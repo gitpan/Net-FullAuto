@@ -33,12 +33,13 @@ package Net::FullAuto;
 #
 ################################################################
 
-our $VERSION='0.01';
+our $VERSION='0.02';
 use 5.002;
 
 BEGIN {
    my @ARGS=@ARGV;
    my $quiet=0;
+   my $args='';
    foreach (@ARGS) {
       if ($_ eq '--password') {
          $args.='--password ';

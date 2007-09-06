@@ -28,4 +28,10 @@
 
         * Version 0.01 released.
 
+        * Fixed unintialized variable error.
+
+2007-09-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.01 released.
+
         * INITIAL RELEASE of ***BETA*** Net::FullAuto
