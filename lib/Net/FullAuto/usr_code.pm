@@ -451,7 +451,7 @@ sub jumpbuild
    #my @hosts=('NJ-CAR-JTPROD8');
    my %connections=();my $handle='';my $stdout='';my $stderr='';
    my %threads=();my $queue=new Thread::Queue;
-   $rite=threads->create(\&rite,$queue);
+   $rite=&threads->create(\&rite,$queue);
    foreach my $host (@hosts) {
       $threads{$host}=[];
       ($handle,$stderr)=&connect_ssh($host);
@@ -495,7 +495,7 @@ sub jumpbuild
          while (my $line=$hand->{_cmd_handle}->get) {
             last if $line=~/_funkyPrompt_/s or $last++==10;
          }
-         push @{$threads{$host}},threads->create(
+         push @{$threads{$host}},&threads->create(
                         \&act,$hand,$log,$queue);
       }
    }
