@@ -33,7 +33,7 @@ package Net::FullAuto;
 #
 ################################################################
 
-our $VERSION='0.04';
+our $VERSION='0.05';
 use 5.002;
 
 BEGIN {
@@ -497,6 +497,198 @@ STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
 
 =back
 
+=head1 SETUP
+
+FullAuto requires some preliminary setup before it can be used.
+
+=over 2
+
+=item * C<fa_hosts.pm> Setup and Location
+
+=back
+
+=over 3
+
+=item
+
+In order to manage connection configuration information in the easiest way possible, all host information must be stored in anonymous hash blocks in a file named C<fa_hosts.pm>. This file can be located in one of two places. There is a default C<fa_hosts.pm> file included with the distribution, and you can locate it wherever C<FullAuto> was installed. Usually this is in the C</lib> directory under C</usr> or C</usr/local/>. A typical location would be C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Hosts blocks I<can> be added directly to this file (provided that file is given write permissions: i.e. C<chmod u+w fa_hosts.pm>) 
+
+=back
+
+=over 3
+
+=item * Setting the C<$fa_hosts> location variable
+
+=back
+
+=over 3
+
+=item
+
+You can (and should) define where you wish to store custom C<fa_hosts.pm> files with the C<$fa_hosts> variable. 
+
+B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use FullAuto;> line:
+
+=begin html
+
+<STYLE TYPE="text/css">
+<!--
+.indented
+   {
+   padding-left: 45pt;
+   padding-right: 45pt;
+   }
+-->
+</STYLE>
+<P CLASS="indented">
+<code>BEGIN { our $fa_hosts='/home/user/fullauto_hosts.pm' }<br>
+use FullAuto;<br>
+. . .</code>
+</P>
+
+=end html
+
+=back
+
+=over
+
+=item
+
+B<NOTE>:  An  'C<fa_hosts>'  configuration module file does NOT need to be named
+  C<fa_hosts.pm> . Any name can be used, so long as the internal package name is
+ the same as the file name. For example, a file named  C<host_blocks.pm>  needs to have the line  C<package host_blocks;>  as the first line of the file.
+
+=back
+
+=over 3
+
+=item * TypicalS<  C<fa_hosts.pm>  >File Contents
+
+=back
+
+=over
+
+=item
+
+S<The following is typical contents of a  C<fa_hosts.pm>
+ showing two host blocks with minimal configuration:>
+
+=begin html
+
+<code>
+<br><br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+package fa_hosts;<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+require Exporter;<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+use warnings;<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+our @ISA     = qw(Exporter);<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+our @EXPORT  = qw(@Hosts);<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+@Hosts=(<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp{<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+Label&nbsp&nbsp&nbsp&nbsp&nbsp=> 'REMOTE COMPUTER ONE',<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+IP&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp=> '198.201.10.01',<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+Hostname&nbsp&nbsp=> 'Linux_Host_One',<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp},<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp{<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+Label&nbsp&nbsp&nbsp&nbsp&nbsp=> 'REMOTE COMPUTER TWO',<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+IP&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp=> '198.201.10.02',<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+Hostname&nbsp&nbsp=> 'Linux_Host_Two',<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp},<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+);<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp1
+</code>
+
+=end html
+
+=back
+
+=head2 S<  >C<fa_hosts.pm>S<  >HOST BLOCK KEY ELEMENTS
+
+=over 2
+
+=item * Key Elements
+
+=over 2
+
+B<Label>S<  >- string to identify host blockS<   >(This is a REQUIRED Element)
+
+S<                 >C<Label =>>C< 'Any_Unique_String',>
+
+=back
+
+S<      >The C<L>C<abel> Key Element is the method by which FullAuto locates the connection information in theS<  >C<fa_hosts.pm>S<   >file.
+
+=back
+
+=over 2
+
+=item
+
+B<IP>S<       >- ip address of remote hostS<   >(Either an IP address or Hostname Element is REQUIRED)
+
+S<                 >C<IP =>>C< '198.201.10.01',>
+
+=back
+
+=over 2
+
+=item
+
+B<Hostname>S<  >- hostname of remote hostS<   >(Either an IP address or Hostname Element is REQUIRED)
+
+S<                 >C<Hostname =>>C< 'Remote_Host_One',>
+
+=back
+
+=over 2
+
+=item
+
+B<LoginID>S<  >- optional login id for remote host
+
+S<                 >C<LoginID =>>C<'Username'>
+
+=back
+
+=begin html
+
+<STYLE TYPE="text/css">
+<!--
+.indented
+   {
+   padding-left: 45pt;
+   }
+-->
+</STYLE>
+<P CLASS="indented">
+The <code>LoginID</code> Key Element is <i>optional</i> because FullAuto defaults to use the login id of the current user running <code>fullauto</code> (or script using the <code>FullAuto.pm</code>&nbsp&nbspmodule). The password associated with ALL login ids - either default or indicated with this key element - are protected in an encrypted password file, and added and retrieved <i>automatically</i> when <code>fullauto</code> is run. If the password associated with the host and login id cannot be located in the password file, the user will be prompted to add it.
+</P>
+
+=end html
+
+=over 2
+
+=item
+
+B<LogFile>S<  >- optional log file name and location
+
+S<                 >C<LogFile =>>C< "/tmp/FAlog${$}d" .
+"$Net::FullAuto::FA_lib::invoked[2]" .
+"$Net::FullAuto::FA_lib::invoked[3].txt",>
+
+=back
+
 =head1 METHODS
 
 =over 2
@@ -524,7 +716,6 @@ C<($secure_host_object,$error) = connect_secure('HOSTLABEL');>
 .indented
    {
    padding-left: 45pt;
-   padding-right: 45pt;
    }
 -->
 </STYLE>

@@ -24,6 +24,13 @@
 #
 ################################################################
 
+2007-09-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.05 released.
+
+        * Added more Pod Documentation to FullAuto.pm describing
+          the required contents of the fa_hosts.pm file. 
+
 2007-09-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.04 released.
