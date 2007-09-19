@@ -24,6 +24,13 @@
 #
 ################################################################
 
+2007-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.06 released.
+
+        * Added more Pod Documentation to FullAuto.pm describing
+          the required contents of the usr_code.pm file.
+
 2007-09-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.05 released.

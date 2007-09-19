@@ -33,7 +33,7 @@ package Net::FullAuto;
 #
 ################################################################
 
-our $VERSION='0.05';
+our $VERSION='0.06';
 use 5.002;
 
 BEGIN {
@@ -503,7 +503,7 @@ FullAuto requires some preliminary setup before it can be used.
 
 =over 2
 
-=item * C<fa_hosts.pm> Setup and Location
+=item * C<fa_hosts.pm>S<  >Setup and Location
 
 =back
 
@@ -512,6 +512,20 @@ FullAuto requires some preliminary setup before it can be used.
 =item
 
 In order to manage connection configuration information in the easiest way possible, all host information must be stored in anonymous hash blocks in a file named C<fa_hosts.pm>. This file can be located in one of two places. There is a default C<fa_hosts.pm> file included with the distribution, and you can locate it wherever C<FullAuto> was installed. Usually this is in the C</lib> directory under C</usr> or C</usr/local/>. A typical location would be C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Hosts blocks I<can> be added directly to this file (provided that file is given write permissions: i.e. C<chmod u+w fa_hosts.pm>) 
+
+=back
+
+=over 2
+
+=item * C<usr_code.pm>S<  >Setup and Location
+
+=back
+
+=over 3
+
+=item
+
+In order to create the most flexibility, power and convencience, FullAuto requires the use of a C<usr_code.pm> module file. This file can be located in one of two places. There is a default C<usr_code.pm> file included with the distribution, and you can locate it wherever C<FullAuto> was installed. Usually this is in the C</lib> directory under C</usr> or C</usr/local/>. A typical location would be C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Custom subroutines I<can> be added directly to this file (provided that file is given write permissions: i.e. C<chmod u+w usr_code.pm>)
 
 =back
 
@@ -541,7 +555,7 @@ B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. I
 -->
 </STYLE>
 <P CLASS="indented">
-<code>BEGIN { our $fa_hosts='/home/user/fullauto_hosts.pm' }<br>
+<code>BEGIN { our $fa_hosts='/home/user/my_hosts.pm' }<br>
 use FullAuto;<br>
 . . .</code>
 </P>
@@ -550,7 +564,44 @@ use FullAuto;<br>
 
 =back
 
-=over
+=over 3
+
+=item * Setting the C<$usr_code> location variable
+
+=back
+
+=over 3
+
+=item
+
+You can (and should) define where you wish to store custom C<usr_code.pm> files
+with the C<$usr_code> variable.
+
+B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. I
+T MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use FullAuto;> line:
+
+=begin html
+
+<STYLE TYPE="text/css">
+<!--
+.indented
+   {
+   padding-left: 45pt;
+   padding-right: 45pt;
+   }
+-->
+</STYLE>
+<P CLASS="indented">
+<code>BEGIN { our $usr_code='/home/user/my_code.pm' }<br>
+use FullAuto;<br>
+. . .</code>
+</P>
+
+=end html
+
+=back
+
+=over 2
 
 =item
 
@@ -560,7 +611,30 @@ B<NOTE>:  An  'C<fa_hosts>'  configuration module file does NOT need to be named
 
 =back
 
-=over 3
+S<     >B<NOTE>: It is common to use BOTH location variables together:
+
+=begin html
+
+<STYLE TYPE="text/css">
+<!--
+.indented
+   {
+   padding-left: 45pt;
+   padding-right: 45pt;
+   }
+-->
+</STYLE>
+<P CLASS="indented">
+<code>BEGIN { our $usr_code='/home/user/my_code.pm';<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+our $fa_hosts='/home/user/my_hosts.pm' }<br>
+use FullAuto;<br>
+. . .</code>
+</P>
+
+=end html
+
+=over 2 
 
 =item * TypicalS<  C<fa_hosts.pm>  >File Contents
 
@@ -588,6 +662,18 @@ our @ISA     = qw(Exporter);<br>
 our @EXPORT  = qw(@Hosts);<br><br>
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 @Hosts=(<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+##&nbsp&nbspDo NOT alter code ABOVE this block.<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+##  -------------------------------------------------------------<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+##&nbsp&nbspADD HOST BLOCKS HERE:<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+##  -------------------------------------------------------------<br><br>
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp{<br>
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 Label&nbsp&nbsp&nbsp&nbsp&nbsp=> 'REMOTE COMPUTER ONE',<br>
@@ -603,10 +689,96 @@ Label&nbsp&nbsp&nbsp&nbsp&nbsp=> 'REMOTE COMPUTER TWO',<br>
 IP&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp=> '198.201.10.02',<br>
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 Hostname&nbsp&nbsp=> 'Linux_Host_Two',<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp},<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp},<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+##&nbsp&nbspDo NOT alter code BELOW this block.<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br>
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 );<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp1
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+## Important! The '1' at the Bottom is NEEDED!<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+1
+</code>
+
+=end html
+
+=back
+
+=over 2
+
+=item * TypicalS<  C<usr_code.pm>  >File Contents
+
+=back
+
+=over
+
+=item
+
+S<The following is typical contents of a  C<usr_code.pm>
+ showing two simple subroutines:>
+
+=begin html
+
+<code>
+<br><br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+package usr_code;<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+require Exporter;<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+use warnings;<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+our @ISA     = qw(Exporter Net::FullAuto::FA_lib);<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+use Net::FullAuto::FA_lib;<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+##&nbsp&nbspDo NOT alter code ABOVE this block.<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+sub hello_world {<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+print $localhost->cmd('echo "hello world"');<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+}<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+sub remote_hostname {<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+my ($computer_one,$stdout,$stderr);
+&nbsp&nbsp&nbsp&nbsp
+# Scope Variables<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+$computer_one=connect_ssh('REMOTE COMPUTER ONE');
+# Connect to<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+&nbsp&nbsp&nbsp&nbsp
+# Remote Host via ssh<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+($stdout,$stderr)=$computer_one->cmd('hostname');<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+print "REMOTE ONE HOSTNAME=$stdout\n";<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+}<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+########### END OF SUBS ########################<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+##&nbsp&nbspDo NOT alter code BELOW this block.<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+#################################################################<br><br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+## Important! The '1' at the Bottom is NEEDED!<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+1
 </code>
 
 =end html
