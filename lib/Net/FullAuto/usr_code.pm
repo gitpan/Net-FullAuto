@@ -99,7 +99,7 @@ sub get_file_from_one {
 
    my ($computer_one,$stdout,$stderr);         # Scope Variables
 
-   $computer_one=connect_reverse('EUREXSIM1'); # Connect to
+   $computer_one=connect_reverse('');          # Connect to
                                                # Remote Host via
                                                # ssh *and* sftp
 
@@ -140,11 +140,11 @@ sub get_file_from_one {
 
 sub test_this
 {
-   ($prod1,$stderr)  = &connect_ssh('ATL-JTPROD1');
-   ($prod2,$stderr)  = &connect_ssh('NJ-CAR-JTPROD2');
-   ($prod10,$stderr) = &connect_host('JT-PROD10');
+   ($prod1,$stderr)  = &connect_ssh('');
+   ($prod2,$stderr)  = &connect_ssh('');
+   ($prod10,$stderr) = &connect_host('');
    die $stderr if $stderr; 
-   ($dev3,$stderr)   = &connect_ssh('JUMPDEV3');
+   ($dev3,$stderr)   = &connect_ssh('');
 
    print $Net::FullAuto::FA_lib::MRLOG "OUT OF ALL CONNECT_SSH CALLS\n";
 
@@ -253,11 +253,11 @@ print $Net::FullAuto::FA_lib::MRLOG "PROD10_LINE=$line<==\n";
 
 sub risk_report
 {
-   #($prod1,$stderr)  = &connect_ssh('ATL-JTPROD1');
-   #($prod2,$stderr)  = &connect_ssh('NJ-CAR-JTPROD2');
-   ($prod10,$stderr) = &connect_ssh('JT-PROD10');
-   ($cer,$stderr)    = &connect_ssh('CER-ENERGYGW4');
-   ($dev3,$stderr)   = &connect_ssh('JUMPDEV3');
+   #($prod1,$stderr)  = &connect_ssh('');
+   #($prod2,$stderr)  = &connect_ssh('');
+   ($prod10,$stderr) = &connect_ssh('');
+   ($cer,$stderr)    = &connect_ssh('');
+   ($dev3,$stderr)   = &connect_ssh('');
 
    $dev3->{_cmd_handle}->print("/home/bkelly/torino/release/sbin/".
                                "linux/plreport_r -c prodtagspace");
@@ -401,7 +401,7 @@ sub risk_report
          print "10_HOST=$host<==\n";
          print "10_LOG=$lahg<==\n";
          $lahg='';
-         print "IS THERE A KOGAN HERE??=$trader<==\n";<STDIN>;
+         print "IS HERE??=$trader<==\n";<STDIN>;
       }
    }
 
@@ -443,12 +443,10 @@ sub risk_report
 }
 
 
-sub jumpbuild
+sub build
 {
-   my @hosts=('NJ-CAR-JTPROD3','NJ-CAR-JTPROD4','NJ-CAR-JTPROD5',
-              'NJ-CAR-JTPROD6','NJ-CAR-JTPROD7','NJ-CAR-JTPROD8',
-              'NJ-CAR-JTPROD9');
-   #my @hosts=('NJ-CAR-JTPROD8');
+   my @hosts=();
+   #my @hosts=('');
    my %connections=();my $handle='';my $stdout='';my $stderr='';
    my %threads=();my $queue=new Thread::Queue;
    $rite=&threads->create(\&rite,$queue);

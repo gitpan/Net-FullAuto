@@ -26,6 +26,14 @@
 
 2007-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.07 released.
+
+        * Repaired Pod Documentation
+
+        * Cleaned out fa_hosts.pm file
+
+2007-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.06 released.
 
         * Added more Pod Documentation to FullAuto.pm describing
