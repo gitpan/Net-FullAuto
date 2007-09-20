@@ -33,7 +33,7 @@ package Net::FullAuto;
 #
 ################################################################
 
-our $VERSION='0.08';
+our $VERSION='0.09';
 use 5.002;
 
 BEGIN {
@@ -87,11 +87,11 @@ Automation Utility
 
 =head1 NOTE TO USERS
 
- This is the initial (2007-09-06) BETA RELEASE of Net::FullAuto. I have
- attemped to provide just enough documentation so that users and testers can
- "hopefully" get it up and running for VERY basic operations. Your
- help in this effort is NEEDED and will be GREATLY APPRECIATED. Please
- contact me at my email address -
+This is a BETA RELEASE of Net::FullAuto. I have
+attemped to provide just enough documentation so that users and testers can
+"hopefully" get it up and running for VERY basic operations. Your
+help in this effort is NEEDED and will be GREATLY APPRECIATED. Please
+contact me at my email address -
 
 =over 2
 
@@ -101,17 +101,17 @@ B<Brian.Kelly@fullautosoftware.net>
 
 =back
 
- and let me know of ANY and ALL bugs, issues, problems, questions
- as well as suggestions for improvements to both the documentation
- and module itself. I will make every effort to get back to you quickly.
+and let me know of ANY and ALL bugs, issues, problems, questions
+as well as suggestions for improvements to both the documentation
+and module itself. I will make every effort to get back to you quickly.
 
- Update the module from CPAN *often* - as I anticipate adding documentation
- and fixing bugs and making improvements almost daily for the immediate
- future.
+Update the module from CPAN *often* - as I anticipate adding documentation
+and fixing bugs and making improvements almost daily for the immediate
+future.
 
- THANKS - and GOOD LUCK with your Net::FullAuto project!
+THANKS - and GOOD LUCK with your Net::FullAuto project!
 
- Brian Kelly, September 6, 2007
+Brian Kelly, September 6, 2007
 
 =head1 BETA Notice
 
@@ -215,32 +215,32 @@ additional built-in features like a command-handle to the local machine without
 having to explicitly create it. Or, being able to connect to a remote host with
 syntax as simple as:
 
-$computer_one=connect_ssh('COMPUTER_ONE');
+ $computer_one=connect_ssh('COMPUTER_ONE');
 
 IT REALLY IS THAT EASY!
 
 Commands also are easy:
 
-($stdout,$stderr)=$computer_one->cmd('ls -l');
+ ($stdout,$stderr)=$computer_one->cmd('ls -l');
 
 And NO CLEANUP is necessary - FullAuto handles this AUTOMATICALLY.
 
 This is a COMPLETE *routine* or *process*:
 
-sub ls_one {
+ sub ls_one {
 
-   my ($computer_one,$stdout,$stderr);             # Scope Variables
+    my ($computer_one,$stdout,$stderr);             # Scope Variables
 
-   $computer_one=connect_ssh('COMPUTER_ONE');      # Connect to Remote Host
+    $computer_one=connect_ssh('COMPUTER_ONE');      # Connect to Remote Host
 
-   ($stdout,$stderr)=$computer_one->cmd('ls -l');  # Run Command
+    ($stdout,$stderr)=$computer_one->cmd('ls -l');  # Run Command
 
-   if ($stderr) {                                  # Check Results
-      print "We Have and ERROR! : $stderr\n";
-   } else {
-      print "Output of ls command from Computer One:\n\n$stdout\n\n";
-   }
-}                                                  # DONE!! 
+    if ($stderr) {                                  # Check Results
+       print "We Have and ERROR! : $stderr\n";
+    } else {
+       print "Output of ls command from Computer One:\n\n$stdout\n\n";
+    }
+ }                                                  # DONE!! 
 
 AGAIN - IT REALLY IS THAT EASY!
 
@@ -543,63 +543,32 @@ You can (and should) define where you wish to store custom C<fa_hosts.pm> files 
 
 B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use FullAuto;> line:
 
-=begin html
-
-<STYLE TYPE="text/css">
-<!--
-.indented
-   {
-   padding-left: 45pt;
-   padding-right: 45pt;
-   }
--->
-</STYLE>
-<P CLASS="indented">
-<code>BEGIN { our $fa_hosts='/home/user/my_hosts.pm' }<br>
-use FullAuto;<br>
-. . .</code>
-</P>
-
-=end html
-
 =back
 
-=over 3
+              BEGIN { our $fa_hosts='/home/user/my_hosts.pm' }
+              use FullAuto;
+              . . . 
+
+=over 2 
 
 =item * Setting the C<$usr_code> location variable
 
 =back
 
-=over 3
+=over 2
 
 =item
 
 You can (and should) define where you wish to store custom C<usr_code.pm> files
 with the C<$usr_code> variable.
 
-B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. I
-T MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use FullAuto;> line:
-
-=begin html
-
-<STYLE TYPE="text/css">
-<!--
-.indented
-   {
-   padding-left: 45pt;
-   padding-right: 45pt;
-   }
--->
-</STYLE>
-<P CLASS="indented">
-<code>BEGIN { our $usr_code='/home/user/my_code.pm' }<br>
-use FullAuto;<br>
-. . .</code>
-</P>
-
-=end html
+B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use FullAuto;> line:
 
 =back
+
+              BEGIN { our $usr_code='/home/user/my_code.pm' }
+              use FullAuto;
+              . . .
 
 =over 2
 
@@ -613,26 +582,10 @@ B<NOTE>:  An  'C<fa_hosts>'  configuration module file does NOT need to be named
 
 S<     >B<NOTE>: It is common to use BOTH location variables together:
 
-=begin html
-
-<STYLE TYPE="text/css">
-<!--
-.indented
-   {
-   padding-left: 45pt;
-   padding-right: 45pt;
-   }
--->
-</STYLE>
-<P CLASS="indented">
-<code>BEGIN { our $usr_code='/home/user/my_code.pm';<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-our $fa_hosts='/home/user/my_hosts.pm' }<br>
-use FullAuto;<br>
-. . .</code>
-</P>
-
-=end html
+        BEGIN { our $usr_code='/home/user/my_code.pm';
+                our $fa_hosts='/home/user/my_hosts.pm' }
+        use FullAuto;
+        . . . 
 
 =over 2 
 
@@ -647,66 +600,41 @@ use FullAuto;<br>
 S<The following is typical contents of a  C<fa_hosts.pm>
  showing two host blocks with minimal configuration:>
 
-=begin html
-
-<code>
-<br><br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-package fa_hosts;<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-require Exporter;<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-use warnings;<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-our @ISA     = qw(Exporter);<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-our @EXPORT  = qw(@Hosts);<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-@Hosts=(<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-##&nbsp&nbspDo NOT alter code ABOVE this block.<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-##  -------------------------------------------------------------<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-##&nbsp&nbspADD HOST BLOCKS HERE:<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-##  -------------------------------------------------------------<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp{<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-Label&nbsp&nbsp&nbsp&nbsp&nbsp=> 'REMOTE COMPUTER ONE',<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-IP&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp=> '198.201.10.01',<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-Hostname&nbsp&nbsp=> 'Linux_Host_One',<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp},<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp{<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-Label&nbsp&nbsp&nbsp&nbsp&nbsp=> 'REMOTE COMPUTER TWO',<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-IP&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp=> '198.201.10.02',<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-Hostname&nbsp&nbsp=> 'Linux_Host_Two',<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp},<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-##&nbsp&nbspDo NOT alter code BELOW this block.<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-);<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-## Important! The '1' at the Bottom is NEEDED!<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-1
-</code>
-
-=end html
-
 =back
+
+        package fa_hosts;
+
+        require Exporter;
+        use warnings;
+        our @ISA = qw(Exporter);
+        our @EXPORT = qw(@Hosts);
+
+        @Hosts=(
+        #################################################################
+        ##  Do NOT alter code ABOVE this block.
+        #################################################################
+        ## -------------------------------------------------------------
+        ##  ADD HOST BLOCKS HERE:
+        ## -------------------------------------------------------------
+
+           {
+               Label     => 'REMOTE COMPUTER ONE',
+               IP        => '198.201.10.01',
+               Hostname  => 'Linux_Host_One',
+           },
+           {
+               Label     => 'REMOTE COMPUTER TWO',
+               IP        => '198.201.10.02',
+               Hostname  => 'Linux_Host_Two',
+           },
+
+        #################################################################
+        ##  Do NOT alter code BELOW this block.
+        #################################################################
+        );
+
+        ## Important! The '1' at the Bottom is NEEDED!
+        1
 
 =over 2
 
@@ -721,69 +649,46 @@ Hostname&nbsp&nbsp=> 'Linux_Host_Two',<br>
 S<The following is typical contents of a  C<usr_code.pm>
  showing two simple subroutines:>
 
-=begin html
-
-<code>
-<br><br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-package usr_code;<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-require Exporter;<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-use warnings;<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-our @ISA     = qw(Exporter Net::FullAuto::FA_lib);<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-use Net::FullAuto::FA_lib;<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-##&nbsp&nbspDo NOT alter code ABOVE this block.<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-sub hello_world {<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-print $localhost->cmd('echo "hello world"');<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-}<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-sub remote_hostname {<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-my ($computer_one,$stdout,$stderr);
-&nbsp&nbsp&nbsp&nbsp
-# Scope Variables<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-$computer_one=connect_ssh('REMOTE COMPUTER ONE');
-# Connect to<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-&nbsp&nbsp&nbsp&nbsp
-# Remote Host via ssh<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-($stdout,$stderr)=$computer_one->cmd('hostname');<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-print "REMOTE ONE HOSTNAME=$stdout\n";<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-}<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-########### END OF SUBS ########################<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-##&nbsp&nbspDo NOT alter code BELOW this block.<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-#################################################################<br><br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-## Important! The '1' at the Bottom is NEEDED!<br>
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-1
-</code>
-
-=end html
-
 =back
+
+        package usr_code;
+
+        require Exporter;
+        use warnings;
+        our @ISA = qw(Exporter Net::FullAuto::FA_lib);
+        use Net::FullAuto::FA_lib;
+
+        #################################################################
+        ##  Do NOT alter code ABOVE this block.
+        #################################################################
+
+        sub hello_world {
+
+            print $localhost->cmd('echo "hello world"');
+
+        }
+
+        sub remote_hostname {
+
+            my ($computer_one,$stdout,$stderr);      # Scope Variables
+
+            $computer_one=connect_ssh('REMOTE COMPUTER ONE'); # Connect to
+                                                     # Remote Host via ssh
+
+            ($stdout,$stderr)=$computer_one->cmd('hostname');
+
+            print "REMOTE ONE HOSTNAME=$stdout\n";
+
+        }
+
+        ########### END OF SUBS ########################
+
+        #################################################################
+        ##  Do NOT alter code BELOW this block.
+        #################################################################
+
+        ## Important! The '1' at the Bottom is NEEDED!
+        1 
 
 =head2 S<  >C<fa_hosts.pm>S<  >HOST BLOCK KEY ELEMENTS
 
