@@ -26,6 +26,12 @@
 
 2007-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.08 released.
+
+        * Cleaned out usr_code.pm file
+
+2007-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.07 released.
 
         * Repaired Pod Documentation
