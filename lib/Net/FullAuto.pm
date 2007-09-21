@@ -33,7 +33,7 @@ package Net::FullAuto;
 #
 ################################################################
 
-our $VERSION='0.09';
+our $VERSION='0.10';
 use 5.002;
 
 BEGIN {
@@ -93,7 +93,7 @@ attemped to provide just enough documentation so that users and testers can
 help in this effort is NEEDED and will be GREATLY APPRECIATED. Please
 contact me at my email address -
 
-=over 2
+=over 4 
 
 =item
 
@@ -152,68 +152,29 @@ see METHODS section below
 
 =head1 DESCRIPTION
 
-Net::FullAuto is a Perl based Secure Distributed Computing Network Process
-Automation Utility. It's a MOUTHFUL - and it IS everything implied in it's
-description. Net::FullAuto is a command environent based implementation that
+C<Net::FullAuto>S<  >is a Perl based Secure Distributed Computing Network Process Automation Utility. It's a MOUTHFUL - and it IS everything implied in it's
+description.S<  >C<Net::FullAuto>S<  >is a command environent based implementation that
 truly embodies the term "The Network **IS** the Computer!!" 
 
-Net::FullAuto utilizes ssh and sftp (can also use telnet and ftp, though for
-security reasons, this is NOT recommended) to bring the command enviroments
-of any number of remote computers (OS of remote computer does not matter),
-together in **ONE** convenient scripting space. With Net::FullAuto, you write
-code once, on one computer, and have it execute on multiple computers
-simultaneously, in an interactive dynamic fashion, AS IF the many computers
-were truly ONE.
+C<Net::FullAuto>S<  >utilizesS<  >C<ssh>S<  >andS<  >C<sftp>S<  >(can also useS<  >C<telnet>S<  >andS<  >C<ftp>, though for security reasons, this is NOT recommended) to bring the command enviroments of any number of remote computers (OS of remote computer does not matter), together in **ONE** convenient scripting space. WithS<  >C<Net::FullAuto>, you write code once, on one computer, and have it execute on multiple computers simultaneously, in an interactive dynamic fashion, AS IF the many computers were truly ONE.  
 
-Net::FullAuto is POWERFUL. Net::FullAuto can be run by a user in a Menu driven,
-interactive mode (using the Term::Menus module - also written by Brian Kelly),
-OR via UNIX or Windows/Cygwin cron in a fully automated (and secure) fashion.
+C<Net::FullAuto> is POWERFUL. C<Net::FullAuto> can be run by a user in a Menu driven, interactive mode (using the C<Term::Menus> module - also written by Brian Kelly), OR via UNIX or Windows/Cygwin C<cron> in a fully automated (and secure) fashion.
 
 Example: A user needs to pull data from a database, put it in text file, zip
 and encrypt it, and then transfer that file to another computer on the other
 side of the world via the internet - in ONE step, and in a SECURE fashion.
 
-Net::FullAuto is the ANSWER! Assume Net::FullAuto is installed on computer one,
-the database is on computer two, and the remote computer in China is computer
-three. When the user types the script using FullAuto, FullAuto will connect
-via ssh AND sftp (simultaneously) to computer two, and via sftp to computer
-three. Using an sql command utility on computer two, data can be extracted
-and piped to a text file on computer two. Then, FullAuto will run a command
-for a zip utility over ssh on computer two to zip the file. Next (assume the
-encryption software is on computer one) FullAuto will transfer this file to
-computer one, where it can be encrypted with licensed encryption software, and
-then finally, the encrypted file can be transferred to computer three via sftp.
-Email and pager software can be used for automated notification as well.
+C<Net::FullAuto>S<  >is the ANSWER! AssumeS<  >C<Net::FullAuto>S<  >is installed on computer one, the database is on computer two, and the remote computer in China is computer three. When the user types the script usingS<  >C<Net::FullAuto>,S<  >C<Net::FullAuto>S<  >will connect viaS<  >C<ssh>S<  >ANDS<  >C<sftp>S<  >(simultaneously) to computer two, and viaS<  >C<sftp>S<  >to computer three. Using an sql command utility on computer two, data can be extracted and piped to a text file on computer two. Then,S<  >C<Net::FullAuto>S<  >will run a command for aS<  >C<zip>S<  >utility overS<  >C<ssh>S<  >on computer two toS<  >C<zip>S<  >the file. Next (assume the encryption software is on computer one)S<  >C<Net::FullAuto>S<  >will transfer this file to computer one, where it can be encrypted with licensed encryption software, and then finally, the encrypted file can be transferred to computer three via sftp. Email and pager software can be used for automated notification as well.
 
 Example: The same process above needs to run at 2:00am unattended.
 
-No Problem! FullAuto can be run via cron to perform the same actions above
+No Problem! A script usingS<  >C<Net::FullAuto>S<  >can be run viaS<  >C<cron>S<  >to perform the same actions above
 without user involvement.
 
-FullAuto is RELIABLE and FAULT TOLERANT. Each individual command run on a
-remote computer returns to FullAuto BOTH stdout (output) and stderr (error
-messages). With this feature, users and programmers can write code to
-essentially trap remote errors "locally" and respond with a host of error
-recovery approaches. Everything from sending an e-mail, to re-running the
-command, to switching remote computers and much more is available as error
-handling options. The only limits are the skills and ingenuity of the
-programmers and administrators using FullAuto. If FullAuto loses a connection
-to a remote host, automatic attempts will be made to re-connect seemlessly -
-with errors reported when the specified number of attempts fail.
+C<Net::FullAuto>S<  >is RELIABLE and FAULT TOLERANT. Each individual command run on a remote computer returns toS<  >C<Net::FullAuto>S<  >BOTH stdout (output) and stderr (error messages). With this feature, users and programmers can write code to essentially trap remote errors "locally" and respond with a host of error recovery approaches. Everything from sending an e-mail, to re-running the command, to switching remote computers and much more is available as error handling options. The only limits are the skills and ingenuity of the programmers and administrators usingS<  >C<Net::FullAuto>. IfS<  >C<Net::FullAuto>S<  >loses a connection to a remote host, automatic attempts will be made to re-connect seemlessly - with errors reported when the specified number of attempts fail.
 
-FullAuto is EASY. FullAuto uses a mix of traditional and object-oriented
-features to maximize ease of use and maintenance. Due to the unique nature of
-distributed computing, combined with the need for ease of maintaining
-a lot of configuration information (i.e. ip addresses, host names, login
-ID's, passwords, etc), along with any number of *routines* or *processes*, as
-well as the need for robust security, FullAuto has a unique layout and
-architechture. Normally in perl, programmers segregate functional code in
-separate script files or perl modules or packages. FullAuto supports this as
-well, but advocates keeping *process* code confined to a single routine in a
-kind of "process library" file. This is in order that FullAuto can provide
-additional built-in features like a command-handle to the local machine without
-having to explicitly create it. Or, being able to connect to a remote host with
-syntax as simple as:
+C<Net::FullAuto>S<  >is EASY.S<  >C<Net::FullAuto>S<  >uses a mix of traditional and object-oriented features to maximize ease of use and maintenance. Due to the unique nature of distributed computing, combined with the need for ease of maintaining a lot of configuration information (i.e. ip addresses, host names, login ID's, passwords, etc), along with any number of *routines* or *processes*, as
+well as the need for robust security,S<  >C<Net::FullAuto>S<  >has a unique layout and architechture. Normally in perl, programmers segregate functional code in separate script files or perl modules or packages.S<  >C<Net::FullAuto>S<  >supports this as well, but advocates keeping *process* code confined to a single routine in a kind of "process library" file. This is in order thatS<  >C<Net::FullAuto>S<  >can provide additional built-in features like a command-handle to the local machine without having to explicitly create it. Or, being able to connect to a remote host with syntax as simple as:
 
  $computer_one=connect_ssh('COMPUTER_ONE');
 
@@ -223,7 +184,7 @@ Commands also are easy:
 
  ($stdout,$stderr)=$computer_one->cmd('ls -l');
 
-And NO CLEANUP is necessary - FullAuto handles this AUTOMATICALLY.
+And NO CLEANUP is necessary -S<  >C<Net::FullAuto>S<  >handles this AUTOMATICALLY.
 
 This is a COMPLETE *routine* or *process*:
 
@@ -247,53 +208,34 @@ AGAIN - IT REALLY IS THAT EASY!
 As with most things in life, what many or most consider a blessing,
 others consider a curse. Perl's motto is "There's more than one way to do it."
 (TIMTOWTDI) Not everyone thinks this is utopia. Perl also attempts "to make
-easy tasks easy and difficult tasks possible." FullAuto - written in perl -
-*IS* PERL. It is essentially a perl extension and therefore adheres to the
-same goals as perl itself: i.e. - there's no "one" correct way to use FullAuto.
+easy tasks easy and difficult tasks possible."S<  >C<Net::FullAuto>S<  >- written in perl - *IS* PERL. It is essentially a perl extension and therefore adheres to the same goals as perl itself: i.e. - there's no "one" correct way to useS<  >C<Net::FullAuto>.
 
-FullAuto is SECURE. It uses ssh and sftp for communication accross computers, 
-and uses powerful encryption to store passwords to remote resources. When
-running FullAuto, a user on the first iteration of a process will be prompted
-to enter a password for each and every remote resource (or even local resource,
-since FullAuto can and does use ssh to acquire enhanced user-rights on the
-local computer.) Every following iteration will then prompt for a password
-ONLY ONCE (or a password can even be passed in via command or method arguement)
-with every other needed password retrieved from an encrypted datafile which
-utilizes the user's main login password as the "salt".
+C<Net::FullAuto>S<  >is SECURE. It usesS<  >C<ssh>S<  >andS<  >C<sftp>S<  >for communication accross computers, and uses powerful encryption to store passwords to remote resources. When runningS<  >C<Net::FullAuto>, a user on the first iteration of a process will be prompted to enter a password for each and every remote resource (or even local resource, sinceS<  >C<Net::FullAuto>S<  >can and does use ssh to acquire enhanced user-rights on the local computer.) Every following iteration will then prompt for a password ONLY ONCE (or a password can even be passed in via command or method arguement) with every other needed password retrieved from an encrypted datafile which utilizes the user's main login password as the "salt".
 
-For added security, and enhanced user functionality, FullAuto can be installed
-on UNIX computers to use "setuid". (Windows/Cygwin does not support "setuid" -
-so this feature is not available on Windows computers. This is the ONLY Windows
-limitation.) With FullAuto setup to use "setuid", users can be configured to
-run complex distributed processes in a secure fashion without the permissions
-ACTUALLY needed by the remote (or even local) resources. On top of that, it is
-possible to create a process administered by numerous individuals such that NO
-ONE PERSON KNOWS OR HAS ACCESS TO ALL THE PASSWORDS. For example, a database
-administrator on a remote computer can "loan" his username and password to drop
-a table (for instance) for a process that will be run by another user remotely.
-During the first iteration, after the user enters her/his password, the DB can
-then (when prompted), enter his/her password which will then be encrypted
-LOCALLY with the user's password as the salt. With the encrypted datafile and
-perl code protected from user write (or even read) access via setuid on UNIX
-computers (setup and administered by yet another individual or group - such as
-the root user), there is no way for either the DB to discover the user's
-password, or the user to discover the DB's password! Even the root user of the
-local computer running FullAuto will not be able to discover these passwords!
+For added security, and enhanced user functionality,S<  >C<Net::FullAuto>S<  >can be installed on UNIX computers to useS<  >C<setuid>. (Windows/Cygwin does not support "setuid" - so this feature is not available on Windows computers. This is the ONLY Windows limitation.) WithS<  >C<Net::FullAuto>S<  >setup to useS<  >C<setuid>, users can be configured to run complex distributed processes in a secure fashion without the permissions ACTUALLY needed by the remote (or even local) resources. On top of that, it is possible to create a process administered by numerous individuals such that NO ONE PERSON KNOWS OR HAS ACCESS TO ALL THE PASSWORDS. For example, a database administrator on a remote computer can "loan" his username and password to drop a table (for instance) for a process that will be run by another user remotely.  During the first iteration, after the user enters her/his password, the DB can then (when prompted), enter his/her password which will then be encrypted LOCALLY with the user's password as the salt. With the encrypted datafile and perl code protected from user write (or even read) access via setuid on UNIX computers (setup and administered by yet another individual or group - such as the root user), there is no way for either the DB to discover the user's password, or the user to discover the DB's password! Even the root user of the local computer runningNet::FullAuto will not be able to discover these passwords!
 (When setuid is setup and used PROPERLY). This setup will allow users to run
 FullAuto processes WITHOUT access to the passwords controlling remote access,
 or for that matter, the CODE running those processes! 
 
 Reasons to use this module are:
 
-=over 2
+=over 4
 
 =item *
 
 You want the output of the ps -e command from a remote UNIX computer.
 Example:
 
-   In the file "fa_hosts.pm" add the connection information for
-   the remote computer (This will suffice for all following examples):
+=over 4
+
+=item
+
+=begin html <br>
+
+=end html
+
+S<   >In the fileS<  >C<fa_hosts.pm>S<  >add the connection information for
+the remote computer (This will suffice for all following examples):
 
        {
           'Label'         => 'COMPUTER_ONE',
@@ -305,7 +247,7 @@ Example:
                              "${FA_lib::invoked[3]}.txt",
        },
 
-   In the file "usr_code.pm" add the *process* subroutine code:
+S<   >In the fileS<  >C<usr_code.pm>S<  >add the *process* subroutine code:
 
        sub ps_one {
 
@@ -326,18 +268,18 @@ Example:
 
        }
 
-Run FullAuto:  (Hint: the --< # >-- line are instructions and are
-                not displayed when the program actually runs)
 
---< 1 >-<Type Command and <ENTER> >---------------------------
+Run script using S<  >C<Net::FullAuto>S<  >(B<Hint>: the --<...>-- line are instructions and are not displayed when the program actually runs)
 
-       fullauto.pl --usr_code ps_one
+--< 1 >-<Type Command and <B<C<ENTER>>> >---------------------------
+
+       fullauto  --usr_code  ps_one
 
 --< The user sees: >------------------------------------------
 
-STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
+ STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
 
-  Starting fullauto.pl . . .
+  Starting fullauto . . .
 
 
 
@@ -345,12 +287,12 @@ STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
 
   computer_one Login <bkelly> :
 
---< 2 >-<ENTER>-(Hint: since 'Login' was specified in
+--< 2 >-<B<C<ENTER>>>-(B<Hint>: since 'Login' was specified in
                  fa_hosts.pm 'bkelly' appears as the default)-
 
   Password:
 
---< 3 >-<Type Password and <ENTER> >--------------------------
+--< 3 >-<Type Password and <B<C<ENTER>>> >--------------------------
 
 --> Logging into localhost via ssh  . . .
 
@@ -396,10 +338,12 @@ STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
 
  FULLAUTO COMPLETED SUCCESSFULLY on Wed Jun  6 12:28:30 2007
 
+=back
+
 =item *
 
-You want to zip and transfer a remote file from COMPUTER_ONE
-to your local computer and then unzip it:
+You want toS<  >C<zip>S<  >and transfer a remote file from COMPUTER_ONE
+to your local computer and thenS<  >C<unzip>S<  >it:
 
    In the file "usr_code.pm" add the *process* subroutine code:
 
@@ -439,18 +383,17 @@ to your local computer and then unzip it:
 
        }
 
-Run FullAuto:  (Hint: the --< # >-- line are instructions and are
-               not displayed when the program actually runs)
+Run script usingS<  >C<Net::FullAuto>S<  >(B<Hint>: the --< # >-- line are instructions and are not displayed when the program actually runs)
 
---< 1 >-<Type Command and <ENTER> >---------------------------
+--< 1 >-<Type Command and <B<C<ENTER>>> >---------------------------
 
-       fullauto.pl --usr_code get_file_from_one
+       fullautoS<  >--usr_codeS<  >get_file_from_one
 
 --< The user sees: >------------------------------------------
 
-STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
+ STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
 
-  Starting fullauto.pl . . .
+  Starting fullauto . . .
 
 
 
@@ -458,12 +401,12 @@ STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
 
   computer_one Login <bkelly> :
 
---< 2 >-<ENTER>-(Hint: since 'Login' was specified in
+--< 2 >-<B<C<ENTER>>>-(B<Hint>: since 'Login' was specified in
                  fa_hosts.pm 'bkelly' appears as the default)-
 
   Password:
 
---< 3 >-<Type Password and <ENTER> >--------------------------
+--< 3 >-<Type Password and <B<C<ENTER>>> >--------------------------
 
 
  --> Logging into localhost via ssh  . . .
@@ -499,78 +442,160 @@ STARTING FULLAUTO on Wed Jun  6 12:27:08 2007
 
 =head1 SETUP
 
-FullAuto requires some preliminary setup before it can be used.
+C<Net::FullAuto>S<  >requires some preliminary setup before it can be used.
 
-=over 2
+=head2 Setup Checklist
+
+=over 4
+
+=item * Setup for UNIX OS's (like Linux)
+
+=item
+
+=begin html <br>
+
+=end html
+
+=over 4
+
+=item 1. Check for a Perl 5+ installation 
+
+=begin html <br>
+
+=end html
+
+C<Net::FullAuto>S<  >requires a local installation of perl5. To test forS<  >C<perl>,S<  >typeS<  >C<perl -v>S<  >at the UNIX/Linux command prompt:
+
+  $ perl -v
+
+  This is perl, v5.8.7 built for x86_64-linux-thread-multi 
+
+  Copyright 1987-2005, Larry Wall
+
+  Perl may be copied only under the terms of either the Artistic License or the
+  GNU General Public License, which may be found in the Perl 5 source kit.
+
+  Complete documentation for Perl, including FAQ lists, should be found on
+  this system using `man perl' or `perldoc perl'.  If you have access to the
+  Internet, point your browser at http://www.perl.org/, the Perl Home Page.
+
+=item 2. Check for a working CPAN utility
+
+=begin html <br>
+
+=end html
+
+C<Net::FullAuto>S<  >is easiest to set up with a working CPAN utility. To test forS<  >C<cpan>,S<  >typeS<  >C<cpan -v>S<  >at the UNIX/Linux command prompt:
+
+  $ cpan -v
+  /usr/bin/cpan script version 1.9, CPAN.pm version 1.9102
+
+If you don't have a working C<cpan>, then perhaps you can find some assitance here:
+
+  http://sial.org/howto/perl/life-with-cpan/
+
+Otherwise, you will have to manually install the additional modules from the CPAN (Comprehensive Perl Archive Network) that are required byS<  >C<Net::FullAuto>. Note also that at least one required module -S<  >C<IO::Pty>, will require the use of a C compiler on your local host. The following CPAN modules are required byS<  >C<Net::FullAuto>S< >:
+
+   -  Sort::Versions 
+   -  Crypt::CBC
+   -  Crypt::DES
+   -  Getopt::Long
+   -  HTTP::Date
+   -  IO::Pty
+   -  LWP
+   -  Mail::Internet
+   -  Mail::Sender
+   -  MemHandle
+   -  MLDBM
+   -  MLDBM::Sync
+   -  MLDBM::Sync::SDBM_File
+   -  Net::Telnet
+   -  Term::Menus >= Version 1.24
+   -  Tie::Cache
+   -  URI
+
+=back
+
+=back
+
+=over 4
+
+=item * Setup for Windows OS's (like XP and Vista)
+
+=back
+
+=head2 Setup Components
+
+=over 4
 
 =item * C<fa_hosts.pm>S<  >Setup and Location
 
 =back
 
-=over 3
+=over 4
 
 =item
 
-In order to manage connection configuration information in the easiest way possible, all host information must be stored in anonymous hash blocks in a file named C<fa_hosts.pm>. This file can be located in one of two places. There is a default C<fa_hosts.pm> file included with the distribution, and you can locate it wherever C<FullAuto> was installed. Usually this is in the C</lib> directory under C</usr> or C</usr/local/>. A typical location would be C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Hosts blocks I<can> be added directly to this file (provided that file is given write permissions: i.e. C<chmod u+w fa_hosts.pm>) 
+In order to manage connection configuration information in the easiest way possible, all host information must be stored in anonymous hash blocks in a file named C<fa_hosts.pm>. This file can be located in one of two places. There is a default C<fa_hosts.pm> file included with the distribution, and you can locate it wherever C<Net::FullAuto> was installed. Usually this is in the C</lib> directory under C</usr> or C</usr/local/>. A typical location would be C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Hosts blocks I<can> be added directly to this file (provided that file is given write permissions: i.e. C<chmod u+w fa_hosts.pm>) 
 
 =back
 
-=over 2
+=over 4
 
 =item * C<usr_code.pm>S<  >Setup and Location
 
 =back
 
-=over 3
+=over 4
 
 =item
 
-In order to create the most flexibility, power and convencience, FullAuto requires the use of a C<usr_code.pm> module file. This file can be located in one of two places. There is a default C<usr_code.pm> file included with the distribution, and you can locate it wherever C<FullAuto> was installed. Usually this is in the C</lib> directory under C</usr> or C</usr/local/>. A typical location would be C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Custom subroutines I<can> be added directly to this file (provided that file is given write permissions: i.e. C<chmod u+w usr_code.pm>)
+In order to create the most flexibility, power and convencience,S<  >C<Net::FullAuto>S<  >requires the use of aS<  >C<usr_code.pm>S<  >module file. This file can be located in one of two places. There is a defaultS<  >C<usr_code.pm>S<  >file included with the distribution, and you can locate it whereverS<  >C<Net::FullAuto>S<  >was installed. Usually this is in theS<  >C</lib>S<  >directory underS<  >C</usr>S<  >orS<  >C</usr/local/>. A typical location would beS<  >C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Custom subroutinesS<  >I<can>S<  >be added directly to this file (provided that file is given write permissions: i.e.S<  >C<chmod u+w usr_code.pm>)
 
 =back
 
-=over 3
+=over 4
 
-=item * Setting the C<$fa_hosts> location variable
+=item * Setting theS<  >C<$fa_hosts>S<  >location variable
 
 =back
 
-=over 3
+=over 4
 
 =item
 
-You can (and should) define where you wish to store custom C<fa_hosts.pm> files with the C<$fa_hosts> variable. 
+You can (and should) define where you wish to store customS<  >C<fa_hosts.pm>S<  >files with the C<$fa_hosts> variable. 
 
-B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use FullAuto;> line:
+B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN AS<  >C<BEGIN {}>S<  >blockS<  >B<I<BEFORE>>S<  >theS<  >C<use Net::FullAuto;>S<  >line:
 
 =back
 
               BEGIN { our $fa_hosts='/home/user/my_hosts.pm' }
-              use FullAuto;
+              use Net::FullAuto;
               . . . 
 
-=over 2 
+=over 4 
 
 =item * Setting the C<$usr_code> location variable
 
 =back
 
-=over 2
+=over 4
 
 =item
 
 You can (and should) define where you wish to store custom C<usr_code.pm> files
 with the C<$usr_code> variable.
 
-B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use FullAuto;> line:
+B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use Net::FullAuto;> line:
 
 =back
 
               BEGIN { our $usr_code='/home/user/my_code.pm' }
-              use FullAuto;
+              use Net::FullAuto;
               . . .
 
-=over 2
+=over 4
 
 =item
 
@@ -584,10 +609,10 @@ S<     >B<NOTE>: It is common to use BOTH location variables together:
 
         BEGIN { our $usr_code='/home/user/my_code.pm';
                 our $fa_hosts='/home/user/my_hosts.pm' }
-        use FullAuto;
+        use Net::FullAuto;
         . . . 
 
-=over 2 
+=over 4
 
 =item * TypicalS<  C<fa_hosts.pm>  >File Contents
 
@@ -636,7 +661,7 @@ S<The following is typical contents of a  C<fa_hosts.pm>
         ## Important! The '1' at the Bottom is NEEDED!
         1
 
-=over 2
+=over 4
 
 =item * TypicalS<  C<usr_code.pm>  >File Contents
 
@@ -692,11 +717,11 @@ S<The following is typical contents of a  C<usr_code.pm>
 
 =head2 S<  >C<fa_hosts.pm>S<  >HOST BLOCK KEY ELEMENTS
 
-=over 2
+=over 4
 
 =item * Key Elements
 
-=over 2
+=over 4
 
 B<Label>S<  >- string to identify host blockS<   >(This is a REQUIRED Element)
 
@@ -704,11 +729,11 @@ S<                 >C<Label =>>C< 'Any_Unique_String',>
 
 =back
 
-S<      >The C<L>C<abel> Key Element is the method by which FullAuto locates the connection information in theS<  >C<fa_hosts.pm>S<   >file.
+S<      >The C<L>C<abel> Key Element is the method by whichS<  >C<Net::FullAuto>S<  >locates the connection information in theS<  >C<fa_hosts.pm>S<   >file.
 
 =back
 
-=over 2
+=over 4
 
 =item
 
@@ -718,7 +743,7 @@ S<                 >C<IP =>>C< '198.201.10.01',>
 
 =back
 
-=over 2
+=over 4
 
 =item
 
@@ -728,7 +753,7 @@ S<                 >C<Hostname =>>C< 'Remote_Host_One',>
 
 =back
 
-=over 2
+=over 4
 
 =item
 
@@ -749,12 +774,12 @@ S<                 >C<LoginID =>>C<'Username'>
 -->
 </STYLE>
 <P CLASS="indented">
-The <code>LoginID</code> Key Element is <i>optional</i> because FullAuto defaults to use the login id of the current user running <code>fullauto</code> (or script using the <code>FullAuto.pm</code>&nbsp&nbspmodule). The password associated with ALL login ids - either default or indicated with this key element - are protected in an encrypted password file, and added and retrieved <i>automatically</i> when <code>fullauto</code> is run. If the password associated with the host and login id cannot be located in the password file, the user will be prompted to add it.
+The <code>LoginID</code> Key Element is <i>optional</i> because <code>Net::FullAuto</code> defaults to use the login id of the current user running <code>fullauto</code> (or script using the <code>Net::FullAuto.pm</code>&nbsp&nbspmodule). The password associated with ALL login ids - either default or indicated with this key element - are protected in an encrypted password file, and added and retrieved <i>automatically</i> when <code>fullauto</code> is run. If the password associated with the host and login id cannot be located in the password file, the user will be prompted to add it.
 </P>
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -768,17 +793,17 @@ S<                 >C<LogFile =>>C< "/tmp/FAlog${$}d" .
 
 =head1 METHODS
 
-=over 2
+=over 4
 
 =item * Create New Host Objects
 
-=over 2
+=over 4
 
 =back
 
 B<connect_secure> - connect to remote host via ssh & sftp
 
-=over 2
+=over 4
 
 =item
 
@@ -805,7 +830,7 @@ Otherwise, if the method is<br>requested to only return a scalar:
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -837,7 +862,7 @@ connection information.)</P>
 </P>
 <P CLASS="indented">
 The important thing to understand, is that there is no other code
-needed to connect to remote<br>hosts. Net::FullAuto handles all
+needed to connect to remote<br>hosts. <code>Net::FullAuto</code> handles all
 connection details, such as dynamic remote-prompt discovery,<br>
 AUTOMATICALLY. No need to define <i>or even know</i> what the remote
 prompt is. This feature<br>'alone' is a major departure from most
@@ -845,7 +870,7 @@ other scriptable remote command and file transfer utilities.</P>
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -855,7 +880,7 @@ THIS IS THE RECOMMENDED I<BEST METHOD> for CONNECTING.
 
 B<connect_ssh> - connect to remote host via ssh
 
-=over 2
+=over 4
 
 =item
 
@@ -888,7 +913,7 @@ your process.
 
 B<connect_sftp> - connect to remote host via sftp
 
-=over 2
+=over 4
 
 =item
 
@@ -920,7 +945,7 @@ remote command-line capability in your process.</P>
 B<connect_host> - connect to remote host via ssh  OR telnet
                                          and sftp OR ftp
 
-=over 2
+=over 4
 
 =item
 
@@ -960,7 +985,7 @@ completion is more important than having optimum connection security.
 
 B<connect_insecure> - connect to remote host via telnet & ftp
 
-=over 2
+=over 4
 
 =item
 
@@ -988,7 +1013,7 @@ Otherwise, if the method is<br>requested to only return a scalar:
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -1021,7 +1046,7 @@ instructions on configuring host connection information.)</P>
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -1032,7 +1057,7 @@ use C<connect_secure()> whenever possible.
 
 B<connect_telnet> - connect to remote host via telnet
 
-=over 2
+=over 4
 
 =item
 
@@ -1063,7 +1088,7 @@ your process.
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -1074,7 +1099,7 @@ use C<connect_ssh()> whenever possible.
 
 B<connect_ftp> - connect to remote host via ftp
 
-=over 2
+=over 4
 
 =item
 
@@ -1103,7 +1128,7 @@ remote command-line capability in your process.</P>
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -1114,7 +1139,7 @@ use C<connect_sftp()> whenever possible.
 
 B<connect_ssh_telnet> - connect to remote host via ssh OR telnet
 
-=over 2
+=over 4
 
 =item
 
@@ -1157,7 +1182,7 @@ your process.
 
 B<connect_telnet_ssh> - connect to remote host via telnet OR ssh
 
-=over 2
+=over 4
 
 =item
 
@@ -1201,7 +1226,7 @@ your process.
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -1212,7 +1237,7 @@ use C<connect_ssh()> whenever possible.
 
 B<connect_sftp_ftp> - connect to remote host via sftp OR ftp
 
-=over 2
+=over 4
 
 =item
 
@@ -1253,7 +1278,7 @@ remote command-line capability in your process.</P>
 
 B<connect_ftp_sftp> - connect to remote host via ftp OR sftp
 
-=over 2
+=over 4
 
 =item
 
@@ -1295,7 +1320,7 @@ remote command-line capability in your process.</P>
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -1307,7 +1332,7 @@ use C<connect_sftp()> whenever possible.
 B<connect_reverse>  - connect to remote host via telnet OR ssh
                                              and ftp    OR sftp
 
-=over 2
+=over 4
 
 =item
 
@@ -1349,17 +1374,17 @@ important than security.
 
 =back
 
-=over 2
+=over 4
 
 =item * Host Object Methods
 
-=over 2
+=over 4
 
 =back
 
 B<cmd> - run command line commands on the remote host
 
-=over 2
+=over 4
 
 =item
 
@@ -1388,7 +1413,7 @@ following syntax:
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
@@ -1415,7 +1440,7 @@ file-transfer command-line feature.
 
 =end html
 
-=over 2
+=over 4
 
 =item
 
