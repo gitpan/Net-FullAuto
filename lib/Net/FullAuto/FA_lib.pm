@@ -137,9 +137,18 @@ BEGIN {
 
    our $fa_hosts='';
    if (defined $main::fa_hosts) {
-      require $main::fa_hosts;
-      import $main::fa_hosts;
-      $fa_hosts=$main::fa_hosts;
+      if (-1<index $main::fa_hosts,'/') {
+         require $main::fa_hosts;
+         my $mc=substr($main::fa_hosts,
+                (rindex $main::fa_hosts, '/')+1,-3);
+         import $fh;
+         $fa_hosts=$fh.'.pm';
+      } else {
+         require $main::fa_hosts;
+         my $fh=substr($main::fa_hosts,0,-3);
+         import $fh;
+         $fa_hosts=$main::fa_hosts;
+      }
    } else {
       require 'Net/FullAuto/fa_hosts.pm';
       import fa_hosts;
@@ -148,20 +157,23 @@ BEGIN {
 
    our $fa_maps='';
    if (defined $main::fa_maps) {
-      require $main::fa_maps;
-      import $main::fa_maps;
-      $fa_maps=$main::fa_maps;
+      if (-1<index $main::fa_maps,'/') {
+         require $main::fa_maps;
+         my $fm=substr($main::fa_maps,
+                (rindex $main::fa_maps, '/')+1,-3);
+         import $fm;
+         $fa_maps=$fm.'.pm';
+      } else {
+         require $main::fa_maps;
+         my $fm=substr($main::fa_maps,0,-3);
+         import $fm;
+         $fa_maps=$fm.'.pm';
+      }
    } else {
       require 'Net/FullAuto/fa_maps.pm';
       import fa_maps;
       $fa_maps='fa_maps.pm';
    }
-
-   #our $fa_hosts='fa_hosts.pm';
-   #require $fa_hosts;
-
-   #our $fa_maps='fa_maps.pm';
-   #require $fa_maps;
 
    our $fasetuid='fasetuid.pm';
    if (-f substr($0,0,(rindex $0,'/')+1).$fasetuid) {

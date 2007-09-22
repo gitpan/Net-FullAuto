@@ -28,6 +28,7 @@ package usr_code;
 
 our $test=0;our $timeout=0;
 require Exporter;
+our $VERSION = 1.00;
 use warnings;
 use MemHandle;
 #use threads ();

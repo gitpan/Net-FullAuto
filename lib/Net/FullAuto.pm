@@ -33,7 +33,7 @@ package Net::FullAuto;
 #
 ################################################################
 
-our $VERSION='0.10';
+our $VERSION='0.11';
 use 5.002;
 
 BEGIN {
@@ -494,7 +494,7 @@ If you don't have a working C<cpan>, then perhaps you can find some assitance he
 
   http://sial.org/howto/perl/life-with-cpan/
 
-Otherwise, you will have to manually install the additional modules from the CPAN (Comprehensive Perl Archive Network) that are required byS<  >C<Net::FullAuto>. Note also that at least one required module -S<  >C<IO::Pty>, will require the use of a C compiler on your local host. The following CPAN modules are required byS<  >C<Net::FullAuto>S< >:
+Otherwise, you will have to manually install the additional modules from the CPAN ( Comprehensive Perl Archive Network - http://www.cpan.org ) that are required byS<  >C<Net::FullAuto>. Note also that at least one required module -S<  >C<IO::Pty>, will require the use of a C compiler on your local host. The following CPAN modules are required byS<  >C<Net::FullAuto>S< >:
 
    -  Sort::Versions 
    -  Crypt::CBC
@@ -513,6 +513,51 @@ Otherwise, you will have to manually install the additional modules from the CPA
    -  Term::Menus >= Version 1.24
    -  Tie::Cache
    -  URI
+
+=item 3. Check for a working C compiler
+
+=begin html <br>
+
+=end html
+
+C<Net::Fullauto>S<  >requires S<  >C<IO::Pty>, and this module needs to be compiled locally with a C compiler. Check for an installation ofS<  >C<cc>S<  >orS<  >C<gcc>S<  >.
+
+   $ gcc --version
+   gcc (GCC) 3.4.2 20041017 (Red Hat 3.4.2-6.fc3)
+   * Copyright (C) 2004 Free Software Foundation, Inc.
+   * This is free software; see the source for copying conditions.  There is NO
+   * warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=item 4. ViaS<  >C<cpan>,S<  >installS<  >C<Net::FullAuto>.
+
+=begin html <br>
+
+=end html
+
+   $ cpan
+   CPAN: File::HomeDir loaded ok (v0.65)
+
+   cpan shell -- CPAN exploration and modules installation (v1.9102)
+   ReadLine support enabled
+
+
+   cpan[1]> install Net::FullAuto
+
+=item 5. Create or modifyS<  >C<fa_hosts.pm>S<  >file.
+
+=begin html <br>
+
+=end html
+
+See theS<  >C<fa_hosts.pm>S<  > B<Setup and Location> section below.
+
+=item 6. Create or modifyS<  >C<usr_code.pm>S<  >file.
+
+=begin html <br>
+
+=end html
+
+See theS<  >C<usr_code.pm>S<  > B<Setup and Location> section below.
 
 =back
 
@@ -715,7 +760,7 @@ S<The following is typical contents of a  C<usr_code.pm>
         ## Important! The '1' at the Bottom is NEEDED!
         1 
 
-=head2 S<  >C<fa_hosts.pm>S<  >HOST BLOCK KEY ELEMENTS
+=head1 S<  >C<fa_hosts.pm>S<  >HOST BLOCK KEY ELEMENTS
 
 =over 4
 
@@ -791,7 +836,7 @@ S<                 >C<LogFile =>>C< "/tmp/FAlog${$}d" .
 
 =back
 
-=head1 METHODS
+=head1 S<  >C<usr_code.pm>S<  >METHODS
 
 =over 4
 

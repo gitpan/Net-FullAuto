@@ -28,7 +28,7 @@ package menu_cfg;
 
 require Exporter;
 our @ISA = qw(Exporter);
-$VERSION = 1.00;
+our $VERSION = 1.00;
 
 our @EXPORT = qw(%Menu_1 %Menu_2 %Menu_5 %Menu_15 %Menu_30);
 
