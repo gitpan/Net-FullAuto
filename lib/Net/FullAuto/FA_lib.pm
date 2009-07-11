@@ -4808,7 +4808,7 @@ print $Net::FullAuto::FA_lib::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
 
          ## Make sure prompt won't match anything in send data.
          $local_host->prompt("/_funkyPrompt_\$/");
-         $local_host->print("export PS1=_funkyPrompt_");
+         $local_host->print("export PS1=_funkyPrompt_;unset PROMPT_COMMAND");
          $localhost->{_ftm_type}='';
          $localhost->{_cwd}='';
          $localhost->{_hostlabel}=[ "__Master_${$}__",'' ];
@@ -4969,19 +4969,25 @@ print $Net::FullAuto::FA_lib::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
             &handle_error($su_err,'-1') if $su_err;
          }
 
-         if ($su_id && $OS ne 'cygwin') {
+         if ($OS ne 'cygwin') {
 
-            ($output,$stderr)=
-               &Net::FullAuto::FA_lib::clean_filehandle($local_host);
-            if ($stderr) {
-               &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
-                  if $stderr=~/Connection closed/s;
-               &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+            if ($su_id) {
+
+               ($output,$stderr)=
+                  &Net::FullAuto::FA_lib::clean_filehandle($local_host);
+               if ($stderr) {
+                  &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
+                     if $stderr=~/Connection closed/s;
+                  &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+               }
+               ($ignore,$su_err)=&su($local_host,$hostlabel,
+                       $login_id,$su_id,$hostname,
+                       $ip,$use,$login_Mast_error);
+               &handle_error($su_err,'-1') if $su_err;
+            } else {
+               ($output,$stderr)=
+                  &Net::FullAuto::FA_lib::clean_filehandle($local_host);
             }
-            ($ignore,$su_err)=&su($local_host,$hostlabel,
-                    $login_id,$su_id,$hostname,
-                    $ip,$use,$login_Mast_error);
-            &handle_error($su_err,'-1') if $su_err;
 
          }
 
@@ -5397,7 +5403,7 @@ print $Net::FullAuto::FA_lib::MRLOG "su() PASSFLAG=$pass_flag\n"
    ## Make sure prompt won't match anything in send data.
    my $prompt = '_funkyPrompt_';
    $fh->prompt("/$prompt\$/");
-   $fh->print("export PS1=$prompt");
+   $fh->print("export PS1=$prompt;unset PROMPT_COMMAND");
    while (my $line=$fh->get) {
       last if $line=~/$prompt$/s;
    }
@@ -7241,7 +7247,7 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         delete $Net::FullAuto::FA_lib::tiedb{$synctimepid};
                      }
                      $ftr_cmd->{_cmd_handle}->cmd(
-                        "export PS1='_funkyPrompt_'");
+                        "export PS1='_funkyPrompt_';unset PROMPT_COMMAND");
                      $ftr_cmd->{_cmd_handle}->prompt("/_funkyPrompt_\$/");
 
                      ($output,$stderr)=
@@ -7299,7 +7305,7 @@ print "GOOD - SCRUBBING\n";
 
                }
                $ftr_cmd->{_cmd_handle}->cmd(
-                  "export PS1='_funkyPrompt_'");
+                  "export PS1='_funkyPrompt_';unset PROMPT_COMMAND");
                $ftr_cmd->{_cmd_handle}->prompt("/_funkyPrompt_\$/");
                if ($hostlabel eq $host_label) {
 print "FTR_RETURN4\n";
@@ -14820,7 +14826,7 @@ print $Net::FullAuto::FA_lib::MRLOG "SHELL_PIDRRRRR**BBBB=$shell_pid<==\n"
             if ($shell eq 'bash' || $shell eq 'ksh' || $shell eq 'sh') {
                my $fp=$funkyprompt;
                $fp=~s/\\\\/\\\\\\\\/g;
-               $cmd_handle->print("PS1=`printf $fp`;export PS1");
+               $cmd_handle->print("PS1=`printf $fp`;export PS1;unset PROMPT_COMMAND");
                while (my $line=$cmd_handle->get) {
                   $out.=$line;
                   chomp($out=~tr/\0-\37\177-\377//d);   
@@ -14908,7 +14914,7 @@ print $Net::FullAuto::FA_lib::MRLOG
                   &Net::FullAuto::FA_lib::handle_error($su_err) if $su_err;
                   # Make sure prompt won't match anything in send data.
                   $cmd_handle->prompt("/$prompt\$/");
-                  $cmd_handle->print("export PS1=\'$prompt\'");
+                  $cmd_handle->print("export PS1=\'$prompt\';unset PROMPT_COMMAND");
 
                   ($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
                   if ($stderr) {
@@ -16129,6 +16135,7 @@ print $Net::FullAuto::FA_lib::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
             push @FA_lib::pid_ts, $pid_ts;
             my $t=$self->{_work_dirs}->{_tmp_mswin}.'\\';
             $t=~s/\\/\\\\/g;
+            $t=~s/\\$//mg;
             my $str="echo \"del ${t}end${pid_ts}.flg ${t}cmd${pid_ts}.bat"
                    ." ${t}out${pid_ts}.txt ${t}err${pid_ts}.txt\""
                    ." > ${t}rm${pid_ts}.bat";
@@ -16141,6 +16148,7 @@ print $Net::FullAuto::FA_lib::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                   ($cmmd=$cmd)=~s/^\s*[cC][mM][dD]\s+\/[cC]\s+(.*)$/$1/;
                   $cmmd=~tr/\'/\"/;
                   $cmmd=~s/\\/\\\\/g;
+                  $cmmd=~s/\\$//mg;
                   $cmmd=~s/\"/\\\"/g;
                   if (!$ccnt++) {
                      if (unpack('a4',$cmmd) eq 'set ') {
@@ -16208,6 +16216,7 @@ print $Net::FullAuto::FA_lib::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                ($cmmd=$command)=~s/^\s*[cC][mM][dD]\s+\/[cC]\s+(.*)$/$1/;
                $cmmd=~tr/\'/\"/;
                $cmmd=~s/\\/\\\\/g;
+               $cmmd=~s/\\$//mg;
                $cmmd=~s/\"/\\\"/g;
                $str="echo \"$cmmd 2>${t}err${pid_ts}.txt 1>${t}out${pid_ts}"
                    .".txt\" > ${t}cmd${pid_ts}.bat";
@@ -16406,6 +16415,7 @@ print "BIGGOOOPUTPUT=$output<== and PRE=$self->{_work_dirs}->{_pre} and TMP=$sel
                         }
                         my $freecmd='';
                         ($freecmd=$self->{_freemem}->[0])=~s/\\/\\\\/g;
+                        ($freecmd=$self->{_freemem}->[0])=~s/\\$//mg;
                         $str="echo cmd /c \\\"$freecmd\\\" dir"
                             ." >> freemem${pid_ts}.bat";
                         $self->{_cmd_handle}->print("$str");
@@ -16638,6 +16648,7 @@ print $Net::FullAuto::FA_lib::MRLOG "LIVE_COMMAND=$live_command and ",
                      if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
             $self->{_cmd_handle}->timeout($cmtimeout);
             $live_command=~s/\\/\\\\/g;
+            $live_command=~s/\\$//mg;
             $self->{_cmd_handle}->print($live_command);
             my $growoutput='';my $ready='';my $firstout=0;
             my $fulloutput='';my $lastline='';my $errflag='';
@@ -17266,7 +17277,7 @@ foreach my $line (reverse split /^/, $fulloutput) {
    last if $lcntt++==5;
 }
 print $Net::FullAuto::FA_lib::MRLOG "DOIN FULLOUTPUTMAYBE==>$newline<==",
-   " and LASTLINE=$lastline<==\n"
+   " and LASTLINE=$lastline and CMD_PROMPT=$cmd_prompt<== and FO=$fulloutput<==\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                      if (!$lastline) {
                         if ($retry++<3) {
@@ -17351,8 +17362,8 @@ print $Net::FullAuto::FA_lib::MRLOG "DOIN FULLERROR2222==>$line<==\n"
                         chomp $stdout if $stdout;
                         chomp $stderr if $stderr;
                         last;
-                     } elsif ($lastline=~/$cmd_prompt/) {
-print "WE HAVE LASTLINE CMDPROMPT AND ARE GOING TO EXIT and FO=$fulloutput and MS_CMD=$ms_cmd<==\n"
+                     } elsif (-1<index $lastline, $cmd_prompt) {
+print $Net::FullAuto::FA_lib::MRLOG "WE HAVE LASTLINE CMDPROMPT AND ARE GOING TO EXIT and FO=$fulloutput and MS_CMD=$ms_cmd<==\n"
    if !$Net::FullAuto::FA_lib::cron && $debug;
                         if ($ms_cmd) {
                            $stdout=$fullerror;
@@ -17442,8 +17453,9 @@ print $Net::FullAuto::FA_lib::MRLOG "PAST THE ALARM5\n"
       } else {
          $self->{_cmd_handle}->timeout($svtimeout);
       }
-print $Net::FullAuto::FA_lib::MRLOG "EVAL_ERROR=$eval_error and STDERR=$stderr\n" if
-   $stderr or $eval_error;
+print $Net::FullAuto::FA_lib::MRLOG "EVAL_ERROR=$eval_error and STDERR=$stderr\n"
+      if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*'
+         && $stderr or $eval_error;
       $eval_error=$stderr if $stderr && !$eval_error; 
       if ($eval_error) {
          #print "ERROR THROWN! in Rem_Command::cmd()\n"
