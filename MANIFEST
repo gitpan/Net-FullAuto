@@ -1,4 +1,4 @@
-bin/fullauto
+bin/fullauto.pl
 Build.PL
 ChangeLog
 inc/Module/AutoInstall.pm
