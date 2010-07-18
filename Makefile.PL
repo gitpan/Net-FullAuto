@@ -2,6 +2,7 @@
 use inc::Module::Install;
 use Config;
 use POSIX qw/strftime/;
+use Term::Menus;
 
 # Define metadata
 name            'Net-FullAuto';
@@ -107,29 +108,47 @@ print FH '/* program: fullauto'."\n".
 
 close FH;
 
-install_script 'bin/fullauto';
+my @list=('Default','Setuid','Setgid');
+my %Menu_1=(
+
+   Item_1 => {
+
+      Text    => "Install with ]Convey[ Permissions",
+      Convey  => \@list,
+#      Default => 'Default'
+
+   },
+
+   Select => 'One',
+   Banner => "\n   Choose a Permission Setting :"
+);
+
+my $selection=&Menu(\%Menu_1);
+my $permission = 'Default';
+print "SELECTION = $selection\n";
+
+if (-1<index $selection,'Setuid') {
+   $permission = 'Setuid';
+} elsif (-1<index $selection,'Setgid') {
+   $permission = 'Setgid';
+}
+
+if ($^O eq 'cygwin') {
+   install_script 'bin/fullauto.exe';
+} else {
+   install_script 'bin/fullauto';
+}
 install_script 'bin/fullauto.pl';
 
 auto_install;
 WriteAll;
-
-package MY; # so that "SUPER works right
-sub MY::installbin {
-
-   my $inherited = shift->SUPER::installbin(@_);
-   
-   $inherited =~ s/RM_F\) \\/RM_F\) bin\/fullauto\$(EXE_EXT) fullauto.c fullauto\$(EXE_EXT)\\/;
-
-   $inherited;
-
-}
 
 package MY; # so that "SUPER" works right
 sub MY::top_targets {
 
    my $inherited = shift->SUPER::top_targets(@_);
 
-   $inherited =~ s/pure_all :: /pure_all :: fullauto /;
+   $inherited =~ s/pure_all :: /pure_all :: fullauto\$(EXE_EXT) /;
    $inherited =~ s/ linkext//;
 
    $inherited;
@@ -141,9 +160,77 @@ sub makefile {
 
    my $inherited = shift->SUPER::makefile(@_);
 
-   $inherited .= "fullauto: fullauto.c\n\t\$(CC) fullauto.c -o \$@".
-                 "\n\t\$(CP) \$@\$(EXE_EXT) bin";
+   $inherited .= "fullauto\$(EXE_EXT): fullauto.c\n\t\$(CC) fullauto.c -o \$@".
+                 "\n\t\$(CP) \$@ bin\n\n";
 
    $inherited;
 
 }
+
+package MY; # so that "SUPER" works right
+sub constants {
+
+   my $inherited = shift->SUPER::constants(@_);
+
+   $inherited =~ 
+      s/(PERM_RWX = \d+)/$1\nPERM_S_X = 4511\nPERM_G_X = 2511/m;
+   $inherited =~
+      s/(PERM_G_X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 500/m;
+   $inherited =~
+      s/(PERM_R_X = \d+)/$1\nPERM_D-X = 750\nPERM_D_X = 700/m;
+
+
+   $inherited;
+
+}
+
+package MY; # so that "SUPER works right
+sub MY::installbin {
+
+   my $inherited = shift->SUPER::installbin(@_);
+
+   $inherited =~ s/RM_F\) \\/RM_F\) bin\/fullauto\$(EXE_EXT) fullauto.c fullauto\$(EXE_EXT)\\/;
+
+   $inherited;
+
+}
+
+package MY; # so that "SUPER" works right
+sub install {
+
+   my $inherited = shift->SUPER::install(@_);
+
+   if ($permission eq 'Setuid') {
+      $inherited =~ s/(install ::.*)$/$1 setuid_permissions/m;
+   } elsif ($permission eq 'Setgid') {
+      $inherited =~ s/(install ::.*)$/$1 setgid_permissions/m;
+   } else {
+      $inherited =~ s/(install ::.*)$/$1 default_permissions/m;
+   }
+
+   $inherited .= "\nsetuid_permissions ::\n".
+      "\t\$(NOECHO) \$(ECHO) \"Applying Setuid Permissions\"\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_S_X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_D_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n\n";
+   $inherited .= "\nsetgid_permissions ::\n".
+      "\t\$(NOECHO) \$(ECHO) \"Applying Setgid Permissions\"\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_G_X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R-X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R-X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_D-X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R-X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n\n";
+   $inherited .= "\ndefault_permissions ::\n".
+      "\t\$(NOECHO) \$(ECHO) \"Applying Default Permissions\"\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_DIR) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n\n"; 
+
+   $inherited;
+
+}
+

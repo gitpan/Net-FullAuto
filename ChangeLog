@@ -24,7 +24,15 @@
 #
 ################################################################
 
-2010-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2010-07-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.14 released.
+
+        * More Build modifications to compile C Wrapper fullauto(.exe)
+          to fullauto.pl to use with setuid and setgid
+
+
+2010-07-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.13 released.
 
