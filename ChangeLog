@@ -24,12 +24,27 @@
 #
 ################################################################
 
+
+2010-07-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.16 released.
+
+        * Fixed cygwin output fetching from socket bugs
+
+
 2010-07-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.15 released.
+
+        * Fixed setgid build and runtime bugs
+
+
+2010-07-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.14 released.
 
-        * More Build modifications to compile C Wrapper fullauto(.exe)
-          to fullauto.pl to use with setuid and setgid
+        * Modifed Makefile.PL to install setuid, and setgid
+          configurations
 
 
 2010-07-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>

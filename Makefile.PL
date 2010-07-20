@@ -173,7 +173,7 @@ sub constants {
    my $inherited = shift->SUPER::constants(@_);
 
    $inherited =~ 
-      s/(PERM_RWX = \d+)/$1\nPERM_S_X = 4511\nPERM_G_X = 2511/m;
+      s/(PERM_RWX = \d+)/$1\nPERM_S_X = 4511\nPERM_G_X = 2551/m;
    $inherited =~
       s/(PERM_G_X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 500/m;
    $inherited =~
