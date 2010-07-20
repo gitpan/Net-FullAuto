@@ -27,6 +27,14 @@
 
 2010-07-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.17 released.
+
+        * Added line to unset environment DISPLAY setting in
+          forked processes
+
+
+2010-07-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.16 released.
 
         * Fixed cygwin output fetching from socket bugs

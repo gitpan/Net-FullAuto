@@ -2497,7 +2497,6 @@ sub pty_do_cmd
          }
       }
    }
-#print "WHAT IS ARG4=$four<==";
    while (1) {
       my $m="Hint: Try Rebooting the Local Host";
       eval {
@@ -2536,6 +2535,7 @@ sub pty_do_cmd
       $ENV{ENV}=~/^(.*)$/;
       $ENV{ENV}=$1;
    }
+   $ENV{DISPLAY}='';
    print "\n";
 
    if ($three) {
