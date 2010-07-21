@@ -29,7 +29,8 @@ package Net::FullAuto::FA_lib;
 ## For Testing Multiple Iterations in a BASH shell environment
 #
 #  num=0; while (( $num < 1000 )); do ./fullauto.pl --login *******
-#  --password ******** --usr_code test_this --log; let num+=1; done
+#  --password ******** --usr_code hello_world --log; let num+=1;
+#  echo "FINISHED NUM=$num"; done
 
 BEGIN {
 
@@ -101,6 +102,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use HTTP::Date ();
    use IO::Handle;
    use IO::Select;
+   use IO::Capture::Stderr;
    use Symbol qw(qualify_to_ref);
    use Tie::Cache;
    use IO::Pty;
@@ -2484,10 +2486,32 @@ sub pty_do_cmd
 {
 #print "PTY_CALLER=",caller,"\n";
    my ($cmd,@args)=@_;
-   my $pty = IO::Pty->new or &Net::FullAuto::FA_lib::handle_error("can't make Pty: ".($!));
-   my $try=0;my $child='';
+   my $pty='';my $pty_err='';my $try=0;
+   my $capture = IO::Capture::Stderr->new();
+   $capture->start();
+   while (1) {
+      my $m="Hint: Try Rebooting the Local Host";
+      eval {
+         $pty = IO::Pty->new;
+      };
+      if ($@) {
+         if ($@=~/Cannot open/is && $try++!=4) {
+            sleep $try;next;
+         } else {
+            my @all_lines = $capture->read;
+            $capture->stop();
+            &Net::FullAuto::FA_lib::handle_error(
+               $@."\n        $all_lines[$#all_lines]\n       $m");
+         }
+      } else { last }
+   }
+   $capture->stop();
+   $try=0;my $child='';
    my $cmd_err=join ' ',@{$cmd};
-   my $one=shift @{$cmd};my $two='';my $three='';my $four='';
+   my $one=shift @{$cmd};
+   my $doslave=${$cmd}[$#cmd] eq '_slave_' ? pop @{$cmd} : '';
+   my $two='';my $three='';
+   my $four='';my $five='';
    if (-1<$#{$cmd}) {
       $two=shift @{$cmd};
       if (-1<$#{$cmd}) {
@@ -2500,14 +2524,13 @@ sub pty_do_cmd
    while (1) {
       my $m="Hint: Try Rebooting the Local Host";
       eval {
-         defined ($child = fork) or
-            &handle_error("Can't fork: ");
+         $child = fork;
       };
       if ($@) {
          if ($@=~/temporarily unavailable/ && $try++!=4) {
             sleep 5;next;
          } else {
-            &handle_error($@);
+            &Net::FullAuto::FA_lib::handle_error($@."\n       $m");
          }
       } else { last }
    }
@@ -2515,7 +2538,7 @@ sub pty_do_cmd
    POSIX::setsid or &handle_error("setsid failed: ".($!));
    my $tty = $pty->slave;
    $pty->make_slave_controlling_terminal
-      if $Net::FullAuto::FA_lib::OS eq 'cygwin' || $four;
+      if ($Net::FullAuto::FA_lib::OS eq 'cygwin') || ($doslave eq '_slave_');
    CORE::close $pty;
 
    STDIN->fdopen($tty,"<")  or &handle_error("STDIN: ".($!));
@@ -2538,7 +2561,10 @@ sub pty_do_cmd
    $ENV{DISPLAY}='';
    print "\n";
 
-   if ($three) {
+   if ($four) {
+      exec $one, $two, $three, $four ||
+         &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+   } elsif ($three) {
       exec $one, $two, $three ||
          &handle_error("Couldn't exec: $cmd_err".($!),'-1');
    } elsif ($two) {
@@ -2612,28 +2638,38 @@ sub test_dir
    my $shell_cmd="if\n[[ -d $tdir ]]\nthen\nif\n[[ -w $tdir ]]"
                 ."\nthen\necho WRITE\nelse\necho READ\nfi\n"
                 ."else\necho NODIR\nfi;printf \\\\055";
-   $cmd_handle->print($shell_cmd);
-   my $leave=0;my $l='';
-   TD: while (1) {
-      while (my $line=$cmd_handle->get) {
-         $l.=$line;
-         if ($l=~/printf/s) {
-            if ($line=~/^WRITE/m) {
-               $test_result='WRITE';
-               $leave=1;
-            } elsif ($line=~/^READ/m) {
-               $test_result='READ';
-               $leave=1;
-            } elsif ($line=~/^NODIR/m) {
-               $test_result=0;
-               $leave=1;
+   my $cnt=5;
+   while ($cnt--) {
+      $cmd_handle->print($shell_cmd);
+      my $leave=0;my $l='';
+      TD: while (1) {
+         while (my $line=$cmd_handle->get) {
+            $l.=$line;
+            if ($l=~/printf/s) {
+               if ($line=~/^WRITE/m) {
+                  $test_result='WRITE';
+                  $leave=1;
+               } elsif ($line=~/^READ/m) {
+                  $test_result='READ';
+                  $leave=1;
+               } elsif ($line=~/^NODIR/m) {
+                  $test_result=0;
+                  $leave=1;
+               }
             }
-         }
-         if ($l=~/-\s*_funkyPrompt_/s) {
-            last TD;
-         }
+            if ($l=~/-\s*_funkyPrompt_/s) {
+               last TD;
+            }
+         } last if $leave;
+         $cmd_handle->print;
       } last if $leave;
-      $cmd_handle->print;
+      ($output,$stderr)=
+         &Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+      if ($stderr) {
+         &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
+            if $stderr=~/Connection closed/s;
+         &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+      }
    } return $test_result;
 
 }
@@ -2759,8 +2795,22 @@ else { $Net::FullAuto::FA_lib::log=1 }
 
 sub push_cmd
 {
+   my @topcaller=caller;
+   print "\nINFO: main::push_cmd() (((((((CALLER))))))):\n\t",(join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_lib::debug;
+   print $Net::FullAuto::FA_lib::MRLOG "\nmain::push_cmd() (((((((CALLER))))))):\n\t",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_lib::log &&
+      -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    my $cmd_handle=$_[0];
    my $cmd=$_[1];
+   my $output='';my $stderr='';my $ignore='';
+   ($ignore,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+   if ($stderr) {
+      &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
+         if $stderr=~/Connection closed/s;
+      &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+   }
    if (-1==index $cmd_handle,'GLOB' || !defined fileno $cmd_handle) {
       if (-1==index $cmd_handle,'GLOB') {
          eval {
@@ -2787,15 +2837,25 @@ sub push_cmd
    }
    $hostlabel=$_[2];
    my $cou=100;
-   my $output='';my $stderr='';
    while ($cou--) {
       ($output,$stderr)=Rem_Command::cmd(
          { _cmd_handle=>$cmd_handle,
            _hostlabel=>[ $hostlabel,'' ] },
            $cmd,__live__);
-print "XXXXXXXXXXXXXXOUT=$output<==\n";
+      print "\nOUTPUT FROM \"push_cmd()\" (problamatic cmds that often need to be tried",
+         " more than once):\n\t==>$output<== at Line ",__LINE__,"\n\n"
+         if !$Net::FullAuto::FA_lib::cron && $Net::FullAuto::FA_lib::debug;
+      print $Net::FullAuto::FA_lib::MRLOG
+          "\nOUTPUT FROM \"push_cmd()\" (problamatic cmds that often need to be tried",
+         " more than once):\n\t==>$output<== at Line ",__LINE__,"\n\n"
+         if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
       if (!$output) {
-         #&Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+         ($ignore,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+         if ($stderr) {
+            &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
+               if $stderr=~/Connection closed/s;
+            &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+         }
          select(undef,undef,undef,0.02);
          $cmd_handle->print(
             'printf \\\\041\\\\041;$cmd;printf \\\\045\\\\045');
@@ -2817,10 +2877,21 @@ print $Net::FullAuto::FA_lib::MRLOG "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<==\n"
                $cmd_handle->print;
                last;
             }
-         } &Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+         }
+         ($ignore,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+         if ($stderr) {
+            &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
+               if $stderr=~/Connection closed/s;
+            &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+         }
       } else { last }
    }
-   &Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+   ($ignore,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+   if ($stderr) {
+      &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
+         if $stderr=~/Connection closed/s;
+      &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+   }
    return $output;
 }
 
@@ -2940,7 +3011,15 @@ print "WHAT IS SCREWED CURDIR=$curdir<====\n";
    }
    if ($OS eq 'cygwin') {
       ($output,$stderr)=$localhost->cmd("cd /tmp");
-      if (!$stderr) {
+      print $Net::FullAuto::FA_lib::MRLOG
+         "\nTTTTTTT cd /tmp TTTTTTT OUTPUT ==>$output<== and STDERR ==>$stderr<==",
+         "\n\tat Line ",__LINE__,"\n\n"
+         if $Net::FullAuto::FA_lib::log &&
+         -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+      print "\nTTTTTTT cd /tmp TTTTTTT OUTPUT ==>$output<== and STDERR ==>$stderr<==",
+         "\n\tat Line ",__LINE__,"\n\n"
+         if !$Net::FullAuto::FA_lib::cron && $debug;
+      if (!$stderr || ($stderr eq 'cd /tmp 2>&1')) {
          $curdir=&Net::FullAuto::FA_lib::push_cmd($localhost,'cmd /c chdir',
                  $localhost->{'hostlabel'}[0]);
          my ($drive,$path)=unpack('a1 x1 a*',$curdir);
@@ -2948,6 +3027,14 @@ print "WHAT IS SCREWED CURDIR=$curdir<====\n";
                  .lc($drive).$path.'/';
          $tdir=~tr/\\/\//;
          my $testd=&test_dir($localhost->{_cmd_handle},$tdir);
+         print $Net::FullAuto::FA_lib::MRLOG
+            "\nDDDDDDD &test_dir() of $tdir DDDDDDD OUTPUT ==>$testd<==",
+            "\n\tat Line ",__LINE__,"\n\n"
+            if $Net::FullAuto::FA_lib::log &&
+            -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+         print "\nDDDDDDD &test_dir of $tdir DDDDDDD OUTPUT ==>$testd<==",
+            "\n\tat Line ",__LINE__,"\n\n"
+            if !$Net::FullAuto::FA_lib::cron && $debug;
          if ($testd eq 'WRITE') {
             ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$curdir.'\\';
             ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=$tdir;
@@ -4755,14 +4842,25 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
                if (exists $Hosts{"__Master_${$}__"}{'ssh'}) {
                   $sshpath=$Hosts{"__Master_${$}__"}{'ssh'};
                   $sshpath.='/' if $sshpath!~/\/$/;
+               } my $sshport='';
+               if (exists $Hosts{"__Master_${$}__"}{'sshport'}) {
+                  $sshport=$Hosts{"__Master_${$}__"}{'sshport'};
                }
                my $try_count=0;
                while (1) {
-                  ($local_host,$cmd_pid)=&Net::FullAuto::FA_lib::pty_do_cmd(
-                     ["${sshpath}ssh","$login_id\@localhost",
-                      '',$Net::FullAuto::FA_lib::slave])
-                     or &Net::FullAuto::FA_lib::handle_error(
-                     "couldn't launch ssh subprocess");
+                  if ($sshport) {
+                     ($local_host,$cmd_pid)=&Net::FullAuto::FA_lib::pty_do_cmd(
+                        ["${sshpath}ssh","-p$sshport","$login_id\@localhost",
+                        '',$Net::FullAuto::FA_lib::slave])
+                        or &Net::FullAuto::FA_lib::handle_error(
+                       "couldn't launch ssh subprocess");
+                  } else {
+                     ($local_host,$cmd_pid)=&Net::FullAuto::FA_lib::pty_do_cmd(
+                        ["${sshpath}ssh","$login_id\@localhost",
+                         '',$Net::FullAuto::FA_lib::slave])
+                        or &Net::FullAuto::FA_lib::handle_error(
+                        "couldn't launch ssh subprocess");
+                  }
                   $localhost->{_cmd_pid}=$cmd_pid;
                   print $Net::FullAuto::FA_lib::MRLOG
                      "SSH_Pid=$cmd_pid at Line ", __LINE__,"<==\n"
@@ -4790,7 +4888,7 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
                         ($stdout,$stderr)=&kill($cmd_pid,9)
                            if &testpid($cmd_pid);
-                        $Net::FullAuto::FA_lib::slave=1;next
+                        $Net::FullAuto::FA_lib::slave='_slave_';next
                      } elsif (3<$try_count++) {
                         &Net::FullAuto::FA_lib::handle_error($stderr)
                      } else { sleep 1;next }
@@ -4810,7 +4908,8 @@ print $Net::FullAuto::FA_lib::MRLOG "PRINTING PASSWORD NOW<==\n"
             if ($OS ne 'cygwin') {
                print $blanklines;
             } else { print "\n\n" }
-            print "--> LoggingA into $host via $cmd_type  . . .\n\n";
+            # LoggingA
+            print "--> Logging into $host via $cmd_type  . . .\n\n";
          }
 
          my $newpw='';$passline=__LINE__+1;
@@ -4865,7 +4964,7 @@ print $Net::FullAuto::FA_lib::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
             my $_sh_pid='';
             ($_sh_pid,$stderr)=Rem_Command::cmd(
                $localhost,'echo $$');
-print $Net::FullAuto::FA_lib::MRLOG "LOCAL_sh_pid=$localhost->{_sh_pid}\n"
+print $Net::FullAuto::FA_lib::MRLOG "LOCAL_sh_pid=$_sh_pid<==\n"
    if $Net::FullAuto::FA_lib::log &&
    -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
             $_sh_pid||=0;
@@ -4873,6 +4972,9 @@ print $Net::FullAuto::FA_lib::MRLOG "LOCAL_sh_pid=$localhost->{_sh_pid}\n"
             $_sh_pid=$1;
             chomp($_sh_pid=~tr/\0-\11\13-\37\177-\377//d);
             $localhost->{_sh_pid}=$_sh_pid;
+print $Net::FullAuto::FA_lib::MRLOG "ERROR LOCALLLLLLLLLLLLLLLLLLLL_sh_pid=$localhost->{_sh_pid}<==\n"
+   if $Net::FullAuto::FA_lib::log &&
+   -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
             if (!$localhost->{_sh_pid}) {
                $localhost->print;
                $localhost->print(
@@ -4912,19 +5014,12 @@ print $Net::FullAuto::FA_lib::MRLOG
    -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
             } else { last }
             last if $localhost->{_sh_pid} && $localhost->{_sh_pid}=~/^\d+$/;
-            #($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($local_host);
+            ($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($local_host);
             if ($stderr || $wloop++==10) {
                &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
                   if $stderr=~/Connection closed/s;
                &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
             }
-            ($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($local_host);
-            if ($stderr) {
-               &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
-                  if $stderr=~/Connection closed/s;
-               &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
-            }
-
          }
  
          &su_scrub($hostlabel) if $su_scrub;
@@ -5110,6 +5205,8 @@ print $Net::FullAuto::FA_lib::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                (-1<index $login_Mast_error,$passline)) {
             if ($retrys<2 && -1<index $login_Mast_error,'timed-out') {
 print $Net::FullAuto::FA_lib::MRLOG "WE ARE RETRYING LOGINMASTERERROR=$login_Mast_error\n";
+               my $psoutput=`${pspath}ps`;
+print $Net::FullAuto::FA_lib::MRLOG "PSOUTPUTTTTTTTTTTTT=$psoutput<==\n";
                $retrys++;
                if (-1<index $login_Mast_error,'read') {
                   next;
@@ -8913,11 +9010,14 @@ sub wait_for_ftr_passwd_prompt
    eval {
       while (1) {
          PW: while (my $line=$filehandle->{_cmd_handle}->get(Timeout=>5)) {
-            print "wait_for_ftr_passwd_prompt() OUTPUT_LINE=".
-                  "$line<==\n" if $debug;
-            print $Net::FullAuto::FA_lib::MRLOG "wait_for_ftr_passwd_prompt() ".
-                  "OUTPUT_LINE=$line<==\n" if $Net::FullAuto::FA_lib::log &&
-                  -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+            print $Net::FullAuto::FA_lib::MRLOG
+               "\nPPPPPPP wait_for_ftr_passwd_prompt() PPPPPPP ",
+               "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+               if $Net::FullAuto::FA_lib::log &&
+               -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+            print "\nPPPPPPP wait_for_ftr_passwd_prompt() PPPPPPP ",
+               "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+               if !$Net::FullAuto::FA_lib::cron && $debug;
             $lin.=$line;
             if (-1<index $line,'Permission denied') {
                die 'Permission denied';
@@ -11346,17 +11446,20 @@ sub get_drive
       } else { chdir $sav_curdir }
       $Net::FullAuto::FA_lib::drives{$hostlabel}=$drvs;
    }
-print "ARE WE HERE and what are DRVS=$drvs\n";
    foreach my $drv (split /\n/, $drvs) {
       last unless $drv;
       if ($cmd_handle) {
          my $result=&Net::FullAuto::FA_lib::test_dir($cmd_handle->{_cmd_handle},
             $cmd_handle->{_cygdrive}."/$drv/$dir/");
-         if ($result ne 'NODIR') { 
-            push @drvs, "$drv:\\$ms_dir\\";
+         if ($result ne 'NODIR') {
+            if ($ms_dir && $ms_dir ne '\\') {
+               push @drvs, "$drv:\\$ms_dir\\";
+            } else { push @drvs, "$drv:\\" }
          }
       } elsif (-d "$drv:\\$ms_dir") {
-         push @drvs, "$drv:\\$ms_dir\\";
+         if ($ms_dir && $ms_dir ne '\\') {
+            push @drvs, "$drv:\\$ms_dir\\";
+         } else { push @drvs, "$drv:\\" }
       }
    }
    if (-1<$#drvs) {
@@ -14650,16 +14753,26 @@ print $Net::FullAuto::FA_lib::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                   } elsif (lc($connect_method) eq 'ssh') {
                      $sshloginid=($use_su_login)?$su_id:$login_id;
                      eval {
-                        my $sshpath='';
                         if (exists $Hosts{"__Master_${$}__"}{'ssh'}) {
                            $sshpath=$Hosts{"__Master_${$}__"}{'ssh'};
                            $sshpath.='/' if $sshpath!~/\/$/;
+                        } my $sshport='';
+                        if (exists $Hosts{"__Master_${$}__"}{'sshport'}) {
+                           $sshport=$Hosts{"__Master_${$}__"}{'sshport'};
                         }
-                        ($cmd_handle,$cmd_pid)=&Net::FullAuto::FA_lib::pty_do_cmd(
-                           ["${sshpath}ssh",'-v',"$sshloginid\@$host",
-                            $Net::FullAuto::FA_lib::slave])
-                           or &Net::FullAuto::FA_lib::handle_error(
-                           "couldn't launch ssh subprocess");
+                        if ($sshport) {
+                           ($cmd_handle,$cmd_pid)=&Net::FullAuto::FA_lib::pty_do_cmd(
+                              ["${sshpath}ssh",'-v',"-p$sshport","$sshloginid\@$host",
+                              $Net::FullAuto::FA_lib::slave])
+                              or &Net::FullAuto::FA_lib::handle_error(
+                              "couldn't launch ssh subprocess");
+                        } else {
+                           ($cmd_handle,$cmd_pid)=&Net::FullAuto::FA_lib::pty_do_cmd(
+                              ["${sshpath}ssh",'-v',"$sshloginid\@$host",
+                              $Net::FullAuto::FA_lib::slave])
+                              or &Net::FullAuto::FA_lib::handle_error(
+                              "couldn't launch ssh subprocess");
+                        }
 #print "CMD_PIDSSHHHHHHHHHHH=$cmd_pid<=========\n";
                         $cmd_handle=Net::Telnet->new(Fhopen => $cmd_handle,
                            Timeout => $cdtimeout);
@@ -15999,7 +16112,7 @@ sub cmd
    my $ftp=0;my $live=0;my $display=0;my $log=0;
    my $wantarray= wantarray ? wantarray : '';
    my $cmtimeout='X';my $svtimeout='X';my $sem='';
-   my $notrap=0;
+   my $notrap=0;my $ignore='';
    if (defined $_[2] && $_[2]) {
       if ($_[2]=~/^[0-9]+/) {
          $cmtimeout=$_[2];
@@ -16680,29 +16793,27 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
             my $live_command='';
             if ($command=~/^cd[\t ]/) {
                $live_command="$command 2>&1";
-#print "WHAT IS THIS=$command\n";
                if (-1<$#{$self->{_hostlabel}} && $self->{_hostlabel}->[$#{$self->{_hostlabel}}]
                      eq "__Master_${$}__") {
                   my $lcd=$command;$lcd=~s/^cd[\t ]*//;
                   chdir $lcd;
                }
             #} elsif ($wantarray && !$ms_cmd) {
-            } elsif ($wantarray) {
+            #} elsif ($wantarray) {
+            } else {
                $live_command='('.$command.')'." | sed -e 's/^/stdout: /' 2>&1";
             }
             #} else {
             #   $live_command='('.$command.')';
             #}
             $live_command.=' &' if $bckgrd;
-print "LIVE_COMMAND_UNIX=$live_command and TIMEOUT=$cmtimeout and KEYSSELF="
-      ,keys %{$self},"\n";# if !$Net::FullAuto::FA_lib::cron && $debug;
             print $Net::FullAuto::FA_lib::MRLOG
-               "\n+++++++ RUNNING LIVE COMMAND +++++++: ==>$live_command<==\n\tand ",
+               "\n+++++++ RUNNING FULLAUTO MODIFIED COMMAND +++++++: ==>$live_command<==\n\tand ",
                "SELECT_TIMEOUT=$cmtimeout and KEYSSELF=",
                (join ' ',@{[keys %{$self}]}),"\n\n"
                if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
-            print "\n+++++++ RUNNING LIVE COMMAND +++++++: ==>$live_command<==\n\tand ",
-               "SELECT_TIMEOUT=$cmtimeout and KEYSSELF=",
+            print "\n+++++++ RUNNING FULLAUTO MODIFIED COMMAND +++++++: ==>$live_command<==\n\t",
+               "and ", "SELECT_TIMEOUT=$cmtimeout and KEYSSELF=",
                (join ' ',@{[keys %{$self}]}),"\n\n"
                if !$Net::FullAuto::FA_lib::cron && $debug;
             $self->{_cmd_handle}->timeout($cmtimeout);
@@ -16735,7 +16846,7 @@ print "LIVE_COMMAND_UNIX=$live_command and TIMEOUT=$cmtimeout and KEYSSELF="
                      -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                if ($select_timeout==$tim) {
                   $self->{_cmd_handle}->print("\003");
-                  ($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle(
+                  ($ignore,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle(
                      $self->{_cmd_handle});
                   if ($stderr) {
                      &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
@@ -16792,11 +16903,11 @@ print "LIVE_COMMAND_UNIX=$live_command and TIMEOUT=$cmtimeout and KEYSSELF="
                   }
                   if ($first<0) {
                      print "\nOUTPUT BEFORE NEW LINE ENCOUNTERED: ==>$output<== :",
-                        " at Line ",__LINE__,"\n\n"
+                        "\n\tat Line ",__LINE__,"\n\n"
                         if !$Net::FullAuto::FA_lib::cron && $debug;
                      print $Net::FullAuto::FA_lib::MRLOG
                         "\nOUTPUT BEFORE NEW LINE ENCOUNTERED: ==>$output<== :",
-                        " at Line ",__LINE__,"\n\n"
+                        "\n\tat Line ",__LINE__,"\n\n"
                         if $Net::FullAuto::FA_lib::log &&
                         -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                      $loop=$wait=$sec=$ten=0;$hun=5;
@@ -16812,29 +16923,35 @@ print "LIVE_COMMAND_UNIX=$live_command and TIMEOUT=$cmtimeout and KEYSSELF="
                         print "\nSTRIPPED OUTPUT equals STRIPPED LIVE COMMAND",
                            " at Line ",__LINE__,"\n"
                            if !$Net::FullAuto::FA_lib::cron && $debug;
-print $Net::FullAuto::FA_lib::MRLOG "FIRST_FOUR\n"
-   if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                        print $Net::FullAuto::FA_lib::MRLOG 
+                           "\nSTRIPPED OUTPUT equals STRIPPED LIVE COMMAND",
+                           " at Line ",__LINE__,"\n"
+                           if $Net::FullAuto::FA_lib::log &&
+                           -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                         $command_stripped_from_output=1;
                         $output='';
                         $first=0;next;
                      } elsif ($output=~/\n/s) {
-print "WE HAVE NEW LINES IN THE OUTPUT and OUTPUT=$output<==\n"
-   if !$Net::FullAuto::FA_lib::cron && $debug;
-print $Net::FullAuto::FA_lib::MRLOG "WE HAVE NEW LINES IN THE OUTPUT and ",
-   "OUTPUT=$output<==\n"
-   if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
-                           die 'logout' if $output=~/imed out/s
-                              || $output=~/logout$|closed\.$/mg;
-print $Net::FullAuto::FA_lib::MRLOG "GOT PAST DIE<==".index $output,'imed out'."\n"
-   if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                        print "\nNNNNNNN OUTPUT HAS NEW LINE CHAR NNNNNNN RAW OUTPUT:",
+                           " ==>$output<== ".
+                           " at Line ",__LINE__,"\n"
+                           if !$Net::FullAuto::FA_lib::cron && $debug;
+                        print $Net::FullAuto::FA_lib::MRLOG 
+                           "\nNNNNNNN OUTPUT HAS NEW LINE CHAR NNNNNNN RAW OUTPUT:",
+                           " ==>$output<== ".
+                           " at Line ",__LINE__,"\n"
+                           if $Net::FullAuto::FA_lib::log && 
+                           -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                        die 'logout' if $output=~/imed out/s
+                           || $output=~/logout$|closed\.$/mg;
                         my $last_line='';
                         $output=~/^.*\n(.*)$/s;
                         $last_line=$1;
                         $last_line||='';
                         my $ptest=substr($output,(rindex $output,'|'),-1);
                         $ptest=~s/\s*//g;$ptest||='';
-                        if ($last_line && $last_line=~/$cmd_prompt$/s
-                              || $bckgrd) {
+                        if ($last_line && ($last_line=~/$cmd_prompt$/s
+                              || $bckgrd)) {
 print "LAST_LINE=$last_line and OUTPUT=$output<=\n" if !$Net::FullAuto::FA_lib::cron && $debug;
 print $Net::FullAuto::FA_lib::MRLOG "LAST_LINE=$last_line and OUTPUT=$output<=\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
@@ -16866,10 +16983,6 @@ print $Net::FullAuto::FA_lib::MRLOG "FIRST_SIX\n"
                                        ($cmd_prompt.*)$/$1/sx
                                  && $output!~s/^\s+
                                         ($cmd_prompt.*)/$1/sx) {
-                              #($growoutput.=$output)=~s/$cmd_prompt//;
-                              #$growoutput=~s/^(.*)$/       $1/mg;
-                              #$growoutput=~s/^(.*)$/$1$cmd_prompt/s;
-                              #$growoutput=~s/^\s*//s;
                               $output=~s/$cmd_prompt//;
                               $output=~s/^(.*)$/       $1/mg;
                               $output=~s/^(.*)$/$1$cmd_prompt/s;
@@ -16972,16 +17085,34 @@ print $Net::FullAuto::FA_lib::MRLOG "PAST THE ALARM3\n"
 
 print "OUTPUT ***After First-Line Loop***=$output<== and COMSTROUT=$command_stripped_from_output<==\n"
    if !$Net::FullAuto::FA_lib::cron && $debug;
-print $Net::FullAuto::FA_lib::MRLOG "OUTPUTNOWWWWWWWWWWW=$output<==\n"
+print $Net::FullAuto::FA_lib::MRLOG "OUTPUTNOWWWWWWWWWWW=$output<== and STRIPPED=$command_stripped_from_output\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
-                  if ($command_stripped_from_output &&
-                        $output=~/^$cmd_prompt/) {
-print "GOT COMMAND_PROMPT AND EMPTY OUTPUT AND LAST FETCH<==\n"
-   if !$Net::FullAuto::FA_lib::cron && $debug;
-                     last FETCH; 
+                  if ($command_stripped_from_output) {
+print $Net::FullAuto::FA_lib::MRLOG "GOT STRIPPED_COMMAND_FLAG AND GROWOUTPUT=$growoutput<==\n"
+   if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                     if (($output=~/^\s?$cmd_prompt/) && !$growoutput) {
+                        print $Net::FullAuto::FA_lib::MRLOG
+                           "\nGOT $cmd_prompt AND EMPTY \$growoutput and OUTPUT ==>$output<==\n",
+                           "\tat Line ",__LINE__," -> LAST FETCH\n\n"
+                           if $Net::FullAuto::FA_lib::log &&
+                           -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                        my $tou=$output;
+                        $tou=~s/^\s?$cmd_prompt\s*//;
+                        if (($tou eq '(') || ($tou eq '(e') || ($tou eq '(ec')
+                              || ($tou=~/^[(]ech.*$/)) {
+                           print $Net::FullAuto::FA_lib::MRLOG
+                              "\nGOT $tou AND EMPTY \$growoutput and OUTPUT ==>$output<==\n",
+                              "\tat Line ",__LINE__," -> NEXT FETCH\n\n"
+                              if $Net::FullAuto::FA_lib::log && 
+                              -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                           next FETCH;
+                        } last FETCH;
+                     } elsif (($output=~/^stdout: [^\/]+/) && ($growoutput=~/ 2\>&1\s?$/)) {
+                        $growoutput=$output;
+                        next FETCH if $output!~/$cmd_prompt$/s;
+                     }
                   } elsif ($output eq 'Connection closed') {
                      if ($wantarray) {
-print "TWOOO\n";
                         return 0,$output;
                      } else {
                         &Net::FullAuto::FA_lib::handle_error($output)
@@ -16991,13 +17122,11 @@ print "TWOOO\n";
                             ."\n\nHas a Syntax Error. The Command "
                             ."Shell\n       Entered Interacive Mode '>'";
                      if ($wantarray) {
-print "THEREE\n";
                         return 0,$die;
                      } else {
                         &Net::FullAuto::FA_lib::handle_error($die)
                      }
                   }
-######## CHANGED LINE BELOW AND TOOK AWAY THE ' ' SPACE AFTER stdout: 080107
                   $output=~s/^[ |\t]+(stdout:.*)$/$1/m if !$fullerror;
                   &display($output,$cmd_prompt,$save)
                      if $display;
@@ -17016,9 +17145,6 @@ if (!$Net::FullAuto::FA_lib::cron && $debug) {
 print "THISEVALLL=",($test_out=~/$cmd_prompt$/s),
        " and OUT=$output and CMD_PROMPT=$cmd_prompt\n";
 }
-#print $Net::FullAuto::FA_lib::MRLOG "THISEVALLL=",($test_out=~/$cmd_prompt$/os),
-#                     " and OUT=$output and CMD_PROMPT=$cmd_prompt\n"
-#                     if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                   if (15<length $growoutput &&
                         unpack('a16',$growoutput) eq '?Invalid command') {
                      $self->{_cmd_handle}->timeout($svtimeout);
@@ -17026,19 +17152,13 @@ print "THISEVALLL=",($test_out=~/$cmd_prompt$/s),
                         "?Invalid Command ftp> -> $live_command");
                   } elsif (-1<index lc($growoutput),'killed by signal 15') {
                      die 'Connection closed';
-######## CHANGED LINE BELOW AND TOOK AWAY THE ' ' SPACE AFTER stdout: 080107
                   } elsif ((-1==index $growoutput,'stdout:') &&
                         (-1<index $growoutput,' sync_with_child: ')) {
                      &Net::FullAuto::FA_lib::handle_error($growoutput,'__cleanup__');
                   } elsif (1<($growoutput=~tr/\n//) ||
                              $growoutput=~/($cmd_prompt)$/s) {
                      my $oneline=$1;$oneline||=0;
-#print "GROWOUTPUT=$growoutput<===GROWOUTPUT\n" if !$Net::FullAuto::FA_lib::cron && $debug;
-#print $Net::FullAuto::FA_lib::MRLOG "GROWOUTPUT=$growoutput<===GROWOUTPUT\n"
-#                     if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                      ($lastline=$growoutput)=~s/^.*\n(.*)$/$1/s;
-#print "GROWOUT=$growoutput<==\n";
-#print "LASTLINE=$lastline<==\n";<STDIN>;
 print "NOWLASTLINE=$lastline<==\n" if !$Net::FullAuto::FA_lib::cron && $debug;
 print $Net::FullAuto::FA_lib::MRLOG "NOWLASTLINE=$lastline<==\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
@@ -17057,8 +17177,30 @@ print $Net::FullAuto::FA_lib::MRLOG "GROWOUTPUT2=$growoutput\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                            if ($growoutput=~/stdout: PS1=/m) {
                               ($lastline=$growoutput)=~s/^.*\n(.*)$/$1/s;
-                           } else {
-                              $growoutput=~s/\n*$cmd_prompt\n*//s;
+                           } elsif ($growoutput=~s/\n*$cmd_prompt\n*//s) {
+                              my $test_stripped_output=$growoutput;
+                              my $stripped_live_command=$live_command;
+                              $stripped_live_command=~s/\s*//gs;
+                              my $testgrow=$test_stripped_output;
+                              $testgrow=~s/^(.*?2>&1\n?)(.*)$/$1/s;
+                              my $thisout=$2;
+                              $testgrow=~s/\s*//gs;
+                              if ($testgrow eq $stripped_live_command) {
+                                 $growoutput=$thisout;
+                              }
+                              last FETCH if !$growoutput && $live_command=~/^cd /;
+                              next FETCH if !$growoutput;
+                              my $testgr=$growoutput;
+                              $testgr=~s/([(|)|$|\[|\]|{|}])/\\$1/g;
+                              if ($growoutput=~/^(.*)stdout: [^\/]/) {
+                                 my $frag=$1;
+                                 if ($live_command=~/$frag/) {
+                                    $growoutput=~s/^$frag//s;
+                                 }
+                              }
+print "CLEANEDGROWOUT=$growoutput\n" if !$Net::FullAuto::FA_lib::cron && $debug;
+print $Net::FullAuto::FA_lib::MRLOG "CLEANEDGROWOUT=$growoutput\n"
+   if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                            }
                         } elsif (!$lastline) {
                            my $tmp_grow=$growoutput;
@@ -17312,7 +17454,7 @@ print $Net::FullAuto::FA_lib::MRLOG "ELSFI AT THE BOTTOM==>$growoutput<==\n";
                   if (!$restart_attempt) {
 print "FOURTEEN003\n";
                      $self->{_cmd_handle}->print("\003");
-                     ($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle(
+                     ($ignore,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle(
                         $self->{_cmd_handle});
                      if ($stderr) {
                         &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
@@ -17452,11 +17594,11 @@ print $Net::FullAuto::FA_lib::MRLOG "GOING TO TRY RETRY\n"
             my $save_cwd='';
             if (exists $self->{_work_dirs}->{_cwd_mswin}
                   && $self->{_work_dirs}->{_cwd_mswin}=~/^\\\\/) {
-               $save_cwd=$self->{_work_dirs}->{_tmp};
+               $save_cwd=$self->{_work_dirs}->{_tmp}||'';
             } else {
-               $save_cwd=$self->{_work_dirs}->{_cwd};
+               $save_cwd=$self->{_work_dirs}->{_cwd}||'';
             }
-print $Net::FullAuto::FA_lib::MRLOG "SAVECWD=$save_cwd\n"
+print $Net::FullAuto::FA_lib::MRLOG "SAVECWD=$save_cwd<==\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
             my $save_self=$self->{_cmd_handle};
             ($self->{_cmd_handle},$eval_error)=
@@ -17646,7 +17788,7 @@ print "GOT NEW UNIX ID=$id and STDERR=$stderr and SU_ID=$su_id\n";
          else { &Net::FullAuto::FA_lib::handle_error($error,'-3') }
       } else {
 
-                  ($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($self);
+                  ($ignore,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle($self);
                   if ($stderr) {
                      &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
                         if $stderr=~/Connection closed/s;

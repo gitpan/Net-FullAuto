@@ -18,11 +18,18 @@
 #   WHERE DATA INTEGRITY IS CRITICAL. DO NOT USE IN/FOR A
 #   PROCESS THAT IS TIME SENSITIVE, UNMONITORED, OR
 #   PERSISTENCE CRITICAL. DO NOT USE THIS SOFTWARE WITHOUT
-#   ANOTHER METHOD FOR RUNNING THE PROCESS YOU WISH TO
+#   ANOTHER METHOD iOR RUNNING THE PROCESS YOU WISH TO
 #   AUTOMATE WITH Net::FullAuto. DO NOT USE IN/FOR A PROCESS
 #   WHERE FAILURE OF "ANY KIND" IS UNACCEPTABLE.
 #
 ################################################################
+
+
+2010-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.18 released.
+
+        * Misc bug fixes to socket output processing.
 
 
 2010-07-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>

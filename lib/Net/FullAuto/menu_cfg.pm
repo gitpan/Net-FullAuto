@@ -130,7 +130,8 @@ my @PortalApps=(
 
       Text   => "Deploy Non-Secure FROM ]P[ TO \"]C[\"",
       Convey => \@StaticAppDestinations,
-      Result => "&DeployStaticApp(\"]S[\",'Non-Secure')"
+      Result => "&hello_world(\"]S[\",'Non-Secure')"
+      #Result => "&DeployStaticApp(\"]S[\",'Non-Secure')"
 
    },
    Select => 'One',

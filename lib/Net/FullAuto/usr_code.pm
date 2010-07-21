@@ -99,7 +99,12 @@ my $email_to=[
 
 sub hello_world {
 
-    print "\n".$localhost->cmd('echo "hello world"');
+    #print "\nFIRST PARAMETER=$_[0]\n";
+    #print "SECOND PARAMETER=$_[1]\n";
+    my $hostname=$localhost->cmd('hostname');
+    print "\nHELLO=",$localhost->cmd('echo "hello world"'),"\n";
+    print "HOSTNAME=$hostname\n";
+    print "HELLO WORLD\n\n";
 
 }
 

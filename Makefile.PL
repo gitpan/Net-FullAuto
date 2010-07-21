@@ -70,6 +70,7 @@ requires        'Crypt::DES'             => 0;
 requires        'Getopt::Long'           => 0;
 requires        'HTTP::Date'             => 0;
 requires        'IO::Pty'                => 0;
+requires	'IO::Capture::Stderr'    => 0;
 requires        'LWP'                    => 0;
 requires        'Mail::Internet'         => 0;
 requires        'Mail::Sender'           => 0;
