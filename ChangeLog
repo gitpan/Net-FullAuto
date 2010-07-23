@@ -25,6 +25,13 @@
 ################################################################
 
 
+2010-07-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.19 released.
+
+        * MORE Misc bug fixes to socket output processing.
+
+
 2010-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.18 released.

@@ -102,9 +102,45 @@ sub hello_world {
     #print "\nFIRST PARAMETER=$_[0]\n";
     #print "SECOND PARAMETER=$_[1]\n";
     my $hostname=$localhost->cmd('hostname');
+    my $computer_taro='';
+    ($computer_taro,$stderr)=connect_host('Taro'); # Connect to
+                                        # Remote Host via ssh
+    if ($stderr) {
+       print "We Have an ERROR when attempting to connect to Taro! : $stderr\n";
+    }
+
+    if ($hostname eq 'reedfish-laptop') {
+       $computer_one=connect_ssh('VB_Ubuntu'); # Connect to
+                                            # Remote Host via ssh
+    } else {
+       $computer_one=connect_host('Ubuntu'); # Connect to
+                                            # Remote Host via ssh
+    }
+    #$computer_two=connect_host('Taro'); # Connect to
+    #                                    # Remote Host via ssh
     print "\nHELLO=",$localhost->cmd('echo "hello world"'),"\n";
     print "HOSTNAME=$hostname\n";
-    print "HELLO WORLD\n\n";
+    print "HELLO WORLD\n";
+    ($stdout,$stderr)=$computer_one->cmd('hostname');
+    print "Ubuntu=$stdout\n";
+    #($stdout,$stderr)=$computer_two->cmd('hostname');
+    #print "Taro=$stdout\n\n";
+    #($stdout,$stderr)=$computer_one->cmd('/develop/deployment/ids');
+    #print $stderr if $stderr;
+    ($stdout,$stderr)=$computer_one->cmd('ls');
+    print "ls output:\n\n$stdout\n";
+    ($stdout,$stderr)=$computer_one->cwd('/home/abinitio/eme_import');
+    print $stderr if $stderr;
+    ($stdout,$stderr)=$computer_one->get(
+                     'IDS_2_3_9_0_00.tag');              # Get the File
+    if ($stderr) {                              # Check Results
+       print "We Have an ERROR! : $stderr\n";
+    } else {
+       print "Output of Get command from Computer One:".
+            "\n\n$stdout\n\n";
+    }
+    ($stdout,$stderr)=$computer_one->cmd('pwd');
+    print "CURDIR=$stdout\n\n" if $stdout;
 
 }
 
