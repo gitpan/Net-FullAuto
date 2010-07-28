@@ -102,11 +102,11 @@ sub hello_world {
     #print "\nFIRST PARAMETER=$_[0]\n";
     #print "SECOND PARAMETER=$_[1]\n";
     my $hostname=$localhost->cmd('hostname');
-    my $computer_taro='';
-    ($computer_taro,$stderr)=connect_host('Taro'); # Connect to
+    my $computer_zero='';
+    ($computer_zero,$stderr)=connect_host('Zero'); # Connect to
                                         # Remote Host via ssh
     if ($stderr) {
-       print "We Have an ERROR when attempting to connect to Taro! : $stderr\n";
+       print "We Have an ERROR when attempting to connect to Zero! : $stderr\n";
     }
 
     if ($hostname eq 'reedfish-laptop') {
@@ -116,29 +116,31 @@ sub hello_world {
        $computer_one=connect_host('Ubuntu'); # Connect to
                                             # Remote Host via ssh
     }
-    #$computer_two=connect_host('Taro'); # Connect to
-    #                                    # Remote Host via ssh
     print "\nHELLO=",$localhost->cmd('echo "hello world"'),"\n";
     print "HOSTNAME=$hostname\n";
     print "HELLO WORLD\n";
     ($stdout,$stderr)=$computer_one->cmd('hostname');
     print "Ubuntu=$stdout\n";
-    #($stdout,$stderr)=$computer_two->cmd('hostname');
-    #print "Taro=$stdout\n\n";
-    #($stdout,$stderr)=$computer_one->cmd('/develop/deployment/ids');
-    #print $stderr if $stderr;
-    ($stdout,$stderr)=$computer_one->cmd('ls');
-    print "ls output:\n\n$stdout\n";
-    ($stdout,$stderr)=$computer_one->cwd('/home/abinitio/eme_import');
-    print $stderr if $stderr;
-    ($stdout,$stderr)=$computer_one->get(
-                     'IDS_2_3_9_0_00.tag');              # Get the File
-    if ($stderr) {                              # Check Results
+    ($stdout,$stderr)=$computer_zero->cmd('hostname');
+    print "Zero=$stdout\n\n";
+    ($stdout,$stderr)=$computer_zero->cwd('/develop/deployment/ids');
+    print "STDERR=$stderr<==\n" if $stderr;
+    my $file='';
+    ($file,$stderr)=$computer_zero->cmd('ls ID*');
+    print "Zero File=$file<==\n\n";
+    return unless $file;
+    ($stdout,$stderr)=$computer_zero->get($file); # Get the File
+    if ($stderr) {                                # Check Results
        print "We Have an ERROR! : $stderr\n";
-    } else {
-       print "Output of Get command from Computer One:".
-            "\n\n$stdout\n\n";
     }
+    ($stdout,$stderr)=$computer_one->cwd('/home/abinitio/eme_import');
+    print "STDERR=$stderr\n" if $stderr;
+    ($stdout,$stderr)=$computer_one->put($file); # Get the File
+    if ($stderr) {                               # Check Results
+       print "We Have an ERROR! : $stderr\n";
+    }
+    ($stdout,$stderr)=$computer_one->cmd('ls');
+    print $computer_one->{_hostlabel}->[0]," ls output:\n\n$stdout\n";
     ($stdout,$stderr)=$computer_one->cmd('pwd');
     print "CURDIR=$stdout\n\n" if $stdout;
 

@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-07-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.20 released.
+
+        * MORE Misc bug fixes to socket output processing.
+
+        * Implemented printf printing of download progress.
+
+        * Cleaned up logging.
+
+
 2010-07-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.19 released.

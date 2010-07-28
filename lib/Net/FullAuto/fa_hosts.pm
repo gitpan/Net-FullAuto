@@ -57,28 +57,6 @@ our $VERSION = 1.00;
                               "$Net::FullAuto::FA_lib::invoked[2]".
                               "$Net::FullAuto::FA_lib::invoked[3].txt",
        },
-       {
-          'HostName'       => 'localhost',
-          'Label'          => 'Ubuntu',
-          'LoginID'        => 'reedfish',
-          'sshport'        => '2222',
-       },
-       {
-          'IP'             => '192.168.56.1',
-          'Label'          => 'Laptop',
-          'LoginID'        => 'KB06606',
-       },
-       {
-          'HostName'       => 'reedfish-laptop',
-          'Label'          => 'VB_Ubuntu',
-          'LoginID'        => 'reedfish',
-       },
-       {
-          'HostName'       => 'taro',
-          'Label'          => 'Taro',
-          'LoginID'        => 'kb06606',
-       },
-
 
 #################################################################
 ##  Do NOT alter code BELOW this block.

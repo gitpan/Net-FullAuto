@@ -304,6 +304,11 @@ BEGIN {
       $pingpath='/etc/';
    }
 
+   our $termwidth=''; our $termheight='';
+   if (!$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug) {
+      ($termwidth, $termheight) = GetTerminalSize(STDOUT);    
+   }
+
 }
 our $blanklines='';our $clear='';our $oldpasswd='';
 our $scrub=0;our $pcnt=0;our $chk_id='';our $d_sub='';
@@ -942,24 +947,38 @@ print $Net::FullAuto::FA_lib::MRLOG "cleanup() GOING TO CLEAN MASTER"
          print "\n\n";
       }
    } ReadMode 0;
-print $Net::FullAuto::FA_lib::MRLOG "GOING TO CLOSE LOG\n" if -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+   print $Net::FullAuto::FA_lib::MRLOG "INFO: GOING TO CLOSE LOG\n"
+      if -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    $MRLOG||='';
    CORE::close($MRLOG) if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    $MRLOG='';
+   $Hosts{"__Master_${$}__"}{'LogFile'}||='';
+   print "\n  LOGFILE ==> \"",$Hosts{"__Master_${$}__"}{'LogFile'},"\"\n\n\n"
+      if $Net::FullAuto::FA_lib::log && !($Net::FullAuto::FA_lib::quiet ||
+         $Net::FullAuto::FA_lib::cron);
+   print "FULLAUTO COMPLETED SUCCESSFULLY on ".localtime()."\n"
+      if (!$Net::FullAuto::FA_lib::cron && !$Net::FullAuto::FA_lib::stdio)
+         && !$Net::FullAuto::FA_lib::quiet;
    if (!$Net::FullAuto::FA_lib::log && exists $Hosts{"__Master_${$}__"}{'LogFile'}
          && $Hosts{"__Master_${$}__"}{'LogFile'}) {
       unlink $Hosts{"__Master_${$}__"}{'LogFile'};
    }
-   print "FULLAUTO COMPLETED SUCCESSFULLY on ".localtime()."\n"
-      if (!$Net::FullAuto::FA_lib::cron && !$Net::FullAuto::FA_lib::stdio)
-         && !$Net::FullAuto::FA_lib::quiet;
    return 1 if $_[0];
    exit 0;
 
 };
 
 # Handle INT SIGNAL interruption
-$SIG{ INT } = sub{ print "CAUGHT A SIG!!\n";$log=1;$cleanup=1;&cleanup() };
+$SIG{ INT } = sub{
+                    print "\n\nCAUGHT AN INTERUPT SIGNAL!!\n";
+                    print $Net::FullAuto::FA_lib::MRLOG
+                       "\n\n=============================",
+                       "\n====   INTERUPT SIGNAL   ====",
+                       "\n=============================\n\n",
+                       if $Net::FullAuto::FA_lib::log &&
+                       -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+
+                    $log=1;$cleanup=1;&cleanup(); };
 our $alarm_sounded=0;
 $SIG{ ALRM } = sub{ open(AL,">>ALRM.txt");
                     print AL scalar(localtime())."\n";
@@ -4689,6 +4708,7 @@ print "CRUD\n";
                my $olog="$home_dir/FAlog${$}d".
                   $Net::FullAuto::FA_lib::invoked[2].
                   $Net::FullAuto::FA_lib::invoked[3].".txt";
+               $Hosts{"__Master_${$}__"}{'LogFile'}=$olog;
                open ($MRLOG, ">$olog") || &handle_error($die);
                $MRLOG->autoflush(1);
                print "\n  LOGFILE ==> \"$olog\"\n"
@@ -4912,8 +4932,10 @@ print $Net::FullAuto::FA_lib::MRLOG "PRINTING PASSWORD NOW<==\n"
             if ($OS ne 'cygwin') {
                print $blanklines;
             } else { print "\n\n" }
-            # LoggingA
+            # Logging (1)
             print "--> Logging into $host via $cmd_type  . . .\n\n";
+         } elsif ($debug) {
+            print "--> Logging (1) into $host via $cmd_type  . . .\n\n";
          }
 
          my $newpw='';$passline=__LINE__+1;
@@ -7055,7 +7077,7 @@ sub put
    foreach my $file (@args) {
       if ($self->{_ftp_handle} ne "__Master_${$}__") {
 #print "FILEARGGGINT=",int $file,"\n";<STDIN>;
-         return 'SEMAPHORE' if &Net::FullAuto::FA_lib::take_semaphore('',$file);
+         #return 'SEMAPHORE' if &Net::FullAuto::FA_lib::take_semaphore('',$file);
          ($output,$stderr)=&Rem_Command::ftpcmd($self,"put $file");
          &Net::FullAuto::FA_lib::give_semaphore($file);
          if ($stderr) {
@@ -7135,54 +7157,14 @@ sub ftr_cmd
          if (defined $transfer_dir && $transfer_dir) {
             $work_dirs=&Net::FullAuto::FA_lib::work_dirs($transfer_dir,
                           $hostlabel,$ftr_cmd,$cmd_type,'',$_connect);
-            #my $curdir='';my $cw3='';my $cw_tmp='';my $cou=2;
-            #while ($cou--) {
             my $curdir='';
             if ($ftr_cmd->{_uname}!~/[Cc][Yy][Gg]/) {
-               #($curdir,$stderr)=$ftr_cmd->cmd('pwd',__live__);
                my $curdir=&Net::FullAuto::FA_lib::push_cmd($ftr_cmd,
                   'pwd',$hostlabel);
             } else {
-               #($curdir,$stderr)=$ftr_cmd->cmd('cmd /c chdir',__live__);
                my $curdir=&Net::FullAuto::FA_lib::push_cmd($ftr_cmd,
                           'cmd /c chdir',$hostlabel);
             }
-            #   #&Net::FullAuto::FA_lib::handle_error($stderr,'-1') if $stderr;
-            #   if (!$curdir) {
-            #      $ftr_cmd->{_cmd_handle}->autoflush(1);
-            #      $ftr_cmd->{_cmd_handle}->print;my $ct=0;
-            #      if (!$curdir) {
-            #         $ftr_cmd->{_cmd_handle}->print(
-            #            'printf \\\\041\\\\041;pwd;printf \\\\045\\\\045');
-            #         my $allins='';my $ct=0;
-            #         while (1) {
-            #            eval {
-            #               while (my $line=$ftr_cmd->{_cmd_handle}->get(
-            #                        Timeout=>5)) {
-            #                  chomp($line=~tr/\0-\37\177-\377//d);
-            #                  $allins.=$line;
-#print $Net::FullAuto::FA_lib::MRLOG "CURDIRLINEEEE=$allins<==\n";
-            #                  if ($allins=~/!!(.*)%%/) {
-            #                     $curdir=$1;
-#print $Net::FullAuto::FA_lib::MRLOG "CURDIRRRRRAAAAA=$curdir<==\n";
-            #                     last;
-            #                  }
-            #               }
-            #            };
-#print $Net::FullAuto::FA_lib::MRLOG "CURDIRRRRRBBBB=$curdir<==\n";
-            #            if ($@) {
-            #               $ftr_cmd->{_cmd_handle}->print;
-            #            } elsif (!$curdir && $ct++<50) {
-            #               $ftr_cmd->{_cmd_handle}->print;
-            #            } else { last }
-            #         }
-            #      }
-#print $Net::FullAuto::FA_lib::MRLOG "CURDIRRRRRCCCC=$curdir<==\n";
-            #      #($output,$stderr)=
-            #      #   &Net::FullAuto::FA_lib::clean_filehandle($ftr_cmd);
-            #      #&Net::FullAuto::FA_lib::handle_error($stderr) if $stderr; 
-            #   } else { last }
-            #}
 print "CURDIRRRRR=$curdir<==\n";
             my ($drive,$path)=unpack('a1 x1 a*',$curdir);
             ${$work_dirs}{_pre_mswin}=$curdir.'\\';
@@ -7260,7 +7242,19 @@ print "CURDIRRRRR=$curdir<==\n";
                 ${$work_dirs}{_tmp_mswin}=
                    $ftr_cmd->{_work_dirs}->{_tmp_mswin};
             } else {
-               ($curdir,$stderr)=$ftr_cmd->cmd('pwd');
+               my $cnt=3;
+               while ($cnt--) {
+                  ($curdir,$stderr)=$ftr_cmd->cmd('pwd');
+                  if (!$curdir) {
+                     ($output,$stderr)=&Net::FullAuto::FA_lib::clean_filehandle(
+                        $ftr_cmd->{_cmd_handle});
+                     if ($stderr) {
+                        &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
+                           if $stderr=~/Connection closed/s;
+                        &Net::FullAuto::FA_lib::handle_error($stderr,'-5');
+                     }
+                  } else { last }
+               }
                $curdir.='/' if $curdir ne '/';
                ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
                ${$work_dirs}{_tmp}=$ftr_cmd->{_work_dirs}->{_tmp};
@@ -7412,7 +7406,7 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                      $ftr_cmd->{_cmd_handle}->prompt("/_funkyPrompt_\$/");
 
                      ($output,$stderr)=
-                        &Net::FullAuto::FA_lib::clean_filehandle($cmd_handle);
+                        &Net::FullAuto::FA_lib::clean_filehandle($ftr_cmd);
                      if ($stderr) {
                         &Net::FullAuto::FA_lib::handle_error('read timed-out','-3')
                            if $stderr=~/Connection closed/s;
@@ -7558,10 +7552,14 @@ print "FTRTHREE\n";
 sub ftm_login
 {
    my @topcaller=caller;
-   print "File_Transfer::ftm_login() CALLER=",(join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_lib::debug;
-   print $Net::FullAuto::FA_lib::MRLOG "File_Transfer::ftm_login() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+   print "\nINFO: File_Transfer::ftm_login() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if !$Net::FullAuto::FA_lib::cron && $Net::FullAuto::FA_lib::debug;
+   print $Net::FullAuto::FA_lib::MRLOG
+      "\nFile_Transfer::ftm_login() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_lib::log &&
+      -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    my $hostlabel=$_[0];
    my $new_master=$_[1]||'';
    my $_connect=$_[2]||'';
@@ -8203,12 +8201,15 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                }
 
                ## Send Login ID.
-               my $showftp=
-                  "\n       LoggingB into $host via ftp  . . .\n\n";
-               print $showftp if (!$Net::FullAuto::FA_lib::cron
-                  || $Net::FullAuto::FA_lib::debug)
-                  && !$Net::FullAuto::FA_lib::quiet;
-               print $Net::FullAuto::FA_lib::MRLOG $showftp
+               if ((!$Net::FullAuto::FA_lib::cron ||
+                     $Net::FullAuto::FA_lib::debug) && !$Net::FullAuto::FA_lib::quiet) {
+                  # Logging (2)
+                  print "\n       Logging into $host ($hostlabel) via $ftm_type  . . .\n\n";
+               } elsif ($debug) {
+                  print "\n       Logging (2) into $host ($hostlabel) via $ftm_type  . . .\n\n";
+               }
+               print $Net::FullAuto::FA_lib::MRLOG
+                  "\n       Logging (2) into $host ($hostlabel) via $ftm_type  . . .\n\n"
                   if $Net::FullAuto::FA_lib::log
                   && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                $s_err=' ';
@@ -8588,12 +8589,15 @@ print $Net::FullAuto::FA_lib::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index $
                      }
                   }
                }
-               my $showsftp=
-                  "\n       LoggingB into $host via sftp  . . .\n\n";
-               print $showsftp if (!$Net::FullAuto::FA_lib::cron
-                  || $Net::FullAuto::FA_lib::debug)
-                  && !$Net::FullAuto::FA_lib::quiet;
-               print $Net::FullAuto::FA_lib::MRLOG $showsftp
+               if ((!$Net::FullAuto::FA_lib::cron ||
+                     $Net::FullAuto::FA_lib::debug) && !$Net::FullAuto::FA_lib::quiet) {
+                  # Logging (3)
+                  print "\n       Logging into $host ($hostlabel) via $ftm_type  . . .\n\n";
+               } elsif ($debug) {
+                  print "\n       Logging (3) into $host ($hostlabel) via $ftm_type  . . .\n\n";
+               }
+               print $Net::FullAuto::FA_lib::MRLOG
+                  "\n       Logging (3) into $host via $ftm_type  . . .\n\n"
                   if $Net::FullAuto::FA_lib::log
                   && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                ## Wait for password prompt.
@@ -8704,16 +8708,22 @@ print "LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";
                                     $hostlabel,$login_id,
                                     $ms_share,$ftm_errmsg,'','sftp');
                                  $ftp_handle->print($ftm_passwd);
-
-                                 my $showsftp="\n       LoggingD into "
-                                             ."$host via sftp  . . .\n\n";
-                                 print $showsftp if
-                                    (!$Net::FullAuto::FA_lib::cron
-                                    || $Net::FullAuto::FA_lib::debug)
-                                    && !Net::FullAuto::FA_lib::quiet;
-                                 print $Net::FullAuto::FA_lib::MRLOG $showsftp
-                                    if $Net::FullAuto::FA_lib::log &&
-                                    -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                                 if ((!$Net::FullAuto::FA_lib::cron ||
+                                       $Net::FullAuto::FA_lib::debug) &&
+                                       !$Net::FullAuto::FA_lib::quiet) {
+                                    # Logging (4)
+                                    print "\n       Logging into $host ($hostlabel) ",
+                                          "via $ftm_type  . . .\n\n";
+                                 } elsif ($Net::FullAuto::FA_lib::debug) {
+                                    print
+                                       "\n       Logging (4) into $host ($hostlabel) ",
+                                       "via $ftm_type  . . .\n\n";
+                                 }
+                                 print $Net::FullAuto::FA_lib::MRLOG
+                                    "\n       Logging (4) into $host ($hostlabel) ",
+                                    "via $ftm_type  . . .\n\n"
+                                    if $Net::FullAuto::FA_lib::log
+                                    && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                                  last;
                               }
                            } else { 
@@ -9271,9 +9281,11 @@ sub connect_share
 sub cwd
 {
    my @topcaller=caller;
-   print "\nINFO: File_Transfer::cwd() (((((((CALLER))))))):\n       ",(join ' ',@topcaller),"\n\n"
+   print "\nINFO: File_Transfer::cwd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_lib::debug;
-   print $Net::FullAuto::FA_lib::MRLOG "\nFile_Transfer::cwd() (((((((CALLER))))))):\n       ",
+   print $Net::FullAuto::FA_lib::MRLOG
+      "\nFile_Transfer::cwd() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_lib::log &&
       -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
@@ -9458,7 +9470,6 @@ sub cwd
                   else { &Net::FullAuto::FA_lib::handle_error($stderr,'-3') }
                }
             }
-print "ARGGGG=$arg\n";
             ($output,$stderr)=$self->cmd('cd \'..\'');
             if ($stderr) {
                if (wantarray) { return '',$stderr }
@@ -9512,21 +9523,16 @@ print $Net::FullAuto::FA_lib::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}->
             }
          } elsif ((exists $self->{_ftm_type}) &&
                $self->{_ftm_type}=~/s*ftp/) {
-my $pwd='';
-($pwd,$stderr)=&Rem_Command::ftpcmd($self,'pwd');
-&Net::FullAuto::FA_lib::handle_error($stderr,'-1') if $stderr &&
-(-1==index $stderr,'command success');
             ($output,$stderr)=
                &Rem_Command::ftpcmd($self,"cd \"$target_dir\"");
-            &Net::FullAuto::FA_lib::handle_error($stderr,'-1') if $stderr &&
-               (-1==index $stderr,'command success');
-            if ($stderr) {
+            if ($stderr && (-1==index $stderr,'command success')) {
                if (wantarray) {
                   return '',$stderr;
-               } else { &Net::FullAuto::FA_lib::handle_error($stderr,'-6') }
-            } $Net::FullAuto::FA_lib::ftpcwd{$self->{_ftp_handle}}{cd}
-                 =$target_dir;
-         } 
+               } else { &Net::FullAuto::FA_lib::handle_error($stderr,'-4') }
+            }
+            $Net::FullAuto::FA_lib::ftpcwd{$self->{_ftp_handle}}{cd}
+               =$target_dir;
+         }
          ($output,$stderr)=$self->cmd("cd \'$target_dir\'");
          if ($stderr) {
             if (wantarray) {
@@ -9575,21 +9581,7 @@ my $pwd='';
       return $output,'';
    } else {
       return $output;
-   } #elsif ($self->{_hostlabel}->[0] ne "__Master_${$}__") {
-     # eval {
-     #    $self->{_ftp_handle}->cmd("cd \"$arg\"");
-     #    $Net::FullAuto::FA_lib::ftpcwd{$self->{_ftp_handle}}{cd}=$arg;
-     # };
-     # if ($@) {
-     #    if (wantarray) { return '',$@ }
-     #    else { &Net::FullAuto::FA_lib::handle_error($@) }
-     # } else { return '\'.\' is Current Directory' }
-   #} else {
-   #   if ($@) {
-   #      if (wantarray) { return '',$@ }
-   #      else { &Net::FullAuto::FA_lib::handle_error($@) }
-   #   } else { return '\'.\' is Current Directory' }
-   #}
+   }
 
 }
 
@@ -14759,12 +14751,6 @@ print $Net::FullAuto::FA_lib::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         print $Net::FullAuto::FA_lib::MRLOG $showline
                            if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                         chomp($line=~tr/\0-\37\177-\377//d);
-                        #if ((20<length $line && unpack('a21',$line)
-                        #      eq 'A remote host refused') ||
-                        #      (31<length $line && (unpack('a32',$line)
-                        #      eq 'ftp: connect: Connection refused' ||
-                        #      unpack('a32',$line) eq
-                        #      'ftp: connect: Attempt to connect'))) {
                         if (-1<index $line,'Connection refused') {
                            ($stdout,$stderr)=&Net::FullAuto::FA_lib::kill($shell_pid,9)
                               if &Net::FullAuto::FA_lib::testpid($shell_pid);
@@ -14966,12 +14952,16 @@ print $Net::FullAuto::FA_lib::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                   } else { &Net::FullAuto::FA_lib::handle_error($@) }
                } last
             }
-            my $showcmd=
-               "\n       LoggingK into $host via $cmd_type  . . .\n\n";
-            print $showcmd if (!$Net::FullAuto::FA_lib::cron
-               || $Net::FullAuto::FA_lib::debug)
-               && !$Net::FullAuto::FA_lib::quiet;
-            print $Net::FullAuto::FA_lib::MRLOG $showcmd
+            if ((!$Net::FullAuto::FA_lib::cron ||
+                  $Net::FullAuto::FA_lib::debug) && (!$Net::FullAuto::FA_lib::quiet) &&
+                  $hostlabel!~/^__Master/) {
+               # Logging (11)
+               print "\n       Logging into $host ($hostlabel) via $cmd_type  . . .\n\n";
+            } elsif ($debug) {
+               print "\n       Logging (11) into $host ($hostlabel) via $cmd_type  . . .\n\n";
+            }
+            print $Net::FullAuto::FA_lib::MRLOG
+               "\n       Logging (11) into $host ($hostlabel) via $cmd_type  . . .\n\n"
                if $Net::FullAuto::FA_lib::log
                && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
             ## Send password.
@@ -14986,9 +14976,18 @@ print $Net::FullAuto::FA_lib::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
             while (1) {
                eval {
                   while (my $line=$cmd_handle->get(Timeout=>5)) {
-print "GETTELSSHPROMPTLINEEEEEEEEEEE=$line and ${$Net::FullAuto::FA_lib::uhray}[0]_-<==\n" if $debug;
-print $Net::FullAuto::FA_lib::MRLOG "GETTELSSHPROMPTLINE=$line<==\n"
-   if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                     print $Net::FullAuto::FA_lib::MRLOG
+                        "\nRem_Command::cmd_login() LOOKING FOR CMD PROMPT AFTER PASSWD OUTPUT:",
+                        "\n       ==>$line<==\n       ",
+                        "SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
+                        "\n       at Line ",__LINE__,"\n\n"
+                        if $Net::FullAuto::FA_lib::log &&
+                        -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                     print "\nRem_Command::cmd_login() LOOKING FOR CMD PROMPT AFTER PASSWD OUTPUT:",
+                        "\n       ==>$line<==\n       ",
+                        "SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
+                        "\n       at Line ",__LINE__,"\n\n"
+                        if !$Net::FullAuto::FA_lib::cron && $debug;
                      chomp($line=~tr/\0-\11\13-\37\177-\377//d);
                      $outpt.=$line;
                      $output.=$line;
@@ -15016,11 +15015,31 @@ print $Net::FullAuto::FA_lib::MRLOG "GETTELSSHPROMPTLINE=$line<==\n"
                      if ($outpt=~
                            /${$Net::FullAuto::FA_lib::uhray}[0]_-(.*)$/s) {
                         $prompt=$1;
+                        print $Net::FullAuto::FA_lib::MRLOG
+                           "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVIED:\n       ",
+                           "==>$prompt<==\n       SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
+                           "\n       at Line ",__LINE__,"\n\n"
+                           if $Net::FullAuto::FA_lib::log &&
+                        -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                        print "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVED:\n       ",
+                           "==>$line<==\n       SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
+                           "\n       at Line ",__LINE__,"\n\n"
+                           if !$Net::FullAuto::FA_lib::cron && $debug;
                         last;
                      }
                   }
                };
                if ($@) {
+                  print $Net::FullAuto::FA_lib::MRLOG
+                     "\nRem_Command::cmd_login() (eval) ERROR \"set\" cmd:\n       ",
+                     "==>$@<==\n       SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
+                     "\n       at Line ",__LINE__,"\n\n"
+                     if $Net::FullAuto::FA_lib::log &&
+                     -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                  print "\nRem_Command::cmd_login() (eval) ERROR \"set\" cmd:\n       ",
+                     "==>$@<==\n       SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
+                     "\n       at Line ",__LINE__,"\n\n"
+                     if !$Net::FullAuto::FA_lib::cron && $Net::FullAuto::FA_lib::debug;
                   my $ev_err=$@;
                   if ($ev_err=~/read timed-out/s && $ct++<2) {
                      $Net::FullAuto::FA_lib::uhray=
@@ -15060,18 +15079,15 @@ print $Net::FullAuto::FA_lib::MRLOG "GETTELSSHPROMPTLINE=$line<==\n"
                      chomp($line=~tr/\0-\37\177-\377//d);
                      $outpt.=$line;
                      if (!$shell && (-1<index lc($line),'shell') &&
-                           $line=~/^[Ss][Hh][Ee][Ll[Ll][=|\s]*(.*)$/) {
+                           $line=~/^[Ss][Hh][Ee][Ll]+[=|\s]+(.*)$/) {
                         $shell=$1;
-                        $shell=~s/^.*[\\\\|\/]([^\\|\/]+)$/$1/;
+                        $shell=~s/^.*[\\\\|\/]([^\\|\/]+)[']*$/$1/;
                         $cmd_handle->print if $shell eq 'csh';
                         last;
                      }
                   }
                };
-$shell_pid||='';
-print $Net::FullAuto::FA_lib::MRLOG "SHELL_PIDRRRRR**BBBB=$shell_pid<==\n"
-   if $Net::FullAuto::FA_lib::log &&
-   -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+               $shell_pid||='';
                if ($@) {
                   $cmd_handle->print;
                } elsif (!$shell && $ct++<50) {
@@ -15079,7 +15095,7 @@ print $Net::FullAuto::FA_lib::MRLOG "SHELL_PIDRRRRR**BBBB=$shell_pid<==\n"
                } else { last }
             }
             &Net::FullAuto::FA_lib::clean_filehandle($cmd_handle,$prompt);
-            if ($shell eq 'bash' || $shell eq 'ksh' || $shell eq 'sh') {
+            if ($shell=~/\/?bash[']*$/ || $shell=~/\/?ksh[']*$/ || $shell=~/\/?sh[']*$/) {
                my $fp=$funkyprompt;
                $fp=~s/\\\\/\\\\\\\\/g;
                $cmd_handle->print("PS1=`printf $fp`;export PS1;unset PROMPT_COMMAND");
@@ -15089,6 +15105,14 @@ print $Net::FullAuto::FA_lib::MRLOG "SHELL_PIDRRRRR**BBBB=$shell_pid<==\n"
                   last if -1<index $out,'_funkyPrompt_';
                }
             } else {
+               print $Net::FullAuto::FA_lib::MRLOG
+                  "\nRem_Command::cmd_login() NO SHELL FOUND - ASSUMING MICROSOFT:",
+                  "\n       at Line ",__LINE__,"\n\n"
+                  if $Net::FullAuto::FA_lib::log &&
+                  -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+               print "\nRem_Command::cmd_login() NO SHELL FOUND - ASSUMING MICROSOFT:",
+                  "\n       at Line ",__LINE__,"\n\n"
+                  if !$Net::FullAuto::FA_lib::cron && $debug;
                $cmd_handle->print("set prompt=`printf $funkyprompt`");
                $cmd_handle->print;
                my $out='';
@@ -15098,9 +15122,18 @@ print $Net::FullAuto::FA_lib::MRLOG "SHELL_PIDRRRRR**BBBB=$shell_pid<==\n"
                   last if -1<index $out,'_funkyPrompt_';
                }
             } $cmd_handle->prompt('/_funkyPrompt_$/');
-            
+           
             $uname=&Net::FullAuto::FA_lib::push_cmd($cmd_handle,
                     'uname',$hostlabel);
+
+            print $Net::FullAuto::FA_lib::MRLOG
+               "\nRem_Command::cmd_login() UNAME: ==>$uname<==",
+               "\n       at Line ",__LINE__,"\n\n"
+               if $Net::FullAuto::FA_lib::log &&
+               -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+            print "\nRem_Command::cmd_login() UNAME: ==>$uname<==",
+               "\n       at Line ",__LINE__,"\n\n"
+               if !$Net::FullAuto::FA_lib::cron && $debug;
             
             if (lc($uname)=~/cygwin/) {
                $uname='cygwin';$cygwin=1;
@@ -15433,11 +15466,14 @@ my $logreset=1;
 if ($Net::FullAuto::FA_lib::log) { $logreset=0 }
 else { $Net::FullAuto::FA_lib::log=1 }
    my @topcaller=caller;
-   print "ftpcmd() CALLER=",(join ' ',@topcaller),"\n"
+   print "\nINFO: Rem_Command::ftpcmd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_lib::debug;
-   print $Net::FullAuto::FA_lib::MRLOG "ftpcmd() CALLER=",
-      (join ' ',@topcaller),"\n"
-      if -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+   print $Net::FullAuto::FA_lib::MRLOG
+      "\nRem_Command::ftpcmd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_lib::log &&
+      -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    my $handle=$_[0];
    my $cmd=$_[1];my $ftperr='';
    my $hostlabel=$handle->{_hostlabel}->[1]
@@ -15464,12 +15500,19 @@ else { $Net::FullAuto::FA_lib::log=1 }
          $gfp='' if (-1==index $gfp,'/');
       }
       ($output,$stderr)=&ftpcmd($handle,"${ex}ls$gfp");
-#print "OUTPUTXXXX=$output and STDERR=$stderr<======\n";
+      print "\nINFO: Rem_Command::ftpcmd() (S)FTP OUTPUT FROM (!)ls cmd:\n       ",
+         "OUTPUT=$output<== and STDERR=$stderr<==\n\n"
+         if $Net::FullAuto::FA_lib::debug;
+      print $Net::FullAuto::FA_lib::MRLOG
+         "\nRem_Command::ftpcmd() (S)FTP OUTPUT FROM (!)ls cmd:\n       ",
+         "OUTPUT=$output<== and STDERR=$stderr<==\n\n"
+         if $Net::FullAuto::FA_lib::log &&
+         -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
       if ($stderr) {
          if (wantarray) {
             return $output,$stderr;
          } else {
-            &Net::FullAuto::FA_lib::handle_error($stderr,'-3','__cleanup__');
+            &Net::FullAuto::FA_lib::handle_error($stderr,'-13','__cleanup__');
          }
       } my $gpf=substr($gf,(rindex $gf,'/')+1);
       foreach my $line (split /^/, $output) {
@@ -15477,7 +15520,6 @@ else { $Net::FullAuto::FA_lib::log=1 }
             if (wantarray) {
                return '',"$cmd: No Files Found";
             } else {
-               #&Net::FullAuto::FA_lib::handle_error("$cmd: No Files Found",'__cleanup__');
                &Net::FullAuto::FA_lib::handle_error("$cmd: No Files Found");
             }
          }
@@ -15494,11 +15536,11 @@ else { $Net::FullAuto::FA_lib::log=1 }
 #print "OUTPUT=$output and STDERR=$stderr\n";
          &Net::FullAuto::FA_lib::handle_error($stderr,'-1') if $stderr;
          foreach my $line (split /^/, $output) {
+#print "SFTPOUTPUTLINE=$line<==\n";
             if (-1<index $line,'total 0') {
                if (wantarray) {
                   return '',"$cmd: No Files Found";
                } else {
-                  #&Net::FullAuto::FA_lib::handle_error("$cmd: No Files Found",'__cleanup__');
                   &Net::FullAuto::FA_lib::handle_error("$cmd: No Files Found");
                }
             }
@@ -15525,7 +15567,7 @@ else { $Net::FullAuto::FA_lib::log=1 }
          ($output,$stderr)=&ftpcmd($handle,'hash');
          &Net::FullAuto::FA_lib::handle_error($stderr,'-1') if $stderr;
       }
-$allbytes||='';
+#$allbytes||='';
 #print "ALLBYTES=$allbytes<==\n";
    } else { $gpfile='' }
    eval {
@@ -15559,15 +15601,12 @@ $allbytes||='';
             $stdout.=$output;
 print $Net::FullAuto::FA_lib::MRLOG "FTP-STDOUT=$stdout<=======\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
-            if ($gpfile && !$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug) {
+            if ($gpfile && (!$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug)) {
                $hashcount=$output;
                $hashcount=($hashcount=~tr/#//);
-               if ($allbytes && 1<$hashcount && $ftm_type ne 'sftp') {
+               if ($allbytes && (1<$hashcount) && ($ftm_type ne 'sftp')) {
                   if ($Net::FullAuto::FA_lib::OS ne 'cygwin') {
                      print $Net::FullAuto::FA_lib::blanklines;
-                     #if ($Net::FullAuto::FA_lib::clear) {
-                     #   print $Net::FullAuto::FA_lib::clear;
-                     #} else { print `clear`."\n" }
                   } elsif (!$firstvisit) {
                      print "\n";
                      $firstvisit=1;
@@ -15608,27 +15647,33 @@ print $Net::FullAuto::FA_lib::MRLOG "FTP-STDOUT=$stdout<=======\n"
                         $seen=1
                      }
                      $line=~s/Fetch.*$//s if 1<$ftcnt;
-                     $line=~s/\n*Uploading/\n\nUploading/gs;
-                     $line=~s/Fetch/\n\nFetch/gs;
-                     #$line="\n".$line;
-                     #if ($stdout!~/^(U|F)/m) {
-                     #if ($ftm_type eq 'sftp') {
-                     #   print $line;
-                     #} elsif ((-1==index $line,'421 Service not')
                      if ((-1==index $line,'421 Service not')
                            || (-1==index $line,'421 Timeout')
                            || (-1==index $line,'Not connected')
                            || (-1==index $line,'file access p')) {
                         my $tl=$line;
                         $tl=~s/[\r|\n]*//sg;
-                        if ($cmdflag) {
-                           print "\n";
+                        if ($line=~s/^\n*Uploading/\n\nUploading/gs) {
+                           STDOUT->autoflush(1);
+                           print $line."\n\n";
+                           STDOUT->autoflush(0);
+                        } elsif ($line=~s/^\n*Fetch/\n\nFetch/gs) {
+                           STDOUT->autoflush(1);
+                           print $line,"\n\n";
+                           STDOUT->autoflush(0);
+                        } elsif ($line=~/(stalled -|\d\d:\d\d *E*T*A*)$/) {
+                           STDOUT->autoflush(1);
+                           printf("\r% 0s",$line);
+                           STDOUT->autoflush(0);
+                        } elsif (!$cmdflag && $stdout=~/^((?:get|put) ["][^"]+["]).*/s) {
+                           print $1;
+                           $cmdflag=1;
                         } elsif ($cmd!~/$tl/) {
                            $cmdflag=1;
                         } else {
-                           $tcmd.=$line;
+                           $tcmd=$line;
                            $cmdflag=1 if $cmd eq $tcmd;
-                        } print $line;
+                        }
                      }
                      if (!$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug) {
                         if (5<length $line) { 
@@ -15674,11 +15719,6 @@ print $Net::FullAuto::FA_lib::MRLOG "TOO MANY LOOPS - GOING TO RETRY11<=======\n
                      $stdout=~s/^(.*?)(\012|\013)+//s;
                      $stdout=~s/s*ftp> ?$//s;
                      $stdout=~tr/#//d;
-#if ($stdout=~/(\d+) bytes/) {
-# my $bytestransferred=$1;
-# print "BYTESTRANSFERRED=$bytestransferred\n";sleep 2;
-#}
-                     #print "FTPCMD-STDOUT=$stdout" if !$gfile && !$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug;
                      last
                   }
                } $starttime=time();
@@ -15870,9 +15910,12 @@ print $Net::FullAuto::FA_lib::MRLOG "YESSS-WE HAVE 421 ERROR!!!!! and HOSTLABEL=
                         } else {
                            &Net::FullAuto::FA_lib::handle_error($tline);
                         }
-                     } print "TLIN=$tline" if !$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug;
-                     print $Net::FullAuto::FA_lib::MRLOG $tline
-                        if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+                     }
+                     print "TLIN=$tline"
+                        if !$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug;
+                     print $Net::FullAuto::FA_lib::MRLOG "TLIN=$tline"
+                        if $Net::FullAuto::FA_lib::log &&
+                        -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                      if (-1<index $tline,
                            'ftp: connect: Connection timed out') {
                         $tline=~s/s*ftp> ?\s*$//s;
@@ -16188,8 +16231,14 @@ print "COPIED and GETFILE222=$getfile<==\n";#<STDIN>;
          print "\n";
          &Net::FullAuto::FA_lib::handle_error($stderr,'-1') if $stderr;
       }
-print $Net::FullAuto::FA_lib::MRLOG "RETURNING FTMSTDOUT=$stdout and FTMSTDERR=$stderr\n"
-   if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+      print "\nINFO: Rem_Command::ftpcmd() <<<<<<<RETURNING>>>>>>>:\n       ",
+         "STDOUT=$stdout<== and STDERR=$stderr<==\n\n"
+         if $Net::FullAuto::FA_lib::debug;
+      print $Net::FullAuto::FA_lib::MRLOG
+         "\nRem_Command::ftpcmd() <<<<<<<RETURNING>>>>>>>:\n       ",
+         "STDOUT=$stdout<== and STDERR=$stderr<==\n\n"
+         if $Net::FullAuto::FA_lib::log &&
+         -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
 $Net::FullAuto::FA_lib::log=0 if $logreset;
       if (wantarray) {
          return $stdout,$stderr;
@@ -17625,7 +17674,7 @@ print $Net::FullAuto::FA_lib::MRLOG "PAST THE ALARM5\n"
       if ($@) {
          print "\nEEEEEEE eval EEEEEEE  ERROR: $@\n       at Line ",__LINE__,"\n       ".
             (join ' ',@topcaller)."\n\n"
-            if !$Net::FullAuto::FA_lib::cron ||
+            if !$Net::FullAuto::FA_lib::cron &&
             $Net::FullAuto::FA_lib::debug;
          print $Net::FullAuto::FA_lib::MRLOG
             "\nEEEEEEE eval EEEEEEE  ERROR: $@\n       at Line ",__LINE__,"\n       ".
