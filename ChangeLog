@@ -24,6 +24,14 @@
 #
 ################################################################
 
+2010-07-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.20 released.
+
+        * Cleaned up error messaging.
+
+        * More logging cleanup.
+
 
 2010-07-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
