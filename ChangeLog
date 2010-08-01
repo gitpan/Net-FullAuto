@@ -24,6 +24,17 @@
 #
 ################################################################
 
+2010-07-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.21 released.
+
+        * Cleaned up ftp login flow
+
+        * Cleaned up error messaging.
+
+        * More logging cleanup.
+
+
 2010-07-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.20 released.
