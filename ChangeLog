@@ -24,6 +24,22 @@
 #
 ################################################################
 
+
+2010-08-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.24 released.
+
+        * Implemented Bad_Handle package to enable methods to
+          return the stderr from the orginal connection failure
+          as an explanation for why the method invocation fails.
+
+        * Cleaned up more ftp & ssh login flow
+
+        * Cleaned up more error messaging.
+
+        * More logging cleanup.
+
+
 2010-08-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.23 released.
