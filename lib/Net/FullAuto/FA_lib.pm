@@ -9368,7 +9368,7 @@ print $Net::FullAuto::FA_lib::MRLOG "wait_for_ftr_passwd_prompt() GETGOTPASS!!=$
       if (wantarray) {
          my $error=$@;
          if ($@=~/Permission denied/) {
-print "do_slave ONE and ERROR=$error\n";
+#print "do_slave ONE and ERROR=$error\n";
             return ('','read timed-out:do_slave')
          } elsif ($@!~/Connection closed/) {
             my $err=$@;
@@ -9383,12 +9383,12 @@ print "do_slave ONE and ERROR=$error\n";
                }
                if ($cnt==11 and (-1<index $err,'read timed-out')
                      && !$slave) {
-print "do_slave TWO and ERROR=$error\n";
+#print "do_slave TWO and ERROR=$error\n";
                   $error='read timed-out:do_slave';
                }
             };
             if ($error eq 'read timed-out:do_slave') {
-print "do_slave THREE and ERROR=$error\n";
+#print "do_slave THREE and ERROR=$error\n";
                return ('','read timed-out:do_slave')
             }
          #} return '', $error."\n       Connection Closed";
@@ -16364,6 +16364,8 @@ print "DO WE HAVE LCD????=$Net::FullAuto::FA_lib::ftpcwd{$handle->{_ftp_handle}}
          next
       } elsif ($ftm_type eq 'sftp') {
          $stdout=~s/^$cmd\s*(.*)\s*sftp>\s*$/$1/s;
+         $stdout=~tr/\r//d;
+         $stdout=~s/\s*$//s;
          if (exists $handle->{_cmd_handle}) {
             if ($stdout=~/Couldn\'t canonicalise:/s) {
                if ($cmd=~/^ls$|^ls /) {

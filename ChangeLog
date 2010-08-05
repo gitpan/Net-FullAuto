@@ -25,6 +25,19 @@
 ################################################################
 
 
+2010-08-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.25 released.
+
+        * Added process flow to Makefile.PL for scenarios
+          when installers do not have permission to install
+          to the default location. It now gives them an
+          option to install to alternate locations. 
+
+        * Added alarm timeout to Makefile.PL so that installs
+          never hang indefinitely
+
+
 2010-08-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.24 released.
