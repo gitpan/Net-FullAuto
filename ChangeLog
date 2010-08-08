@@ -25,6 +25,18 @@
 ################################################################
 
 
+2010-08-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.26 released.
+
+        * Implemented 'tosspass' condition so that users can
+          have the option of *not* saving passwords to the
+          encrypted database file. This behavior must be
+          specifically 'requested' via configuration setting
+          or command line arguement. Saving passwords remains
+          and WILL remain the 'default' behavior for FullAuto.
+
+
 2010-08-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.25 released.
