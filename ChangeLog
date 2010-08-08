@@ -27,6 +27,13 @@
 
 2010-08-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.27 released.
+
+        * Removed 'use Term::Menus;' from Makefile.PL
+
+
+2010-08-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.26 released.
 
         * Implemented 'tosspass' condition so that users can

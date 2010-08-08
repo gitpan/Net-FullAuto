@@ -3,8 +3,6 @@ use inc::Module::Install;
 use Config;
 use POSIX qw/strftime/;
 
-use Term::Menus;
-
 # Define metadata
 name            'Net-FullAuto';
 all_from        'lib/Net/FullAuto.pm';
