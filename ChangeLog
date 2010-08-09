@@ -25,6 +25,14 @@
 ################################################################
 
 
+2010-08-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.28 released.
+
+        * Fixed a bug in how timeouts were handled when looking
+          for ssh prompt after login
+
+
 2010-08-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.27 released.

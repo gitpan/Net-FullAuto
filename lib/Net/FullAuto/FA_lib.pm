@@ -26,11 +26,18 @@ package Net::FullAuto::FA_lib;
 #
 ################################################################
 
+## ******* Misc Notes ******************************************
 ## For Testing Multiple Iterations in a BASH shell environment
 #
 #  num=0; while (( $num < 1000 )); do ./fullauto.pl --login *******
 #  --password ******** --usr_code hello_world --log; let num+=1;
 #  echo "FINISHED NUM=$num"; done
+#
+## For re-configuring CPAN:
+#
+#  at CPAN prompt (cpan[1]) type: o conf init
+#
+## *************************************************************
 
 BEGIN {
 
@@ -315,7 +322,12 @@ BEGIN {
 
    our $termwidth=''; our $termheight='';
    if (!$Net::FullAuto::FA_lib::cron || $Net::FullAuto::FA_lib::debug) {
-      ($termwidth, $termheight) = GetTerminalSize(STDOUT);    
+      eval {
+         ($termwidth, $termheight) = GetTerminalSize(STDOUT);
+      };
+      if ($@) {
+         $termwidth='';$termheight='';
+      }
    }
 
 }
@@ -3319,10 +3331,10 @@ sub getpasswd
          }
       } $force=1;
    }
+   my $kind='prod';
+   $kind='test' if $Net::FullAuto::FA_lib::test &&
+           !$Net::FullAuto::FA_lib::prod;
    unless ($Net::FullAuto::FA_lib::tosspass) {
-      my $kind='prod';
-      $kind='test' if $Net::FullAuto::FA_lib::test &&
-              !$Net::FullAuto::FA_lib::prod;
       print $MRLOG "PASSWDDB=",
          "${Net::FullAuto::FA_lib::progname}_${kind}_passwds.db","<==\n"
          if -1<index $MRLOG,'*';
@@ -3375,7 +3387,6 @@ sub getpasswd
             $pass=$cipher->decrypt($encrypted_passwd);
             chop $pass if $pass eq substr($pass,0,(rindex $pass,'.')).'X';
          };
-#print $Net::FullAuto::FA_lib::MRLOG "WAHT THE HECK IS PASSWD=$pass<==\n";
          return $pass if $pass && $pass!~tr/\0-\37\177-\377//;
          if (!$pass && $oldpasswd) {
             my $cipher = new Crypt::CBC($oldpasswd,
@@ -3404,7 +3415,6 @@ sub getpasswd
          delete $Net::FullAuto::FA_lib::tiedb{$synctimepid};
       }
       &scrub_passwd_file($passlabel,$login_id);
-#print $Net::FullAuto::FA_lib::MRLOG "WAHT THE HECK IS SAVE_PASSWD=$save_passwd<==\n";
    } elsif (exists $Net::FullAuto::FA_lib::tosspass{$key}) {
       $save_passwd=$Net::FullAuto::FA_lib::tosspass{$key};
    }
@@ -4632,7 +4642,6 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       }
       my $cipher_algorithm=($oldcipher)?$oldcipher:
          $Net::FullAuto::FA_lib::Hosts{"__Master_${$}__"}{'Cipher'};
-#print "WHAT IS THE PASS=$passwd[8]\n";
       my $cipher = new Crypt::CBC($passwd[8],
          $cipher_algorithm);
       my $kind='prod';
@@ -4924,7 +4933,6 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
          }
 
          ## Send password.
-#print "WHAT IS THE PASSWORD=$password<==\n";
 print $Net::FullAuto::FA_lib::MRLOG "PRINTING PASSWORD NOW<==\n"
    if $Net::FullAuto::FA_lib::log &&
    -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
@@ -5330,7 +5338,6 @@ print $Net::FullAuto::FA_lib::MRLOG "FA_SUCURE8=",$Hosts{"__Master_${$}__"}{'FA_
       $key="${username}_X_${login_id}_X_"
           .$hostlabel;
    }
-print $Net::FullAuto::FA_lib::MRLOG "PASSWDUPDATE__NEWKEY=$key<==\n";
    my $href=${$Net::FullAuto::FA_lib::tiedb{$synctimepid}}{$hostlabel};
    foreach my $ky (keys %{$href}) {
       if ($ky eq $key) {
@@ -5341,7 +5348,6 @@ print $Net::FullAuto::FA_lib::MRLOG "PASSWDUPDATE__NEWKEY=$key<==\n";
    }
    my $cipher = new Crypt::CBC($Net::FullAuto::FA_lib::passwd[1],
       $Net::FullAuto::FA_lib::Hosts{"__Master_${$}__"}{'Cipher'});
-print "HOW ABOUT PASS NOW=$Net::FullAuto::FA_lib::passwd[1]\n";
    my $new_encrypted=$cipher->encrypt($passwd);
    $href->{$key}=$new_encrypted;
    ${$Net::FullAuto::FA_lib::tiedb{$synctimepid}}{$hostlabel}=$href;
@@ -8418,7 +8424,6 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                               $al=$line;next
                            }
                         }
-#print "four\n";
                         print $Net::FullAuto::FA_lib::MRLOG
                            "\nFile_Transfer::ftm_login() LOOKING FOR FTP ",
                            "ERROR AFTER PASSWD OUTPUT IN CM2:->ID: SUBLOOP:",
@@ -8436,14 +8441,12 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                            $ftp_handle->cmd('bye');
                            die "ftp: connect: Unknown host";
                         }
-#print "WHAT IS ALLINES=$allines<==\n";
                         if (-1<index $allines,'ftp: connect:') {
                            $allines=~/^.*connect:\s*(.*?)\n.*$/s;
                            my $m=$1;$m||='';
                            if ((-1==index $allines,'Address already in use')
                                  && (-1==index $allines,'Connection timed out')
                                  && (-1<index $allines,'Connection refused')) {
-#print "DO WE GET HERE? and M=$m<==\n";
                               $ftp_handle->cmd('bye');
                               die "ftp: connect: $m";
                            } elsif ($retrys++<2) {
@@ -8896,7 +8899,6 @@ print $Net::FullAuto::FA_lib::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index $
                                  &Net::FullAuto::FA_lib::passwd_db_update(
                                     $hostlabel,$su_id,'DoNotSU!',
                                     $ftm_type);
-print "EIGHT003\n";
                                  $ftp_handle->print("\003");
                                  $ftp_handle->print;
                                  while (my $line=$ftp_handle->get) {
@@ -8962,7 +8964,6 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                      } else {
 
                         ## Send password.
-print "222 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";sleep 5;#<STDIN>;
                         my $showerr='';
                         ($showerr=$lin)=~s/^.*?\n(.*)$/$1/s;
                         $showerr=~s/^(.*)?\n.*$/$1/s;
@@ -8978,7 +8979,6 @@ print "222 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";sleep 5;#<STDIN>;
                         my $ftm_passwd=&Net::FullAuto::FA_lib::getpasswd(
                            $hostlabel,$login_id,
                            $ms_share,$showerr,'','sftp','__force__');
-#print "PASSWORD=$ftm_passwd<== and LOGIN_ID=$login_id\n";
                         $ftp_handle->print($ftm_passwd);
 
                         my $showsftp=
@@ -12444,9 +12444,8 @@ print $Net::FullAuto::FA_lib::MRLOG "ftm_connect::cmd() HAD TO DO LOGIN_RETRY".
       $ftm_passwd=&Net::FullAuto::FA_lib::getpasswd(
          $hostlabel,$su_id,$ms_share,
          $ftm_errmsg,'__su__');
-print $Net::FullAuto::FA_lib::MRLOG "ftm_connect::cmd() BACK FROM PASSWD=$ftm_passwd<==\n";
-#.
-#   " for $ftpFH->{_cmd_handle} and HOSTLABEL=$ftpFH->{_hostlabel}->[0] and $ftpFH->{_hostlabel}->[1]\n" if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
+print $Net::FullAuto::FA_lib::MRLOG "ftm_connect::cmd() BACK FROM PASSWD at Line: ",
+   __LINE__,"\n" if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
       if ($ftm_passwd ne 'DoNotSU!') {
          $su_login=1;
       } else { $su_id='' }
@@ -12660,7 +12659,6 @@ print "YEA WE GOT HERE!!!!!!!!!!!!!!!!!!!!!!\n";
          }
       } last;
    }
-print "OUT OF WAITING FOR PASSWORD\n";
    my $die='';my $die_login_id='';my $ftm_errmsg='';
    my $su_login='';my $retrys=0;
    my %ftp=();
@@ -12802,7 +12800,6 @@ print "555 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";<STDIN>;
                      my $ftm_passwd=&Net::FullAuto::FA_lib::getpasswd(
                         $hostlabel,$login_id,
                         $ms_share,$showerr,'','sftp','__force__');
-print "PASSWORD=$ftm_passwd<== and LOGIN_ID=$login_id\n";
                      $ftpFH->{_cmd_handle}->print($ftm_passwd);
                      my $showsftp=
                         "\n       LoggingJ into $host via sftp  . . .\n\n";
@@ -15223,8 +15220,15 @@ print $Net::FullAuto::FA_lib::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                          '|| printf \\\\'.${$Net::FullAuto::FA_lib::uhray}[2].
                          '\\\\'.${$Net::FullAuto::FA_lib::uhray}[3].
                          '\\\\137\\\\055 2>/dev/null');
-            my $output='';my $ct=0;
+            my $output='';my $ct=0;my $tymeout=2;
             while (1) {
+               if (($ct==1) && (5<$timeout)) {
+                  $tymeout=5;
+               } elsif (($ct==2) && (10<$timeout)) {
+                  $tymeout=10;
+               } elsif (2<$ct) {
+                  $tymeout=$timeout;
+               }
                eval {
 
                   print $Net::FullAuto::FA_lib::MRLOG
@@ -15240,21 +15244,21 @@ print $Net::FullAuto::FA_lib::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                      "\n       at Line ",__LINE__,"\n\n"
                      if !$Net::FullAuto::FA_lib::cron && $debug;
 
-                  while (my $line=$cmd_handle->get(Timeout=>$timeout)) {
+                  while (my $line=$cmd_handle->get(Timeout=>$tymeout)) {
 
                      $SIG{ALRM} = sub { die "read timed-out\n" }; # \n required
                      alarm $timeout+1;
 
                      print $Net::FullAuto::FA_lib::MRLOG
                         "\nRem_Command::cmd_login() $ct ",
-                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT (Timeout=$timeout):",
+                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT (Timeout=$tymeout):",
                         "\n       ==>$line<==\n       ",
                         "SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
                         "\n       at Line ",__LINE__,"\n\n"
                         if $Net::FullAuto::FA_lib::log &&
                         -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                      print "\nRem_Command::cmd_login() $ct ",
-                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT ($Timeout=$timeout):",
+                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT ($Timeout=$tymeout):",
                         "\n       ==>$line<==\n       ",
                         "SEPARATOR=${$Net::FullAuto::FA_lib::uhray}[0]_- ",
                         "\n       at Line ",__LINE__,"\n\n"
