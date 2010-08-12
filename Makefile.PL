@@ -13,11 +13,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
            "\n                      on Windows - goto www.cygwin.com.".
            "\n\n           Be sure to install the following programs in ".
            "\n           addition to the base package:".
-           "\n\n           OpenSSH and the sshd service [as provided by Cygwin]".
+           "\n\n           OpenSSH [as provided by Cygwin]".
            "\n           inetutils \(if telnet and/or ftp services are desired\)".
            "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
            "\n           libwin32 [as provided by Cygwin] (*NOT* CPAN)".
            "\n           gcc [as provided by Cygwin]".
+           "\n           Oracle Berkeley DB [as provided by Cygwin]".
            "\n\n           **IMPORTANT** - the FullAuto install, either manual".
            "\n           or via CPAN, must be run *inside* a Cygwin bash shell".
            "\n           when installing FullAuto on Microsoft Windows.".
@@ -28,13 +29,15 @@ if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
            "\n                      as provided by Cygwin".
            "\n                      is required to install FullAuto".
-           "\n                      on Windows - goto www.cygwin.com.".
+           "\n                      on Windows.".
+           "\n(Hint: Run Cygwin setup.exe and install 'gcc-core' ".
+           "under the Category 'Devel' ).".
            "\n\n";
    die $die;
 } elsif (!can_cc()) {
    my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
            "\n                      is required to install FullAuto".
-           "\n                      (Hint: goto www.gnu.org).".
+           "\n                      (Hint: goto www.gnu.org for gcc).".
            "\n\n";
    die $die;
 }
@@ -49,7 +52,9 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
             "\n                  and/or 'telnet' (via inetutils)".
             "\n                  as provided by Cygwin".
             "\n                  is required to install FullAuto".
-            "\n                  on Windows - goto www.cygwin.com.".
+            "\n                  on Windows.".
+            "\n(Hint: Run Cygwin setup.exe and install OpenSSH ".
+            "under the Category 'Net' ).".
             "\n\n";
       print "Press <ENTER> if you wish to continue, or 'N' to quit . . . [Y] ";$a=<STDIN>;
       alarm 0;
@@ -65,10 +70,12 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
 unless (can_run('make')) {
    my $die="\n       FATAL ERROR! : Cannot locate 'make'. This program ".
            "\n                      is required to install FullAuto".
-           "\n                      (Hint: goto www.gnu.org).".
+           "\n                      (Hint: goto www.gnu.org for gnumake).".
            "\n\n";
    die $die;
 }
+
+if (0) { ## This disables the following code testing for lynx
 
 unless (can_run('lynx')) {
    my $timeout=120;my $a='';
@@ -91,7 +98,10 @@ unless (can_run('lynx')) {
    }
 }
 
+} ## End disable block
+
 #Specific dependencies
+requires        'Tie::Cache'             => 0;
 requires        'Sort::Versions'         => 0;
 requires        'Crypt::CBC'             => 0;
 requires        'Crypt::DES'             => 0;
@@ -100,18 +110,44 @@ requires        'HTTP::Date'             => 0;
 requires        'IO::Pty'                => 0;
 requires	'IO::Capture::Stderr'    => 0;
 requires        'IO::CaptureOutput'      => 0;
-requires        'LWP'                    => 0;
 requires        'Mail::Internet'         => 0;
 requires        'Mail::Sender'           => 0;
 requires        'MemHandle'              => 0;
+requires        'DB_File'                => 0;
 requires        'MLDBM'                  => 0;
 requires        'MLDBM::Sync'            => 0;
 requires        'MLDBM::Sync::SDBM_File' => 0;
 requires        'Net::Telnet'            => 0;
-requires        'Term::Menus'            => 1.24;
-requires        'Tie::Cache'             => 0;
+requires        'Term::Menus'            => 1.38;
+requires        'Term::ReadKey'          => 0;
 requires        'URI'                    => 0;
 recommends      'Crypt::Rijndael'        => 0;
+
+auto_install;
+
+eval {
+   require DB_File;
+   my $db = tie %hash, "DB_File", "fullauto_test_for_db_creation.db" 
+      || die "Cannot tie fullauto_test_for_db_creation.db: $!" ;
+   undef $db ;
+   untie %hash ;
+   unlink "fullauto_test_for_db_creation.db";
+};
+if ($@) {
+   my $die="\n$@\n".
+           "\n       FATAL ERROR! : Cannot create 'fullauto_test_for_db_creation.db'".
+           "\n                      You may be missing the Berkeley DB 'c' library.".
+           "\n                      This 'c' library is required to install FullAuto\n";
+   if ($^O eq 'cygwin') {
+      $die.="\n(Hint: Run Cygwin setup.exe and install Oracle Berkley DB ".
+           "under the Category 'Database' ).";
+   } else {
+      $die.="\n(Hint: goto ->  http://www.oracle.com/technetwork/".
+           "database/berkeleydb/downloads/index.html ).";
+   }
+   $die.="\n\n";
+   die $die;
+}
 
 my $c_file='';
 my $date=strftime('%D',localtime);
@@ -209,6 +245,7 @@ eval {
 };
 if ($@) {
    # timed out
+   print "\n";
    $selection = 'Default';
 }
 
@@ -229,7 +266,7 @@ if ($^O eq 'cygwin') {
 }
 install_script 'bin/fullauto.pl';
 
-auto_install;
+#auto_install;
 WriteAll;
 
 sub menu {

@@ -969,7 +969,7 @@ print $Net::FullAuto::FA_lib::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
    print "\n  LOGFILE ==> \"",$Hosts{"__Master_${$}__"}{'LogFile'},"\"\n\n\n"
       if $Net::FullAuto::FA_lib::log && !($Net::FullAuto::FA_lib::quiet ||
          $Net::FullAuto::FA_lib::cron);
-   print "FULLAUTO COMPLETED SUCCESSFULLY on ".localtime()."\n"
+   print "FullAuto COMPLETED SUCCESSFULLY on ".localtime()."\n"
       if (!$Net::FullAuto::FA_lib::cron && !$Net::FullAuto::FA_lib::stdio)
          && !$Net::FullAuto::FA_lib::quiet;
    if (!$Net::FullAuto::FA_lib::log && exists $Hosts{"__Master_${$}__"}{'LogFile'}
