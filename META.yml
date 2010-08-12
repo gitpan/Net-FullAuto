@@ -1,38 +1,23 @@
 ---
-name: Net-FullAuto
-version: 0.12
+abstract: 'Perl Based Secure Distributed Computing Network Process'
 author:
   - 'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>'
-abstract: Perl Based Secure Distributed Computing Network Process
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3603'
 license: gpl
-resources:
-  license: http://opensource.org/licenses/gpl-license.php
-requires:
-  Crypt::CBC: 0
-  Crypt::DES: 0
-  Getopt::Long: 0
-  HTTP::Date: 0
-  IO::Pty: 0
-  LWP: 0
-  MLDBM: 0
-  MLDBM::Sync: 0
-  MLDBM::Sync::SDBM_File: 0
-  Mail::Internet: 0
-  Mail::Sender: 0
-  MemHandle: 0
-  Net::Telnet: 0
-  Sort::Versions: 0
-  Term::Menus: 1.24
-  Tie::Cache: 0
-  URI: 0
-recommends:
-  Crypt::Rijndael: 0
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Net-FullAuto
 provides:
+  Bad_Handle:
+    file: lib/Net/FullAuto/FA_lib.pm
   File_Transfer:
     file: lib/Net/FullAuto/FA_lib.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.12
+    version: 0.30
   Net::FullAuto::FA_DB:
     file: lib/Net/FullAuto/FA_lib.pm
   Net::FullAuto::FA_lib:
@@ -55,7 +40,29 @@ provides:
   usr_code:
     file: lib/Net/FullAuto/usr_code.pm
     version: 1
-generated_by: Module::Build version 0.280802
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+recommends:
+  Crypt::Rijndael: 0
+requires:
+  Crypt::CBC: 0
+  Crypt::DES: 0
+  DB_File: 0
+  Getopt::Long: 0
+  HTTP::Date: 0
+  IO::Capture::Stderr: 0
+  IO::CaptureOutput: 0
+  IO::Pty: 0
+  MLDBM: 0
+  MLDBM::Sync: 0
+  MLDBM::Sync::SDBM_File: 0
+  Mail::Internet: 0
+  Mail::Sender: 0
+  MemHandle: 0
+  Net::Telnet: 0
+  Sort::Versions: 0
+  Term::Menus: 1.4
+  Term::ReadKey: 0
+  Tie::Cache: 0
+  URI: 0
+resources:
+  license: http://opensource.org/licenses/gpl-license.php
+version: 0.30

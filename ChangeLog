@@ -27,6 +27,14 @@
 
 2010-08-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.30 released.
+
+        * Improved the setup Makefile.PL
+          Added more pre-req checks and error handling
+
+
+2010-08-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.29 released.
 
         * Improved the setup Makefile.PL
