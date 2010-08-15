@@ -266,7 +266,6 @@ if ($^O eq 'cygwin') {
 }
 install_script 'bin/fullauto.pl';
 
-#auto_install;
 WriteAll;
 
 sub menu {

@@ -25,6 +25,18 @@
 ################################################################
 
 
+2010-08-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.31 released.
+
+        * Numerous changes to enable FullAuto to work on AIX.
+          Changes are *not* AIX specific. FullAuto is not more robust.
+
+        * More debugging code added
+
+        * "clear" logic removed (should fix cpan testers error)
+
+
 2010-08-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.30 released.
