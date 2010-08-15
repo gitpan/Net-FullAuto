@@ -2687,8 +2687,8 @@ my $onemore=0;
       if $Net::FullAuto::FA_lib::log &&
       -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    my $filehandle=$_[0];
-   if (-1==index $filehandle,'GLOB' || !defined fileno $filehandle) {
-      if (-1==index $filehandle,'GLOB') {
+   if (!defined $filehandle || -1==index $filehandle,'GLOB' || !defined fileno $filehandle) {
+      if (defined $filehandle && (-1==index $filehandle,'GLOB')) {
          eval {
             $filehandle=$filehandle->{_cmd_handle};
             $filehandle=$filehandle->{_cmd_handle}->{_cmd_handle}
@@ -5970,12 +5970,16 @@ sub close
 sub cwd
 {
    my @topcaller=caller;
+   print "\nINFO: main::cwd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if !$Net::FullAuto::FA_lib::cron &&
+      $Net::FullAuto::FA_lib::debug;
+   print $Net::FullAuto::FA_lib::MRLOG
+      "\nmain::cwd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_lib::log &&
+      -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    my $stdout='';my $stderr='';
-print "INSIDE CWD3\n";
-   print "main::cwd() CALLER=",(join ' ',@topcaller),"\n";
-   #   if $Net::FullAuto::FA_lib::debug;
-   print $Net::FullAuto::FA_lib::MRLOG "main::cwd() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
    if (!defined $_[1]) {
       return Cwd::getcwd();
    } else { 
@@ -9877,7 +9881,11 @@ print $Net::FullAuto::FA_lib::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}->
          }
          if (($self->{_connect} eq 'connect_host') ||
                ($self->{_connect} eq 'connect_secure') ||
-               ($self->{_connect} eq 'connect_insecure')) {
+               ($self->{_connect} eq 'connect_insecure') ||
+               ($self->{_connect} eq 'connect_ssh_telnet') ||
+               ($self->{_connect} eq 'connect_ssh') ||
+               ($self->{_connect} eq 'connect_telnet') ||
+               ($self->{_connect} eq 'connect_telnet_ssh')) {
             ($output,$stderr)=$self->cmd("cd \'$target_dir\'");
             if ($stderr) {
                if (wantarray) {

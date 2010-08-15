@@ -24,6 +24,12 @@
 #
 ################################################################
 
+2010-08-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.32 released.
+
+        * Fixed bug in cwd() cmd
+
 
 2010-08-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
