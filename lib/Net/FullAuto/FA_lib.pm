@@ -1335,12 +1335,12 @@ sub testpid
               }, \$mystdout;
    chomp $stdout;chomp $stderr;
    print $Net::FullAuto::FA_lib::MRLOG
-      "\nPPPPPPP &main::testpid() PPPPPPP STDOUT ",
+      "\nppppppp &main::testpid() ppppppp STDOUT ",
       "==>$stdout<== and STDERR ==>$stderr<==",
       "\n       at Line ",__LINE__,"\n\n"
       if $Net::FullAuto::FA_lib::log &&
       -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
-   print "\nPPPPPPP &main::testpid() PPPPPPP STDOUT ",
+   print "\nppppppp &main::testpid() ppppppp STDOUT ",
       "==>$stdout<== and STDERR ==>$stderr<==",
       "\n       at Line ",__LINE__,"\n\n"
       if !$Net::FullAuto::FA_lib::cron && $debug;
@@ -1738,13 +1738,16 @@ sub connect_secure
    push @_, '__secure__';
    ($handle,$stderr)=connect_host(@_);
    if (wantarray) {
-print $Net::FullAuto::FA_lib::MRLOG "RETURNINGSSH_HANDLE1\n";
+print $Net::FullAuto::FA_lib::MRLOG "RETURNINGSSH_HANDLE1\n"
+if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
       return $handle,$stderr;
    } elsif ($stderr) {
-print $Net::FullAuto::FA_lib::MRLOG "GOTSSHCONNECTERRORDYING\n";
+print $Net::FullAuto::FA_lib::MRLOG "GOTSSHCONNECTERRORDYING\n"
+if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
       &handle_error($stderr,'-4','__cleanup__');
    } else {
-print $Net::FullAuto::FA_lib::MRLOG "RETURNINGSSH_HANDLE2\n";
+print $Net::FullAuto::FA_lib::MRLOG "RETURNINGSSH_HANDLE2\n"
+if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
       return $handle;
    }
 }
@@ -3747,7 +3750,7 @@ sub apache_download
    );
 
    if ($res->is_success || $res->message =~ /^Interrupted/) {
-      show("");  # clear text
+      show("");
       print "\r";
       print fbytes($size);
       print " of ", fbytes($length) if defined($length) && $length != $size;
@@ -4976,8 +4979,6 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
                   $local_host->output_record_separator("\r");
                   $localhost->{_cmd_handle}->close()
                      if exists $localhost->{_cmd_handle};
-                  #delete $localhost->{_cmd_handle}
-                  #   if exists $localhost->{_cmd_handle};
                   $localhost->{_cmd_handle}=$local_host;
                   ## Wait for password prompt.
                   my $ignore='';
@@ -5069,6 +5070,12 @@ print $Net::FullAuto::FA_lib::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
          ($cfh_ignore,$cfh_error)=&clean_filehandle($local_host);
          &handle_error($cfh_error,'-1') if $cfh_error;
          my $wloop=0;
+         foreach my $host (keys %same_host_as_Master) {
+            if (exists $Hosts{$host}{'LoginID'} &&
+                  ($Hosts{$host}{'LoginID'} ne $username)) {
+               $Hosts{$host}{'LoginID'}=$username;
+            }
+         }
          while (1) {
             my $_sh_pid='';
             ($_sh_pid,$stderr)=Rem_Command::cmd(
@@ -6388,7 +6395,7 @@ sub new {
    }
    my ($ftp_handle,$ftp_pid,$work_dirs,$ftr_cmd,$ftm_type,
        $cmd_type,$smb,$fpx_handle,$fpx_pid,$stderr)=
-       &ftm_login($hostlabel,$new_master,$_connect);
+       ftm_login($hostlabel,$new_master,$_connect);
    if ($stderr) {
       $stderr=~s/(at .*)$/\n\n       $1/s;
       my $die="\n       FATAL ERROR! - $stderr";
@@ -8230,9 +8237,15 @@ print "WHAT IS THE FTP_EVAL_ERROR1111=$@\n";
                        _hostlabel=>[ $hostlabel,'' ],
                        _cmd_type=>$cmd_type },$timeout);
                   if ($stderr) {
-                     if ($fm_cnt==$#{$ftr_cnct}) {
-                        return '',$stderr;
-                     } else { next }
+                     if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                        die $stderr;
+                     } else {
+                        $ftp_handle->print("bye");
+                        my $cfh_ignore='';my $cfh_error='';
+                        ($cfh_ignore,$cfh_error)=
+                           &Net::FullAuto::FA_lib::clean_filehandle($ftp_handle);
+                        next;
+                     }
                   }
                   $ftm_type='ftp';last;
                } elsif (lc($connect_method) eq 'sftp') {
@@ -8854,9 +8867,15 @@ print $Net::FullAuto::FA_lib::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index $
                     _hostlabel=>[ $hostlabel,'' ],
                     _cmd_type=>$cmd_type },$timeout);
                if ($stderr) {
-                  if ($fm_cnt==$#{$ftr_cnct}) {
-                     return '',$stderr;
-                  } else { next }
+                  if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                     die $stderr;
+                  } else {
+                     $ftp_handle->print("bye");
+                     my $cfh_ignore='';my $cfh_error='';
+                     ($cfh_ignore,$cfh_error)=
+                        &Net::FullAuto::FA_lib::clean_filehandle($ftp_handle);
+                     next;
+                  }
                }
                $ftm_type='ftp';last;
             } elsif (lc($connect_method) eq 'sftp') {
@@ -8906,8 +8925,8 @@ print $Net::FullAuto::FA_lib::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index $
                     _hostlabel=>[ $hostlabel,'' ],
                     _cmd_type=>$cmd_type },$timeout);
                if ($stderr) {
-                  if ($fm_cnt==$#{$ftr_cnct}) {
-                     return '',$stderr;
+                  if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                     die $stderr;
                   } else {
                      $ftp_handle->print("bye");
                      my $cfh_ignore='';my $cfh_error='';
@@ -9011,9 +9030,15 @@ print $Net::FullAuto::FA_lib::MRLOG "LLINE44=$line\n"
                                          _hostlabel=>[ $hostlabel,'' ],
                                          _cmd_type=>$cmd_type },$timeout);
                                  if ($stderr) {
-                                    if ($fm_cnt==$#{$ftr_cnct}) {
-                                       return '',$stderr;
-                                    } else { next }
+                                    if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                                       die $stderr;
+                                    } else {
+                                       $ftp_handle->print("bye");
+                                       my $cfh_ignore='';my $cfh_error='';
+                                       ($cfh_ignore,$cfh_error)=
+                                          &Net::FullAuto::FA_lib::clean_filehandle($ftp_handle);
+                                       next;
+                                    }
                                  }
 
                                  ## Send password.
@@ -9093,9 +9118,15 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                              _hostlabel=>[ $hostlabel,'' ],
                              _cmd_type=>$cmd_type },$timeout);
                      if ($stderr) {
-                        if ($fm_cnt==$#{$ftr_cnct}) {
-                           return '',$stderr;
-                        } else { next }
+                        if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                           die $stderr;
+                        } else {
+                           $ftp_handle->print("bye");
+                           my $cfh_ignore='';my $cfh_error='';
+                           ($cfh_ignore,$cfh_error)=
+                              &Net::FullAuto::FA_lib::clean_filehandle($ftp_handle);
+                           next;
+                        }
                      }
 
                      ## Send password.
@@ -9246,11 +9277,6 @@ print "AUTHENHERE!1111\n";
                $Net::FullAuto::FA_lib::localhost->{_work_dirs}->{_tmp};
          }
       };
-#$ftp_handle->print("quote stat");
-#while ($line=$ftp_handle->get) {
-#   print "FTPLOGIN_EVAL=$line\n";
-#   last if $line=~/ftp>\s*$/;
-#};<STDIN>;
       if ($@) {
          $ftm_errmsg=$@;
 #print "FTM_LOGIN_ERRMSG=$ftm_errmsg and FTM_PID=$ftp_pid and SHELLPID=$shell_pid<===\n";
@@ -9259,8 +9285,8 @@ print "AUTHENHERE!1111\n";
             if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
          if (unpack('a4',$ftm_errmsg) eq 'read' ||
                (-1<index $ftm_errmsg,'421 Service') ||
-               (-1<index $ftm_errmsg,'Connection closed') ||
                (-1<index $ftm_errmsg,'Connection refused') ||
+               (-1<index $ftm_errmsg,'Connection closed') ||
                (-1<index $ftm_errmsg,'Unknown host') ||
                (-1<index $ftm_errmsg,'A remote host refused')) {
             my $host= $hostname ? $hostname : $ip;
@@ -9466,20 +9492,23 @@ sub wait_for_ftr_passwd_prompt
 print $Net::FullAuto::FA_lib::MRLOG "wait_for_ftr_passwd_prompt() GETGOTPASS!!=$lin<==\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                $gotpass=1;alarm 0;last PW;
-            } elsif ((-1<index($lin,'530 '))
-                  || (-1<index($lin,'421 '))
-                  || (-1<index($lin,'Connection refused'))
-                  || (-1<index($lin,'Connection closed'))
-                  || (-1<index($lin,'ssh: Could not'))) {
+            } elsif ((-1<index $lin,'530 ')
+                  || (-1<index $lin,'421 ')
+                  || (-1<index $lin,'Connection refused')
+                  || (-1<index $lin,'Connection closed')
+                  || (-1<index $lin,'ssh: Could not')) {
                chomp($lin=~tr/\0-\11\13-\31\33-\37\177-\377//d);
                $lin=~/(^530[ ].*$)|(^421[ ].*$)
-                      |(^Connection[ ]closed.*$)
                       |(^Connection[ ]refused.*$)
+                      |(^Connection[ ]closed.*$)
                       |(^ssh:[ ]Could[ ]not.*)/xm;
                $lin=$1 if $1;$lin=$2 if $2;
                $lin=$3 if $3;$lin=$4 if $4;
                $lin=$5 if $5;
-               if ($lin eq 'Connection closed') {
+               if (-1<index $lin,'Connection refused') {
+                  alarm 0;
+                  die 'Connection refused';
+               } elsif (-1<index $lin,'Connection closed') {
                   alarm 0;
                   die 'Connection closed';
                } else {
@@ -12643,29 +12672,17 @@ H->{_hostlabel}->[1]\n" if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAut
             }
 
             ## Wait for password prompt.
-            ($ignore,$stderr)=&wait_for_ftr_passwd_prompt(
-               $ftpFH);
+            ($ignore,$stderr)=&wait_for_ftr_passwd_prompt($ftpFH);
             if ($stderr) {
-print "WE GOT FTPPPPPPSTDERRRRR=$stderr<==\n";sleep 3;
-               $ftpFH->{_cmd_handle}->print;
-               $ftpFH->{_cmd_handle}->print('bye');
-while (my $line=$ftpFH->{_cmd_handle}->get) {
-print "STDERRRRLINE=$line<==\n";
-   last if $line=~/_funkyPrompt_/s;
-}
-print "YES WE GOT OUT AND ARE GOING TO CLEAN<==\n";
-               my $cfh_ignore='';my $cfh_error='';
-               ($cfh_ignore,$cfh_error)=
-                  &Net::FullAuto::FA_lib::clean_filehandle(
-                  $ftpFH->{_cmd_handle});
-print "GOOD _ DONE WITH CLEANING\n";
-               if ($cfh_error) {
-print "YEA WE GOT HERE!!!!!!!!!!!!!!!!!!!!!!\n";
-                  return 0;
-               } elsif ($fm_cnt==$#{$ftr_cnct}) {
-print "WE ARE RETURNING THE FOLLOWING ERROR=$stderr<==\n";
-                  return 0;
-               } else { next }
+               if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                  return '',$stderr;
+               } else {
+                  $ftpFH->{_cmd_handle}->print("bye");
+                  my $cfh_ignore='';my $cfh_error='';
+                  ($cfh_ignore,$cfh_error)=
+                     &Net::FullAuto::FA_lib::clean_filehandle($ftpFH);
+                  next;
+               }
             }
             $ftm_type='ftp';last;
 
@@ -12710,22 +12727,17 @@ print $Net::FullAuto::FA_lib::MRLOG "ftm_connect::cmd() HAD TO DO SFTP LOGIN_RET
             }
 
             ## Wait for password prompt.
-            ($ignore,$stderr)=&wait_for_ftr_passwd_prompt(
-               $ftpFH);
-print "FTM_CONNECT_ERRORRRRRRRR======$stderr<==\n";sleep 3;
+            ($ignore,$stderr)=&wait_for_ftr_passwd_prompt($ftpFH);
             if ($stderr) {
-               my $cfh_ignore='';my $cfh_error='';
-               ($cfh_ignore,$cfh_error)=
-                  &Net::FullAuto::FA_lib::clean_filehandle(
-                  $ftpFH->{_cmd_handle});
-               &Net::FullAuto::FA_lib::handle_error($cfh_error,'-1')
-                  if $cfh_error;
-               if ($cfh_error) {
-print "YEA WE GOT HERE!!!!!!!!!!!!!!!!!!!!!!\n";
-                  return 0;
-               } elsif ($fm_cnt==$#{$ftr_cnct}) {
-                  return 0;
-               } else { next }
+               if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                  return '',$stderr;
+               } else {
+                  $ftpFH->{_cmd_handle}->print("bye");
+                  my $cfh_ignore='';my $cfh_error='';
+                  ($cfh_ignore,$cfh_error)=
+                     &Net::FullAuto::FA_lib::clean_filehandle($ftpFH);
+                  next;
+               }
             }
 
             SP: foreach my $hlabel (keys %Net::FullAuto::FA_lib::Processes) {
@@ -12851,12 +12863,17 @@ print $Net::FullAuto::FA_lib::MRLOG "LLINE44=$line\n"
 
                               ## Wait for password prompt.
                               ($ignore,$stderr)=
-                                 &wait_for_ftr_passwd_prompt(
-                                 $ftpFH);
+                                 &wait_for_ftr_passwd_prompt($ftpFH);
                               if ($stderr) {
-                                 if ($fm_cnt==$#{$ftr_cnct}) {
+                                 if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                                     return '',$stderr;
-                                 } else { next }
+                                 } else {
+                                    $ftpFH->{_cmd_handle}->("bye");
+                                    my $cfh_ignore='';my $cfh_error='';
+                                    ($cfh_ignore,$cfh_error)=
+                                       &Net::FullAuto::FA_lib::clean_filehandle($ftpFH);
+                                    next;
+                                 }
                               }
 
                               ## Send password.
@@ -16159,7 +16176,9 @@ sub ftpcmd
             }
             if ($output || $stdout=~/s*ftp> ?$/s) {
                if ((-1<index $stdout,'bash: ') || (-1<index $stdout,'age too lo')) {
-print $Net::FullAuto::FA_lib::MRLOG "TOO MANY LOOPS - GOING TO RETRY11<=======\n";
+print $Net::FullAuto::FA_lib::MRLOG "TOO MANY LOOPS - GOING TO RETRY11<=======\n"
+      if $Net::FullAuto::FA_lib::log &&
+      -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                   $handle->{_ftp_handle}->print("\004");
                   die "421 Timeout - $ftm_type read timed out";
                }
@@ -16180,7 +16199,9 @@ print $Net::FullAuto::FA_lib::MRLOG "TOO MANY LOOPS - GOING TO RETRY11<=======\n
                   }
                } $starttime=time();
             } elsif ((!$gpfile && $loop++==10) || (-1<index $stdout,'bash: ')) {
-print $Net::FullAuto::FA_lib::MRLOG "TOO MANY LOOPS - GOING TO RETRY<22=======\n";
+print $Net::FullAuto::FA_lib::MRLOG "TOO MANY LOOPS - GOING TO RETRY<22=======\n"
+      if $Net::FullAuto::FA_lib::log &&
+      -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                $handle->{_ftp_handle}->print("\004");
                $stdout="421 Timeout - $ftm_type read timed out";die
             } elsif ($handle->{_ftp_handle}->timeout<time()-$starttime) {
@@ -16444,9 +16465,16 @@ print $Net::FullAuto::FA_lib::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                        _connect=>$_connect });
                $ftm_type='ftp';
                if ($stderr) {
-                  if ($fm_cnt==$#{$ftr_cnct}) {
+                  if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                      return '',$stderr;
-                  } else { next }
+                  } else {
+                     $handle->{_ftp_handle}->print("bye");
+                     my $cfh_ignore='';my $cfh_error='';
+                     ($cfh_ignore,$cfh_error)=
+                        &Net::FullAuto::FA_lib::clean_filehandle(
+                        $handle->{_ftp_handle});
+                     next;
+                  }
                } last
             } elsif (lc($connect_method) eq 'sftp') {
                my $sftploginid=($su_id)?$su_id:$login_id;
@@ -16490,9 +16518,16 @@ print $Net::FullAuto::FA_lib::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                        _connect=>$_connect });
                $ftm_type='sftp';
                if ($stderr) {
-                  if ($fm_cnt==$#{$ftr_cnct}) {
+                  if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                      return '',$stderr;
-                  } else { next }
+                  } else {
+                     $handle->{_ftp_handle}->print("bye");
+                     my $cfh_ignore='';my $cfh_error='';
+                     ($cfh_ignore,$cfh_error)=
+                        &Net::FullAuto::FA_lib::clean_filehandle(
+                        $handle->{_ftp_handle});
+                     next;
+                  }
                } last
             }
          }

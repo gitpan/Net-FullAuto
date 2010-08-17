@@ -24,6 +24,14 @@
 #
 ################################################################
 
+
+2010-08-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.33 released.
+
+        * More error handling cleanup
+
+
 2010-08-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.32 released.
