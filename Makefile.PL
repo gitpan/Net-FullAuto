@@ -27,17 +27,17 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 }
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
-           "\n                      as provided by Cygwin".
+           "\n                      version 4 as provided by Cygwin".
            "\n                      is required to install FullAuto".
            "\n                      on Windows.".
-           "\n(Hint: Run Cygwin setup.exe and install 'gcc-core' ".
+           "\n(Hint: Run Cygwin setup.exe and install 'gcc4-core' ".
            "under the Category 'Devel' ).".
            "\n\n";
    die $die;
 } elsif (!can_cc()) {
-   my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
+   my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc version 4)".
            "\n                      is required to install FullAuto".
-           "\n                      (Hint: goto www.gnu.org for gcc).".
+           "\n                      (Hint: goto www.gnu.org for gcc version 4).".
            "\n\n";
    die $die;
 }
@@ -112,7 +112,6 @@ requires	'IO::Capture::Stderr'    => 0;
 requires        'IO::CaptureOutput'      => 0;
 requires        'Mail::Internet'         => 0;
 requires        'Mail::Sender'           => 0;
-requires        'MemHandle'              => 0;
 requires        'DB_File'                => 0;
 requires        'MLDBM'                  => 0;
 requires        'MLDBM::Sync'            => 0;

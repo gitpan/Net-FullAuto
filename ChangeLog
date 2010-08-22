@@ -25,6 +25,21 @@
 ################################################################
 
 
+2010-08-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.34 released.
+
+        * More error handling cleanup
+
+        * Removed dependency on MemHandle
+
+        * &Menu() is now available in usr_code.pm
+
+        * retry logic made saner and more reliable
+
+        * &send_email() functionality restored
+
+
 2010-08-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.33 released.
