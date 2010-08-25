@@ -30,7 +30,6 @@ our $test=0;our $timeout=0;
 require Exporter;
 our $VERSION = 1.00;
 use warnings;
-use MemHandle;
 #use threads ();
 #use Thread::Queue;
 our @ISA = qw(Exporter Net::FullAuto::FA_lib);

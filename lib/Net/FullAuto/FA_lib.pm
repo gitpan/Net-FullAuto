@@ -159,7 +159,7 @@ BEGIN {
          $fa_hosts=$main::fa_hosts;
       }
    } else {
-      require 'Net/FullAuto/fa_hosts.pm';
+      require 'Net/FullAuto/Custom/fa_hosts.pm';
       import fa_hosts;
       $fa_hosts='fa_hosts.pm';
    }
@@ -179,7 +179,7 @@ BEGIN {
          $fa_maps=$fm.'.pm';
       }
    } else {
-      require 'Net/FullAuto/fa_maps.pm';
+      require 'Net/FullAuto/Custom/fa_maps.pm';
       import fa_maps;
       $fa_maps='fa_maps.pm';
    }
@@ -1411,6 +1411,7 @@ sub check_Hosts
    my $name=substr($_[0],0,-3);
    my @Hosts=eval "\@${name}::Hosts";
    foreach my $host (@Hosts) {
+      next if exists ${$host}{'sshport'};
       my $hostn=(exists ${$host}{'HostName'})?lc(${$host}{'HostName'}):'';
       my $ipn=(exists ${$host}{'IP'})?${$host}{'IP'}:''; 
       if ($hostn eq lc($Local_FullHostName)) {
@@ -5151,7 +5152,8 @@ print $Net::FullAuto::FA_lib::MRLOG
          &su_scrub($hostlabel) if $su_scrub;
 
          my $switch_user='';
-         if (!$mainuser && exists $Hosts{$hostlabel}{'LoginID'}) {
+         if (!$mainuser && (exists $Hosts{$hostlabel}{'LoginID'}) &&
+               ($Hosts{$hostlabel}{'LoginID'} ne $login_id)) {
             $switch_user=$Hosts{$hostlabel}{'LoginID'};
             $passwd[0]=$passwd[2]=$password=&Net::FullAuto::FA_lib::getpasswd($hostlabel,
                        $switch_user,'',$ftm_errmsg,__su__);
@@ -18011,7 +18013,7 @@ foreach my $line (reverse split /^/, $fulloutput) {
    last if $lcntt++==5;
 }
 print $Net::FullAuto::FA_lib::MRLOG "DOIN FULLOUTPUTMAYBE==>$newline<==",
-   " and LASTLINE=$lastline and CMD_PROMPT=$cmd_prompt<== and FO=$fulloutput<==\n"
+   " and LASTLINE=$lastline<== and CMD_PROMPT=$cmd_prompt<== and FO=$fulloutput<==\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                      if (!$lastline) {
                         if ($retry++<3) {
@@ -18104,7 +18106,11 @@ print "WE HAVE LASTLINE CMDPROMPT AND ARE GOING TO EXIT and FO=$fulloutput and M
 		        chomp $stdout if $stdout;
                         chomp $stderr if $stderr;
                         last;
-                     } $growoutput=$lastline;
+                     } elsif ($lastline=~/^\s*$/) {
+                        $growoutput.=$lastline;
+                     } else {
+                        $growoutput=$lastline;
+                     }
 print $Net::FullAuto::FA_lib::MRLOG "GRO_GONNA_LOOP==>$growoutput<==\n"
    if $Net::FullAuto::FA_lib::log && -1<index $Net::FullAuto::FA_lib::MRLOG,'*';
                      $starttime=0;$select_timeout=0;

@@ -17,7 +17,7 @@ provides:
     file: lib/Net/FullAuto/FA_lib.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.34
+    version: 0.35
   Net::FullAuto::FA_DB:
     file: lib/Net/FullAuto/FA_lib.pm
   Net::FullAuto::FA_lib:
@@ -29,16 +29,16 @@ provides:
   Rem_Command:
     file: lib/Net/FullAuto/FA_lib.pm
   fa_hosts:
-    file: lib/Net/FullAuto/fa_hosts.pm
+    file: lib/Net/FullAuto/Distro/fa_hosts.pm
     version: 1
   fa_maps:
-    file: lib/Net/FullAuto/fa_maps.pm
+    file: lib/Net/FullAuto/Distro/fa_maps.pm
     version: 1
   menu_cfg:
-    file: lib/Net/FullAuto/menu_cfg.pm
+    file: lib/Net/FullAuto/Distro/menu_cfg.pm
     version: 1
   usr_code:
-    file: lib/Net/FullAuto/usr_code.pm
+    file: lib/Net/FullAuto/Distro/usr_code.pm
     version: 1
 recommends:
   Crypt::Rijndael: 0
@@ -64,4 +64,4 @@ requires:
   URI: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
-version: 0.34
+version: 0.35

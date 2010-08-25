@@ -1,0 +1,9 @@
+This is the FullAuto Custom/BackUp directory. FullAuto will copy customized
+configuration and user code files to this directory whenever its built-in
+edit feature is invoked - so that a backup of these critical files is always
+available. It is left to the user to determine how and when these files
+should be purged. FullAuto users are HIGHLY encouraged to keep a history of
+these files in some form of software version control system such as:
+
+Apache Subversion: http://subversion.apache.org/
+
