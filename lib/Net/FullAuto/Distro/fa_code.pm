@@ -1,4 +1,4 @@
-package usr_code;
+package fa_code;
 
 ################################################################
 #
@@ -32,8 +32,8 @@ our $VERSION = 1.00;
 use warnings;
 #use threads ();
 #use Thread::Queue;
-our @ISA = qw(Exporter Net::FullAuto::FA_lib);
-use Net::FullAuto::FA_lib;
+our @ISA = qw(Exporter Net::FullAuto::FA_Core);
+use Net::FullAuto::FA_Core;
 
 #################################################################
 ##  Do NOT alter code ABOVE this block.
@@ -108,7 +108,7 @@ sub hello_world {
        print "We Have an ERROR when attempting to connect to Zero! : $stderr\n";
     }
 
-    if ($hostname eq 'reedfish-laptop') {
+    if ($hostname eq 'bkelly-laptop') {
        $computer_one=connect_ssh('VB_Ubuntu'); # Connect to
                                             # Remote Host via ssh
     } else {
@@ -122,7 +122,7 @@ sub hello_world {
     print "Ubuntu=$stdout\n";
     ($stdout,$stderr)=$computer_zero->cmd('hostname');
     print "Zero=$stdout\n\n";
-    ($stdout,$stderr)=$computer_zero->cwd('/develop/deployment/ids');
+    ($stdout,$stderr)=$computer_zero->cwd('/develop/deployment/dest');
     print "STDERR=$stderr<==\n" if $stderr;
     my $file='';
     ($file,$stderr)=$computer_zero->cmd('ls ID*');
@@ -132,7 +132,7 @@ sub hello_world {
     if ($stderr) {                                # Check Results
        print "We Have an ERROR! : $stderr\n";
     }
-    ($stdout,$stderr)=$computer_one->cwd('/home/abinitio/eme_import');
+    ($stdout,$stderr)=$computer_one->cwd('/home/qa/import');
     print "STDERR=$stderr\n" if $stderr;
     ($stdout,$stderr)=$computer_one->put($file); # Get the File
     if ($stderr) {                               # Check Results

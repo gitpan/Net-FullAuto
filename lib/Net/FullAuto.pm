@@ -33,7 +33,10 @@ package Net::FullAuto;
 #
 ################################################################
 
-our $VERSION='0.35';
+
+our $VERSION='0.36';
+
+
 use 5.002;
 
 BEGIN {
@@ -243,8 +246,8 @@ the remote computer (This will suffice for all following examples):
           'HostName'      => 'compter_one.w2k.fullautosoftware.net',
           'Login'         => 'bkelly',
           'LogFile'       => "/cygdrive/d/fullauto/logs/FAlog${$}d".
-                             "${FA_lib::invoked[2]}".
-                             "${FA_lib::invoked[3]}.txt",
+                             "${FA_Core::invoked[2]}".
+                             "${FA_Core::invoked[3]}.txt",
        },
 
 S<   >In the fileS<  >C<usr_code.pm>S<  >add the *process* subroutine code:
@@ -725,8 +728,8 @@ S<The following is typical contents of a  C<usr_code.pm>
 
         require Exporter;
         use warnings;
-        our @ISA = qw(Exporter Net::FullAuto::FA_lib);
-        use Net::FullAuto::FA_lib;
+        our @ISA = qw(Exporter Net::FullAuto::FA_Core);
+        use Net::FullAuto::FA_Core;
 
         #################################################################
         ##  Do NOT alter code ABOVE this block.
@@ -831,8 +834,8 @@ The <code>LoginID</code> Key Element is <i>optional</i> because <code>Net::FullA
 B<LogFile>S<  >- optional log file name and location
 
 S<                 >C<LogFile =>>C< "/tmp/FAlog${$}d" .
-"$Net::FullAuto::FA_lib::invoked[2]" .
-"$Net::FullAuto::FA_lib::invoked[3].txt",>
+"$Net::FullAuto::FA_Core::invoked[2]" .
+"$Net::FullAuto::FA_Core::invoked[3].txt",>
 
 =back
 

@@ -12,33 +12,36 @@ meta-spec:
 name: Net-FullAuto
 provides:
   Bad_Handle:
-    file: lib/Net/FullAuto/FA_lib.pm
+    file: lib/Net/FullAuto/FA_Core.pm
   File_Transfer:
-    file: lib/Net/FullAuto/FA_lib.pm
+    file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.35
+    version: 0.36
+  Net::FullAuto::FA_Core:
+    file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
-    file: lib/Net/FullAuto/FA_lib.pm
-  Net::FullAuto::FA_lib:
-    file: lib/Net/FullAuto/FA_lib.pm
+    file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::Getline:
-    file: lib/Net/FullAuto/FA_lib.pm
+    file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::MemoryHandle:
-    file: lib/Net/FullAuto/FA_lib.pm
+    file: lib/Net/FullAuto/FA_Core.pm
   Rem_Command:
-    file: lib/Net/FullAuto/FA_lib.pm
-  fa_hosts:
-    file: lib/Net/FullAuto/Distro/fa_hosts.pm
+    file: lib/Net/FullAuto/FA_Core.pm
+  fa_code:
+    file: lib/Net/FullAuto/Distro/fa_code.pm
+    version: 1
+  fa_conf:
+    file: lib/Net/FullAuto/Distro/fa_conf.pm
+    version: 1
+  fa_host:
+    file: lib/Net/FullAuto/Distro/fa_host.pm
     version: 1
   fa_maps:
     file: lib/Net/FullAuto/Distro/fa_maps.pm
     version: 1
-  menu_cfg:
-    file: lib/Net/FullAuto/Distro/menu_cfg.pm
-    version: 1
-  usr_code:
-    file: lib/Net/FullAuto/Distro/usr_code.pm
+  fa_menu:
+    file: lib/Net/FullAuto/Distro/fa_menu.pm
     version: 1
 recommends:
   Crypt::Rijndael: 0
@@ -58,10 +61,10 @@ requires:
   Mail::Sender: 0
   Net::Telnet: 0
   Sort::Versions: 0
-  Term::Menus: 1.4
+  Term::Menus: 1.44
   Term::ReadKey: 0
   Tie::Cache: 0
   URI: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
-version: 0.35
+version: 0.36

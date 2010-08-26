@@ -1,4 +1,4 @@
-package fa_hosts;
+package fa_conf;
 
 ################################################################
 #
@@ -26,42 +26,32 @@ package fa_hosts;
 #
 ################################################################
 
+#################################################################
+#
+#  *** This functionality is NOT yet implemented. ***
+#
+#################################################################
+
 require Exporter;
 use warnings;
 our @ISA     = qw(Exporter);
-our @EXPORT  = qw(@Hosts);
+our @EXPORT  = qw(@Maps);
 our $VERSION = 1.00;
 
-@Hosts = (
+@Maps = (
 #################################################################
 ##  Do NOT alter code ABOVE this block.
 #################################################################
 ##  -------------------------------------------------------------
-##  ADD HOST BLOCKS HERE:
+##  ADD CONFIGURATION BLOCKS HERE:
 ##  -------------------------------------------------------------
 
-       {
-          'IP'             => '198.201.10.1',
-          'HostName'       => 'computer_one',
-          'Label'          => 'REMOTE COMPUTER ONE',
-          #'LoginID'        => 'bkelly',
-          'LogFile'        => "/tmp/FAlog${$}d".
-                              "$Net::FullAuto::FA_lib::invoked[2]".
-                              "$Net::FullAuto::FA_lib::invoked[3].txt",
-       },
-       {
-          'IP'             => '198.201.10.2',
-          'HostName'       => 'computer_two',
-          'Label'          => 'REMOTE COMPUTER TWO',
-          'LogFile'        => "/tmp/FAlog${$}d".
-                              "$Net::FullAuto::FA_lib::invoked[2]".
-                              "$Net::FullAuto::FA_lib::invoked[3].txt",
-       },
+
+
 
 #################################################################
 ##  Do NOT alter code BELOW this block.
 #################################################################
 );
-
-## Important! The '1' at the Bottom is NEEDED!
 1;
+

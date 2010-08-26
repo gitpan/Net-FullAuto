@@ -15,11 +15,12 @@ inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/Net/FullAuto.pm
-lib/Net/FullAuto/FA_lib.pm
-lib/Net/FullAuto/Distro/fa_hosts.pm
+lib/Net/FullAuto/FA_Core.pm
+lib/Net/FullAuto/Distro/fa_host.pm
 lib/Net/FullAuto/Distro/fa_maps.pm
-lib/Net/FullAuto/Distro/menu_cfg.pm
-lib/Net/FullAuto/Distro/usr_code.pm
+lib/Net/FullAuto/Distro/fa_menu.pm
+lib/Net/FullAuto/Distro/fa_code.pm
+lib/Net/FullAuto/Distro/fa_conf.pm
 lib/Net/FullAuto/Custom/README
 lib/Net/FullAuto/Custom/BackUp/README
 LICENSE

@@ -128,8 +128,8 @@ You want the output of the ps -e command from a remote UNIX computer. Example:
           'HostName'      => 'compter_one.w2k.fullautosoftware.net',
           'Login'         => 'bkelly',
           'LogFile'       => "/cygdrive/d/fullauto/logs/FAlog${$}d".
-                             "${FA_lib::invoked[2]}".
-                             "${FA_lib::invoked[3]}.txt",
+                             "${FA_Core::invoked[2]}".
+                             "${FA_Core::invoked[3]}.txt",
        },   In the file "usr_code.pm" add the *process* subroutine code:       sub ps_one {          my ($computer_one,$stdout,$stderr);        # Scope Variables          $computer_one=connect_ssh('COMPUTER_ONE'); # Connect to
                                                      # Remote Host via
                                                      # ssh only          ($stdout,$stderr)=$computer_one->cmd('ps -e'); # Run Command          if ($stderr) {                             # Check Results

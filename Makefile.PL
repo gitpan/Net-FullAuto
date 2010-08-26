@@ -120,7 +120,7 @@ requires        'MLDBM'                  => 0;
 requires        'MLDBM::Sync'            => 0;
 requires        'MLDBM::Sync::SDBM_File' => 0;
 requires        'Net::Telnet'            => 0;
-requires        'Term::Menus'            => 1.40;
+requires        'Term::Menus'            => 1.44;
 requires        'Term::ReadKey'          => 0;
 requires        'URI'                    => 0;
 recommends      'Crypt::Rijndael'        => 0;
@@ -304,15 +304,15 @@ sub MY::makefile {
    $inherited .= "fullauto\$(EXE_EXT): fullauto.c\n\t\$(CC) fullauto.c -o \$@".
                  "\n\t\$(CP) \$@ bin\n\n";
 
-   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_hosts.pm") {
-      $inherited .= "lib/Net/FullAuto/Custom/fa_hosts.pm:".
-                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_hosts.pm \$@\n\n";
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_host.pm") {
+      $inherited .= "lib/Net/FullAuto/Custom/fa_host.pm:".
+                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_host.pm \$@\n\n";
    } else {
-      $inherited =~ s/^(.*FullAuto.*fa_hosts.pm.*)$//m;
-      $inherited .= "lib/Net/FullAuto/Custom/fa_hosts.pm:".
+      $inherited =~ s/^(.*FullAuto.*fa_host.pm.*)$//m;
+      $inherited .= "lib/Net/FullAuto/Custom/fa_host.pm:".
                     "\n\t\$(NOECHO)\n\n";
-      unlink "lib/Net/FullAuto/Custom/fa_hosts.pm";
-      unlink "blib/lib/Net/FullAuto/Custom/fa_hosts.pm";
+      unlink "lib/Net/FullAuto/Custom/fa_host.pm";
+      unlink "blib/lib/Net/FullAuto/Custom/fa_host.pm";
    }
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_maps.pm") {
       $inherited .= "lib/Net/FullAuto/Custom/fa_maps.pm:".
@@ -324,25 +324,35 @@ sub MY::makefile {
       unlink "lib/Net/FullAuto/Custom/fa_maps.pm";
       unlink "blib/Net/FullAuto/Custom/fa_maps.pm";
    }
-   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/menu_cfg.pm") {
-      $inherited .= "lib/Net/FullAuto/Custom/menu_cfg.pm:".
-                    "\n\t\$(CP) lib/Net/FullAuto/Distro/menu_cfg.pm \$@\n\n";
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
+      $inherited .= "lib/Net/FullAuto/Custom/fa_conf.pm:".
+                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_conf.pm \$@\n\n";
    } else {
-      $inherited =~ s/^(.*Custom\/menu_cfg.pm.*)$//m;
-      $inherited .= "lib/Net/FullAuto/Custom/menu_cfg.pm:".
+      $inherited =~ s/^(.*Custom\/fa_conf.pm.*)$//m;
+      $inherited .= "lib/Net/FullAuto/Custom/fa_conf.pm:".
                     "\n\t\$(NOECHO)\n\n";
-      unlink "lib/Net/FullAuto/Custom/menu_cfg.pm";
-      unlink "blib/lib/Net/FullAuto/Custom/menu_cfg.pm";
+      unlink "lib/Net/FullAuto/Custom/fa_conf.pm";
+      unlink "blib/Net/FullAuto/Custom/fa_conf.pm";
    }
-   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/usr_code.pm") {
-      $inherited .= "lib/Net/FullAuto/Custom/usr_code.pm:".
-                    "\n\t\$(CP) lib/Net/FullAuto/Distro/usr_code.pm \$@\n\n";
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_menu.pm") {
+      $inherited .= "lib/Net/FullAuto/Custom/fa_menu.pm:".
+                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_menu.pm \$@\n\n";
    } else {
-      $inherited =~ s/^(.*Custom\/usr_code.pm.*)$//m;
-      $inherited .= "lib/Net/FullAuto/Custom/usr_code.pm:".
+      $inherited =~ s/^(.*Custom\/fa_menu.pm.*)$//m;
+      $inherited .= "lib/Net/FullAuto/Custom/fa_menu.pm:".
                     "\n\t\$(NOECHO)\n\n";
-      unlink "lib/Net/FullAuto/Custom/usr_code.pm";
-      unlink "blib/lib/Net/FullAuto/Custom/usr_code.pm";
+      unlink "lib/Net/FullAuto/Custom/fa_menu.pm";
+      unlink "blib/lib/Net/FullAuto/Custom/fa_menu.pm";
+   }
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_code.pm") {
+      $inherited .= "lib/Net/FullAuto/Custom/fa_code.pm:".
+                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_code.pm \$@\n\n";
+   } else {
+      $inherited =~ s/^(.*Custom\/fa_code.pm.*)$//m;
+      $inherited .= "lib/Net/FullAuto/Custom/fa_code.pm:".
+                    "\n\t\$(NOECHO)\n\n";
+      unlink "lib/Net/FullAuto/Custom/fa_code.pm";
+      unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
    }
 
    $inherited; 
@@ -356,15 +366,15 @@ sub MY::constants {
 
    my $inherited = shift->SUPER::constants(@_);
 
-   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_hosts.pm") {
-      my $fa_h="\tlib\/Net\/FullAuto\/Custom\/fa_hosts.pm ".
-               "\\\n\tblib\/Net\/FullAuto\/Custom\/fa_hosts.pm \\";
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_host.pm") {
+      my $fa_h="\tlib\/Net\/FullAuto\/Custom\/fa_host.pm ".
+               "\\\n\tblib\/Net\/FullAuto\/Custom\/fa_host.pm \\";
       $inherited =~
-         s/(\s+lib.*Distro\/fa_hosts.pm \\)/$1\n\tlib\/Net\/FullAuto\/Custom\/fa_hosts.pm \\/m; 
+         s/(\s+lib.*Distro\/fa_host.pm \\)/$1\n\tlib\/Net\/FullAuto\/Custom\/fa_host.pm \\/m; 
       $inherited =~
-         s/(\s+blib.*Distro\/fa_hosts.pm \\)/$1\n$fa_h/m;
+         s/(\s+blib.*Distro\/fa_host.pm \\)/$1\n$fa_h/m;
    } else {
-      $inherited =~ s/^(.*Custom\/fa_hosts.pm.*)$//;
+      $inherited =~ s/^(.*Custom\/fa_host.pm.*)$//;
    }
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_maps.pm") {
       my $fa_m="\tlib\/Net\/FullAuto\/Custom\/fa_maps.pm ".
@@ -376,25 +386,35 @@ sub MY::constants {
    } else {
       $inherited =~ s/^(.*Custom\/fa_maps.pm.*)$//;
    }
-   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/menu_cfg.pm") {
-      my $fa_c="\tlib\/Net\/FullAuto\/Custom\/menu_cfg.pm ".
-               "\\\n\tblib\/Net\/FullAuto\/Custom\/menu_cfg.pm \\";
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
+      my $fa_g="\tlib\/Net\/FullAuto\/Custom\/fa_conf.pm ".
+               "\\\n\tblib\/Net\/FullAuto\/Custom\/fa_conf.pm \\";
       $inherited =~
-         s/(\s+lib.*Distro\/menu_cfg.pm \\)/$1\n\tlib\/Net\/FullAuto\/Custom\/menu_cfg.pm \\/m;
+         s/(\s+lib.*Distro\/fa_conf.pm \\)/$1\n\tlib\/Net\/FullAuto\/Custom\/fa_conf.pm \\/m;
       $inherited =~
-         s/(\s+blib.*Distro\/menu_cfg.pm \\)/$1\n$fa_c/m;
+         s/(\s+blib.*Distro\/fa_conf.pm \\)/$1\n$fa_g/m;
    } else {
-      $inherited =~ s/^(.*Custom\/menu_cfg.pm.*)$//;
+      $inherited =~ s/^(.*Custom\/fa_conf.pm.*)$//;
    }
-   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/usr_code.pm") {
-      my $fa_u="\tlib\/Net\/FullAuto\/Custom\/usr_code.pm ".
-               "\\\n\tblib\/Net\/FullAuto\/Custom\/usr_code.pm \\";
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_menu.pm") {
+      my $fa_c="\tlib\/Net\/FullAuto\/Custom\/fa_menu.pm ".
+               "\\\n\tblib\/Net\/FullAuto\/Custom\/fa_menu.pm \\";
       $inherited =~
-         s/(\s+lib.*Distro\/usr_code.pm \\)/$1\n\tlib\/Net\/FullAuto\/Custom\/usr_code.pm \\/m;
+         s/(\s+lib.*Distro\/fa_menu.pm \\)/$1\n\tlib\/Net\/FullAuto\/Custom\/fa_menu.pm \\/m;
       $inherited =~
-         s/(\s+blib.*Distro\/usr_code.pm \\)/$1\n$fa_u/m;
+         s/(\s+blib.*Distro\/fa_menu.pm \\)/$1\n$fa_c/m;
    } else {
-      $inherited =~ s/^(.*Custom\/usr_code.pm.*)$//;
+      $inherited =~ s/^(.*Custom\/fa_menu.pm.*)$//;
+   }
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_code.pm") {
+      my $fa_u="\tlib\/Net\/FullAuto\/Custom\/fa_code.pm ".
+               "\\\n\tblib\/Net\/FullAuto\/Custom\/fa_code.pm \\";
+      $inherited =~
+         s/(\s+lib.*Distro\/fa_code.pm \\)/$1\n\tlib\/Net\/FullAuto\/Custom\/fa_code.pm \\/m;
+      $inherited =~
+         s/(\s+blib.*Distro\/fa_code.pm \\)/$1\n$fa_u/m;
+   } else {
+      $inherited =~ s/^(.*Custom\/fa_code.pm.*)$//;
    }
 
    $inherited =~ 
@@ -467,17 +487,17 @@ sub MY::pm_to_blib {
 
    my $inherited = shift->SUPER::pm_to_blib(@_);
 
-   unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_hosts.pm") &&
-         ($inherited =~ /Custom\/fa_hosts.pm/)) {
-      my $fa_h="\t  lib\/Net\/FullAuto\/Distro\/fa_hosts.pm ".
-               "blib\/lib\/Net\/FullAuto\/Custom\/fa_hosts.pm";
+   unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_host.pm") &&
+         ($inherited =~ /Custom\/fa_host.pm/)) {
+      my $fa_h="\t  lib\/Net\/FullAuto\/Distro\/fa_host.pm ".
+               "blib\/lib\/Net\/FullAuto\/Custom\/fa_host.pm";
       my $wrap='';
-      $inherited =~ /\s+blib.*Distro\/fa_hosts.pm( \\)/m;
+      $inherited =~ /\s+blib.*Distro\/fa_host.pm( \\)/m;
       $wrap=$1;
       $inherited =~
-         s/(\s+blib.*Distro\/fa_hosts.pm).*/$1 \\\n$fa_h$wrap/m;
+         s/(\s+blib.*Distro\/fa_host.pm).*/$1 \\\n$fa_h$wrap/m;
    } else {
-      $inherited =~ s/.*Custom\/fa_hosts.pm.*\n//m;
+      $inherited =~ s/.*Custom\/fa_host.pm.*\n//m;
    }
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_maps.pm") &&
          ($inherited =~ /Custom\/fa_maps.pm/)) {
@@ -491,29 +511,41 @@ sub MY::pm_to_blib {
    } else {
       $inherited =~ s/.*Custom\/fa_maps.pm.*\n//m;
    }
-   unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/menu_cfg.pm") &&
-         ($inherited =~ /Custom\/menu_cfg.pm/)) {
-      my $fa_c="\t  lib\/Net\/FullAuto\/Distro\/menu_cfg.pm ".
-               "blib\/lib\/Net\/FullAuto\/Custom\/menu_cfg.pm";
+   unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") &&
+         ($inherited =~ /Custom\/fa_conf.pm/)) {
+      my $fa_g="\t  lib\/Net\/FullAuto\/Distro\/fa_conf.pm ".
+               "blib\/lib\/Net\/FullAuto\/Custom\/fa_conf.pm";
       my $wrap='';
-      $inherited =~ /\s+blib.*Distro\/menu_cfg.pm( \\)/m;
+      $inherited =~ /\s+blib.*Distro\/fa_conf.pm( \\)/m;
       $wrap=$1;
       $inherited =~
-         s/(\s+blib.*Distro\/menu_cfg.pm).*/$1 \\\n$fa_c$wrap/m;
+         s/(\s+blib.*Distro\/fa_conf.pm).*/$1 \\\n$fa_g$wrap/m;
    } else {
-      $inherited =~ s/.*Custom\/menu_cfg.pm.*\n//m;
+      $inherited =~ s/.*Custom\/fa_conf.pm.*\n//m;
    }
-   unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/usr_code.pm") &&
-         ($inherited =~ /Custom\/usr_code.pm/)) {
-      my $fa_u="\t  lib\/Net\/FullAuto\/Distro\/usr_code.pm ".
-               "blib\/lib\/Net\/FullAuto\/Custom\/usr_code.pm";
+   unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_menu.pm") &&
+         ($inherited =~ /Custom\/fa_menu.pm/)) {
+      my $fa_c="\t  lib\/Net\/FullAuto\/Distro\/fa_menu.pm ".
+               "blib\/lib\/Net\/FullAuto\/Custom\/fa_menu.pm";
       my $wrap='';
-      $inherited =~ /\s+blib.*Distro\/usr_code.pm( \\)/m;
+      $inherited =~ /\s+blib.*Distro\/fa_menu.pm( \\)/m;
       $wrap=$1;
       $inherited =~
-         s/(\s+blib.*Distro\/usr_code.pm).*/$1 \\\n$fa_u$wrap/m;
+         s/(\s+blib.*Distro\/fa_menu.pm).*/$1 \\\n$fa_c$wrap/m;
    } else {
-      $inherited =~ s/.*Custom\/usr_code.pm.*\n//m;
+      $inherited =~ s/.*Custom\/fa_menu.pm.*\n//m;
+   }
+   unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_code.pm") &&
+         ($inherited =~ /Custom\/fa_code.pm/)) {
+      my $fa_u="\t  lib\/Net\/FullAuto\/Distro\/fa_code.pm ".
+               "blib\/lib\/Net\/FullAuto\/Custom\/fa_code.pm";
+      my $wrap='';
+      $inherited =~ /\s+blib.*Distro\/fa_code.pm( \\)/m;
+      $wrap=$1;
+      $inherited =~
+         s/(\s+blib.*Distro\/fa_code.pm).*/$1 \\\n$fa_u$wrap/m;
+   } else {
+      $inherited =~ s/.*Custom\/fa_code.pm.*\n//m;
    }
    
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;

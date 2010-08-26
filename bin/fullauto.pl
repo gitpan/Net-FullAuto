@@ -30,8 +30,8 @@ use lib 'Net/FullAuto';
 
 BEGIN {
 
-   our $usr_code='usr_code.pm';
-   our $menu_cfg='menu_cfg.pm';
+   our $custom_code='fa_code.pm';
+   our $menu_config='fa_menu.pm';
 }
 
 use Net::FullAuto;
