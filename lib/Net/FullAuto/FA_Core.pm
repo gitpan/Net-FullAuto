@@ -354,7 +354,7 @@ our %hours=();our %month=();our %Hosts=();our %Maps=();
 our %same_host_as_Master=("__Master_${$}__"=>'-','localhost'=>'-');
 our @same_host_as_Master=();our $dest_first_hash='';
 our %file_rename=();our %rename_file=();our $quiet='';
-our %filerename=();our %renamefile=();our $log='';
+our %filerename=();our %renamefile=();our $log;
 our %Processes=();our %shellpids=();our %ftpcwd=();
 our @DeploySMB_Proxy=('');our @DeployRCM_Proxy=('');
 our @DeployFTM_Proxy=('');our $master_transfer_dir='';
@@ -1111,28 +1111,54 @@ sub edit {
    my $tpath=$path;
    $tpath=~s/Net.*//;
 
+   my $savdir=cwd();
    if ($_[0]=~/ho*s*t*/i) {
-      my $savdir=cwd();
       system("cd $cpath;vi $fa_host;cd \"$savdir\"");
    } elsif ($_[0]=~/me*n*u*/i) {
-      my $savdir=cwd();
       system("cd $cpath;vi fa_menu.pm;cd \"$savdir\"");
    } elsif ($_[0]=~/ma*p*s*/i) {
-      my $savdir=cwd();
       system("cd $cpath;vi $fa_maps;cd \"$savdir\"");
    } elsif ($_[0]=~/co*d*e*/i) {
-      my $savdir=cwd();
       system("cd $cpath;vi fa_code.pm;cd \"$savdir\"");
    } elsif ($_[0]=~/con*f*/i) {
-      my $savdir=cwd();
-      #system("cd $cpath;vi $fa_conf;cd \"$savdir\"");
+      system("cd $cpath;vi $fa_conf;cd \"$savdir\"");
    } elsif ($_[0]=~/f/) {
-      my $savdir=cwd();
       system("cd $path;vi FA_Core.pm;cd \"$savdir\"");
    } elsif ($_[0]=~/t/) {
-      my $savdir=cwd();
       system("cd ${tpath}Term;vi Menus.pm;cd \"$savdir\""); 
-   } else { print "no option\n" }
+   } else {
+      my $stderr='';my $stdout='';
+      chdir $cpath;
+      ($stdout,$stderr)=cmd("ls -F");
+      die $stderr if $stderr;
+      my @files=split "\n", $stdout;
+      my @file=();
+      foreach my $file (@files) {
+         chomp($file);
+         next if $file=~/\/$/;
+         next if $file eq 'README';
+         chop($file);
+         push @file,$file;
+         print "FILE=$file\n";
+      }
+      my %Menu_1=(
+
+         Label   => 'Menu_1',
+         Item_1  => {
+
+            Text    => "]C[",
+            Convey  => \@file,
+
+         },
+         Select => 'One',
+         Banner => "\n   Choose a File to Edit :"
+
+      );
+      my $file=Menu(\%Menu_1);
+      exit if $file eq ']quit[';
+      system("vi $file");
+      chdir $savdir;
+   }
    
    exit;
 }
@@ -3263,11 +3289,17 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING CURDIR FOR TRANSFER=",cwd(),"\n"
 
 sub getpasswd
 {
+
    my @topcaller=caller;
-   print "main::getpasswd() CALLER="
-      ,(join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::debug;
-   print $Net::FullAuto::FA_Core::MRLOG "main::getpasswd() CALLER=",
-      (join ' ',@topcaller),"\n" if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   print "\nINFO: main::getpasswd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if !$Net::FullAuto::FA_Core::cron &&
+      $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG
+      "\nmain::getpasswd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $passlabel=$_[0];$passlabel||='';my $use='';
    if (exists $Hosts{$passlabel}) {
       if (exists $Hosts{$passlabel}{'HostName'}) {
@@ -4314,7 +4346,17 @@ sub send_email
          $Mail::Sender::NO_X_MAILER=1;
          my $mail_err=0;
          while (1) {
-            $mail=new Mail::Sender;
+            $mail=new Mail::Sender{ debug_level => 1 };
+            if ($Mail::Sender::Error) {
+               print $Net::FullAuto::FA_Core::MRLOG $Mail::Sender::Error
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               if (wantarray) {
+                  return '',$Mail::Sender::Error,'';
+               } else {
+                  die $Mail::Sender::Error;
+               }
+            }
             $body.="\n\n\n##########   BEGIN DEBUGGING OUTPUT"
                  ."##########\n\n\n$Net::FullAuto::FA_Core::debug\n"
                  if $debug;
@@ -4325,7 +4367,8 @@ sub send_email
                      my $dbug='';
                      while (<debug>) { $dbug.=$_ }
                      print $Net::FullAuto::FA_Core::MRLOG $dbug
-                        if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                        if $Net::FullAuto::FA_Core::log &&
+                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      %Mail::Sender::default=%mail_sender_defaults;
                      return 'Mail sent OK.','',"$dbug";
                   } else {
@@ -4339,7 +4382,8 @@ sub send_email
                      while (my $line=<debug>) {
                         print $line;
                         print $Net::FullAuto::FA_Core::MRLOG $line
-                           if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                           if $Net::FullAuto::FA_Core::log &&
+                           -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      }
                   }
                   print "\nMail sent OK.\n";
@@ -4349,7 +4393,8 @@ sub send_email
                   my $dbug='';
                   while (<debug>) { $dbug.=$_ }
                   print $Net::FullAuto::FA_Core::MRLOG $dbug
-                     if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   %Mail::Sender::default=%mail_sender_defaults;
                   return '',"$Mail::Sender::Error","$dbug";
                } else {
@@ -4367,11 +4412,14 @@ sub send_email
                   while (my $line=<debug>) {
                      print $line;
                      print $Net::FullAuto::FA_Core::MRLOG $line
-                        if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                        if $Net::FullAuto::FA_Core::log &&
+                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   }
                   my $m_err="Error From Perl CPAN Module \'Mail::Sender\':\n"
                            . "       $Mail::Sender::Error\n";
-                  print $Net::FullAuto::FA_Core::MRLOG $m_err if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                  print $Net::FullAuto::FA_Core::MRLOG $m_err
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   die "$m_err"; 
                }
             }
@@ -4476,8 +4524,8 @@ sub fa_login
       my $die="Cannot Locate the \"FullAuto Custom Code\" perl module (.pm) file"
               . "\n       < original default name 'fa_code.pm' >\n\n       $@";
       &handle_error($die,'-3');
-   } my $submodule=substr($custom_code_module_file,0,-3).'=s';
-   my $submodarg=substr($custom_code_module_file,0,-3).'-arg=s';
+   } my $name_of_fa_code_file=substr($custom_code_module_file,0,-3).'=s';
+   my $arg_to_fa_code_sub=substr($custom_code_module_file,0,-3).'-arg=s';
 
    my $man=0;my $help=0;my $userflag=0;my $passerror=0;
    my $test_arg=0;my $oldcipher='';
@@ -4485,37 +4533,45 @@ sub fa_login
 
    Getopt::Long::Configure ("bundling");
    &GetOptions(
-                'debug'            => \$debug,
-                'scrub'            => \$scrub,
-                'help|?'           => \$help,
-                'log'              => \$log,
-                 man               => \$man,
-                'password=s'       => \$passwd[0],
-                'quiet'            => \$quiet,
-                'oldpassword=s'    => \$oldpasswd,
-                'oldcipher=s'      => \$oldcipher,
-                'updatepw'         => \$updatepw,
-                'local-login-id=s' => \$username,
-                'login=s'          => \$username,
-                'code=s'           => \$fa_code,
-                $submodule         => \$fa_code,
-                'user-arg=s'       => \@menu_args,
-                'user_arg=s'       => \@menu_args,
-                $submodarg         => \@menu_args,
-                'cron'             => \$cron,
-                'random'           => \$random,
-                'timeout=i'        => \$cltimeout,
-                'prod'             => \$prod,
-                'test'             => \$test_arg,
-                'tosspass'         => \$tosspass,
-                'edit:s'           => \$edit,
-                'e:s'              => \$edit,
+                'debug'                 => \$debug,
+                'scrub'                 => \$scrub,
+                'help|?'                => \$help,
+                'h|?'                   => \$help,
+                'log:s'                 => \$log,
+                'l:s'                   => \$log, 
+                 man                    => \$man,
+                'password=s'            => \$passwd[0],
+                'quiet'                 => \$quiet,
+                'oldpassword=s'         => \$oldpasswd,
+                'oldcipher=s'           => \$oldcipher,
+                'updatepw'              => \$updatepw,
+                'local-login-id=s'      => \$username,
+                'login=s'               => \$username,
+                'code=s'                => \$cust_subname_in_fa_code_module_file,
+                $name_of_fa_code_file   => \$cust_subname_in_fa_code_module_file,
+                'subroutine'            => \$cust_subname_in_fa_code_module_file,
+                'subname'               => \$cust_subname_in_fa_code_module_file,
+                'sub'                   => \$cust_subname_in_fa_code_module_file,
+                'sub-arg=s'             => \@menu_args,
+                'sub_arg=s'             => \@menu_args,
+                'arg=s'                 => \@menu_args,
+                'a=s'                   => \@menu_args,
+                $arg_to_fa_code_sub     => \@menu_args,
+                'cron'                  => \$cron,
+                'random'                => \$random,
+                'timeout=i'             => \$cltimeout,
+                'prod'                  => \$prod,
+                'test'                  => \$test_arg,
+                'tosspass'              => \$tosspass,
+                'edit:s'                => \$edit,
+                'e:s'                   => \$edit,
               ) or pod2usage(2);
    pod2usage(1) if $help;
    pod2usage(-exitstatus => 0, -verbose => 2) if $man;
    &edit($edit) if defined $edit;
    @ARGV=@holdARGV;undef @holdARGV;
    $random='__random__' if $random;
+   if (defined $log) { $log=1 }
    $log=$log_ if !$log;
    $tosspass=$tosspass_ if !$tosspass;
    if ($test_arg) {
@@ -4817,7 +4873,6 @@ print "CRUD\n";
       eval { # eval is for error trapping. Any errors are
              # handled by the "if ($@)" block at the bottom
              # of this routine.
-
          if (!$MRLOG) {
             if (exists $Hosts{"__Master_${$}__"}{'LogFile'}
                   && $Hosts{"__Master_${$}__"}{'LogFile'}) {
@@ -5342,6 +5397,8 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
             if !$username;
          $login_id=$username if !$login_id;
          $login_Mast_error=$@;
+         $localhost->{_sh_pid}||='';
+         $localhost->{_cmd_pid}||='';
          if ((-1<index $@,'Not a GLOB reference') ||
                (-1<index $@,'Write failed: Connection reset by peer')) {
             print $Net::FullAuto::FA_Core::MRLOG
@@ -5423,7 +5480,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PSOUTPUTTTTTTTTTTTT=$psoutput<==\n";
          &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
 
       } last;
-   } return $fa_code, \@menu_args, $fatimeout;
+   } return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
 
 } ## END of &fa_login
 
@@ -8423,10 +8480,23 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                $ftm_passwd=&Net::FullAuto::FA_Core::getpasswd($hostlabel,
                            $login_id,'',$ftm_errmsg,$ftm_type);
             }
+         } my $peer=0;
+         while ($peer++<2) {
+            ($ftp_handle,$stderr)=
+                 Rem_Command::new('Rem_Command',
+                 "__Master_${$}__",$new_master,$_connect);
+            if ($stderr) {
+               print $Net::FullAuto::FA_Core::MRLOG
+                  "\nhhhhhhh Error getting \$ftp_handle via Rem_Command::cmd() hhhhhhh: ".
+                  "==>$stderr<==\n\n"
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               print "\nhhhhhhh Error getting \$ftp_handle via Rem_Command::cmd() hhhhhhh: ".
+                  "==>$stderr<==\n\n"
+                  if !$Net::FullAuto::FA_Core::cron &&
+                  $Net::FullAuto::FA_Core::debug;
+            } else { last }
          }
-         ($ftp_handle,$stderr)=
-              Rem_Command::new('Rem_Command',
-              "__Master_${$}__",$new_master,$_connect);
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
          $ftp_pid=$ftp_handle->{_cmd_pid};
          $shell_pid=$ftp_handle->{_sh_pid};
@@ -10030,7 +10100,11 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
          } else { &Net::FullAuto::FA_Core::handle_error($@) }
       } else {
          my $die=$@;
-         $die=~s/\.$//s;
+         #$die=~s/\.$//s;
+         $die=~s/( line.*)[.]$/\n      $1/s;
+         if ($hostlabel=~/Master/) {
+            $hostlabel='localhost';
+         }
          $die.=" on Host $hostlabel\n";
          my $cnt='';my $hnames='';
          foreach my $host (@{$self->{_hostlabel}}) {
@@ -15490,7 +15564,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         $prompt=$1;
                         print $Net::FullAuto::FA_Core::MRLOG
                            "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVIED:\n       ",
-                           "==>$prompt<==\n       SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+                           "==>$prompt<==\n       SEPARATOR=".
+                           "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                            "\n       at Line ",__LINE__,"\n\n"
                            if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -15530,7 +15605,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                      "\n       at Line ",__LINE__,"\n\n"
                      if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
                   my $ev_err=$@;
-                  if ($ev_err=~/read timed-out/s && $ct++<2) {
+                  if ($ev_err=~/read timed-out/s && $ct++<3) {
                      $Net::FullAuto::FA_Core::uhray=
                         &Net::FullAuto::FA_Core::get_prompt();
                      $cmd_handle->print('cmd /Q /C "set /A '.
@@ -17526,6 +17601,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
             my $starttime=time();my $restart_attempt=1;my $nl='';
             my $select_timeout=2;my $appendout='';my $retry=0;
             my $command_stripped_from_output=0;
+            my $test_stripped_output='';
             $self->{_cmd_handle}->autoflush(1);my $save='';
             FETCH: while (1) {
                my $output='';$nl='';
@@ -17614,11 +17690,17 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                         $output="$appendout$output";
                         $appendout='';
                      }
-                     my $test_stripped_output=$output;
+                     #my $test_stripped_output=$output;
+                     $test_stripped_output.=$output;
                      $test_stripped_output=~s/\s*//gs;
                      my $stripped_live_command=$live_command;
                      $stripped_live_command=~s/\s*//gs;
-                     if ($test_stripped_output eq $stripped_live_command) {
+                     #if ($test_stripped_output eq $stripped_live_command) {
+                     my $lslc=length $stripped_live_command;
+                     my $ltso=length $test_stripped_output;
+                     if (($test_stripped_output eq $stripped_live_command) ||
+                           (($lslc<$ltso) && (substr($test_stripped_output,-$lslc) eq
+                           $stripped_live_command))) {
                         print "\nSTRIPPED OUTPUT equals STRIPPED LIVE COMMAND",
                            " at Line ",__LINE__,"\n"
                            if !$Net::FullAuto::FA_Core::cron && $debug;
@@ -17633,11 +17715,15 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                      } elsif ($output=~/\n/s) {
                         print "\nNNNNNNN OUTPUT HAS NEW LINE CHAR NNNNNNN RAW OUTPUT:",
                            " ==>$output<== ".
+                           "\n\n TEST_STRIPPED_OUTPUT=$test_stripped_output".
+                           "\n\n STRIPPED_LIVE_COMMAND=$stripped_live_command\n\n".
                            " at Line ",__LINE__,"\n"
                            if !$Net::FullAuto::FA_Core::cron && $debug;
                         print $Net::FullAuto::FA_Core::MRLOG 
                            "\nNNNNNNN OUTPUT HAS NEW LINE CHAR NNNNNNN RAW OUTPUT:",
                            " ==>$output<== ".
+                           "\n\n TEST_STRIPPED_OUTPUT=$test_stripped_output".
+                           "\n\n STRIPPED_LIVE_COMMAND=$stripped_live_command\n\n".
                            " at Line ",__LINE__,"\n"
                            if $Net::FullAuto::FA_Core::log && 
                            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -17654,7 +17740,16 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
 print "LAST_LINE=$last_line and OUTPUT=$output<=\n" if !$Net::FullAuto::FA_Core::cron && $debug;
 print $Net::FullAuto::FA_Core::MRLOG "LAST_LINE=$last_line and OUTPUT=$output<=\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                           if (-1<index $ptest,'1stdout:') {
+                           if (($lslc<$ltso) && (unpack("a$lslc",$test_stripped_output) eq
+                                 $stripped_live_command)) {
+                              my $llc=length $live_command;
+                              $output=unpack("x$llc a*",$output);
+                              $first=0;$growoutput=$output;
+                              $growoutput=~s/^.*($cmd_prompt)$/$1/s;
+print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput\n"
+   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                              $output='';
+                           } elsif (-1<index $ptest,'1stdout:') {
                               $output=~s/^.*?1(?:\s|\s*\[[AK]|\<)*
                                  (stdout:.*)$/$1/sx;
                               &display($output,$cmd_prompt,$save)

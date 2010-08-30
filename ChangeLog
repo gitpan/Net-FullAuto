@@ -24,6 +24,16 @@
 #
 ################################################################
 
+2010-08-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.37 released.
+
+        * &sendemail() now has better error reporting.
+
+        * improved output parser to better detect stderr
+          output from remote hosts.
+
+
 2010-08-26  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.36 released.
