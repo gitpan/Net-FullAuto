@@ -24,6 +24,19 @@
 #
 ################################################################
 
+
+2010-08-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.38 released.
+
+        * Implemented 'unattended' mode in conjunction with
+          changes to Term::Menus. Menus can now be used in
+          FullAuto and when Default selections are set, Fullauto
+          can be run 'unattended' in schedulers, and where a
+          Menu would ususally great a user, the Default selections
+          will be used.
+
+
 2010-08-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.37 released.

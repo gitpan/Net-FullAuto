@@ -82,7 +82,9 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   cleanup $dest_first_hash
                   test_file test_dir timelocal
                   %GLOBAL @GLOBAL $MRLOG $OS
-                  $funkyprompt handle_error $quiet);
+                  $funkyprompt handle_error
+                  $quiet $batch $unattended
+                  $fullauto);
 
 {
    no warnings;
@@ -362,7 +364,8 @@ our %perms=();our @ApacheNode=();our $test=0;
 our $prod=0;our $force_pause_for_exceed=0;our $tosspass=0;
 our $timeout=30;our $cltimeout='X';our $slave=0;
 our %email_defaults=();our $increment=0;our %tosspass=();
-our $email_defaults='';our %semaphores=();
+our $email_defaults='';our %semaphores=();our $batch='';
+our $unattended='';our $fullauto='';
 our %base_shortcut_info=();our @dhostlabels=();
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
@@ -4558,6 +4561,9 @@ sub fa_login
                 'a=s'                   => \@menu_args,
                 $arg_to_fa_code_sub     => \@menu_args,
                 'cron'                  => \$cron,
+                'unattended'            => \$cron,
+                'batch'                 => \$cron,
+                'fullauto'              => \$cron,
                 'random'                => \$random,
                 'timeout=i'             => \$cltimeout,
                 'prod'                  => \$prod,
@@ -4615,6 +4621,12 @@ sub fa_login
    if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/
          && 7<length $passwd[0]) {
       $passwd[1]=unpack('a8',$passwd[0])
+   }
+   if ($cron) {
+      $batch=']Batch[';
+      $unattended=']Unattended[';
+      $fullauto=']FullAuto[';
+      $cron=']Cron[';
    }
 
    print "\n  Starting $progname . . .\n" if (!$cron || $debug)
