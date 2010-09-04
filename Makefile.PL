@@ -1,16 +1,78 @@
+my $process_id='';
+$process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
+my $install_cygwin_without_asking=0;
+foreach my $arg (@ARGV) {
+   if ($arg=~/INSTALL_*CYGWIN\s*=\*1/i) {
+      $install_cygwin_without_asking=1;
+      last;
+   }
+}
+
 # Load the Module::Install bundled in ./inc/
 use inc::Module::Install;
 use Config;
 use POSIX qw/strftime/;
+
 BEGIN {
    unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
+   Module::Install::AutoInstall->install([], 'Term::Menus' => 1.46);
 };
+use Term::Menus 1.46;
 
 # Define metadata
 name            'Net-FullAuto';
 all_from        'lib/Net/FullAuto.pm';
 
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+
+   my %Menu_win_to_cyg=(
+
+         Label  => 'Menu_win_to_cyg',
+         Item_1 => {
+
+            Text => "Install Cygwin Linux Emulation Layer for Windows",
+
+         },
+         Item_2 => {
+ 
+            Text    => "DO *NOT* Install Cygwin (FullAuto Install will END)",
+            Default => "*",
+ 
+         },
+         Banner => "Would you like to install Cygwin?",
+
+   );
+   my $selection='';
+   if ($install_cygwin_without_asking) {
+      $selection='Install';
+   } else {
+      $selection=Menu(\%Menu_win_to_cyg);
+   }
+   exit if $selection eq ']quit[';
+   if ($selection!~/NOT/) {
+      if ($@) {
+         Module::Install::AutoInstall->install([], 'LWP' => 5.386);
+      }
+      require LWP;
+      my $ua=LWP::UserAgent->new;
+      my $response = $ua->get('http://www.cygwin.com/setup.exe');
+      open(CP,">setup.exe") || die $!;
+      binmode(CP);
+      if ($response->is_success) {
+         print CP $response->content;
+      } else {
+         die $response->status_line;
+      }
+      close(CP) || die $!;
+      chmod 0755, 'setup.exe';
+      my $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,make,'
+                   .'openssh,perl,db4.5 -A -q"';    
+      system($setup_cmd);
+      system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -c "perl Makefile.pl '.$$.'"');
+      exit;
+   } elsif ($process_id) {
+      exit;
+   }
    my $die="\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
            "\n                      is required to use FullAuto".
            "\n                      on Windows - goto www.cygwin.com.".
@@ -110,6 +172,7 @@ requires        'Crypt::CBC'             => 0;
 requires        'Crypt::DES'             => 0;
 requires        'Getopt::Long'           => 0;
 requires        'HTTP::Date'             => 0;
+requires        'JSON'                   => 2.14;
 requires        'IO::Pty'                => 0;
 requires	'IO::Capture::Stderr'    => 0;
 requires        'IO::CaptureOutput'      => 0;
@@ -120,13 +183,13 @@ requires        'MLDBM'                  => 0;
 requires        'MLDBM::Sync'            => 0;
 requires        'MLDBM::Sync::SDBM_File' => 0;
 requires        'Net::Telnet'            => 0;
-requires        'Term::Menus'            => 1.46;
 requires        'Term::ReadKey'          => 0;
 requires        'URI'                    => 0;
 recommends      'Crypt::Rijndael'        => 0;
 
 auto_install;
 
+my %hash=();
 eval {
    require DB_File;
    my $db = tie %hash, "DB_File", "fullauto_test_for_db_creation.db" 
@@ -229,9 +292,7 @@ print FH '/* program: fullauto'."\n".
 
 close FH;
 
-use Term::Menus;
-
-my $timeout=120;my $selection='';
+my $timeout=120;my $selection='';my @selection=();
 eval {
    $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
    alarm $timeout;
@@ -260,9 +321,13 @@ if (-1<index $selection,'Setuid') {
 } print "\n"; 
 
 if ($^O eq 'cygwin') {
+   `touch "bin/fullauto.exe"`;
    install_script 'bin/fullauto.exe';
+   unlink "bin/fullauto.exe";
 } else {
+   `touch "bin/fullauto"`;
    install_script 'bin/fullauto';
+   unlink "bin/fullauto";
 }
 install_script 'bin/fullauto.pl';
 
@@ -496,6 +561,28 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_DIR) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       $link; 
+
+   $inherited;
+
+}
+
+package MY; # so that "SUPER" works right
+sub MY::dist_core {
+
+   my $inherited = shift->SUPER::dist_core(@_);
+
+   $inherited =~ s/tar$/tar\n\t\$(MV) \$(DISTVNAME).tar\$(SUFFIX) dist/m;
+
+   $inherited;
+
+}
+
+package MY; # so that "SUPER" worls right
+sub MY::clean {
+
+   my $inherited = shift->SUPER::clean(@_);
+
+   $inherited =~ s/blib\s*$/blib setup\$(EXE_EXT) /m;
 
    $inherited;
 

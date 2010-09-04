@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-09-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.39 released.
+
+        * Changed install to include latest Module::Install
+
+        * Added option to install Cygwin when Windows is
+          detected and FullAuto install is not running in
+          Cygwin bash environment
+
+
 2010-08-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.38 released.
