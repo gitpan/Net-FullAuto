@@ -27,3 +27,5 @@ MANIFEST
 META.yml
 README
 t/test.t
+t/0-signature.t
+SIGNATURE                                Public-key signature (added by MakeMaker)

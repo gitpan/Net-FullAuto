@@ -1,3 +1,27 @@
+# Load the Module::Install bundled in ./inc/
+use inc::Module::Install;
+use Config;
+use POSIX qw/strftime/;
+
+# Term::Menus Bootstrap Code.
+BEGIN{my$p='Term::Menus';my$v=1.46;$p->VERSION||0>=$v
+or+eval"use $p $v;1"or+do{my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+(!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
+eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p',$v}
+);1"and exit)and print"==> $p $v required."and print
+"*** Installing $p\n"and
+do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
+$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p $v;1"
+||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
+require CPANPLUS;CPANPLUS::install$p};eval"use $p $v;1"or eval{
+require CPAN;CPAN::install$p};eval"use $p $v;1"||die"*** Please
+manually install $p $v from cpan.org first...\n"}}}
+
+BEGIN {
+   unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
+};
+use Term::Menus 1.46;
+
 my $process_id='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
@@ -8,19 +32,9 @@ foreach my $arg (@ARGV) {
    }
 }
 
-# Load the Module::Install bundled in ./inc/
-use inc::Module::Install;
-use Config;
-use POSIX qw/strftime/;
-
-BEGIN {
-   unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
-   Module::Install::AutoInstall->install([], 'Term::Menus' => 1.46);
-};
-use Term::Menus 1.46;
-
 # Define metadata
 name            'Net-FullAuto';
+sign;
 all_from        'lib/Net/FullAuto.pm';
 
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
@@ -51,7 +65,18 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
    exit if $selection eq ']quit[';
    if ($selection!~/NOT/) {
       if ($@) {
-         Module::Install::AutoInstall->install([], 'LWP' => 5.386);
+         do{my$p='LWP';my$v=5.386;$p->VERSION||0>=$v
+         or+eval"use $p $v;1"or+do{my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+         (!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
+         eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p',$v}
+         );1"and exit)and print"==> $p $v required."and print
+         "*** Installing $p\n"and
+         do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
+         $^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p $v;1"
+         ||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
+         require CPANPLUS;CPANPLUS::install$p};eval"use $p $v;1"or eval{
+         require CPAN;CPAN::install$p};eval"use $p $v;1"||die"*** Please
+         manually install $p $v from cpan.org first...\n"}}}
       }
       require LWP;
       my $ua=LWP::UserAgent->new;
@@ -66,9 +91,15 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       close(CP) || die $!;
       chmod 0755, 'setup.exe';
       my $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,make,'
-                   .'openssh,perl,db4.5 -A -q"';    
+                   .'openssh,perl,db4.5 -A -q"';
+	  my $pwd=`cmd /c chdir`;
+	  chmod($pwd);
+	  my $cygpath=$pwd;
+	  $cygpath=~s/^(.):/\/cygdrive\/$1/;
+	  $cygpath=~s/\\/\//g;
       system($setup_cmd);
-      system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -c "perl Makefile.pl '.$$.'"');
+      system('cmd /c C:\\cygwin\\bin\\bash -c "/usr/bin/perl ./Makefile.PL"');
+      system('C:\\cygwin\\bin\\bash -lc "/usr/bin/make install -C'.$cygpath.'"');
       exit;
    } elsif ($process_id) {
       exit;
@@ -131,8 +162,7 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
       exit;
    }
 }
-
-unless (can_run('make')) {
+if (!can_run('make') && !(($^O eq 'cygwin') && (-e "/usr/bin/make"))) {
    my $die="\n       FATAL ERROR! : Cannot locate 'make'. This program ".
            "\n                      is required to install FullAuto".
            "\n                      (Hint: goto www.gnu.org for gnumake).".
@@ -174,7 +204,7 @@ requires        'Getopt::Long'           => 0;
 requires        'HTTP::Date'             => 0;
 requires        'JSON'                   => 2.14;
 requires        'IO::Pty'                => 0;
-requires	'IO::Capture::Stderr'    => 0;
+requires        'IO::Capture::Stderr'    => 0;
 requires        'IO::CaptureOutput'      => 0;
 requires        'Mail::Internet'         => 0;
 requires        'Mail::Sender'           => 0;
@@ -321,11 +351,11 @@ if (-1<index $selection,'Setuid') {
 } print "\n"; 
 
 if ($^O eq 'cygwin') {
-   `touch "bin/fullauto.exe"`;
+   `/usr/bin/touch "bin/fullauto.exe"`;
    install_script 'bin/fullauto.exe';
    unlink "bin/fullauto.exe";
 } else {
-   `touch "bin/fullauto"`;
+   `/usr/bin/touch "bin/fullauto"`;
    install_script 'bin/fullauto';
    unlink "bin/fullauto";
 }

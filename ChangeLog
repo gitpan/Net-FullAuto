@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-09-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.40 released.
+
+        * 'Finally' got gpg signature working again
+
+        * Modifed Makefile.PL to enable users to automatically
+          install Cygwin when Windows is detected. This now
+          works.
+
+
 2010-09-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.39 released.
