@@ -35,7 +35,10 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-all_from        'lib/Net/FullAuto.pm';
+version         '0.41';
+author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
+license         'gpl';
+perl_version    '5.006';
 
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 
@@ -53,7 +56,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             Default => "*",
  
          },
-         Banner => "Would you like to install Cygwin?",
+         Banner => "   Would you like to install Cygwin?",
 
    );
    my $selection='';
@@ -98,8 +101,24 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 	  $cygpath=~s/^(.):/\/cygdrive\/$1/;
 	  $cygpath=~s/\\/\//g;
       system($setup_cmd);
-      system('cmd /c C:\\cygwin\\bin\\bash -c "/usr/bin/perl ./Makefile.PL"');
-      system('C:\\cygwin\\bin\\bash -lc "/usr/bin/make install -C'.$cygpath.'"');
+#my $content = PAR::read_file('Makefile.PL');
+#	  my $homedir=`cmd /c echo %HOMEDRIVE%%HOMEPATH%`;
+#	  chomp($homedir);
+#chdir $homedir;
+#	  mkdir ".cpan", 0755 unless -e ".cpan";
+#	  chdir ".cpan";
+#	  mkdir "build", 0755 unless -e "build";
+#	  mkdir "CPAN", 0755 unless -e "CPAN";
+#	  my $pwd=`cmd /c chdir`;
+#	  print "PWD=$pwd\n";
+#	  require PAR;
+#	  my $content = PAR::read_file('Makefile.PL');
+#      open(FH,">Makefile.PL");
+#      print FH $content;
+#      close FH;
+#      system('cmd /c C:\\cygwin\\bin\\bash -c "/usr/bin/perl ./Makefile.PL"');
+#      system('C:\\cygwin\\bin\\bash -lc "/usr/bin/make install -C'.$cygpath.'"');
+	  system('cmd /c C:\\cygwin\\bin\\bash -ic "/usr/bin/cpan -i Net::FullAuto"');
       exit;
    } elsif ($process_id) {
       exit;

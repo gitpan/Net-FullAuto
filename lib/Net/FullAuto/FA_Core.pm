@@ -37,6 +37,13 @@ package Net::FullAuto::FA_Core;
 #
 #  at CPAN prompt (cpan[1]) type: o conf init
 #
+## For compiling into MSWin32 setup executable with PAR::Packager
+#
+#  pp -c -o "Setup FullAuto MSWin32-x86.exe" 
+#     -l C:\strawberry\perl\bin\libgcc_s_sjlj-1.dll Makefile.PL
+#     -a bin -a ChangeLog -a inc -a lib -a t -a META.yml
+#     -a LICENSE -a MANIFEST -a README --icon FA_Setup.ico
+#
 ## *************************************************************
 
 BEGIN {
@@ -18490,7 +18497,8 @@ print $Net::FullAuto::FA_Core::MRLOG "LOGINRETRY2=$login_retry and ",
          if ($wantarray) {
 print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETURNING ERROR=$eval_error\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            return '',$eval_error;
+            $stdout||='';
+            return $stdout,$eval_error;
          } else { &Net::FullAuto::FA_Core::handle_error($eval_error) }
       }
       pop @FA_Core::pid_ts if $pid_ts;

@@ -27,6 +27,22 @@
 
 2010-09-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.41 released.
+
+        * Makefile.PL substantially modified with latest
+          version of Module::Install.
+
+        * Build.PL removed
+
+        * Makefile.PL modified to accomodate stand-alone
+          Windows exe installer.
+
+        * Returns content on both STDOUT and STDERR when
+          content exists on both
+
+
+2010-09-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.40 released.
 
         * 'Finally' got gpg signature working again
