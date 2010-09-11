@@ -4,23 +4,23 @@ use Config;
 use POSIX qw/strftime/;
 
 # Term::Menus Bootstrap Code.
-BEGIN{my$p='Term::Menus';my$v=1.46;$p->VERSION||0>=$v
-or+eval"use $p $v;1"or+do{my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+BEGIN{my$p='Term::Menus';eval"use $p;1"or+do{
+my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
 (!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
-eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p',$v}
-);1"and exit)and print"==> $p $v required."and print
+eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'}
+);1"and exit)and print"==> $p required."and print
 "*** Installing $p\n"and
 do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
-$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p $v;1"
+$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p;1"
 ||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
-require CPANPLUS;CPANPLUS::install$p};eval"use $p $v;1"or eval{
-require CPAN;CPAN::install$p};eval"use $p $v;1"||die"*** Please
-manually install $p $v from cpan.org first...\n"}}}
+require CPANPLUS;CPANPLUS::install$p};eval"use $p;1"or eval{
+require CPAN;CPAN::install$p};eval"use $p;1"||die"*** Please
+manually install $p from cpan.org first...\n"}}}
 
 BEGIN {
    unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
 };
-use Term::Menus 1.46;
+use Term::Menus;
 
 my $process_id='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
@@ -35,7 +35,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.41';
+version         '0.42';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -68,18 +68,18 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
    exit if $selection eq ']quit[';
    if ($selection!~/NOT/) {
       if ($@) {
-         do{my$p='LWP';my$v=5.386;$p->VERSION||0>=$v
-         or+eval"use $p $v;1"or+do{my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+         do{my$p='LWP';eval"use $p;1"or+do{
+         my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
          (!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
-         eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p',$v}
-         );1"and exit)and print"==> $p $v required."and print
+         eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'}
+         );1"and exit)and print"==> $p required."and print
          "*** Installing $p\n"and
          do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
-         $^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p $v;1"
+         $^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p;1"
          ||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
-         require CPANPLUS;CPANPLUS::install$p};eval"use $p $v;1"or eval{
-         require CPAN;CPAN::install$p};eval"use $p $v;1"||die"*** Please
-         manually install $p $v from cpan.org first...\n"}}}
+         require CPANPLUS;CPANPLUS::install$p};eval"use $p;1"or eval{
+         require CPAN;CPAN::install$p};eval"use $p;1"||die"*** Please
+         manually install $p from cpan.org first...\n"}}}
       }
       require LWP;
       my $ua=LWP::UserAgent->new;
@@ -215,6 +215,7 @@ unless (can_run('lynx')) {
 } ## End disable block
 
 #Specific dependencies
+requires        'Term::Menus'            => 1.49;
 requires        'Tie::Cache'             => 0;
 requires        'Sort::Versions'         => 0;
 requires        'Crypt::CBC'             => 0;
@@ -580,7 +581,7 @@ sub MY::install {
       }
 
       if ($lnpath) {
-         $link="\t\$(NOECHO) $lnpath -s \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT) ".
+         $link="\t\$(NOECHO) $lnpath -f -s \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT) ".
                "\$(DESTINSTALLSITESCRIPT)\/fa\n"; 
       }
 

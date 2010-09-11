@@ -24,6 +24,18 @@
 #
 ################################################################
 
+2010-09-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.42 released.
+
+        * Makefile.PL changed to not demand particular versions
+          of LWP or Term::Menus when autoloading
+
+        * Added --version and -V arguments and printouts
+
+        * --edit and -e now open broken syntax files and open
+          faster
+
 
 2010-09-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 

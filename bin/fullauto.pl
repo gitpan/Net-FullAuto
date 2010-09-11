@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 ################################################################
 #
 #   WARNING:  THIS IS A ***BETA*** RELEASE OF Net::FullAuto
@@ -26,9 +29,36 @@
 #
 ################################################################
 
-use lib 'Net/FullAuto';
-
 BEGIN {
+
+   my $edit=0;my $earg='';my $cnt=0;
+   my $VERSION=0;
+   foreach my $arg (@ARGV) {
+      if ($arg=~/--ed*i*t*/) {
+         $edit=1;
+         if ($ARGV[$cnt+1]!~/^--/) {
+            $earg=$ARGV[$cnt+1];last;
+         } else { last }
+      } elsif ($arg=~/-[a-df-zA-Z]*e\s*(.*)/) {
+         $earg=$1;
+         $edit=1;
+         chomp $earg; 
+         $earg='' if $earg=~/^\s*$/;
+      } elsif ($arg=~/-[a-df-zA-Z]*V/ ||
+               $arg=~/--VE*R*S*I*O*N*/) {
+         $VERSION=1;
+      }
+      $cnt++;
+   }
+   if ($edit) {
+      require Net::FullAuto::FA_Core;
+      &Net::FullAuto::FA_Core::edit($earg);
+      exit;
+   } elsif ($VERSION) {
+      require Net::FullAuto::FA_Core;
+      &Net::FullAuto::FA_Core::VERSION();
+      exit;
+   }
 
    our $fa_custom_code='fa_code.pm';
    our $fa_menu_config='fa_menu.pm';

@@ -34,7 +34,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.41';
+our $VERSION='0.42';
 
 
 use 5.005;
@@ -49,14 +49,18 @@ BEGIN {
          shift @ARGS;
          $args.='******** ';
          next;
-      } elsif ($_ eq '--quiet') { 
+      } elsif ($_ eq '--quiet' ||
+               $_ eq '--version' ||
+               $_ =~ /^-[a-uw-zA-UW-Z]*[Vv]/) {
          $quiet=1; 
-      } $args.="$_ ";
+      }
+      $args.="$_ ";
    } chop $args;
    my $nl=(grep { $_ eq '--cron' } @ARGV)?'':"\n";
    print "Command Line -> $0 $args\n" if !$nl;
    print "STARTING FullAuto on ". localtime() . "\n"
       unless $quiet;
+
 }
 
 require Exporter;

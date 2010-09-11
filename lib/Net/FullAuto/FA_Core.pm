@@ -50,6 +50,7 @@ BEGIN {
 
    our $progname=substr($0,(rindex $0,'/')+1);
    our $OS=$^O;
+   our $customdir='Net/FullAuto/Custom';
 
    if ($^O eq 'cygwin') {
       require Win32::Semaphore;
@@ -108,6 +109,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Fcntl qw(:DEFAULT :flock);
    use Mail::Internet;
    use Mail::Sender;
+   use Module::Load::Conditional qw[can_load];
    use Net::Telnet;
    use Getopt::Long;
    use Pod::Usage;
@@ -169,7 +171,7 @@ BEGIN {
       }
    } else {
       eval {
-         require 'Net/FullAuto/Custom/fa_host.pm';
+         require $customdir.'/fa_host.pm';
          import fa_host;
          $fa_host='fa_host.pm';
       };
@@ -191,7 +193,7 @@ BEGIN {
       }
    } else {
       eval {
-         require 'Net/FullAuto/Custom/fa_maps.pm';
+         require $customdir.'/fa_maps.pm';
          import fa_maps;
          $fa_maps='fa_maps.pm';
       };
@@ -493,7 +495,6 @@ our $specialperms='none';
 #   }
 #}
 
-our $version='Revision 051807';
 # our $maintainer='Brian Kelly';
 # our $maintainer_phone='';
 #@RCM_Link=('telnet');
@@ -975,7 +976,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
    print $Net::FullAuto::FA_Core::MRLOG "INFO: GOING TO CLOSE LOG\n"
       if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    $MRLOG||='';
-   CORE::close($MRLOG) if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   CORE::close($MRLOG) if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    $MRLOG='';
    $Hosts{"__Master_${$}__"}{'LogFile'}||='';
    print "\n  LOGFILE ==> \"",$Hosts{"__Master_${$}__"}{'LogFile'},"\"\n\n\n"
@@ -1063,6 +1065,84 @@ if ($fasetuid) {
    } undef @Hosts_tmp;
 } else { @Hosts=@Hosts_tmp;undef @Hosts_tmp }
 
+sub version
+{
+can_load(modules => { Net::FullAuto => 0 });
+my $version=<<VERSION;
+
+This is Net::FullAuto, v$Net::FullAuto::VERSION
+(See  fullauto -V  or  fa -V  for more detail)
+
+Copyright 2000-2010, Brian M. Kelly
+
+FullAuto may be copied only under the terms of the GNU General Public License,
+which may be found in the FullAuto source distribution.
+
+Complete documentation for FullAuto, including FAQ lists, should be found on
+this system using "man fullauto" or "perldoc fullauto".  If you have access
+to the Internet, point your browser at http://www.fullautosoftware.net/, the
+FullAuto Home Page.
+VERSION
+print $version;
+exit;
+}
+
+sub VERSION
+{
+
+   can_load(modules => { Term::Menus => 0 });
+   can_load(modules => { Net::FullAuto => 0 });
+   require ExtUtils::Installed;
+   my ($inst) = ExtUtils::Installed->new();
+   my @menus_files = $inst->files("Term::Menus");
+   my @fullauto_files = $inst->files("Net::FullAuto");
+   my @pl=();my @exe=();my @O=();my @Cust=();my @Dist=();
+   my @Tpm=();my @html=();my @Core=();my @README=();
+   foreach my $file (@fullauto_files) {
+      if ($file=~/\.pm$/) {
+         if (-1<index $file,'Distro') {
+            push @Dist, $file;next;
+         } elsif (-1<index $file,'Custom') {
+            push @Cust, $file;next;
+         } else { push @Core, $file;next }
+      } elsif ($file=~/\.pl$/) {
+         push @pl, $file;next;
+      } elsif ($file=~/fullauto(?:\.exe)*$/) {
+         push @exe, $file;next;
+      } elsif ($file=~/1$/) {
+         push @O, $file;next;
+      } elsif ($file=~/html$/) {
+         push @html, $file;next;
+      } elsif ($file=~/3pm/) {
+         push @Tpm, $file;next;
+      } elsif (-1<index $file,'README') {
+         if (-1<index $file,'Custom/README') {
+            my $path=$file;
+            $path=~s/\/[^\/]+$//;
+            opendir(my $dh, $path) || die "can't opendir $path: $!";
+            while (my $file=readdir($dh)) {
+               push @Cust, "$path/$file" if $file!~/^[.]|README$/ && -f "$path/$file";
+            }
+            closedir $dh;
+         }
+         push @README, $file;
+      }
+   }
+   print "\nTerm::Menus Version $Term::Menus::VERSION\n",
+         (join "\n",@menus_files),"\n\n",
+         "Net::FullAuto Version $Net::FullAuto::VERSION\n",
+         (join "\n",@pl),"\n",
+         (join "\n",@exe),"\n\n",
+         (join "\n",@O),"\n",
+         (join "\n",@Tpm),"\n",
+         (join "\n",@html),"\n",
+         (join "\n",@README),"\n\n",
+         (join "\n",sort @Dist),"\n\n",
+         (join "\n",sort @Cust),"\n\n",
+         (join "\n",reverse @Core),"\n";
+   exit;
+}
+
 sub pick
 {
    return &Menus::pick(@_);
@@ -1070,6 +1150,7 @@ sub pick
 
 sub Menu
 {
+   can_load(modules => { Term::Menus => 0 });
    return &Term::Menus::Menu(@_);
 }
 
@@ -1149,7 +1230,6 @@ sub edit {
          next if $file eq 'README';
          chop($file);
          push @file,$file;
-         print "FILE=$file\n";
       }
       my %Menu_1=(
 
@@ -2665,7 +2745,7 @@ print "APACHE_LOGINCALLER=",caller,"\n";
       $apache_handle{$info[2]}->credentials(
          $an,'WebRSH',$un,&getpasswd($hostlabel,$un));
       $apache_handle{$info[2]}->agent(
-            "mvcode.pl/$version" . $ua->agent);
+            "$progname " . $ua->agent);
    };
    if ($@) {
       return $@;
@@ -3799,7 +3879,7 @@ sub apache_download
    my ($file,$host,$hostlabel)=@_;
    my ($size,$start_t,$length,$flength,$last_dur)='';
 
-   $ua->agent("mvcode.pl/$version " . $ua->agent);
+   $ua->agent("$progname " . $ua->agent);
    my $un=$username;
 #print "GP3\n";
    $ua->credentials("$Hosts{\"__Master_${$}__\"}{'IP'}:80",'WebRSH',
@@ -4578,10 +4658,12 @@ sub fa_login
                 'tosspass'              => \$tosspass,
                 'edit:s'                => \$edit,
                 'e:s'                   => \$edit,
+                'v'                     => \$version,
+                'version'               => \$version,
+                'V'                     => \$VERSION,
               ) or pod2usage(2);
    pod2usage(1) if $help;
    pod2usage(-exitstatus => 0, -verbose => 2) if $man;
-   &edit($edit) if defined $edit;
    @ARGV=@holdARGV;undef @holdARGV;
    $random='__random__' if $random;
    if (defined $log) { $log=1 }
