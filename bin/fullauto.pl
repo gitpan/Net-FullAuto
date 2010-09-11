@@ -32,21 +32,24 @@ eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
 BEGIN {
 
    my $edit=0;my $earg='';my $cnt=0;
-   my $VERSION=0;
+   my $VERSION=0;my $version=0;
    foreach my $arg (@ARGV) {
-      if ($arg=~/--ed*i*t*/) {
+      if ($arg=~/^--ed*i*t*$/) {
          $edit=1;
          if ($ARGV[$cnt+1]!~/^--/) {
             $earg=$ARGV[$cnt+1];last;
          } else { last }
-      } elsif ($arg=~/-[a-df-zA-Z]*e\s*(.*)/) {
+      } elsif ($arg=~/^-[a-df-zA-Z]*e\s*(.*)/) {
          $earg=$1;
          $edit=1;
          chomp $earg; 
          $earg='' if $earg=~/^\s*$/;
-      } elsif ($arg=~/-[a-df-zA-Z]*V/ ||
-               $arg=~/--VE*R*S*I*O*N*/) {
+      } elsif ($arg=~/^-[a-df-zA-UW-Z]*V/ ||
+               $arg=~/^--VE*R*S*I*O*N*$/) {
          $VERSION=1;
+      } elsif ($arg=~/^-[a-df-uw-zA-Z]*v/ ||
+               $arg=~/^--VE*R*S*I*O*N*$/) {
+         $version=1;
       }
       $cnt++;
    }
@@ -57,6 +60,10 @@ BEGIN {
    } elsif ($VERSION) {
       require Net::FullAuto::FA_Core;
       &Net::FullAuto::FA_Core::VERSION();
+      exit;
+   } elsif ($version) {
+      require Net::FullAuto::FA_Core;
+      &Net::FullAuto::FA_Core::version();
       exit;
    }
 
