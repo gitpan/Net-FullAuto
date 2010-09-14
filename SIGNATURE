@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 05ac6d89f5489273d5d7ca15e9e61b3e008aec4c ChangeLog
+SHA1 ac56b306a5b36fd2e5b342c540be915aac413c1e ChangeLog
 SHA1 a74125560a260a18a646ef0b3702e1b77a45b931 LICENSE
 SHA1 076b96a40ee3e10d1bee150578c53821e00014c0 MANIFEST
-SHA1 872510ca2ba284aacf585533bf0919ee47288025 META.yml
-SHA1 54702a36abc89a08dc7b53dca52ce851a710811d Makefile.PL
+SHA1 525c5b98cb1dbfd3b6957b8fe5093daac8ed8b93 META.yml
+SHA1 b8d953dedb3775b827ed87b53c3bf89ecded8999 Makefile.PL
 SHA1 8af1a79720895de6dd7dc0f88ed6e07c20e84f2d README
 SHA1 56058fc8d72a96f1cb02917fdf636c1abb94e51d bin/fullauto.pl
 SHA1 20c73697e1713638140c719d8eaa19a275ed43a5 inc/Module/AutoInstall.pm
@@ -33,7 +33,7 @@ SHA1 026cc0551a0ad399d195e395b46bdf842e115192 inc/Module/Install/Metadata.pm
 SHA1 d3a4c720c6ec7f8fce7df37002fbc9177fb77050 inc/Module/Install/Scripts.pm
 SHA1 5457015ea5a50e93465bf2dafa29feebd547f85b inc/Module/Install/Win32.pm
 SHA1 051e7fa8063908befa3440508d0584a2497b97db inc/Module/Install/WriteAll.pm
-SHA1 2daf5f5fd89f5fdd27b2669cfbd23f4024ea7ffd lib/Net/FullAuto.pm
+SHA1 ad19e5d5eb94cfd83c40db1868910c0f567fbc55 lib/Net/FullAuto.pm
 SHA1 5ff6ce13b0ff87967726e71d0ef53ba0b3884ba7 lib/Net/FullAuto/Custom/BackUp/README
 SHA1 1c547d9c70bbd223abf6d28018ca47076501063a lib/Net/FullAuto/Custom/README
 SHA1 c312c49b9b45e407e8deb9b4703e5c2aa8e71fc3 lib/Net/FullAuto/Distro/fa_code.pm
@@ -41,13 +41,13 @@ SHA1 c4c9133e17f1b8dcbd352a15717478c75684e469 lib/Net/FullAuto/Distro/fa_conf.pm
 SHA1 de4dcc81108393e77dacd2f131e7513956d79b8b lib/Net/FullAuto/Distro/fa_host.pm
 SHA1 8bf3902c4ee7bad312fc9c7d11de8e8578b472ec lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 23e8ebc4ed61ba4c578504c9b440c86889626e2f lib/Net/FullAuto/Distro/fa_menu.pm
-SHA1 46bb10c9a7af03f5dd6a697f933b1f36eae404c6 lib/Net/FullAuto/FA_Core.pm
+SHA1 70b8cc13abc8e54728743b58d8306361b32fc99f lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.9 (Cygwin)
 
-iEYEARECAAYFAkyL8ZkACgkQdsVAdUjO9Ik88wCfc6xdCCHV1wxiYVEtYyvocXnT
-cSoAn2twoTWyODJQc7caeDB+qwQ2VlZM
-=Q6po
+iEYEARECAAYFAkyP4/8ACgkQdsVAdUjO9IkEjgCglpk6o/QOcOiJLbTJoyjz9pH2
+QL0Anj1Gr/zXxdzU8uuO0XNM2XAqJJ6c
+=56TR
 -----END PGP SIGNATURE-----

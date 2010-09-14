@@ -37,6 +37,10 @@ package Net::FullAuto::FA_Core;
 #
 #  at CPAN prompt (cpan[1]) type: o conf init
 #
+## For running CPAN with sudo
+#
+#  sudo -i cpan   (-i loads the root environment)
+#
 ## For compiling into MSWin32 setup executable with PAR::Packager
 #
 #  pp -c -o "Setup FullAuto MSWin32-x86.exe" 
@@ -1092,18 +1096,24 @@ sub VERSION
 
    can_load(modules => { Term::Menus => 0 });
    can_load(modules => { Net::FullAuto => 0 });
-   require ExtUtils::Installed;
+   use ExtUtils::Installed;
+   my $cwd='';
+   if ($^O eq 'cygwin') {
+      $cwd='pwd';
+      chdir "/tmp";
+   }
    my ($inst) = ExtUtils::Installed->new();
+   chdir $cwd if $cwd;
    my @menus_files = $inst->files("Term::Menus");
    my @fullauto_files = $inst->files("Net::FullAuto");
-   my @pl=();my @exe=();my @O=();my @Cust=();my @Dist=();
+   my @pl=();my @exe=();my @O=();my %Cust=();my @Dist=();
    my @Tpm=();my @html=();my @Core=();my @README=();
    foreach my $file (@fullauto_files) {
       if ($file=~/\.pm$/) {
          if (-1<index $file,'Distro') {
             push @Dist, $file;next;
          } elsif (-1<index $file,'Custom') {
-            push @Cust, $file;next;
+            $Cust{$file}='';next;
          } else { push @Core, $file;next }
       } elsif ($file=~/\.pl$/) {
          push @pl, $file;next;
@@ -1121,7 +1131,8 @@ sub VERSION
             $path=~s/\/[^\/]+$//;
             opendir(my $dh, $path) || die "can't opendir $path: $!";
             while (my $file=readdir($dh)) {
-               push @Cust, "$path/$file" if $file!~/^[.]|README$/ && -f "$path/$file";
+               $Cust{"$path/$file"}='' if $file!~/^[.]|README$/
+                  && -f "$path/$file";
             }
             closedir $dh;
          }
@@ -1132,13 +1143,13 @@ sub VERSION
          (join "\n",@menus_files),"\n\n",
          "Net::FullAuto Version $Net::FullAuto::VERSION\n",
          (join "\n",@pl),"\n",
-         (join "\n",@exe),"\n\n",
-         (join "\n",@O),"\n",
-         (join "\n",@Tpm),"\n",
+         (join "\n",@exe),"\n\n";
+   print '',(join "\n",@O),"\n" if -1<$#O;
+   print '',(join "\n",@Tpm),"\n",
          (join "\n",@html),"\n",
          (join "\n",@README),"\n\n",
          (join "\n",sort @Dist),"\n\n",
-         (join "\n",sort @Cust),"\n\n",
+         (join "\n",sort keys %Cust),"\n\n",
          (join "\n",reverse @Core),"\n";
    exit;
 }
