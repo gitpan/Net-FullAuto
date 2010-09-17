@@ -35,7 +35,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.44';
+version         '0.45';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -215,27 +215,28 @@ unless (can_run('lynx')) {
 } ## End disable block
 
 #Specific dependencies
-requires        'Term::Menus'            => 1.49;
-requires        'Tie::Cache'             => 0;
-requires        'Sort::Versions'         => 0;
-requires        'Crypt::CBC'             => 0;
-requires        'Crypt::DES'             => 0;
-requires        'Getopt::Long'           => 0;
-requires        'HTTP::Date'             => 0;
-requires        'JSON'                   => 2.14;
-requires        'IO::Pty'                => 0;
-requires        'IO::Capture::Stderr'    => 0;
-requires        'IO::CaptureOutput'      => 0;
-requires        'Mail::Internet'         => 0;
-requires        'Mail::Sender'           => 0;
-requires        'DB_File'                => 0;
-requires        'MLDBM'                  => 0;
-requires        'MLDBM::Sync'            => 0;
-requires        'MLDBM::Sync::SDBM_File' => 0;
-requires        'Net::Telnet'            => 0;
-requires        'Term::ReadKey'          => 0;
-requires        'URI'                    => 0;
-recommends      'Crypt::Rijndael'        => 0;
+requires        'Module::Load::Conditional' => 0;
+requires        'Term::Menus'               => 1.49;
+requires        'Tie::Cache'                => 0;
+requires        'Sort::Versions'            => 0;
+requires        'Crypt::CBC'                => 0;
+requires        'Crypt::DES'                => 0;
+requires        'Getopt::Long'              => 0;
+requires        'HTTP::Date'                => 0;
+requires        'JSON'                      => 2.14;
+requires        'IO::Pty'                   => 0;
+requires        'IO::Capture::Stderr'       => 0;
+requires        'IO::CaptureOutput'         => 0;
+requires        'Mail::Internet'            => 0;
+requires        'Mail::Sender'              => 0;
+requires        'MLDBM'                     => 0;
+requires        'MLDBM::Sync'               => 0;
+requires        'MLDBM::Sync::SDBM_File'    => 0;
+requires        'Net::Telnet'               => 0;
+requires        'Term::ReadKey'             => 0;
+requires        'URI'                       => 0;
+requires        'DB_File'                   => 0;
+recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;
 
