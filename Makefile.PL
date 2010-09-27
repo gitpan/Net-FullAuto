@@ -35,7 +35,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.45';
+version         '0.46';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -93,8 +93,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       }
       close(CP) || die $!;
       chmod 0755, 'setup.exe';
-      my $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,make,'
-                   .'openssh,perl,db4.5 -A -q"';
+      my $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
+                   .'make,openssh,perl,perl-libwin32,db4.5 -A -q"';
 	  my $pwd=`cmd /c chdir`;
 	  chmod($pwd);
 	  my $cygpath=$pwd;
@@ -146,7 +146,7 @@ if ($^O eq 'cygwin' && !can_cc()) {
            "\n                      is required to install FullAuto".
            "\n                      on Windows.".
            "\n(Hint: Run Cygwin setup.exe and install 'gcc4-core' ".
-           "under the Category 'Devel' ).".
+           "and 'gcc4-g++' under the Category 'Devel' ).".
            "\n\n";
    die $die;
 } elsif (!can_cc()) {
@@ -648,7 +648,7 @@ sub MY::pm_to_blib {
 
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_host.pm") &&
          ($inherited !~ /Custom\/fa_host.pm/)) {
-      my $fa_h="\t  lib\/Net\/FullAuto\/Distro\/fa_host.pm ".
+      my $fa_h="\t  lib\/Net\/FullAuto\/Custom\/fa_host.pm ".
                "blib\/lib\/Net\/FullAuto\/Custom\/fa_host.pm";
       my $wrap='';
       $inherited =~ /\s+blib.*Distro\/fa_host.pm( \\)/m;
@@ -660,7 +660,7 @@ sub MY::pm_to_blib {
    }
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_maps.pm") &&
          ($inherited !~ /Custom\/fa_maps.pm/)) {
-      my $fa_p="\t  lib\/Net\/FullAuto\/Distro\/fa_maps.pm ".
+      my $fa_p="\t  lib\/Net\/FullAuto\/Custom\/fa_maps.pm ".
                "blib\/lib\/Net\/FullAuto\/Custom\/fa_maps.pm";
       my $wrap='';
       $inherited =~ /\s+blib.*Distro\/fa_maps.pm( \\)/m;
@@ -672,7 +672,7 @@ sub MY::pm_to_blib {
    }
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") &&
          ($inherited !~ /Custom\/fa_conf.pm/)) {
-      my $fa_g="\t  lib\/Net\/FullAuto\/Distro\/fa_conf.pm ".
+      my $fa_g="\t  lib\/Net\/FullAuto\/Custom\/fa_conf.pm ".
                "blib\/lib\/Net\/FullAuto\/Custom\/fa_conf.pm";
       my $wrap='';
       $inherited =~ /\s+blib.*Distro\/fa_conf.pm( \\)/m;
@@ -684,7 +684,7 @@ sub MY::pm_to_blib {
    }
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_menu.pm") &&
          ($inherited !~ /Custom\/fa_menu.pm/)) {
-      my $fa_m="\t  lib\/Net\/FullAuto\/Distro\/fa_menu.pm ".
+      my $fa_m="\t  lib\/Net\/FullAuto\/Custom\/fa_menu.pm ".
                "blib\/lib\/Net\/FullAuto\/Custom\/fa_menu.pm";
       my $wrap='';
       $inherited =~ /\s+blib.*Distro\/fa_menu.pm( \\)/m;
@@ -696,7 +696,7 @@ sub MY::pm_to_blib {
    }
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_code.pm") &&
          ($inherited !~ /Custom\/fa_code.pm/)) {
-      my $fa_c="\t  lib\/Net\/FullAuto\/Distro\/fa_code.pm ".
+      my $fa_c="\t  lib\/Net\/FullAuto\/Custom\/fa_code.pm ".
                "blib\/lib\/Net\/FullAuto\/Custom\/fa_code.pm";
       my $wrap='';
       $inherited =~ /\s+blib.*Distro\/fa_code.pm( \\)/m;

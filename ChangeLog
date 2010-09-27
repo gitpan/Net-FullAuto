@@ -25,6 +25,13 @@
 ################################################################
 
 
+2010-09-26  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.46 released.
+
+        * Changed Makefile.PL to fix Cygwin install
+
+
 2010-09-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.45 released.
