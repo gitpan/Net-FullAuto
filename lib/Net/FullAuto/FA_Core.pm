@@ -126,7 +126,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use IO::Handle;
    use IO::Select;
    use IO::Capture::Stderr;
-   use IO::CaptureOutput qw(capture);
+   use Capture::Tiny qw(capture);
    use Symbol qw(qualify_to_ref);
    use Tie::Cache;
    use IO::Pty;
@@ -1459,10 +1459,10 @@ sub kill
    }
 print $Net::FullAuto::FA_Core::MRLOG "BEFOREKILL -> ",join ' ',@{$cmd},"\n"
       if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $mystdout='';
-   capture sub {
+   my $stdout_capture='';my $stderr_capture='';
+   ($stdout_capture,$stderr_capture)=capture {
       ($ignore,$stdout)=&setuid_cmd($cmd,5);
-           }, \$mystdout;
+   };
    $stdout||='';
    if (wantarray) {
       return $stdout,'';
@@ -1505,9 +1505,10 @@ sub testpid
    my $stdout=0;my $stderr='';
 
    my $mystdout='';
-   capture sub{
+   my $stdout_capture='';my $stderr_capture='';
+   ($stdout_capture,$stderr_capture)=capture {
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
-              }, \$mystdout;
+   };
    chomp $stdout;chomp $stderr;
    print $Net::FullAuto::FA_Core::MRLOG
       "\nppppppp &main::testpid() ppppppp STDOUT ",
@@ -4280,23 +4281,32 @@ sub send_email
       }
       $body=join '',@{$body} if ref $body eq 'ARRAY';
       $ent->attach(Data => $body);
+      my $stdout_capture='';my $stderr_capture='';
       while (1) {
-         eval {
-            if ($transport) {
-               sendmail($ent,{transport=>$transport});
-            } else {
-               sendmail($ent);
-            }
+         my $eval_error='';
+         ($stdout_capture,$stderr_capture)=capture {
+            eval {
+               if ($transport) {
+                  sendmail($ent,{transport=>$transport});
+               } else {
+                  sendmail($ent);
+               }
+            };
+            $eval_error=$@;
          };
-         if ($@) {
-            my $err=$@;
-            print $Net::FullAuto::FA_Core::MRLOG $err
+         if ($eval_error || $stdout_capture) {
+            if ($eval_error=~/^\s*$/ && $stdout_capture) {
+               $eval_error=$stdout_capture;
+            } elsif ($stdout_capture) {
+               $eval_error="$stdout_capture\n\n$eval_error";
+            } 
+            print $Net::FullAuto::FA_Core::MRLOG $eval_error
                if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             if (wantarray) {
-               return '',$err,'';
+               return '',$eval_error,'';
             } else {
-               die $err;
+               die $eval_error;
             }
          } elsif (wantarray) {
             return 'Mail sent OK.','','';

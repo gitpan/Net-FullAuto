@@ -35,7 +35,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.47';
+version         '0.48';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -260,7 +260,7 @@ requires        'HTTP::Date'                => 0;
 requires        'JSON'                      => 2.14;
 requires        'IO::Pty'                   => 0;
 requires        'IO::Capture::Stderr'       => 0;
-requires        'IO::CaptureOutput'         => 0;
+requires        'Capture::Tiny'             => 0;
 requires        'MLDBM'                     => 0;
 requires        'MLDBM::Sync'               => 0;
 requires        'MLDBM::Sync::SDBM_File'    => 0;

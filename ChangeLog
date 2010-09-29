@@ -27,6 +27,14 @@
 
 2010-09-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.48 released.
+
+        * Replaced IO::CaptureOutput with Capture::Tiny
+          (works better).
+
+
+2010-09-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.47 released.
 
         * Replaced Mail::Internet and Mail::Sender with
