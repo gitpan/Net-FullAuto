@@ -111,8 +111,9 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Cwd qw(getcwd);
    use English;
    use Fcntl qw(:DEFAULT :flock);
-   use Mail::Internet;
-   use Mail::Sender;
+   use Email::Sender::Simple qw(sendmail);
+   use Email::Sender::Transport::SMTP qw();
+   use MIME::Entity;
    use Module::Load::Conditional qw[can_load];
    use Net::Telnet;
    use Getopt::Long;
@@ -4031,18 +4032,18 @@ sub send_email
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $usage='notify_on_error';my $mail_module='Mail::Sender';
-   my $mail_method='';my $mail_server='';my $body='';
+   my $mail_method='';my $mail_server='';my $mail_port='';
    my $bcc='';my $cc='';my $content_type='';my $priority='';
    my $content_transfer_encoding='';my $content_disposition='';
    my $date='';my $from='';my $keywords='';my $message_id='';
    my $mime_version='';my $organization='';my $received='';
    my $references='';my $reply_to='';my $resent_from='';
-   my $return_path='';my $sender='';my $subject='';
-   my $to='';my $sendemail=0;my $done_warning=0;
+   my $return_path='';my $sender='';my $subject='';my $body='';
+   my $to='';my $sendemail=0;my $done_warning=0;my $transport='';
    my $head='';my $mail_sender='';my %mail_sender_defaults=();
-   my $mail_info=$_[0];my $debug=$_[1];$debug||=0;
+   my $mail_info=$_[0];my $debug=$_[1];$debug||=0;my $ent='';
    my $warn=1 if grep { lc($_) eq '__warn__' } @_;
-   tie *debug, "Net::FullAuto::MemoryHandle";
+   #tie *debug, "Net::FullAuto::MemoryHandle";
    if (ref $mail_info eq 'HASH') {
       if (exists ${$mail_info}{Usage}) {
          $usage=${$mail_info}{Usage};
@@ -4054,186 +4055,92 @@ sub send_email
                && (caller(1))[3] eq 'FA_Core::handle_error') {
          return 0;
       }
-      if (exists ${$mail_info}{Mail_Module}) {
-         $mail_module=${$mail_info}{Mail_Module};
+      if (exists ${$mail_info}{Mail_Method}) {
+         $mail_method=${$mail_info}{Mail_Method};
       } elsif ($email_defaults &&
-           (exists $email_defaults{Mail_Module})) {
-         $mail_module=$email_defaults{Mail_Module};
-      }
-      if ($mail_module eq 'Mail::Internet') {
-         $head=Mail::Header->new;
-      }
-      if ($mail_module ne 'Mail::Sender') {
-         if (exists ${$mail_info}{Mail_Method}) {
-            $mail_method=${$mail_info}{Mail_Method};
-         } elsif ($email_defaults &&
-              (exists $email_defaults{Mail_Method})) {
-            $mail_method=$email_defaults{Mail_Method};
-         }
-      } else {
-         %mail_sender_defaults=%Mail::Sender::default;
-         $Mail::Sender::default{debug}=\*debug;
-         #$Mail::Sender::default{debug}='/tmp/maildebug.log';
+           (exists $email_defaults{Mail_Method})) {
+         $mail_method=$email_defaults{Mail_Method};
       }
       if (exists ${$mail_info}{Mail_Server}) {
          $mail_server=${$mail_info}{Mail_Server};
-         if ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{smtp}=$mail_server;
-         }
       } elsif ($email_defaults &&
            (exists $email_defaults{Mail_Server})) {
          $mail_server=$email_defaults{Mail_Server};
-         if ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{smtp}=$mail_server;
+      }
+      if (exists ${$mail_info}{Mail_Port}) {
+         $mail_port=${$mail_info}{Mail_Port};
+      } elsif ($email_defaults &&
+           (exists $email_defaults{Mail_Port})) {
+         $mail_port=$email_defaults{Mail_Port};
+      }
+      if ($mail_method=~/smtp/i) {
+         if ($mail_server) {
+            if ($mail_port) {
+               $transport=Email::Sender::Transport::SMTP->new({ 
+                   host => $mail_server,
+                   prot => $mail_port 
+               });
+            } else {
+               $transport=Email::Sender::Transport::SMTP->new({
+                   host => $mail_server
+               });
+            }
          }
       }
+      $ent = MIME::Entity->build(Type       => "multipart/mixed",
+                                 'X-Mailer' => undef);
       if (exists ${$mail_info}{Bcc}) {
-         $bcc=${$mail_info}{Bcc};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $bcc eq 'ARRAY') {
-               $head->add(Bcc => $bcc);
-            } else {
-               $head->add(Bcc => "$bcc");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{bcc}=$bcc;
-         }
+         $ent->head->mime_attr(Bcc=>${$mail_info}{Bcc});
          $sendemail=1;
       } elsif ($email_defaults &&
             (exists $email_defaults{Bcc})) {
-         $bcc=$email_defaults{Bcc};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $bcc eq 'ARRAY') {
-               $head->add(Bcc => $bcc);
-            } else {
-               $head->add(Bcc => "$bcc");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{bcc}=$bcc;
-         }
+         $ent->head->mime_attr(Bcc=>${$email_defaults}{Bcc});
          $sendemail=1;
       }
       if (exists ${$mail_info}{Cc}) {
-         $cc=${$mail_info}{Cc};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $bcc eq 'ARRAY') {
-               $head->add(Cc => $cc);
-            } else {
-               $head->add(Cc => "$cc");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{cc}=$cc;
-         }
+         $ent->head->mime_attr(Cc=>${$mail_info}{Cc});
          $sendemail=1;
       } elsif ($email_defaults &&
             (exists $email_defaults{Cc})) {
-         $cc=$email_defaults{Cc};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $cc eq 'ARRAY') {
-               $head->add(Cc => $cc);
-            } else {
-               $head->add(Cc => "$cc");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{cc}=$cc;
-         }
+         $ent->head->mime_attr(Cc=>${$email_defaults}{Cc});
          $sendemail=1;
       }
-      if (exists ${$mail_info}{Reply_To}) {
-         $reply_to=${$mail_info}{Reply_To};
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(Reply-To => "$reply_to");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{replyto}=$reply_to;
-         }
+      if (exists ${$mail_info}{"Reply-To"}) {
+         $ent->head->mime_attr("Reply-To"=>${$mail_info}{"Reply-To"});
       } elsif ($email_defaults &&
-            (exists $email_defaults{Reply_To})) {
-         $reply_to=$email_defaults{Reply_To};
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(Reply-To => "$reply_to");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{replyto}=$reply_to;
-         }
+            (exists $email_defaults{"Reply-To"})) {
+         $ent->head->mime_attr("Reply-To"=>${$email_defaults}{"Reply-To"});
       }
       if (exists ${$mail_info}{Priority}) {
-         $priority=${$mail_info}{Priority};
-         if ($mail_module eq 'Mail::Internet') {
-            #$head->add(Reply-To => $priority);
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{priority}=1;
-            $Mail::Sender::default{headers}="Importance: 1";
-         }
-      } elsif ($email_defaults &&
-            (exists $email_defaults{Reply_To})) {
-         $reply_to=$email_defaults{Reply_To};
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(Reply-To => "$reply_to");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{replyto}=$reply_to;
-         }
+         $ent->head->mime_attr("Importance:"=>1);
       }
       if (exists ${$mail_info}{From}) {
-         $from=${$mail_info}{From};
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(From => "$from");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{from}=$from;
-         }
+         $ent->head->mime_attr(From=>${$mail_info}{From});
       } elsif ($email_defaults &&
             (exists $email_defaults{From})) {
-         $from=$email_defaults{From};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $from eq 'ARRAY') {
-               $head->add(From => $from);
-            } else {
-               $head->add(From => "$from");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{from}=$from;
-         }
+         $ent->head->mime_attr(From=>${$email_defaults}{From});
       } else {
          if (!$Net::FullAuto::FA_Core::username) {
             $Net::FullAuto::FA_Core::username=getlogin || getpwuid($<)
          }
-         $from="$Net::FullAuto::FA_Core::progname\@$Net::FullAuto::FA_Core::local_hostname";
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $from eq 'ARRAY') {
-               $head->add(From => $from);
-            } else {
-               $head->add(From => "$from");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{from}=$from;
-         }
+         $ent->head->mime_attr(From=>
+            "$Net::FullAuto::FA_Core::progname".
+            "\@$Net::FullAuto::FA_Core::local_hostname");
       }
       if (exists ${$mail_info}{Subject}) {
-         $subject=${$mail_info}{Subject};
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(Subject => "$subject");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{subject}=$subject;
-         }
+         $ent->head->mime_attr(Subject=>${$mail_info}{Subject});
       } elsif ($email_defaults &&
             (exists $email_defaults{Subject})) {
-         $subject=$email_defaults{Subject};
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(Subject => "$subject");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{subject}=$subject;
-         }
+         $ent->head->mime_attr(Subject=>${$email_defaults}{Subject});
       } elsif ($usage eq 'notify_on_error') {
          if ($warn) {
             $subject="WARNING! from $Net::FullAuto::FA_Core::local_hostname";
          } else {
-            $subject="FATAL ERROR! from $Net::FullAuto::FA_Core::local_hostname";
+            $subject="FATAL ERROR! from ".
+               $Net::FullAuto::FA_Core::local_hostname;
          }
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(Subject => "$subject");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{subject}=$subject;
-            $Mail::Sender::default{priority}=1;
-            $Mail::Sender::default{headers}="Importance: 1" if !$warn;
-         }
+         $ent->head->mime_attr(Subject=>$subject);
+         $ent->head->mime_attr("Importance:"=>1) unless $warn;
       }
       if (exists ${$mail_info}{To}) {
          if ($email_defaults &&
@@ -4256,38 +4163,19 @@ sub send_email
             $Net::FullAuto::FA_Core::username=getlogin || getpwuid($<)
          }
          if (ref $to eq 'ARRAY') {
-            if ($mail_module eq 'Mail::Internet') {
-               my @holder=();
-               foreach my $item (@{$to}) {
-                  if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                     push @holder, $email_addresses{$Net::FullAuto::FA_Core::username}
-                        if exists $email_addresses{$Net::FullAuto::FA_Core::username};
-                     next;
-                  } push @holder, $item;
-               } @{$to}=@holder;
-            } elsif ($mail_module eq 'Mail::Sender') {
-               my $going_to='';
-               foreach my $item (@{$to}) {
-                  if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                     $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\\\,"
-                        if exists $email_addresses{$Net::FullAuto::FA_Core::username};
-                     next;
-                  } $going_to.="$item\\\,";
-               } $to=substr($going_to,0,-2);
-            }
+            my $going_to='';
+            foreach my $item (@{$to}) {
+               if ($item=~/(__|\])USERNAME(\[|__)/i) {
+                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\\\,"
+                     if exists $email_addresses{$Net::FullAuto::FA_Core::username};
+                  next;
+               } $going_to.="$item\\\,";
+            } $to=substr($going_to,0,-2);
          } elsif ($to=~/(__|\])USERNAME(\[|__)/i) {
             $to=$email_addresses{$Net::FullAuto::FA_Core::username}
                if exists $email_addresses{$Net::FullAuto::FA_Core::username};
          }
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $to eq 'ARRAY') {
-               $head->add(To => $to);
-            } else {
-               $head->add(To => "$to");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{to}=$to;
-         }
+         $ent->head->mime_attr(To=>$to);
          $sendemail=1;
       } elsif ($email_defaults &&
             (exists $email_defaults{To})) {
@@ -4296,38 +4184,19 @@ sub send_email
             $Net::FullAuto::FA_Core::username=getlogin || getpwuid($<)
          }
          if (ref $to eq 'ARRAY') {
-            if ($mail_module eq 'Mail::Internet') {
-               my @holder=();
-               foreach my $item (@{$to}) {
-                  if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                     push @holder, $email_addresses{$Net::FullAuto::FA_Core::username}
-                        if exists $email_addresses{$Net::FullAuto::FA_Core::username};
-                     next;
-                  } push @holder, $item;
-               } @{$to}=@holder;
-            } elsif ($mail_module eq 'Mail::Sender') {
-               my $going_to='';
-               foreach my $item (@{$to}) {
-                  if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                     $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\\\,"
-                        if exists $email_addresses{$Net::FullAuto::FA_Core::username};
-                     next;
-                  } $going_to.="$item\\\,";
-               } $to=substr($going_to,0,-2);
-            }
+            my $going_to='';
+            foreach my $item (@{$to}) {
+               if ($item=~/(__|\])USERNAME(\[|__)/i) {
+                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\\\,"
+                     if exists $email_addresses{$Net::FullAuto::FA_Core::username};
+                  next;
+               } $going_to.="$item\\\,";
+            } $to=substr($going_to,0,-2);
          } elsif ($to=~/(__|\])USERNAME(\[|__)/i) {
             $to=$email_addresses{$Net::FullAuto::FA_Core::username}
                if exists $email_addresses{$Net::FullAuto::FA_Core::username};
          }
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $to eq 'ARRAY') {
-               $head->add(To => $to);
-            } else {
-               $head->add(To => "$to");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{to}="$to";
-         }
+         $ent->head->mime_attr(To=>$to);
          $sendemail=1;
       }
    } elsif ($email_defaults) {
@@ -4337,77 +4206,44 @@ sub send_email
                && (caller(1))[3] eq 'FA_Core::handle_error') {
          return 0;
       }
-      if ($mail_module eq 'Mail_Sender') {
-         %mail_sender_defaults=%Mail::Sender::default;
-         $Mail::Sender::default{debug}=\*debug;
-         #$Mail::Sender::default{debug}='/tmp/maildebug.log';
-      }
+      $mail_server=$email_defaults{Mail_Server}
+         if exists $email_defaults{Mail_Server};
+      $mail_port  =$email_defaults{Mail_Port}
+         if exists $email_defaults{Mail_Port};
       $mail_method=$email_defaults{Mail_Method}
-         if ($mail_module ne 'Mail::Sender' &&
-         exists $email_defaults{Mail_Method});
-      if (exists $email_defaults{Mail_Server}) {
-         $mail_server=$email_defaults{Mail_Server};
-         if ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{smtp}=$mail_server;
+         if exists $email_defaults{Mail_Method};
+      if ($mail_method=~/smtp/i) {
+         if ($mail_server) {
+            if ($mail_port) {
+               $transport=Email::Sender::Transport::SMTP->new({
+                   host => $mail_server,
+                   port => $mail_port
+               });
+            } else {
+               $transport=Email::Sender::Transport::SMTP->new({
+                   host => $mail_server
+               });
+            }
          }
       }
+      $ent = MIME::Entity->build(Type       => "multipart/mixed",
+                                 'X-Mailer' => undef);
       if (exists $email_defaults{Bcc}) {
-         $bcc=$email_defaults{Bcc};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $bcc eq 'ARRAY') {
-               $head->add(Bcc => $bcc);
-            } else {
-               $head->add(Bcc => "$bcc");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{bcc}=$bcc;
-         }
+         $ent->head->mime_attr(Bcc=>$email_defaults{Bcc});
          $sendemail=1;
       }
       if (exists $email_defaults{Cc}) {
-         $cc=$email_defaults{Cc};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $bcc eq 'ARRAY') {
-               $head->add(Cc => $cc);
-            } else {
-               $head->add(Cc => "$cc");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{bcc}=$bcc;
-         }
+         $ent->head->mime_attr(Cc=>$email_defaults{Cc});
          $sendemail=1;
       }
       if (exists $email_defaults{From}) {
-         $from=$email_defaults{From};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $from eq 'ARRAY') {
-               $head->add(From => $from);
-            } else {
-               $head->add(From => "$from");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{from}=$from;
-         }
+         $ent->head->mime_attr(From=>$email_defaults{From}); 
       }
       if (exists $email_defaults{Subject}) {
-         $subject=$email_defaults{Subject};
-         if ($mail_module eq 'Mail::Internet') {
-            $head->add(Subject => "$subject");
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{subject}=$subject;
-         }
+         $ent->head->mime_attr(Subject=>$email_defaults{Subject});
       }
       if (exists $email_defaults{To}) {
-         $to=$email_defaults{To};
-         if ($mail_module eq 'Mail::Internet') {
-            if (ref $to eq 'ARRAY') {
-               $head->add(To => $to);
-            } else {
-               $head->add(To => "$to");
-            }
-         } elsif ($mail_module eq 'Mail::Sender') {
-            $Mail::Sender::default{to}=$to;
-         }
+         $ent->head->mime_attr(To=>$email_defaults{To});
          $sendemail=1;
       }
    } else {
@@ -4442,105 +4278,36 @@ sub send_email
            (exists $email_defaults{Msg})) {
          $body=$email_defaults{Msg};
       }
-      if ($mail_module eq 'Mail::Sender') {
-         $body=join '',@{$body} if ref $body eq 'ARRAY';
-         $Mail::Sender::NO_X_MAILER=1;
-         my $mail_err=0;
-         while (1) {
-            $mail=new Mail::Sender{ debug_level => 1 };
-            if ($Mail::Sender::Error) {
-               print $Net::FullAuto::FA_Core::MRLOG $Mail::Sender::Error
-                  if $Net::FullAuto::FA_Core::log &&
-                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               if (wantarray) {
-                  return '',$Mail::Sender::Error,'';
-               } else {
-                  die $Mail::Sender::Error;
-               }
-            }
-            $body.="\n\n\n##########   BEGIN DEBUGGING OUTPUT"
-                 ."##########\n\n\n$Net::FullAuto::FA_Core::debug\n"
-                 if $debug;
-            $body="\n" if !$body;
-            if (ref ($mail->MailMsg({msg=>$body}))) {
-               if (wantarray) {
-                  if ($debug) {
-                     my $dbug='';
-                     while (<debug>) { $dbug.=$_ }
-                     print $Net::FullAuto::FA_Core::MRLOG $dbug
-                        if $Net::FullAuto::FA_Core::log &&
-                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                     %Mail::Sender::default=%mail_sender_defaults;
-                     return 'Mail sent OK.','',"$dbug";
-                  } else {
-                     %Mail::Sender::default=%mail_sender_defaults;
-                     return 'Mail sent OK.','','';
-                  }
-               } elsif ((!$Net::FullAuto::FA_Core::cron ||
-                         $Net::FullAuto::FA_Core::debug) &&
-                         !$Net::FullAuto::FA_Core::quiet) {
-                  if ($debug) {
-                     while (my $line=<debug>) {
-                        print $line;
-                        print $Net::FullAuto::FA_Core::MRLOG $line
-                           if $Net::FullAuto::FA_Core::log &&
-                           -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                     }
-                  }
-                  print "\nMail sent OK.\n";
-               } last
-            } elsif (wantarray) {
-               if ($debug) {
-                  my $dbug='';
-                  while (<debug>) { $dbug.=$_ }
-                  print $Net::FullAuto::FA_Core::MRLOG $dbug
-                     if $Net::FullAuto::FA_Core::log &&
-                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  %Mail::Sender::default=%mail_sender_defaults;
-                  return '',"$Mail::Sender::Error","$dbug";
-               } else {
-                  %Mail::Sender::default=%mail_sender_defaults;
-                  return '',"$Mail::Sender::Error",'';
-               }
-            } elsif (!$mail_err && $Mail::Sender::Error && -1<index
-                  $Mail::Sender::Error,'Address already in use') {
-               sleep $timeout;$mail_err=1;
+      $body=join '',@{$body} if ref $body eq 'ARRAY';
+      $ent->attach(Data => $body);
+      while (1) {
+         eval {
+            if ($transport) {
+               sendmail($ent,{transport=>$transport});
             } else {
-               if ($debug &&
-                     (!$Net::FullAuto::FA_Core::cron ||
-                      $Net::FullAuto::FA_Core::debug) &&
-                      !$Net::FullAuto::FA_Core::quiet) {
-                  while (my $line=<debug>) {
-                     print $line;
-                     print $Net::FullAuto::FA_Core::MRLOG $line
-                        if $Net::FullAuto::FA_Core::log &&
-                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  }
-                  my $m_err="Error From Perl CPAN Module \'Mail::Sender\':\n"
-                           . "       $Mail::Sender::Error\n";
-                  print $Net::FullAuto::FA_Core::MRLOG $m_err
-                     if $Net::FullAuto::FA_Core::log &&
-                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  die "$m_err"; 
-               }
+               sendmail($ent);
             }
-         }
-      } elsif ($mail_module eq 'Mail::Internet') {
-         $body=[$body] if ref $body ne 'ARRAY';
-         $mail=Mail::Internet->new(Header => $head,
-                                   Body   => $body,
-                                   Modify => 1);
-         if ($mail_server) {
-            if (ref $mail_server eq 'ARRAY') {
-               print $mail->send($mail_method,Server => $mail_server);
+         };
+         if ($@) {
+            my $err=$@;
+            print $Net::FullAuto::FA_Core::MRLOG $err
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            if (wantarray) {
+               return '',$err,'';
             } else {
-               print $mail->send($mail_method,Server => "$mail_server");
+               die $err;
             }
-         } else {
-            print $mail->send($mail_method);
+         } elsif (wantarray) {
+            return 'Mail sent OK.','','';
+         } elsif ((!$Net::FullAuto::FA_Core::cron ||
+                    $Net::FullAuto::FA_Core::debug) &&
+                    !$Net::FullAuto::FA_Core::quiet) {
+            print "\nMail sent OK.\n";
+            last;
          }
       }
-   } %Mail::Sender::default=%mail_sender_defaults;
+   }
 
 }
 

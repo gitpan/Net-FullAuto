@@ -25,6 +25,25 @@
 ################################################################
 
 
+2010-09-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.47 released.
+
+        * Replaced Mail::Internet and Mail::Sender with
+          Email::Sender and MIME::Entity modules. Send_email
+          functionality was modified to use these modules
+          instead. The reason for the replacement, was
+          Mail::Sender paused to ask for user input during
+          cpan builds, and this might have been causing
+          the automated test builds to fail.
+
+        * Modified Makefile.PL to install new email dependencies.
+
+        * Modified Makefile.PL to ask users installing Cygwin
+          what editor they would prefer for installation and/or
+          default.
+
+
 2010-09-26  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.46 released.

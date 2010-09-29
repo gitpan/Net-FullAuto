@@ -35,12 +35,13 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.46';
+version         '0.47';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
 
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+#if (1) {
 
    my %Menu_win_to_cyg=(
 
@@ -81,6 +82,49 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          require CPAN;CPAN::install$p};eval"use $p;1"||die"*** Please
          manually install $p from cpan.org first...\n"}}}
       }
+      my @editors=('vim     (ViIMproved - enhanced vi editor)',
+                   "emacs   (The extensible, customizable,\n           ".
+                   "              self-documenting real-time\n         ".
+                   "                display editor)",
+                   'mc      (Midnight Commander visual shell)',
+                   "joe     (Fast and simple editor that\n             ".
+                   '            emulates 5 other editors)', 
+                  );
+      my %Menu_select_editor=(
+
+            Label  => 'Menu_select_editor',
+            Item_1 => {
+
+               Text => "wordpad (Microsoft Wordpad -\n               ".
+                       "          Available on all Windows Systems)",
+               Default => "*",
+
+            },
+            Item_2 => {
+
+               Text    => "]C[",
+               Convey  => \@editors,
+
+            },
+            Banner => "   In order is use the integrated edit features\n".
+                      "   you will need to choose an editor. MS Wordpad\n".
+                      "   is set as the default - and is recommended if\n".
+                      "   you are not familiar with the other listed\n".
+                      "   editors.",
+
+      );
+      my $selection='';
+      if ($install_cygwin_without_asking) {
+         $selection='wordpad';
+      } else {
+         $selection=Menu(\%Menu_select_editor);
+      }
+      if ($selection=~/wordpad/s) {
+         if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
+            print "GOT WORDPAD!!!\n";exit;
+         }
+      }
+      exit if $selection eq ']quit[';
       require LWP;
       my $ua=LWP::UserAgent->new;
       my $response = $ua->get('http://www.cygwin.com/setup.exe');
@@ -93,32 +137,22 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       }
       close(CP) || die $!;
       chmod 0755, 'setup.exe';
-      my $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
+      my $setup_cmd='';
+      if ($selection!~/wordpad/s) {
+         $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
+                   .'make,openssh,perl,perl-libwin32,db4.5,'
+                   .$selection.' -A -q"';
+      } else {
+         $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
                    .'make,openssh,perl,perl-libwin32,db4.5 -A -q"';
-	  my $pwd=`cmd /c chdir`;
-	  chmod($pwd);
-	  my $cygpath=$pwd;
-	  $cygpath=~s/^(.):/\/cygdrive\/$1/;
-	  $cygpath=~s/\\/\//g;
+      }
+      my $pwd=`cmd /c chdir`;
+      chmod($pwd);
+      my $cygpath=$pwd;
+      $cygpath=~s/^(.):/\/cygdrive\/$1/;
+      $cygpath=~s/\\/\//g;
       system($setup_cmd);
-#my $content = PAR::read_file('Makefile.PL');
-#	  my $homedir=`cmd /c echo %HOMEDRIVE%%HOMEPATH%`;
-#	  chomp($homedir);
-#chdir $homedir;
-#	  mkdir ".cpan", 0755 unless -e ".cpan";
-#	  chdir ".cpan";
-#	  mkdir "build", 0755 unless -e "build";
-#	  mkdir "CPAN", 0755 unless -e "CPAN";
-#	  my $pwd=`cmd /c chdir`;
-#	  print "PWD=$pwd\n";
-#	  require PAR;
-#	  my $content = PAR::read_file('Makefile.PL');
-#      open(FH,">Makefile.PL");
-#      print FH $content;
-#      close FH;
-#      system('cmd /c C:\\cygwin\\bin\\bash -c "/usr/bin/perl ./Makefile.PL"');
-#      system('C:\\cygwin\\bin\\bash -lc "/usr/bin/make install -C'.$cygpath.'"');
-	  system('cmd /c C:\\cygwin\\bin\\bash -ic "/usr/bin/cpan -i Net::FullAuto"');
+      system('cmd /c C:\\cygwin\\bin\\bash -ic "/usr/bin/cpan -i Net::FullAuto"');
       exit;
    } elsif ($process_id) {
       exit;
@@ -227,8 +261,6 @@ requires        'JSON'                      => 2.14;
 requires        'IO::Pty'                   => 0;
 requires        'IO::Capture::Stderr'       => 0;
 requires        'IO::CaptureOutput'         => 0;
-requires        'Mail::Internet'            => 0;
-requires        'Mail::Sender'              => 0;
 requires        'MLDBM'                     => 0;
 requires        'MLDBM::Sync'               => 0;
 requires        'MLDBM::Sync::SDBM_File'    => 0;
@@ -236,6 +268,8 @@ requires        'Net::Telnet'               => 0;
 requires        'Term::ReadKey'             => 0;
 requires        'URI'                       => 0;
 requires        'DB_File'                   => 0;
+requires        'Email::Sender'             => 0;
+requires        'MIME::Entity'              => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;
