@@ -35,11 +35,12 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.48';
+version         '0.49';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
 
+my $editor='';my $selection='';
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 #if (1) {
 
@@ -60,7 +61,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          Banner => "   Would you like to install Cygwin?",
 
    );
-   my $selection='';
    if ($install_cygwin_without_asking) {
       $selection='Install';
    } else {
@@ -90,39 +90,87 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                    "joe     (Fast and simple editor that\n             ".
                    '            emulates 5 other editors)', 
                   );
-      my %Menu_select_editor=(
-
-            Label  => 'Menu_select_editor',
-            Item_1 => {
-
-               Text => "wordpad (Microsoft Wordpad -\n               ".
-                       "          Available on all Windows Systems)",
-               Default => "*",
-
-            },
-            Item_2 => {
-
-               Text    => "]C[",
-               Convey  => \@editors,
-
-            },
-            Banner => "   In order is use the integrated edit features\n".
-                      "   you will need to choose an editor. MS Wordpad\n".
-                      "   is set as the default - and is recommended if\n".
-                      "   you are not familiar with the other listed\n".
-                      "   editors.",
-
-      );
-      my $selection='';
-      if ($install_cygwin_without_asking) {
-         $selection='wordpad';
-      } else {
-         $selection=Menu(\%Menu_select_editor);
-      }
-      if ($selection=~/wordpad/s) {
-         if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
-            print "GOT WORDPAD!!!\n";exit;
+      my $tp='';
+      unless ($tp=find_editor('TextPad.exe')) {
+         if (-e "C:\\Program Files\\TextPad 5\\TextPad.exe") {
+            $tp='default';
          }
+      }
+      if ($tp) {
+         push @editors, 'TextPad (The Text Editor for Windows)';
+      }
+
+      my $banner="   In order is use the integrated edit features\n".
+                 "   you will need to choose an editor.";
+      my %Menu_select_editor=();
+      if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
+         $banner="   In order is use the integrated edit features\n".
+                 "   you will need to choose an editor. MS Wordpad\n".
+                 "   is set as the default - and is recommended if\n".
+                 "   you are not familiar with the other listed\n".
+                 "   editors.";
+         %Menu_select_editor=(
+
+               Label  => 'Menu_select_editor',
+               Item_1 => {
+
+                  Text => "Wordpad (Microsoft Wordpad -\n               ".
+                          "          Available on all Windows Systems)",
+                  Default => "*",
+
+               },
+               Item_2 => {
+
+                  Text    => "]C[",
+                  Convey  => \@editors,
+
+               },
+               Banner => $banner,
+
+         );
+      } else {
+         %Menu_select_editor=(
+
+               Label  => 'Menu_select_editor',
+               Item_1 => {
+
+                  Text    => "]C[",
+                  Convey  => \@editors,
+
+               },
+               Banner => $banner,
+
+         );
+      }
+      
+      if ($install_cygwin_without_asking) {
+         if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
+            $selection='wordpad';
+            $editor="\"/cygdrive/c/Program Files/Windows NT/".
+                    "Accessories/wordpad.exe\"";
+         }
+      } elsif (0<$#editors) {
+         $selection=Menu(\%Menu_select_editor);
+         if ($selection=~/TextPad/) {
+            if ($tp eq 'default') {
+               $editor="\"/cygdrive".
+                  "/c/Program Files/TextPad 5/TextPad.exe\"";
+            } else {
+               $tp=~s/\\/\//g;
+               $tp=~s/^([A-Za-z]):(.*)/$1$2/;
+               $editor="\"/cygdrive/$tp\"";
+            }
+         } elsif ($selection=~/vim/) {
+            $editor='/bin/vim-nox.exe';
+         } elsif ($selection=~/emacs/) {
+            $editor='/bin/emacs-nox.exe';
+         } elsif ($selection=~/joe/) {
+            $editor='/bin/joe.exe';
+         } elsif ($selection=~/mc/) {
+            $editor='/bin/mc.exe';
+         }
+      } elsif (0==$#editors) {
+         $selection=$editors[0];
       }
       exit if $selection eq ']quit[';
       require LWP;
@@ -131,14 +179,23 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       open(CP,">setup.exe") || die $!;
       binmode(CP);
       if ($response->is_success) {
+         open(CP,">setup.exe") || die $!;
+         binmode(CP);
          print CP $response->content;
       } else {
-         die $response->status_line;
+         my $response = $ua->get('http://www.fullautosoftware.net/setup.exe');
+         if ($response->is_success) {
+            open(CP,">setup.exe") || die $!;
+            binmode(CP);
+            print CP $response->content;
+         } else {
+            die $response->status_line;
+         }
       }
       close(CP) || die $!;
       chmod 0755, 'setup.exe';
       my $setup_cmd='';
-      if ($selection!~/wordpad/s) {
+      if ($selection!~/[Ww]ordpad/s) {
          $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
                    .'make,openssh,perl,perl-libwin32,db4.5,'
                    .$selection.' -A -q"';
@@ -146,13 +203,27 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
                    .'make,openssh,perl,perl-libwin32,db4.5 -A -q"';
       }
+      my $mount=`/bin/mount -p`;
+      $mount=~s/^.*(\/\S+).*$/$1/s;
+      if ($selection=~/[Ww]ordpad/) {
+         $editor='"'.$mount.
+            '/c/Program Files/Windows NT/Accessories/wordpad.exe'.'"';
+      } else {
+         $editor="/bin/${selection}.exe";
+      }
       my $pwd=`cmd /c chdir`;
       chmod($pwd);
       my $cygpath=$pwd;
       $cygpath=~s/^(.):/\/cygdrive\/$1/;
       $cygpath=~s/\\/\//g;
       system($setup_cmd);
-      system('cmd /c C:\\cygwin\\bin\\bash -ic "/usr/bin/cpan -i Net::FullAuto"');
+      if ($^O eq 'cygwin') {
+         system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -ic '.
+                '"/usr/bin/cpan -i Net::FullAuto"');
+      } else {
+         system('cmd /c C:\\cygwin\\bin\\bash -ic '.
+                '"/usr/bin/cpan -i Net::FullAuto"');
+      }
       exit;
    } elsif ($process_id) {
       exit;
@@ -174,6 +245,126 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
            "\n\n";
    die $die;
 }
+
+unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
+   my @editors=();
+   my $banner="   In order is use the integrated edit features\n".
+              "   you will need to choose an editor.";
+   if ($^O eq 'cygwin') {
+      my $tp='';
+      my $mount=`/bin/mount -p`;
+      $mount=~s/^.*(\/\S+).*$/$1/s;
+      unless ($tp=find_editor('TextPad.exe')) {
+         if (-e $mount."/c/Program Files/TextPad 5/TextPad.exe") {
+            $tp='default';
+         }
+      }
+      if ($tp) {
+         push @editors, 'TextPad (The Text Editor for Windows)';
+      }
+      my $wordpad=0;
+      if (-e $mount.
+             "/c/Program Files/Windows NT/Accessories/wordpad.exe") {
+         $banner="   In order is use the integrated edit features\n".
+                 "   you will need to choose an editor. MS Wordpad\n".
+                 "   is set as the default - and is recommended if\n".
+                 "   you are not familiar with the other listed\n".
+                 "   editors.";
+         $wordpad=1;
+      }
+      if (-e '/bin/vim-nox.exe') {
+         push @editors,'vim';
+      }
+      if (-e '/bin/emacs-nox.exe') {
+         push @editors, 'emacs';
+      }
+      if (-e '/bin/joe.exe') {
+         push @editors, 'joe';
+      }
+      if (-e '/bin/mc.exe') {
+         push @editors, 'mc';
+      }
+      my %Menu_select_editor=();
+      if ($wordpad) {
+         %Menu_select_editor=(
+
+               Label  => 'Menu_select_editor',
+               Item_1 => {
+
+                  Text => "Wordpad (Microsoft Wordpad -\n               ".
+                          "          Available on all Windows Systems)",
+                  Default => "*",
+
+               },
+               Item_2 => {
+
+                  Text    => "]C[",
+                  Convey  => \@editors,
+
+               },
+               Banner => $banner,
+
+         );
+         $selection=Menu(\%Menu_select_editor);
+      } else {
+         %Menu_select_editor=(
+
+               Label  => 'Menu_select_editor',
+               Item_1 => {
+
+                  Text    => "]C[",
+                  Convey  => \@editors,
+
+               },
+               Banner => $banner,
+
+         );
+         $selection=Menu(\%Menu_select_editor);
+      }
+      if ($selection=~/TextPad/) {
+         if ($tp eq 'default') {
+            $editor="\"$mount".
+               "/c/Program Files/TextPad 5/TextPad.exe\"";
+         } else {
+            $tp=~s/\\/\//g;
+            $tp=~s/^([A-Za-z]):(.*)/$1$2/;
+            $editor="\"$mount/$tp\"";
+         }
+      } elsif ($selection=~/vim/) {
+         $editor='/bin/vim-nox.exe';
+      } elsif ($selection=~/emacs/) {
+         $editor='/bin/emacs-nox.exe';
+      } elsif ($selection=~/joe/) {
+         $editor='/bin/joe.exe';
+      } elsif ($selection=~/mc/) {
+         $editor='/bin/mc.exe';
+      }
+   } else {
+      if (-e '/usr/bin/vi') {
+         push @editors, 'vi';   
+      }
+      if (-e '/usr/bin/emacs') {
+         push @editors, 'emacs';
+      }
+      if (1<$#editors) {
+         my %Menu_select_editor=(
+
+            Label  => 'Menu_select_editor',
+            Item_1 => {
+
+               Text    => "]C[",
+               Convey  => \@editors,
+
+            },
+            Banner => $banner,
+
+         );
+         $selection=Menu(\%Menu_select_editor);
+      }
+      
+   }
+}
+
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
            "\n                      version 4 as provided by Cygwin".
@@ -258,7 +449,7 @@ requires        'Crypt::DES'                => 0;
 requires        'Getopt::Long'              => 0;
 requires        'HTTP::Date'                => 0;
 requires        'JSON'                      => 2.14;
-requires        'IO::Pty'                   => 0;
+requires        'IO::Pty'                   => 1.07;
 requires        'IO::Capture::Stderr'       => 0;
 requires        'Capture::Tiny'             => 0;
 requires        'MLDBM'                     => 0;
@@ -432,6 +623,21 @@ sub menu {
     &{$m->[$choice][1]};
 }
 
+sub find_editor {
+   my $editor=$_[0];
+   $editor=~s/^.*\///;
+   $editor=~s/[.]exe$//;
+   return 0 unless $editor;
+   foreach my $path (split ':', $ENV{PATH}) {
+      $path=~s/[\/]*$/\//;
+      if ($^O eq 'cygwin' && (-e $path.$editor.'.exe')) {
+         return $path.$editor.'.exe';
+      } elsif (-e $path.$editor) {
+         return $path.$editor;
+      }
+   } return 0;
+}
+
 package MY; # so that "SUPER" works right
 sub MY::top_targets {
 
@@ -475,8 +681,9 @@ sub MY::makefile {
       unlink "blib/Net/FullAuto/Custom/fa_maps.pm";
    }
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
+      $editor=~s/\//\\\//g;
       $inherited .= "lib/Net/FullAuto/Custom/fa_conf.pm:".
-                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_conf.pm \$@\n\n";
+                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_conf.pm \$@";
    } else {
       $inherited =~ s/^(.*Custom\/fa_conf.pm.*)$//m;
       $inherited .= "lib/Net/FullAuto/Custom/fa_conf.pm:".
@@ -506,6 +713,20 @@ sub MY::makefile {
    }
 
    $inherited; 
+
+}
+
+package MY; # so that "SUPER" works right
+sub MY::tools_other {
+
+   use Config;
+
+   my $inherited = shift->SUPER::tools_other(@_);
+
+   $inherited =~
+      s/^(MV.*)$/$1\nSED = sed/m;
+
+   $inherited;
 
 }
 
@@ -742,6 +963,10 @@ sub MY::pm_to_blib {
    }
    
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
+   $inherited .= "\t\$(SED) -i \'s/^#[ ]*\\(.\\)editor[ ]*[=].*/".
+                 '\\1'."editor = $editor;/g\' ".
+                 "blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
+
 
    $inherited;
 

@@ -160,6 +160,28 @@ BEGIN {
       $home_dir=$ENV{HOME};
    }
 
+   our $fa_conf='';
+   if (defined $main::fa_conf) {
+      if (-1<index $main::fa_conf,'/') {
+         require $main::fa_conf;
+         my $mc=substr($main::fa_conf,
+                (rindex $main::fa_conf, '/')+1,-3);
+         import $fc;
+         $fa_conf=$fc.'.pm';
+      } else {
+         require $main::fa_conf;
+         my $fh=substr($main::fa_conf,0,-3);
+         import $fc;
+         $fa_conf=$main::fa_conf;
+      }
+   } else {
+      eval {
+         require $customdir.'/fa_conf.pm';
+         import fa_conf;
+         $fa_conf='fa_conf.pm';
+      };
+   }
+
    our $fa_host='';
    if (defined $main::fa_host) {
       if (-1<index $main::fa_host,'/') {
@@ -1214,21 +1236,42 @@ sub edit {
    my $tpath=$path;
    $tpath=~s/Net.*//;
 
+   my $editor='';
+   unless ($editor=$fa_conf::editor) {
+      if ($^O eq 'cygwin') {
+         my $mount=`/bin/mount -p`;
+         $mount=~s/^.*(\/\S+).*$/$1/s;
+         if (-e $mount.
+               '/c/Program Files/Windows NT/Accessories/wordpad.exe') {
+            $editor=$mount.
+               '/c/Program Files/Windows NT/Accessories/wordpad.exe';
+         } elsif (-e '/bin/vim-nox.exe') {
+            $editor='/bin/vim-nox.exe';
+         }
+      } else {
+         if (-e '/usr/bin/vi') {
+            $editor='/usr/bin/vi';
+         } elsif (-e '/usr/bin/emacs') {
+            $editor='/usr/bin/emacs';
+         }
+      }
+   }
+
    my $savdir=cwd();
-   if ($_[0]=~/ho*s*t*/i) {
-      system("cd $cpath;vi $fa_host;cd \"$savdir\"");
-   } elsif ($_[0]=~/me*n*u*/i) {
-      system("cd $cpath;vi fa_menu.pm;cd \"$savdir\"");
-   } elsif ($_[0]=~/ma*p*s*/i) {
-      system("cd $cpath;vi $fa_maps;cd \"$savdir\"");
-   } elsif ($_[0]=~/co*d*e*/i) {
-      system("cd $cpath;vi fa_code.pm;cd \"$savdir\"");
-   } elsif ($_[0]=~/con*f*/i) {
-      system("cd $cpath;vi $fa_conf;cd \"$savdir\"");
+   if ($_[0]=~/ho*s*t*|^fa_host$/i) {
+      system("cd $cpath;\"$editor\" $fa_host;cd \"$savdir\"");
+   } elsif ($_[0]=~/me*n*u*|^fa_menu$/i) {
+      system("cd $cpath;\"$editor\" fa_menu.pm;cd \"$savdir\"");
+   } elsif ($_[0]=~/ma*p*s*|^fa_maps$/i) {
+      system("cd $cpath;\"$editor\" $fa_maps;cd \"$savdir\"");
+   } elsif ($_[0]=~/^c$|^co$|^cod$|^code$|^fa_code$/i) {
+      system("cd $cpath;\"$editor\" fa_code.pm;cd \"$savdir\"");
+   } elsif ($_[0]=~/con*f*"|^fa_conf$/i) {
+      system("cd $cpath;\"$editor\" $fa_conf;cd \"$savdir\"");
    } elsif ($_[0]=~/f/) {
-      system("cd $path;vi FA_Core.pm;cd \"$savdir\"");
+      system("cd $path;\"$editor\" FA_Core.pm;cd \"$savdir\"");
    } elsif ($_[0]=~/t/) {
-      system("cd ${tpath}Term;vi Menus.pm;cd \"$savdir\""); 
+      system("cd ${tpath}Term;\"$editor\" Menus.pm;cd \"$savdir\""); 
    } else {
       my $stderr='';my $stdout='';
       chdir $cpath;
@@ -1258,7 +1301,7 @@ sub edit {
       );
       my $file=Menu(\%Menu_1);
       exit if $file eq ']quit[';
-      system("vi $file");
+      system("\"$editor\" $file");
       chdir $savdir;
    }
    
