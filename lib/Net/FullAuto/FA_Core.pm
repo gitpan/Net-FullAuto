@@ -126,7 +126,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use IO::Handle;
    use IO::Select;
    use IO::Capture::Stderr;
-   use Capture::Tiny qw(capture);
+   use IO::CaptureOutput;
+   use Capture::Tiny;
    use Symbol qw(qualify_to_ref);
    use Tie::Cache;
    use IO::Pty;
@@ -1266,7 +1267,7 @@ sub edit {
       system("cd $cpath;\"$editor\" $fa_maps;cd \"$savdir\"");
    } elsif ($_[0]=~/^c$|^co$|^cod$|^code$|^fa_code$/i) {
       system("cd $cpath;\"$editor\" fa_code.pm;cd \"$savdir\"");
-   } elsif ($_[0]=~/con*f*"|^fa_conf$/i) {
+   } elsif ($_[0]=~/con*f*|^fa_conf$/i) {
       system("cd $cpath;\"$editor\" $fa_conf;cd \"$savdir\"");
    } elsif ($_[0]=~/f/) {
       system("cd $path;\"$editor\" FA_Core.pm;cd \"$savdir\"");
@@ -1502,10 +1503,10 @@ sub kill
    }
 print $Net::FullAuto::FA_Core::MRLOG "BEFOREKILL -> ",join ' ',@{$cmd},"\n"
       if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $stdout_capture='';my $stderr_capture='';
-   ($stdout_capture,$stderr_capture)=capture {
+   my $mystdout='';
+   IO::CaptureOutput::capture sub {
       ($ignore,$stdout)=&setuid_cmd($cmd,5);
-   };
+           }, \$mystdout;
    $stdout||='';
    if (wantarray) {
       return $stdout,'';
@@ -1548,10 +1549,9 @@ sub testpid
    my $stdout=0;my $stderr='';
 
    my $mystdout='';
-   my $stdout_capture='';my $stderr_capture='';
-   ($stdout_capture,$stderr_capture)=capture {
-      ($stdout,$stderr)=&setuid_cmd($cmd,5);
-   };
+   IO::CaptureOutput::capture sub {
+      ($ignore,$stdout)=&setuid_cmd($cmd,5);
+           }, \$mystdout;
    chomp $stdout;chomp $stderr;
    print $Net::FullAuto::FA_Core::MRLOG
       "\nppppppp &main::testpid() ppppppp STDOUT ",
@@ -4327,7 +4327,7 @@ sub send_email
       my $stdout_capture='';my $stderr_capture='';
       while (1) {
          my $eval_error='';
-         ($stdout_capture,$stderr_capture)=capture {
+         ($stdout_capture,$stderr_capture)=Capture::Tiny::capture {
             eval {
                if ($transport) {
                   sendmail($ent,{transport=>$transport});

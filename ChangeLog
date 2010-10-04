@@ -27,6 +27,18 @@
 
 2010-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.50 released.
+
+        * Fixed permissions for Custom dir when choosing
+          Default permissions
+
+        * Switched back to IO::CaptureOutput for two functions
+          that didn't work right with Capture::Tiny.
+          Capture::Tiny remains in the email function however.
+
+
+2010-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.49 released.
 
         * fa_conf now stores editor setting
