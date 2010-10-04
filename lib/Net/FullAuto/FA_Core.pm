@@ -165,13 +165,13 @@ BEGIN {
    if (defined $main::fa_conf) {
       if (-1<index $main::fa_conf,'/') {
          require $main::fa_conf;
-         my $mc=substr($main::fa_conf,
+         my $fc=substr($main::fa_conf,
                 (rindex $main::fa_conf, '/')+1,-3);
          import $fc;
          $fa_conf=$fc.'.pm';
       } else {
          require $main::fa_conf;
-         my $fh=substr($main::fa_conf,0,-3);
+         my $fc=substr($main::fa_conf,0,-3);
          import $fc;
          $fa_conf=$main::fa_conf;
       }
@@ -187,7 +187,7 @@ BEGIN {
    if (defined $main::fa_host) {
       if (-1<index $main::fa_host,'/') {
          require $main::fa_host;
-         my $mc=substr($main::fa_host,
+         my $fh=substr($main::fa_host,
                 (rindex $main::fa_host, '/')+1,-3);
          import $fh;
          $fa_host=$fh.'.pm';
@@ -227,6 +227,28 @@ BEGIN {
       };
    }
 
+   our $fa_menu='';
+   if (defined $main::fa_menu) {
+      if (-1<index $main::fa_menu,'/') {
+         require $main::fa_menu;
+         my $fu=substr($main::fa_menu,
+                (rindex $main::fa_menu, '/')+1,-3);
+         import $fu;
+         $fa_menu=$fu.'.pm';
+      } else {
+         require $main::fa_menu;
+         my $fu=substr($main::fa_menu,0,-3);
+         import $fu;
+         $fa_maps=$fu.'.pm';
+      }
+   } else {
+      eval {
+         require $customdir.'/fa_menu.pm';
+         import fa_menu;
+         $fa_menu='fa_menu.pm';
+      };
+   }
+
    our $fasetuid='fasetuid.pm';
    if (-f substr($0,0,(rindex $0,'/')+1).$fasetuid) {
       if ($> ne $< || $<==(stat $0)[4]) {
@@ -251,11 +273,20 @@ BEGIN {
 
    our $greppath='';
    if (-e '/usr/bin/grep') {
-      $sedpath='/usr/bin/';
+      $greppath='/usr/bin/';
    } elsif (-e '/bin/grep') {
-      $sedpath='/bin/';
+      $greppath='/bin/';
    } elsif (-e '/usr/local/bin/grep') {
-      $sedpath='/usr/local/bin/';
+      $greppath='/usr/local/bin/';
+   }
+
+   our $lspath='';
+   if (-e '/usr/bin/ls') {
+      $lspath='/usr/bin/';
+   } elsif (-e '/bin/ls') {
+      $lspath='/bin/';
+   } elsif (-e '/usr/local/bin/ls') {
+      $lspath='/usr/local/bin/';
    }
 
    our $sedpath='';
@@ -1261,9 +1292,9 @@ sub edit {
    my $savdir=cwd();
    if ($_[0]=~/ho*s*t*|^fa_host$/i) {
       system("cd $cpath;\"$editor\" $fa_host;cd \"$savdir\"");
-   } elsif ($_[0]=~/me*n*u*|^fa_menu$/i) {
-      system("cd $cpath;\"$editor\" fa_menu.pm;cd \"$savdir\"");
-   } elsif ($_[0]=~/ma*p*s*|^fa_maps$/i) {
+   } elsif ($_[0]=~/^m$|^me$|^men$|^menu$|^fa_menu$/i) {
+      system("cd $cpath;\"$editor\" $fa_menu;cd \"$savdir\"");
+   } elsif ($_[0]=~/map*s*|^fa_maps$/i) {
       system("cd $cpath;\"$editor\" $fa_maps;cd \"$savdir\"");
    } elsif ($_[0]=~/^c$|^co$|^cod$|^code$|^fa_code$/i) {
       system("cd $cpath;\"$editor\" fa_code.pm;cd \"$savdir\"");
@@ -1276,7 +1307,7 @@ sub edit {
    } else {
       my $stderr='';my $stdout='';
       chdir $cpath;
-      ($stdout,$stderr)=cmd("ls -F");
+      ($stdout,$stderr)=cmd("${lspath}ls -F");
       die $stderr if $stderr;
       my @files=split "\n", $stdout;
       my @file=();
@@ -1301,7 +1332,10 @@ sub edit {
 
       );
       my $file=Menu(\%Menu_1);
-      exit if $file eq ']quit[';
+      if ($file eq ']quit[') {
+         print "\n";
+         exit;
+      }
       system("\"$editor\" $file");
       chdir $savdir;
    }
@@ -1565,7 +1599,7 @@ sub testpid
       if !$Net::FullAuto::FA_Core::cron && $debug;
    if (wantarray) {
       return $stdout, $stderr;
-   } elsif ($stdout==1) {
+   } elsif ($stdout) {
       return $stdout;
    } elsif ($stderr) {
       &Net::FullAuto::FA_Core::handle_error($stderr);
@@ -4210,11 +4244,11 @@ sub send_email
             my $going_to='';
             foreach my $item (@{$to}) {
                if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\\\,"
+                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\,"
                      if exists $email_addresses{$Net::FullAuto::FA_Core::username};
                   next;
-               } $going_to.="$item\\\,";
-            } $to=substr($going_to,0,-2);
+               } $going_to.="$item\,";
+            } $to=substr($going_to,0,-1);
          } elsif ($to=~/(__|\])USERNAME(\[|__)/i) {
             $to=$email_addresses{$Net::FullAuto::FA_Core::username}
                if exists $email_addresses{$Net::FullAuto::FA_Core::username};
@@ -4231,11 +4265,11 @@ sub send_email
             my $going_to='';
             foreach my $item (@{$to}) {
                if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\\\,"
+                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\,"
                      if exists $email_addresses{$Net::FullAuto::FA_Core::username};
                   next;
-               } $going_to.="$item\\\,";
-            } $to=substr($going_to,0,-2);
+               } $going_to.="$item\,";
+            } $to=substr($going_to,0,-1);
          } elsif ($to=~/(__|\])USERNAME(\[|__)/i) {
             $to=$email_addresses{$Net::FullAuto::FA_Core::username}
                if exists $email_addresses{$Net::FullAuto::FA_Core::username};
@@ -10370,13 +10404,13 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK ALREADY FROM DIR CMD and STDER
       }
       if (!exists $base_shortcut_info{$baseFH} ||
                $base_shortcut_info{$baseFH} ne $dir) {
-         my $lspath='';
+         my $ls_path='';
          if ($baseFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
                exists $Hosts{"__Master_${$}__"}{'ls'}) {
-            $lspath=$Hosts{"__Master_${$}__"}{'ls'};
-            $lspath.='/' if $lspath!~/\/$/;
+            $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+            $ls_path.='/' if $ls_path!~/\/$/;
          }
-         ($base_output,$stderr)=$baseFH->cmd("${lspath}ls -lRs \'$dir\'");
+         ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRs \'$dir\'");
          $base_shortcut_info{$baseFH}=$dir;
          if ($baseFH->{_unaltered_basehash}) { # line 7112
             foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
@@ -10408,13 +10442,13 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK ALREADY FROM DIR CMD and STDER
          $base_shortcut_info{$baseFH} ne $dir) {
       my $dir=$baseFH->{_work_dirs}->{_cwd};
       $base_shortcut_info{$baseFH}=$dir;
-      my $lspath='';
+      my $ls_path='';
       if ($baseFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
             exists $Hosts{"__Master_${$}__"}{'ls'}) {
-         $lspath=$Hosts{"__Master_${$}__"}{'ls'};
-         $lspath.='/' if $lspath!~/\/$/;
+         $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+         $ls_path.='/' if $ls_path!~/\/$/;
       }
-      ($base_output,$stderr)=$baseFH->cmd("${lspath}ls -lRs \'$dir\'");
+      ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRs \'$dir\'");
       if ($baseFH->{_unaltered_basehash}) { # line 7144
          foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
             my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
@@ -10492,14 +10526,14 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK ALREADY FROM DIR CMD and STDER
                while (1) {
                   my $err='';
 
-                  my $lspath='';
+                  my $ls_path='';
                   if ($_[7]->{_hostlabel}->[0] eq "__Master_${$}__" &&
                         exists $Hosts{"__Master_${$}__"}{'ls'}) {
-                     $lspath=$Hosts{"__Master_${$}__"}{'ls'};
-                     $lspath.='/' if $lspath!~/\/$/;
+                     $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+                     $ls_path.='/' if $ls_path!~/\/$/;
                   }
                   ($base_output,$err)=$_[7]->cmd(
-                     "${lspath}ls -lRs \'$_[0]\'");
+                     "${ls_path}ls -lRs \'$_[0]\'");
                   &Net::FullAuto::FA_Core::handle_error($err,'-3') if $err;
                   ($ignore,$stderr)=&build_base_dest_hashes(
                      $base_fdr,\$base_output,$args{Directives},

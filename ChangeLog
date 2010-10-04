@@ -27,6 +27,18 @@
 
 2010-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.51 released.
+
+        * Fixed more permissions for Custom dir when choosing
+          Default permissions
+
+        * Fixed some bugs associated with the --edit feature
+
+        * Fixed multiple addresses when sending email
+
+
+2010-10-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.50 released.
 
         * Fixed permissions for Custom dir when choosing
@@ -37,7 +49,7 @@
           Capture::Tiny remains in the email function however.
 
 
-2010-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2010-10-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.49 released.
 

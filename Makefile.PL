@@ -35,7 +35,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.50';
+version         '0.51';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -161,13 +161,13 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $editor="\"/cygdrive/$tp\"";
             }
          } elsif ($selection=~/vim/) {
-            $editor='/bin/vim-nox.exe';
+            $editor='"/bin/vim-nox.exe"';
          } elsif ($selection=~/emacs/) {
-            $editor='/bin/emacs-nox.exe';
+            $editor='"/bin/emacs-nox.exe"';
          } elsif ($selection=~/joe/) {
-            $editor='/bin/joe.exe';
+            $editor='"/bin/joe.exe"';
          } elsif ($selection=~/mc/) {
-            $editor='/bin/mc.exe';
+            $editor='"/bin/mc.exe"';
          }
       } elsif (0==$#editors) {
          $selection=$editors[0];
@@ -331,13 +331,13 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
             $editor="\"$mount/$tp\"";
          }
       } elsif ($selection=~/vim/) {
-         $editor='/bin/vim-nox.exe';
+         $editor='"/bin/vim-nox.exe"';
       } elsif ($selection=~/emacs/) {
-         $editor='/bin/emacs-nox.exe';
+         $editor='"/bin/emacs-nox.exe"';
       } elsif ($selection=~/joe/) {
-         $editor='/bin/joe.exe';
+         $editor='"/bin/joe.exe"';
       } elsif ($selection=~/mc/) {
-         $editor='/bin/mc.exe';
+         $editor='"/bin/mc.exe"';
       }
    } else {
       if (-e '/usr/bin/vi') {
@@ -360,8 +360,16 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
 
          );
          $selection=Menu(\%Menu_select_editor);
+         if ($selection=~/vi/) {
+            $editor='"/usr/bin/vi"';
+         } elsif ($selection=~/emacs/) {
+            $editor='"/usr/bin/emacs"';
+         }
+      } elsif (1==$#editors) {
+         $editor=$editors[0];
+      } else {
+         $editor='\'\'';
       }
-      
    }
 }
 
@@ -683,7 +691,7 @@ sub MY::makefile {
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $editor=~s/\//\\\//g;
       $inherited .= "lib/Net/FullAuto/Custom/fa_conf.pm:".
-                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_conf.pm \$@";
+                    "\n\t\$(CP) lib/Net/FullAuto/Distro/fa_conf.pm \$@\n\n";
    } else {
       $inherited =~ s/^(.*Custom\/fa_conf.pm.*)$//m;
       $inherited .= "lib/Net/FullAuto/Custom/fa_conf.pm:".
@@ -965,10 +973,10 @@ sub MY::pm_to_blib {
    }
    
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
-   $inherited .= "\t\$(SED) -i \'s/^#[ ]*\\(.\\)editor[ ]*[=].*/".
+   $inherited .= "\t\$(SED) \'s/^#[ ]*\\(.\\)editor[ ]*[=].*/".
                  '\\1'."editor = $editor;/g\' ".
-                 "blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
-
+                 "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
+                 "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
 
    $inherited;
 

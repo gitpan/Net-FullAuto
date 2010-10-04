@@ -17,7 +17,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.50
+    version: 0.51
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -67,4 +67,4 @@ requires:
   DB_File: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
-version: 0.50
+version: 0.51
