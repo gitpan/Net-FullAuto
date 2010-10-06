@@ -25,6 +25,16 @@
 ################################################################
 
 
+2010-10-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.52 released.
+
+        * Moved IO::Pty requirement to 1.09 for Cygwin
+
+        * Added new argument -p and --plan for new "Plan"
+          functionality
+
+
 2010-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.51 released.

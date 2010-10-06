@@ -1343,6 +1343,54 @@ sub edit {
    exit;
 }
 
+sub plan {
+
+   my %plan_menu=(
+
+         Label  => 'plan_menu',
+         Item_1 => {
+
+             Text => 'Set Up a New Plan',
+
+         },
+         Item_2 => {
+
+             Text => 'Set Up a New Scheduled Job',
+
+         },
+         Item_3 => {
+
+             Text => 'Work with Existing Plans',
+
+         },
+         Item_4 => {
+
+             Text => 'Work with Existing Scheduled Jobs',
+
+         },
+
+         Banner => "                 FullAuto Job Planning Menu\n\n".
+                   "   \"Always plan ahead. It wasn\'t raining when Noah\n".
+                   "    built the ark.\" -  Richard C. Cushing\n\n".
+                   "    Plan:  Indicated by a Plan Number, A FullAuto \"Plan\"\n".
+                   "           is a Complete Job Definition composed of recorded\n".
+                   "           User interaction Menu choices and Input. FullAuto\n".
+                   "           \"Plans\" allow otherwise manual/interactive processes\n".
+                   "           to be run unattended when FullAuto is started with\n".
+                   "           the --cron or --unattended or --fullauto options.\n\n".
+                   "    Job:   A FullAuto \"Scheduled Job\" is a fully unattended\n".
+                   "           invocation of a pre-created \"Plan\". Not all Plans\n".
+                   "           are \"Scheduled Jobs\", but all \"Scheduled Jobs\" are\n".
+                   "           directed by a \"Plan\". FullAuto uses external cron\n".
+                   "           for it's scheduling engine.",
+
+   );
+
+   my $output=&Menu(\%plan_menu);
+   return $output;
+
+}
+
 sub sysreadline(*;$) {
    my($handle, $timeout) = @_;
    $handle = qualify_to_ref($handle, caller());
@@ -4512,13 +4560,15 @@ sub fa_login
                 'arg=s'                 => \@menu_args,
                 'a=s'                   => \@menu_args,
                 $arg_to_fa_code_sub     => \@menu_args,
-                'cron'                  => \$cron,
-                'unattended'            => \$cron,
-                'batch'                 => \$cron,
-                'fullauto'              => \$cron,
+                'cron:s'                => \$cron,
+                'unattended:s'          => \$cron,
+                'batch:s'               => \$cron,
+                'fullauto:s'            => \$cron,
                 'random'                => \$random,
                 'timeout=i'             => \$cltimeout,
                 'prod'                  => \$prod,
+                'plan'                  => \$plan,
+                'p'                     => \$plan,
                 'test'                  => \$test_arg,
                 'tosspass'              => \$tosspass,
                 'edit:s'                => \$edit,
@@ -4577,6 +4627,7 @@ sub fa_login
       $passwd[1]=unpack('a8',$passwd[0])
    }
    if ($cron) {
+print "WHAT IS CRON???=$cron\n";sleep 5;
       $batch=']Batch[';
       $unattended=']Unattended[';
       $fullauto=']FullAuto[';
@@ -5110,6 +5161,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WAITING FOR CMDPROMPT=$line<==\n"
                return;
             }
             if ($line=~/Permission denied/s) {
+## ADD - TELL USER ABOUT MISSING CRON CREDS ON CMD LINE
                die "Permission denied";
             }
             if ($line=~/Write failed: Connection reset by peer/s) {
@@ -5446,7 +5498,12 @@ print $Net::FullAuto::FA_Core::MRLOG "PSOUTPUTTTTTTTTTTTT=$psoutput<==\n";
          &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
 
       } last;
-   } return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
+   }
+   if (defined $plan) {
+      $plan=&plan();
+      cleanup() if $plan eq ']quit[';
+   }
+   return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
 
 } ## END of &fa_login
 
