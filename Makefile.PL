@@ -35,7 +35,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.52';
+version         '0.53';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -203,10 +203,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
                    .'make,openssh,perl,perl-libwin32,db4.5 -A -q"';
       }
-      my $mount=`/bin/mount -p`;
-      $mount=~s/^.*(\/\S+).*$/$1/s;
       if ($selection=~/[Ww]ordpad/) {
-         $editor='"'.$mount.
+         $editor='"'.'/cygdrive'.
             '/c/Program Files/Windows NT/Accessories/wordpad.exe'.'"';
       } else {
          $editor="/bin/${selection}.exe";
@@ -459,16 +457,17 @@ requires        'HTTP::Date'                => 0;
 requires        'JSON'                      => 2.14;
 requires        'IO::Pty'                   => 1.09;
 requires        'IO::Capture::Stderr'       => 0;
+requires        'IO::CaptureOutput'         => 0;
 requires        'Capture::Tiny'             => 0;
 requires        'MLDBM'                     => 0;
-requires        'MLDBM::Sync'               => 0;
-requires        'MLDBM::Sync::SDBM_File'    => 0;
 requires        'Net::Telnet'               => 0;
 requires        'Term::ReadKey'             => 0;
 requires        'URI'                       => 0;
-requires        'DB_File'                   => 0;
+requires        'MLDBM::Sync'               => 0.30;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
+#requires        'MLDBM::Sync::SDBM_File'    => 0;
+requires        'DB_File'                   => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;
@@ -973,10 +972,14 @@ sub MY::pm_to_blib {
    }
    
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
-   $inherited .= "\t\$(SED) \'s/^#[ ]*\\(.\\)editor[ ]*[=].*/".
+   unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
+      $inherited .= "\t\$(SED) \'s/^#[ ]*\\(.\\)editor[ ]*[=].*/".
                  '\\1'."editor = $editor;/g\' ".
                  "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
                  "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
+   } else {
+      $inherited .= "\n";
+   }
 
    $inherited;
 

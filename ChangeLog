@@ -25,6 +25,16 @@
 ################################################################
 
 
+2010-10-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.53 released.
+
+        * Removed call to Cygwin mount in Windows section
+          in Makefile.PL
+
+        * Added conditional test for SED in Makefile.PL
+
+
 2010-10-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.52 released.

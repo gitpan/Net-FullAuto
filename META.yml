@@ -17,7 +17,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.52
+    version: 0.53
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -52,10 +52,9 @@ requires:
   HTTP::Date: 0
   IO::Capture::Stderr: 0
   IO::CaptureOutput: 0
+  Capture::Tiny: 0
   IO::Pty: 1.09
   MLDBM: 0
-  MLDBM::Sync: 0
-  MLDBM::Sync::SDBM_File: 0
   Mail::Internet: 0
   Mail::Sender: 0
   Net::Telnet: 0
@@ -64,7 +63,10 @@ requires:
   Term::ReadKey: 0
   Tie::Cache: 0
   URI: 0
+  Email::Sender: 0
+  MIME::Entity: 0
+  MLDBM::Sync: 0.30
   DB_File: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
-version: 0.52
+version: 0.53
