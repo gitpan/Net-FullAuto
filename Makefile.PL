@@ -3,8 +3,24 @@ use inc::Module::Install;
 use Config;
 use POSIX qw/strftime/;
 
+$ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
+
 # Term::Menus Bootstrap Code.
 BEGIN{my$p='Term::Menus';eval"use $p;1"or+do{
+my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+(!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
+eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'}
+);1"and exit)and print"==> $p required."and print
+"*** Installing $p\n"and
+do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
+$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p;1"
+||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
+require CPANPLUS;CPANPLUS::install$p};eval"use $p;1"or eval{
+require CPAN;CPAN::install$p};eval"use $p;1"||die"*** Please
+manually install $p from cpan.org first...\n"}}}
+
+# MLDBM::Sync Bootstrap Code.
+BEGIN{my$p='MLDBM::Sync';eval"use $p;1"or+do{
 my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
 (!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
 eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'}
@@ -21,6 +37,7 @@ BEGIN {
    unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
 };
 use Term::Menus;
+use MLDBM::Sync;
 
 my $process_id='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
@@ -35,7 +52,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.53';
+version         '0.54';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -459,14 +476,12 @@ requires        'IO::Pty'                   => 1.09;
 requires        'IO::Capture::Stderr'       => 0;
 requires        'IO::CaptureOutput'         => 0;
 requires        'Capture::Tiny'             => 0;
-requires        'MLDBM'                     => 0;
 requires        'Net::Telnet'               => 0;
 requires        'Term::ReadKey'             => 0;
 requires        'URI'                       => 0;
-requires        'MLDBM::Sync'               => 0.30;
+requires        'MLDBM::Sync'               => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
-#requires        'MLDBM::Sync::SDBM_File'    => 0;
 requires        'DB_File'                   => 0;
 recommends      'Crypt::Rijndael'           => 0;
 

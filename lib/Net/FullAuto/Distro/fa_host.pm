@@ -30,7 +30,6 @@ require Exporter;
 use warnings;
 our @ISA     = qw(Exporter);
 our @EXPORT  = qw(@Hosts);
-our $VERSION = 1.00;
 
 @Hosts = (
 #################################################################

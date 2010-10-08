@@ -28,7 +28,6 @@ package fa_menu;
 
 require Exporter;
 our @ISA = qw(Exporter);
-our $VERSION = 1.00;
 
 our @EXPORT = qw(%Menu_1 %Menu_2 %Menu_5 %Menu_15 %Menu_30);
 

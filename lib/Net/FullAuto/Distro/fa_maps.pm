@@ -36,7 +36,6 @@ require Exporter;
 use warnings;
 our @ISA     = qw(Exporter);
 our @EXPORT  = qw(@Maps);
-our $VERSION = 1.00;
 
 @Maps = (
 #################################################################

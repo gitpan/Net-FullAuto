@@ -28,7 +28,6 @@ package fa_code;
 
 our $test=0;our $timeout=0;
 require Exporter;
-our $VERSION = 1.00;
 use warnings;
 #use threads ();
 #use Thread::Queue;

@@ -25,6 +25,16 @@
 ################################################################
 
 
+2010-10-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.54 released.
+
+        * Added MLDBM::Sync Bootstrap code to Makefile.PL in
+          yet another attempt to fix CPAN testers results
+
+        * Removed VERSION variables from Distro files
+
+
 2010-10-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.53 released.

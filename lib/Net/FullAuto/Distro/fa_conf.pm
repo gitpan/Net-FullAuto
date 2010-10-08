@@ -30,7 +30,6 @@ require Exporter;
 use warnings;
 our @ISA     = qw(Exporter);
 our @EXPORT  = qw(@editor);
-our $VERSION = 1.00;
 
 #################################################################
 ##  Do NOT alter code ABOVE this block.

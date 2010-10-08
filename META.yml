@@ -17,7 +17,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.53
+    version: 0.54
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -30,43 +30,37 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   fa_code:
     file: lib/Net/FullAuto/Distro/fa_code.pm
-    version: 1
   fa_conf:
     file: lib/Net/FullAuto/Distro/fa_conf.pm
-    version: 1
   fa_host:
     file: lib/Net/FullAuto/Distro/fa_host.pm
-    version: 1
   fa_maps:
     file: lib/Net/FullAuto/Distro/fa_maps.pm
-    version: 1
   fa_menu:
     file: lib/Net/FullAuto/Distro/fa_menu.pm
-    version: 1
 recommends:
   Crypt::Rijndael: 0
 requires:
+  Module::Load::Conditional: 0
+  Term::Menus: 1.49
+  Tie::Cache: 0
+  Sort::Versions: 0
   Crypt::CBC: 0
   Crypt::DES: 0
   Getopt::Long: 0
   HTTP::Date: 0
+  JSON: 2.14
+  IO::Pty: 1.09
   IO::Capture::Stderr: 0
   IO::CaptureOutput: 0
   Capture::Tiny: 0
-  IO::Pty: 1.09
-  MLDBM: 0
-  Mail::Internet: 0
-  Mail::Sender: 0
+  MLDBM::Sync: 0
   Net::Telnet: 0
-  Sort::Versions: 0
-  Term::Menus: 1.49
   Term::ReadKey: 0
-  Tie::Cache: 0
   URI: 0
   Email::Sender: 0
   MIME::Entity: 0
-  MLDBM::Sync: 0.30
   DB_File: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
-version: 0.53
+version: 0.54
