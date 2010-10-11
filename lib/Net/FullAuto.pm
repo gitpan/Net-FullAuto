@@ -34,7 +34,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.54';
+our $VERSION='0.55';
 
 
 use 5.005;
@@ -68,6 +68,9 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(fa_login);
 
 use Term::Menus;
+use Tie::Cache;
+use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
+use MLDBM::Sync;                      # this gets the default, SDBM_File
 
 sub fa_login
 {

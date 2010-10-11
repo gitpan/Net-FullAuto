@@ -25,6 +25,15 @@
 ################################################################
 
 
+2010-10-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.55 released.
+
+        * Adding 'use dependency' statements to FullAuto.pm
+          in another attempt to fix broken CPAN testers
+          results
+
+
 2010-10-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.54 released.

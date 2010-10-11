@@ -17,7 +17,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.54
+    version: 0.55
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -44,6 +44,7 @@ requires:
   Module::Load::Conditional: 0
   Term::Menus: 1.49
   Tie::Cache: 0
+  MLDBM::Sync: 0
   Sort::Versions: 0
   Crypt::CBC: 0
   Crypt::DES: 0
@@ -54,7 +55,6 @@ requires:
   IO::Capture::Stderr: 0
   IO::CaptureOutput: 0
   Capture::Tiny: 0
-  MLDBM::Sync: 0
   Net::Telnet: 0
   Term::ReadKey: 0
   URI: 0
@@ -63,4 +63,4 @@ requires:
   DB_File: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
-version: 0.54
+version: 0.55

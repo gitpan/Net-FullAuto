@@ -102,8 +102,6 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    no warnings;
    use Sys::Hostname;
    our $local_hostname=hostname;
-   use MLDBM::Sync;                      # this gets the default, SDBM_File
-   use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
    use Fcntl qw(:DEFAULT);               # import symbols O_CREAT & O_RDWR
    use Time::Local;
    use Crypt::CBC;
