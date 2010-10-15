@@ -25,6 +25,13 @@
 ################################################################
 
 
+2010-10-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.56 released.
+
+        * Added test for BerkeleyDB to Makefile.PL
+
+
 2010-10-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.55 released.

@@ -3,7 +3,9 @@ use inc::Module::Install;
 use Config;
 use POSIX qw/strftime/;
 
-$ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
+if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
+   $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
+}
 
 # Term::Menus Bootstrap Code.
 BEGIN{my$p='Term::Menus';eval"use $p;1"or+do{
@@ -37,7 +39,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.55';
+version         '0.56';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -383,8 +385,34 @@ if ($^O eq 'cygwin' && !can_cc()) {
            "\n\n";
    die $die;
 } elsif (!can_cc()) {
+
+   my $moreinfo='';
+   if ($Config{cc} and $Config{cc}!~/^\s*$/) {
+      $moreinfo="\n\n                      You are running $^X version $].\n".
+           "\n                      The Config.pm file for this perl installation".
+           "\n                      contains \"$Config{cc}\" as the compiler used".
+           "\n                      to build this perl, but this compiler does not".
+           "\n                      exist in the PATH and may not be installed on".
+           "\n                      this host.\n";
+           "\n                      Retrofitting an existing perl installation to".
+           "\n                      work properly with a new compiler for building".
+           "\n                      CPAN modules, is tricky and NOT recommended.".
+           "\n                      Often the available perl (especially on Unix".
+           "\n                      systems) is highly integrated with the host".
+           "\n                      OS and many of its features and utilities.".
+           "\n                      Upgrading the perl, but not the overall OS".
+           "\n                      is risky and may result in more than a few".
+           "\n                      system problems and instabilities.\n".
+           "\n                      The recommended approach is build a NEW perl".
+           "\n                      from source with your choice of newly installed".
+           "\n                      compiler (such as gcc) in a different location".
+           "\n                      (such as /usr/local/lib) or your home directory".
+           "\n                      if you lack root/admin privileges."
+   }
+
    my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc version 4)".
-           "\n                      is required to install FullAuto".
+           "\n                      is required to install FullAuto";
+           $moreinfo.
            "\n                      (Hint: goto www.gnu.org for gcc version 4).".
            "\n\n";
    die $die;
@@ -422,6 +450,78 @@ if (!can_run('make') && !(($^O eq 'cygwin') && (-e "/usr/bin/make"))) {
    die $die;
 }
 
+if (1) {
+   # Let's find if Berkeley DB is already on the system
+   my $findpath='';
+   if (-e "/bin/find") {
+      $findpath="/bin/";
+   } elsif (-e "/usr/bin/find") {
+      $findpath="/usr/bin/";
+   } elsif (-e "/usr/local/bin/find") {
+      $findpath="/usr/local/bin/";
+   }
+   my $xargspath='';
+   if (-e "/bin/xargs") {
+      $xargspath="/bin/";
+   } elsif (-e "/usr/bin/xargs") {
+      $xargspath="/usr/bin/";
+   } elsif (-e "/usr/local/bin/xargs") {
+      $xargspath="/usr/local/bin/";
+   }
+   my $greppath='';
+   if (-e "/bin/grep") {
+      $greppath="/bin/";
+   } elsif (-e "/usr/bin/grep") {
+      $greppath="/usr/bin/";
+   } elsif (-e "/usr/local/bin/grep") {
+      $greppath="/usr/local/bin/";
+   }
+   if ($findpath && $xargspath && $greppath) {
+      print "\nSearching for latest verison of BerkeleyDB.\n".
+            "This may take up to five minutes ...\n\n";
+      my $find_cmd="$findpath/find /usr -type f -name \"db.h\" ".
+                   "| $xargspath/xargs $greppath/grep -H VERSION_STRING";
+      my @output=`$find_cmd`;my @vers=();my %verhash=(); 
+      $find_cmd="$findpath/find /opt -type f -name \"db.h\" ".
+                   "| $xargspath/xargs $greppath/grep -H VERSION_STRING";
+      my @output2=`$find_cmd`;
+      push @output, @output2;
+      if (-1<$#output) {
+         foreach my $version (@output) {
+            next unless $version=~/VERSION_STRING/;
+            my @fileparts=split 'h:', $version;
+            $fileparts[1]=~s/^.*DB (\d+[^:]+):.*$/$1/;
+            $verhash{$fileparts[1]}=$fileparts[0].'h'; 
+         }
+      }
+      my $header_to_use='';my $dblib='';my $ver='';
+      foreach my $vr (reverse sort keys %verhash) {
+         $header_to_use=$verhash{$vr};
+         $vr=~s/^(^\d+[.]\d+).*$/$1/;
+         chomp($vr);
+         $ver=$vr;
+         my $find_cmd="$findpath/find /usr -type f -name \"libdb-".$ver.".a\"";
+         my @lib=`$find_cmd`;
+         chomp($lib[0]);$dblib=$lib[0];last;
+      }
+      if ($dblib) {
+         $dblib=~s/^(.*)\/.*$/$1/;
+         $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
+         $ENV{'BERKELEYDB_LIB'}=$dblib;
+         $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
+         $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
+         $ENV{'DB_FILE_LIB'}=$dblib;
+         $ENV{'DB_FILE_NAME'}="-ldb-$ver";
+      } else {
+         my $die="\n       FATAL ERROR! : Cannot locate 'BerkeleyDB'. This C Library ".
+                 "\n                      is required to install FullAuto".
+                 "\n                      (Hint: goto www.oracle.com for BerkeleyDB).".
+                 "\n\n";
+         die $die;
+      }
+   }
+}
+
 if (0) { ## This disables the following code testing for lynx
 
 unless (can_run('lynx')) {
@@ -455,7 +555,6 @@ requires        'MLDBM::Sync'               => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
 requires        'Crypt::DES'                => 0;
-requires        'Getopt::Long'              => 0;
 requires        'HTTP::Date'                => 0;
 requires        'JSON'                      => 2.14;
 requires        'IO::Pty'                   => 1.09;
@@ -468,6 +567,7 @@ requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
 requires        'DB_File'                   => 0;
+requires        'BerkeleyDB'                => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;

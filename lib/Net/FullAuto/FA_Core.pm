@@ -48,6 +48,8 @@ package Net::FullAuto::FA_Core;
 #     -a bin -a ChangeLog -a inc -a lib -a t -a META.yml
 #     -a LICENSE -a MANIFEST -a README --icon FA_Setup.ico
 #
+#  http://download.oracle.com/berkeley-db/db-5.1.19.tar.gz
+#
 ## *************************************************************
 
 BEGIN {
@@ -102,6 +104,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    no warnings;
    use Sys::Hostname;
    our $local_hostname=hostname;
+   use MLDBM::Sync;                      # this gets the default, SDBM_File
+   use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
    use Fcntl qw(:DEFAULT);               # import symbols O_CREAT & O_RDWR
    use Time::Local;
    use Crypt::CBC;
@@ -1343,25 +1347,53 @@ sub edit {
 
 sub plan {
 
+   my %new_plan_options_menu=(
+
+         Label  => 'new_plan_options_menu',
+         Item_1 => {
+
+             Text => 'Set Optional Maximum Number of Invocations',
+ 
+         },
+         Item_2 => {
+
+             Text => 'Set Optional Expiration Date and/or Time',
+
+         },
+         Item_3 => {
+
+             Text => 'Set Authorized Users of this Plan',
+
+         },
+
+   );
+
    my %plan_menu=(
 
          Label  => 'plan_menu',
          Item_1 => {
 
-             Text => 'Set Up a New Plan',
+             Text => 'Accept Defaults and Create New Plan',
+             Result => sub { return '' },
 
          },
          Item_2 => {
 
-             Text => 'Set Up a New Scheduled Job',
+             Text => 'Set Options for New Plan',
+             Result => \%new_plan_options_menu,
 
          },
          Item_3 => {
 
-             Text => 'Work with Existing Plans',
+             Text => 'Set Up a New Scheduled Job',
 
          },
          Item_4 => {
+
+             Text => 'Work with Existing Plans',
+
+         },
+         Item_5 => {
 
              Text => 'Work with Existing Scheduled Jobs',
 
