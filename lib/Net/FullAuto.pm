@@ -34,7 +34,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.56';
+our $VERSION='0.57';
 
 
 use 5.005;
@@ -69,8 +69,8 @@ our @EXPORT = qw(fa_login);
 
 use Term::Menus ();
 use Tie::Cache ();
-use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
 use MLDBM::Sync ();                   # this gets the default, SDBM_File
+use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
 use Sort::Versions ();
 use Crypt::CBC ();
 use Crypt::DES ();

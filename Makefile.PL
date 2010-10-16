@@ -39,7 +39,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.56';
+version         '0.57';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -479,6 +479,7 @@ if (1) {
    if ($findpath && $xargspath && $greppath) {
       print "\nSearching for latest verison of BerkeleyDB.\n".
             "This may take up to five minutes ...\n\n";
+      #my @usr_contents=`ls -l /usr`;
       my $find_cmd="$findpath/find /usr -type f -name \"db.h\" ".
                    "| $xargspath/xargs $greppath/grep -H VERSION_STRING";
       my @output=`$find_cmd`;my @vers=();my %verhash=(); 

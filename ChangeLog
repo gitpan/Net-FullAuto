@@ -25,6 +25,14 @@
 ################################################################
 
 
+2010-10-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.57 released.
+
+        * Swapped position of MLDBM and MLDBM::Sync in
+          Makefile.PL
+
+
 2010-10-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.56 released.
