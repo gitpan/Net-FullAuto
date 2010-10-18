@@ -39,7 +39,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.57';
+version         '0.58';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';

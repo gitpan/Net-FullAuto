@@ -25,6 +25,14 @@
 ################################################################
 
 
+2010-10-18  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.58 released.
+
+        * Removed the parentesis from 'use' statements 
+          in FullAuto.pm.
+
+
 2010-10-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.57 released.
