@@ -6,25 +6,13 @@ use POSIX qw/strftime/;
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
 }
-
-# Term::Menus Bootstrap Code.
-BEGIN{my$p='Term::Menus';eval"use $p;1"or+do{
-my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-(!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
-eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'}
-);1"and exit)and print"==> $p required."and print
-"*** Installing $p\n"and
-do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
-$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p;1"
-||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
-require CPANPLUS;CPANPLUS::install$p};eval"use $p;1"or eval{
-require CPAN;CPAN::install$p};eval"use $p;1"||die"*** Please
-manually install $p from cpan.org first...\n"}}}
+configure_requires 'LWP' => '0';
 
 BEGIN {
    unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
 };
-use Term::Menus;
+
+use fai::Term::Menus;
 
 my $process_id='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
@@ -39,7 +27,7 @@ foreach my $arg (@ARGV) {
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.58';
+version         '0.59';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -73,7 +61,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
    exit if $selection eq ']quit[';
    if ($selection!~/NOT/) {
       if ($@) {
-         do{my$p='LWP';eval"use $p;1"or+do{
+         do{my$p='LWP';eval"use $p;1"or do{
          my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
          (!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
          eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'}
@@ -82,8 +70,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
          $^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p;1"
          ||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
-         require CPANPLUS;CPANPLUS::install$p};eval"use $p;1"or eval{
-         require CPAN;CPAN::install$p};eval"use $p;1"||die"*** Please
+         require CPANPLUS;CPANPLUS::install $p};eval"use $p;1"or eval{
+         require CPAN;CPAN::install $p};eval"use $p;1"||die"*** Please
          manually install $p from cpan.org first...\n"}}}
       }
       my @editors=('vim     (ViIMproved - enhanced vi editor)',

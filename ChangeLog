@@ -25,6 +25,14 @@
 ################################################################
 
 
+2010-10-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.59 released.
+
+        * Modified Makefile.PL to load Term::Menus from
+          included fai (f[ull]a[uto]i[nclude]) directory.
+
+
 2010-10-18  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.58 released.

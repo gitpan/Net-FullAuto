@@ -34,7 +34,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.58';
+our $VERSION='0.59';
 
 
 use 5.005;
@@ -68,24 +68,6 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(fa_login);
 
 use Term::Menus;
-use Tie::Cache;
-use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
-use MLDBM::Sync;                      # this gets the default, SDBM_File
-use Sort::Versions;
-use Crypt::CBC;
-use Crypt::DES;
-use JSON;
-use URI;
-use HTTP::Date;
-use IO::Capture::Stderr;
-use IO::CaptureOutput;
-use Capture::Tiny;
-use Net::Telnet;
-use Email::Sender;
-use MIME::Entity;
-use IO::Pty;
-use DB_File;
-use BerkeleyDB;
 
 sub fa_login
 {
