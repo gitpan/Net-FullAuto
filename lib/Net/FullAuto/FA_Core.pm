@@ -43,10 +43,11 @@ package Net::FullAuto::FA_Core;
 #
 ## For compiling into MSWin32 setup executable with PAR::Packager
 #
-#  pp -c -o "Setup FullAuto MSWin32-x86.exe" 
+#  pp -o "Setup FullAuto v.XX MSWin32-x86.exe"
 #     -l C:\strawberry\perl\bin\libgcc_s_sjlj-1.dll Makefile.PL
-#     -a bin -a ChangeLog -a inc -a lib -a t -a META.yml
-#     -a LICENSE -a MANIFEST -a README --icon FA_Setup.ico
+#     -M LWP -M Term::Menus -a fai -a bin -a ChangeLog -a inc 
+#     -a Module -a lib -a t -a META.yml -a LICENSE -a MANIFEST
+#     -a README --icon FA_Setup.ico
 #
 #  http://download.oracle.com/berkeley-db/db-5.1.19.tar.gz
 #

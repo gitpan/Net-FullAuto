@@ -1,12 +1,112 @@
 # Load the Module::Install bundled in ./inc/
+use Cwd qw/cwd/;
+my $curdir=&cwd;
 use inc::Module::Install;
+
+# Define metadata
+name            'Net-FullAuto';
+sign;
+version         '0.60';
+author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
+license         'gpl';
+perl_version    '5.006';
+
+eval { require LWP };
+if ($@) {
+   do {
+      my $p='LWP';
+      eval "use $p;1" or
+      do {
+         my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+         (!defined($e) ||
+            $e!~m/--(?:default|skip|testonly)/
+            and -t STDIN
+            or eval
+               "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
+            and exit)
+         and print"==> $p required."
+         and print "*** Installing $p\n"
+         and
+         do {
+            if (eval '$>' and lc(`sudo -V`) =~ /version/) {
+               system(
+                  'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+               eval "use $p;1" || 
+                   system('sudo', $^X, "-MCPAN", "-e",
+                     "CPAN::Shell->force('install',$p)")
+            }
+            eval {
+               require CPANPLUS;
+               my $u=CPANPLUS::Shell->new();
+               $u->shell;
+               $u->dispatch_on_input(input=>'o conf force 1');
+               $u->dispatch_on_input(input=>"install $p")
+            };
+            eval "use $p;1"
+            or eval{
+                  require CPAN;
+                  CPAN::Shell->force('install',$p)
+               };
+            eval "use $p;1" ||
+               die "*** Please manually install $p from cpan.org first...\n"
+         }
+      }
+   }
+}
+chdir $curdir;
+eval { require IO::CaptureOutput };
+if ($@) {
+   do {
+      my $p='IO::CaptureOutput';
+      eval "use $p;1" or
+      do {
+         my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+         (!defined($e) ||
+            $e!~m/--(?:default|skip|testonly)/
+            and -t STDIN
+            or eval
+               "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
+            and exit)
+         and print"==> $p required."
+         and print "*** Installing $p\n"
+         and
+         do {
+            if (eval '$>' and lc(`sudo -V`) =~ /version/) {
+               system(
+                  'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+               eval "use $p;1" ||
+                   system('sudo', $^X, "-MCPAN", "-e",
+                     "CPAN::Shell->force('install',$p)")
+            }
+            eval {
+               require CPANPLUS;
+               my $u=CPANPLUS::Shell->new();
+               $u->shell;
+               $u->dispatch_on_input(input=>'o conf force 1');
+               $u->dispatch_on_input(input=>"install $p")
+            };
+            eval "use $p;1"
+            or eval{
+                  require CPAN;
+                  CPAN::Shell->force('install',$p)
+               };
+            eval "use $p;1" ||
+               die "*** Please manually install $p from cpan.org first...\n"
+         }
+      }
+   }
+}
+chdir $curdir;
+use IO::CaptureOutput qw(capture);
 use Config;
+use CPAN;
+use CPAN::Config;
+use CPAN::LWP::UserAgent;
 use POSIX qw/strftime/;
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
 }
-configure_requires 'LWP' => '0';
 
 BEGIN {
    unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
@@ -14,27 +114,35 @@ BEGIN {
 
 use fai::Term::Menus;
 
-my $process_id='';
+my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
+
+if (exists $Config{prefix} &&
+      $Config{prefix}) {
+   $PREFIX=$Config{prefix};
+}
+
 foreach my $arg (@ARGV) {
+print "ARG=$arg<==\n";
    if ($arg=~/INSTALL_*CYGWIN\s*=\*1/i) {
       $install_cygwin_without_asking=1;
       last;
+   } elsif ($arg=~/-*-PREFIX=/i) {
+      $PREFIX=$arg;
+      $PREFIX=~s/^-*-[Pp][Rr][Ee][Ff][Ii][Xx]=//;
+      $PREFIX=~s/^["']//;
+      $PREFIX=~s/["']$//;
    }
 }
 
-# Define metadata
-name            'Net-FullAuto';
-sign;
-version         '0.59';
-author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
-license         'gpl';
-perl_version    '5.006';
+$PREFIX='' if $PREFIX='/usr';
 
 my $editor='';my $selection='';
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 #if (1) {
+
+   require Term::Menus;
 
    my %Menu_win_to_cyg=(
 
@@ -56,24 +164,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
    if ($install_cygwin_without_asking) {
       $selection='Install';
    } else {
-      $selection=Menu(\%Menu_win_to_cyg);
+      $selection=Term::Menus::Menu(\%Menu_win_to_cyg);
    }
    exit if $selection eq ']quit[';
    if ($selection!~/NOT/) {
-      if ($@) {
-         do{my$p='LWP';eval"use $p;1"or do{
-         my$e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-         (!defined($e)||$e!~m/--(?:default|skip|testonly)/and-t STDIN or
-         eval"use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'}
-         );1"and exit)and print"==> $p required."and print
-         "*** Installing $p\n"and
-         do{if (eval '$>' and lc(`sudo -V`) =~ /version/){system('sudo',
-         $^X,"-MCPANPLUS","-e","CPANPLUS::install $p");eval"use $p;1"
-         ||system('sudo', $^X, "-MCPAN", "-e", "CPAN::install $p")}eval{
-         require CPANPLUS;CPANPLUS::install $p};eval"use $p;1"or eval{
-         require CPAN;CPAN::install $p};eval"use $p;1"||die"*** Please
-         manually install $p from cpan.org first...\n"}}}
-      }
       my @editors=('vim     (ViIMproved - enhanced vi editor)',
                    "emacs   (The extensible, customizable,\n           ".
                    "              self-documenting real-time\n         ".
@@ -142,7 +236,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                     "Accessories/wordpad.exe\"";
          }
       } elsif (0<$#editors) {
-         $selection=Menu(\%Menu_select_editor);
+         $selection=Term::Menus::Menu(\%Menu_select_editor);
          if ($selection=~/TextPad/) {
             if ($tp eq 'default') {
                $editor="\"/cygdrive".
@@ -165,56 +259,105 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $selection=$editors[0];
       }
       exit if $selection eq ']quit[';
-      require LWP;
-      my $ua=LWP::UserAgent->new;
-      my $response = $ua->get('http://www.cygwin.com/setup.exe');
-      open(CP,">setup.exe") || die $!;
-      binmode(CP);
-      if ($response->is_success) {
-         open(CP,">setup.exe") || die $!;
-         binmode(CP);
-         print CP $response->content;
-      } else {
-         my $response = $ua->get('http://www.fullautosoftware.net/setup.exe');
-         if ($response->is_success) {
+      my $url='http://www.cygwin.com/setup.exe';
+      if ($CPAN::META->has_usable('LWP')) {
+          $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
+         my $Ua;
+         CPAN::LWP::UserAgent->config;
+         eval { $Ua = CPAN::LWP::UserAgent->new; };
+         if ($@) {
+            $CPAN::Frontend->mywarn(
+               "ERROR: CPAN::LWP::UserAgent->new dies with $@\n");
+         } else {
+            my($var);
+            $Ua->proxy('http', $var)
+               if $var = $CPAN::Config->{http_proxy} ||
+               $ENV{http_proxy};
+            $Ua->no_proxy($var)
+               if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
+         }
+         $Ua->show_progress('true value');
+         my $req = HTTP::Request->new(GET => $url);
+         $req->header('Accept' => 'text/html');
+         my $res = $Ua->request($req);
+         if ($res->is_success) {
+            $CPAN::Frontend->myprint(" + request successful.\n")
+               if $CPAN::DEBUG;
             open(CP,">setup.exe") || die $!;
             binmode(CP);
-            print CP $response->content;
+            print CP $res->content;
+         } elsif ($res->status_line=~/403/) {
+            $url='http://www.fullautosoftware.net/download/setup.exe'; 
+            $req = HTTP::Request->new(GET => $url);
+            $req->header('Accept' => 'text/html');
+            $res = $Ua->request($req);
+            if ($res->is_success) {
+               $CPAN::Frontend->myprint(" + request successful.\n")
+                  if $CPAN::DEBUG;
+               open(CP,">setup.exe") || die $!;
+               binmode(CP);
+               print CP $res->content;
+            } elsif ($res->status_line=~/403/) {
+               $url='http://www.fullautosoftware.net/download/setup.tar.gz';
+               $req = HTTP::Request->new(GET => $url);
+               $req->header('Accept' => 'text/html');
+               $res = $Ua->request($req);
+               if ($res->is_success) {
+                  $CPAN::Frontend->myprint(" + request successful.\n")
+                     if $CPAN::DEBUG;
+#print "RES=",$res->is_success," and CWD=",cwd(),"\n";
+                  open(CP,">setup.tar.gz") || die $!;
+                  binmode(CP);
+                  print CP $res->content;
+               } else {
+                  print $res->status_line;
+                  sleep 10;
+                  die $res->status_line;
+               }
+            } else {
+               print $res->status_line;
+               sleep 10;
+               die $res->status_line;
+            }
          } else {
-            die $response->status_line;
+            print $res->status_line;
+            sleep 10;
+            die $res->status_line;
          }
+         close(CP) || die $!;
+         chmod 0755, 'setup.exe';
+         my $setup_cmd='';
+         if ($selection!~/[Ww]ordpad/s) {
+            $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
+                      .'make,openssh,perl,perl-libwin32,db4.5,'
+                      .$selection.' -X -A -q '
+                      .'-s http://cygwin.mirrors.pair.com"';
+         } else {
+            $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
+                      .'make,openssh,perl,perl-libwin32,db4.5 -X -A -q '
+                      .'-s http://cygwin.mirrors.pair.com"';
+         }
+         if ($selection=~/[Ww]ordpad/) {
+            $editor='"'.'/cygdrive'.
+               '/c/Program Files/Windows NT/Accessories/wordpad.exe'.'"';
+         } else {
+            $editor="/bin/${selection}.exe";
+         }
+         my $pwd=`cmd /c chdir`;
+         chmod($pwd);
+         my $cygpath=$pwd;
+         $cygpath=~s/^(.):/\/cygdrive\/$1/;
+         $cygpath=~s/\\/\//g;
+         system($setup_cmd);
+         if ($^O eq 'cygwin') {
+            system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -ic '.
+                   '"/usr/bin/cpan -i Net::FullAuto"');
+         } else {
+            system('cmd /c C:\\cygwin\\bin\\bash -ic '.
+                   '"/usr/bin/cpan -i Net::FullAuto"');
+         }
+         exit;
       }
-      close(CP) || die $!;
-      chmod 0755, 'setup.exe';
-      my $setup_cmd='';
-      if ($selection!~/[Ww]ordpad/s) {
-         $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
-                   .'make,openssh,perl,perl-libwin32,db4.5,'
-                   .$selection.' -A -q"';
-      } else {
-         $setup_cmd='cmd /c ".\\setup.exe -D -P gcc4-core,gcc4-g++,'
-                   .'make,openssh,perl,perl-libwin32,db4.5 -A -q"';
-      }
-      if ($selection=~/[Ww]ordpad/) {
-         $editor='"'.'/cygdrive'.
-            '/c/Program Files/Windows NT/Accessories/wordpad.exe'.'"';
-      } else {
-         $editor="/bin/${selection}.exe";
-      }
-      my $pwd=`cmd /c chdir`;
-      chmod($pwd);
-      my $cygpath=$pwd;
-      $cygpath=~s/^(.):/\/cygdrive\/$1/;
-      $cygpath=~s/\\/\//g;
-      system($setup_cmd);
-      if ($^O eq 'cygwin') {
-         system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -ic '.
-                '"/usr/bin/cpan -i Net::FullAuto"');
-      } else {
-         system('cmd /c C:\\cygwin\\bin\\bash -ic '.
-                '"/usr/bin/cpan -i Net::FullAuto"');
-      }
-      exit;
    } elsif ($process_id) {
       exit;
    }
@@ -234,6 +377,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
            "\n           when installing FullAuto on Microsoft Windows.".
            "\n\n";
    die $die;
+} else {
+   configure_requires 'LWP' => '0';
 }
 
 unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
@@ -437,8 +582,21 @@ if (!can_run('make') && !(($^O eq 'cygwin') && (-e "/usr/bin/make"))) {
            "\n\n";
    die $die;
 }
-
-if (1) {
+my $greppath='';
+if (-e "/bin/grep") {
+   $greppath="/bin/";
+} elsif (-e "/usr/bin/grep") {
+   $greppath="/usr/bin/";
+} elsif (-e "/usr/local/bin/grep") {
+   $greppath="/usr/local/bin/";
+}
+my $get_DB_File=0;
+eval { require DB_File };
+$get_DB_File=1 if $@;
+my $get_BerkeleyDB=0;
+eval { require BerkeleyDB };
+$get_BerkeleyDB=1 if $@;
+if ($get_DB_File || $get_BerkeleyDB) {
    # Let's find if Berkeley DB is already on the system
    my $findpath='';
    if (-e "/bin/find") {
@@ -456,31 +614,48 @@ if (1) {
    } elsif (-e "/usr/local/bin/xargs") {
       $xargspath="/usr/local/bin/";
    }
-   my $greppath='';
-   if (-e "/bin/grep") {
-      $greppath="/bin/";
-   } elsif (-e "/usr/bin/grep") {
-      $greppath="/usr/bin/";
-   } elsif (-e "/usr/local/bin/grep") {
-      $greppath="/usr/local/bin/";
-   }
    if ($findpath && $xargspath && $greppath) {
+      my @output=();
+      my $testgrep=`${greppath}grep -H 2>&1`;
+      my $grepopt='';
+      if (-1==index $testgrep,'illegal option') {
+         $grepopt='-H ';
+      }
+      my $find_cmd1="${findpath}find ";
+      my $find_cmd2=" -type f -name \"*.h\" ".
+                   "| ${xargspath}xargs ${greppath}grep ".
+                   "${grepopt}DB_VERSION_STRING";
       print "\nSearching for latest verison of BerkeleyDB.\n".
             "This may take up to five minutes ...\n\n";
-      #my @usr_contents=`ls -l /usr`;
-      my $find_cmd="$findpath/find /usr -type f -name \"db.h\" ".
-                   "| $xargspath/xargs $greppath/grep -H VERSION_STRING";
-      my @output=`$find_cmd`;my @vers=();my %verhash=(); 
-      $find_cmd="$findpath/find /opt -type f -name \"db.h\" ".
-                   "| $xargspath/xargs $greppath/grep -H VERSION_STRING";
-      my @output2=`$find_cmd`;
-      push @output, @output2;
+      foreach my $dir ('/usr/','/opt/',(getpwuid $>)[7].'/') {
+         opendir(DIR, $dir) or die $!;
+         while (my $file = readdir(DIR) ) {
+            next if ($file eq "." or $file eq ".." or $file eq "doc" or
+                     $file eq "X11R6" or $file eq "docs" or
+                     $file eq "man" or $file eq "ssl" or
+                     $file eq "license" or $file eq "logfile" or
+                     $file eq "bin" or ($^O eq 'cygwin' &&
+                     ($file eq "Application Data" or
+                      $file eq "Favorites" or $file eq
+                      "Local Settings" or $file eq "Recent" or
+                      $file eq "Start Menu" or $file eq "SendTo" or
+                      $file eq "NetHood" or $file eq "PrintHood")));
+            if (-d $dir.$file) {
+               print "Searching $dir$file ...\n";
+               my @subout=`$find_cmd1\"$dir$file\"$find_cmd2`;      
+               push @output, @subout,  
+            }
+         }
+      }
+      my @vers=();my %verhash=(); 
       if (-1<$#output) {
          foreach my $version (@output) {
-            next unless $version=~/VERSION_STRING/;
-            my @fileparts=split 'h:', $version;
+            next if (-1<index $version, $CPAN::Config->{cpan_home}) || 
+                    (-1<index $version, 'Net-FullAuto-') ||
+                    $version!~/db.h:.*DB_VERSION_STRING/;
+            my @fileparts=split 'db.h:', $version;
             $fileparts[1]=~s/^.*DB (\d+[^:]+):.*$/$1/;
-            $verhash{$fileparts[1]}=$fileparts[0].'h'; 
+            $verhash{$fileparts[1]}=$fileparts[0]; 
          }
       }
       my $header_to_use='';my $dblib='';my $ver='';
@@ -489,10 +664,11 @@ if (1) {
          $vr=~s/^(^\d+[.]\d+).*$/$1/;
          chomp($vr);
          $ver=$vr;
-         my $find_cmd="$findpath/find /usr -type f -name \"libdb-".$ver.".a\"";
+         my $find_cmd="${findpath}find /usr -type f -name \"libdb-".$ver.".a\"";
          my @lib=`$find_cmd`;
          chomp($lib[0]);$dblib=$lib[0];last;
       }
+      #if (0) {
       if ($dblib) {
          $dblib=~s/^(.*)\/.*$/$1/;
          $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
@@ -501,12 +677,206 @@ if (1) {
          $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
          $ENV{'DB_FILE_LIB'}=$dblib;
          $ENV{'DB_FILE_NAME'}="-ldb-$ver";
+         $ENV{'LD_LIBRARY_PATH'}=$dblib;
       } else {
-         my $die="\n       FATAL ERROR! : Cannot locate 'BerkeleyDB'. This C Library ".
-                 "\n                      is required to install FullAuto".
-                 "\n                      (Hint: goto www.oracle.com for BerkeleyDB).".
-                 "\n\n";
-         die $die;
+         my $url=
+            'http://www.oracle.com/technetwork/'.
+            'database/berkeleydb/downloads/index.html';
+         if ($CPAN::META->has_usable('LWP')) {
+             $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
+            my $Ua;
+            CPAN::LWP::UserAgent->config;
+            eval { $Ua = CPAN::LWP::UserAgent->new; };
+            if ($@) {
+               $CPAN::Frontend->mywarn(
+                  "ERROR: CPAN::LWP::UserAgent->new dies with $@\n");
+            } else {
+               my($var);
+               $Ua->proxy('http', $var)
+                  if $var = $CPAN::Config->{http_proxy} ||
+                  $ENV{http_proxy};
+               $Ua->no_proxy($var)
+                  if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
+            }
+
+            my $req = HTTP::Request->new(GET => $url);
+            $req->header('Accept' => 'text/html');
+            my $res = $Ua->request($req);
+            if ($res->is_success) {
+               $CPAN::Frontend->myprint(" + request successful.\n")
+                  if $CPAN::DEBUG;
+               my $source=$res->content;
+               my $site='download.oracle.com';
+               $source=~
+                  s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+               my $file=$2;
+               my $file=substr($file,(index $file,'/')+1,-7);
+               $ver=$file;
+               $ver=~s/_.*$//;
+               $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+               my $timeout=120;my $a='';
+               eval {
+                  $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                  alarm $timeout;
+                  print "\n       *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH".
+                        "\n           BerkeleyDB INSTALLATION IN 2 MINUTES ***\n".
+                        "\n       IMPORTANT! : BerkeleyDB - a C Library used".
+                        "\n                  by FullAuto to create a binary".
+                        "\n                  file-based (lightweight) database".
+                        "\n                  for storing and retrieving".
+                        "\n                  credentials and persistance data,".
+                        "\n                  was not located on this ".
+                        "host/system.".
+                        "\n\n       IMPORTANT! : This FullAuto setup process".
+                        " will".
+                        "\n                  now attempt to download ".
+                        "BerkeleyDB".
+                        "\n                  source code from Oracle.com and".
+                        "\n                  and compile it for use by ".
+                        "FullAuto.\n";
+                  my $pre="/usr/local/BerkeleyDB.$ver";
+                  $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
+                  print "\n       IMPORTANT! : BerkeleyDB will be installed".
+                        "\n                  in $pre".
+                        "\n\n       If you do not wish FullAuto setup to".
+                        "\n       perform this step, type 'N' and setup will".
+                        "\n       will exit. Please install BerkeleyDB manually".
+                        "\n       before attempting another installation of".
+                        "\n       FullAuto.\n\n";
+                  print "Press <ENTER> if you wish to continue, ".
+                        "or 'N' to quit . . . [Y] ";$
+                  a=<STDIN>;
+                  alarm 0;
+               };
+               if ($@) {
+                  # timed out
+                  #exit;
+               } elsif ($a=~/^[Nn]$/s) {
+                  exit;
+               }
+               my $fh='';my $filename='';
+               if ($CPAN::META->has_usable("File::Temp")) {
+                  $fh = File::Temp->new(
+                        dir      => cwd(),
+                        template => "${file}_XXXXXX",
+                        suffix => ".tar.gz",
+                        unlink => 0,
+                       );
+                  $filename = $fh->filename;
+               } else {
+                  $fh = FileHandle->new;
+                  $filename = "${file}_$$.tar.gz";
+               }
+               $req = HTTP::Request->new(GET => $source);
+               $req->header('Accept-Encoding' => 'gzip, compress');
+               $Ua->show_progress('true value');
+               $res = $Ua->request($req);
+               if ($res->is_success) {
+                  $CPAN::Frontend->myprint(" + request successful.\n")
+                     if $CPAN::DEBUG;
+                  print $fh $res->content;
+                  close $fh;
+               } elsif ($res->is_error(500)) {
+                  $CPAN::Frontend->myprint(sprintf(
+                     "LWP failed with code[%s], message[%s]\n".
+                     "Please check your connection to the Internet!\n",
+                     $res->code,
+                     $res->message,
+                  ));
+               }
+               $CPAN::Frontend->myprint(qq{ + saved content to $file \n})
+               if $CPAN::DEBUG;
+               `$CPAN::Config->{gzip} -d $filename`;
+               $filename=~s/\.gz$//;
+               open(FH, $CPAN::Config->{tar}." xvf $filename|");
+               while (my $line=<FH>) {
+                  print $line;
+               }
+               close FH;
+               my $uniq='';
+               $filename=~/^.*?_(.*).tar$/;
+               my $uniq=$1;
+               $filename=~s/_.*.tar$//;
+               `mv $filename ${filename}_$uniq`;
+               my $args='';
+               if ($PREFIX) {
+                  $args=' --prefix="'.$PREFIX.'"';
+               }
+               open(FH,"cd ${filename}_$uniq/build_unix;../dist/configure$args|")
+                  || warn $!;
+               while (my $line=<FH>) {
+                  print $line;
+               }
+               close FH;
+               open(FH,"cd ${filename}_$uniq/build_unix;".
+                   $CPAN::Config->{make}." install|")
+                  || warn $!;
+               my $cnt=0;
+               my @savlines=();
+               while (my $line=<FH>) {
+                  print $line;
+                  unless ($cnt<=50) { 
+                     $cnt++;
+                  } else {
+                     shift @savlines;
+                  } push @savlines,$line;
+               }
+               close FH;
+               if (-1==index $savlines[$#savlines],
+                     'Installing documentation:') {
+                  die join "\n", @savlines;
+               } else {
+                  $ver=$filename;
+                  $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+                  my $prefx=$savlines[$#savlines];
+                  $prefx=~s/^Installing documentation: //;
+                  $prefx=~s/docs \.\.\.\s*$//;
+                  $dblib=$prefx."lib/libdb-".$ver.".a";
+                  $header_to_use=$prefx."include";
+                  $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
+                  $ENV{'BERKELEYDB_LIB'}=$dblib;
+                  $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
+                  $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
+                  $ENV{'DB_FILE_LIB'}=$dblib;
+                  $ENV{'DB_FILE_NAME'}="-ldb-$ver";
+                  $ENV{'LD_LIBRARY_PATH'}=$dblib;
+               }
+            } else {
+               if ($res->is_error(500)) {
+                  $CPAN::Frontend->myprint(sprintf(
+                     "LWP failed with code[%s], message[%s]\n".
+                     "Please check your connection to the Internet!\n",
+                     $res->code,
+                     $res->message,
+                  ));
+               } else {
+                  $CPAN::Frontend->myprint(sprintf(
+                     "LWP failed with code[%s], message[%s]\n",
+                     $res->code,
+                     $res->message,
+                  ));
+               }
+            }
+         } else {
+            $CPAN::Frontend->mywarn("  LWP not available\n");
+         }
+         unless (exists $ENV{'BERKELEYDB_INCLUDE'} && $ENV{'BERKELEYDB_INCLUDE'}) {
+            my $BerkDownload='http://www.oracle.com/technetwork/database/'.
+                             'berkeleydb/downloads/index.html';
+            my $PackManagers='http://en.wikipedia.org/wiki/'.
+                             'List_of_software_package_management_systems';
+            my $die="\n       FATAL ERROR! : Cannot locate 'BerkeleyDB'. This C Library ".
+                    "\n                      is required to install FullAuto".
+                    "\n                      (Hint: goto\n".
+                    "\n       $BerkDownload\n".
+                    "\n                       for BerkeleyDB Source Code. Binary versions".
+                    "\n                       of the Library are widely available via".
+                    "\n                       package managers such as yum and apt-get".
+                    "\n                       See:\n".
+                    "\n       $PackManagers).".
+                    "\n\n";
+            die $die;
+         }
       }
    }
 }
@@ -536,31 +906,160 @@ unless (can_run('lynx')) {
 
 } ## End disable block
 
-#Specific dependencies
-requires        'Module::Load::Conditional' => 0;
-requires        'Term::Menus'               => 1.49;
-requires        'Tie::Cache'                => 0;
-requires        'MLDBM::Sync'               => 0;
-requires        'Sort::Versions'            => 0;
-requires        'Crypt::CBC'                => 0;
-requires        'Crypt::DES'                => 0;
-requires        'HTTP::Date'                => 0;
-requires        'JSON'                      => 2.14;
-requires        'IO::Pty'                   => 1.09;
-requires        'IO::Capture::Stderr'       => 0;
-requires        'IO::CaptureOutput'         => 0;
-requires        'Capture::Tiny'             => 0;
-requires        'Net::Telnet'               => 0;
-requires        'Term::ReadKey'             => 0;
-requires        'URI'                       => 0;
-requires        'Email::Sender'             => 0;
-requires        'MIME::Entity'              => 0;
-requires        'DB_File'                   => 0;
-requires        'BerkeleyDB'                => 0;
-recommends      'Crypt::Rijndael'           => 0;
-
-auto_install;
-
+my $combined='';
+if ($get_DB_File) {
+   my $p='DB_File';
+   capture {
+      do {
+         eval "use $p;1" or
+         do {
+            my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+            (!defined($e) ||
+               $e!~m/--(?:default|skip|testonly)/
+               and -t STDIN
+               or eval
+                  "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
+               and exit)
+            and print"==> $p required."
+            and print "*** Getting $p\n"
+            #and print "*** Installing $p\n"
+            and
+            do {
+               if (eval '$>' and lc(`sudo -V`) =~ /version/) {
+                  system(
+                     'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::get $p");
+                     #'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+                  eval "use $p;1" ||
+                     system('sudo', $^X, "-MCPAN", "-e",
+                        #"CPAN::Shell->force('install',$p)")
+                        "CPAN::Shell->force('get',$p)")
+               }
+               eval {
+                  require CPANPLUS;
+                  my $u=CPANPLUS::Shell->new();
+                  $u->shell;
+                  $u->dispatch_on_input(input=>'o conf force 1');
+                  #$u->dispatch_on_input(input=>"install $p")
+                  $u->dispatch_on_input(input=>"get $p")
+               };
+               eval "use $p;1"
+               or eval{
+                     require CPAN;
+                     #CPAN::Shell->force('install',$p) # HERE
+                     CPAN::Shell->force('get',$p)
+                  };
+            }
+         }
+      }
+   } \$combined, \$combined;
+   my $stdout='';my $stderr='';
+   eval {
+      my $dbfilegz='';
+      my @combinedsplit=split "\n", $combined;
+      foreach my $line (@combinedsplit) {
+         if ($line=~/^Checksum for (.*) ok$/) {
+            $dbfilegz=$1;
+         }
+      }
+      die $combined unless $dbfilegz;
+      my @dotcpan=();
+      opendir(DIR, $CPAN::Config->{build_dir}) or die $!;
+      while (my $item = readdir(DIR) ) {
+         next if ($item eq "." or $item eq "..");
+         push @dotcpan, $item;
+      }
+      close DIR;
+      @dotcpan = sort { -M $a <=> -M $b } @dotcpan;
+      my $i="export DB_FILE_INCLUDE=$ENV{'DB_FILE_INCLUDE'};"
+           ."export DB_FILE_LIB=$ENV{'DB_FILE_LIB'};"
+           ."export DB_FILE_NAME=$ENV{'DB_FILE_NAME'}";
+      capture {
+         system("cd $dotcpan[0];$i;$^X Makefile.PL;");
+      } \undef, \$stderr;
+      die $stderr if $stderr;
+      if (($^O eq 'solaris') && ($Config{cc}=~/gcc/)) {
+         my $ldl=`cd $dotcpan[0];${greppath}grep LDDLFLAGS[^\\\)] Makefile`;
+         $ldl=~s/-G/-shared/;
+         chomp($ldl);
+         my $fdl=$ldl.' -R'.$ENV{'DB_FILE_LIB'};
+         $fdl=~s/\s*=\s*/=\"/;$fdl.='"';
+         capture {
+            system("cd $dotcpan[0];$CPAN::Config->{make} $fdl");
+         } \$stdout, \$stderr;
+         print $stdout;
+         die "$stdout\n\n$stderr" if $stderr;
+         capture {
+            system("cd $dotcpan[0];$CPAN::Config->{make} test");
+         } \$stdout, \$stderr;
+         print $stdout;
+         die "$stdout\n\n$stderr" if $stderr;
+         capture {
+            system("cd $dotcpan[0];$CPAN::Config->{make} install");
+         } \$stdout, \$stderr;
+         print $stdout;
+         die "$stdout\n\n$stderr" if $stderr;
+      } else {
+         capture {
+            system("cd $dotcpan[0];$CPAN::Config->{make} install");
+         } \$stdout, \$stderr;
+         print $stdout;
+         die "$stdout\n\n$stderr" if $stderr;
+         capture {
+            system("cd $dotcpan[0];$CPAN::Config->{make} test");
+         } \$stdout, \$stderr;
+         print $stdout;
+         die "$stdout\n\n$stderr" if $stderr;
+      }
+   };
+   if ($@) {
+      die "$stderr\n*** Please manually install $p from cpan.org first...\n"
+   }
+   eval "use $p;1" ||
+      die "*** Please manually install $p from cpan.org first...\n"
+}
+chdir $curdir;
+if ($get_BerkeleyDB) {
+   do {
+      my $p='BerkeleyDB';
+      eval "use $p;1" or
+      do {
+         my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+         (!defined($e) ||
+            $e!~m/--(?:default|skip|testonly)/
+            and -t STDIN
+            or eval
+               "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
+            and exit)
+         and print"==> $p required."
+         and print "*** Installing $p\n"
+         and
+         do {
+            if (eval '$>' and lc(`sudo -V`) =~ /version/) {
+               system(
+                  'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+               eval "use $p;1" ||
+                   system('sudo', $^X, "-MCPAN", "-e",
+                     "CPAN::Shell->force('install',$p)")
+            }
+            eval {
+               require CPANPLUS;
+               my $u=CPANPLUS::Shell->new();
+               $u->shell;
+               $u->dispatch_on_input(input=>'o conf force 1');
+               $u->dispatch_on_input(input=>"install $p")
+            };
+            eval "use $p;1"
+            or eval{
+                  require CPAN;
+                  CPAN::Shell->force('install',$p)
+               };
+            eval "use $p;1" ||
+               die "*** Please manually install $p from cpan.org first...\n"
+         }
+      }
+   }
+}
+chdir $curdir;
 my %hash=();
 eval {
    require DB_File;
@@ -585,6 +1084,31 @@ if ($@) {
    $die.="\n\n";
    die $die;
 }
+
+#Specific dependencies
+requires        'Module::Load::Conditional' => 0;
+requires        'Term::Menus'               => 1.49;
+requires        'Tie::Cache'                => 0;
+requires        'MLDBM::Sync'               => 0;
+requires        'Sort::Versions'            => 0;
+requires        'Crypt::CBC'                => 0;
+requires        'Crypt::DES'                => 0;
+requires        'HTTP::Date'                => 0;
+requires        'JSON'                      => 2.14;
+requires        'IO::Pty'                   => 1.09;
+requires        'IO::Capture::Stderr'       => 0;
+requires        'IO::CaptureOutput'         => 0;
+requires        'Capture::Tiny'             => 0;
+requires        'Net::Telnet'               => 0;
+requires        'Term::ReadKey'             => 0;
+requires        'URI'                       => 0;
+requires        'Email::Sender'             => 0;
+requires        'MIME::Entity'              => 0;
+requires        'DB_File'                   => 0;
+requires        'BerkeleyDB'                => 0;
+recommends      'Crypt::Rijndael'           => 0;
+
+auto_install;
 
 my $c_file='';
 my $date=strftime('%D',localtime);
@@ -693,11 +1217,15 @@ if (-1<index $selection,'Setuid') {
 } print "\n"; 
 
 if ($^O eq 'cygwin') {
-   `/usr/bin/touch "bin/fullauto.exe"`;
+   open(FH,">bin/fullauto.exe");
+   print FH "\n";
+   close FH;
    install_script 'bin/fullauto.exe';
    unlink "bin/fullauto.exe";
 } else {
-   `/usr/bin/touch "bin/fullauto"`;
+   open(FH,">bin/fullauto");
+   print FH "\n";
+   close FH;
    install_script 'bin/fullauto';
    unlink "bin/fullauto";
 }
@@ -981,12 +1509,23 @@ sub MY::dist_core {
 
 }
 
-package MY; # so that "SUPER" worls right
+package MY; # so that "SUPER" works right
 sub MY::clean {
 
    my $inherited = shift->SUPER::clean(@_);
 
    $inherited =~ s/blib\s*$/blib setup\$(EXE_EXT) /m;
+
+   $inherited;
+
+}
+
+package MY; # so that "SUPER" works right
+sub MY::distdir {
+
+   my $inherited = shift->SUPER::distdir(@_);
+
+   $inherited =~ s/^(distdir .*)$/$1 distsignature/m;
 
    $inherited;
 

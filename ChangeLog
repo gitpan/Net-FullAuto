@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-11-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.60 released.
+
+        * Cleaned up search for Berkeley DB.
+
+        * Modified Makefile.PL to download and compile
+          BerkeleyDB if this C Library is not found on
+          the host.
+
+
 2010-10-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.59 released.

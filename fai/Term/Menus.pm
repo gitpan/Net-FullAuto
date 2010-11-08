@@ -1,4 +1,4 @@
-package Term::Menus;
+package fai::Term::Menus;
 
 #    Menus.pm
 #
@@ -426,7 +426,7 @@ foreach my $dir (@INC) {
 
 if ($fullauto) {
    no strict 'refs';
-   foreach my $symname (keys %Term::Menus::) {
+   foreach my $symname (keys %fai::Term::Menus::) {
       if (eval "\\%$symname") {
          my $hashref=eval "\\%$symname";
          HF: foreach my $key (keys %{$hashref}) {
