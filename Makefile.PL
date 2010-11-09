@@ -3,14 +3,14 @@ use Cwd qw/cwd/;
 use inc::Module::Install;
 use Config;
 use CPAN;
-use CPAN::Config;
+CPAN::HandleConfig->load;
 use CPAN::LWP::UserAgent;
 use POSIX qw/strftime/;
 
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.61';
+version         '0.62';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -359,8 +359,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
            "\n           when installing FullAuto on Microsoft Windows.".
            "\n\n";
    die $die;
-} else {
-   configure_requires 'LWP' => '0';
 }
 
 unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {

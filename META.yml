@@ -3,7 +3,6 @@ abstract: 'Perl Based Secure Distributed Computing Network Process'
 author:
   - 'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>'
 configure_requires:
-  LWP: 0
 license: gpl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html

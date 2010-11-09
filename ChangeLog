@@ -25,6 +25,15 @@
 ################################################################
 
 
+2010-11-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.62 released.
+
+        * Modified Makefile.PL to fix Ticket 62852.
+
+        * Removed configure_requires LWP from META.yml.
+
+
 2010-11-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.61 released.
