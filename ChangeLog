@@ -25,6 +25,13 @@
 ################################################################
 
 
+2010-11-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.61 released.
+
+        * Modified Makefile.PL to download Term::Menus
+
+
 2010-11-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.60 released.

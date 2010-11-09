@@ -1,108 +1,94 @@
 # Load the Module::Install bundled in ./inc/
 use Cwd qw/cwd/;
-my $curdir=&cwd;
 use inc::Module::Install;
-
-# Define metadata
-name            'Net-FullAuto';
-sign;
-version         '0.60';
-author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
-license         'gpl';
-perl_version    '5.006';
-
-eval { require LWP };
-if ($@) {
-   do {
-      my $p='LWP';
-      eval "use $p;1" or
-      do {
-         my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-         (!defined($e) ||
-            $e!~m/--(?:default|skip|testonly)/
-            and -t STDIN
-            or eval
-               "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
-            and exit)
-         and print"==> $p required."
-         and print "*** Installing $p\n"
-         and
-         do {
-            if (eval '$>' and lc(`sudo -V`) =~ /version/) {
-               system(
-                  'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
-               eval "use $p;1" || 
-                   system('sudo', $^X, "-MCPAN", "-e",
-                     "CPAN::Shell->force('install',$p)")
-            }
-            eval {
-               require CPANPLUS;
-               my $u=CPANPLUS::Shell->new();
-               $u->shell;
-               $u->dispatch_on_input(input=>'o conf force 1');
-               $u->dispatch_on_input(input=>"install $p")
-            };
-            eval "use $p;1"
-            or eval{
-                  require CPAN;
-                  CPAN::Shell->force('install',$p)
-               };
-            eval "use $p;1" ||
-               die "*** Please manually install $p from cpan.org first...\n"
-         }
-      }
-   }
-}
-chdir $curdir;
-eval { require IO::CaptureOutput };
-if ($@) {
-   do {
-      my $p='IO::CaptureOutput';
-      eval "use $p;1" or
-      do {
-         my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-         (!defined($e) ||
-            $e!~m/--(?:default|skip|testonly)/
-            and -t STDIN
-            or eval
-               "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
-            and exit)
-         and print"==> $p required."
-         and print "*** Installing $p\n"
-         and
-         do {
-            if (eval '$>' and lc(`sudo -V`) =~ /version/) {
-               system(
-                  'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
-               eval "use $p;1" ||
-                   system('sudo', $^X, "-MCPAN", "-e",
-                     "CPAN::Shell->force('install',$p)")
-            }
-            eval {
-               require CPANPLUS;
-               my $u=CPANPLUS::Shell->new();
-               $u->shell;
-               $u->dispatch_on_input(input=>'o conf force 1');
-               $u->dispatch_on_input(input=>"install $p")
-            };
-            eval "use $p;1"
-            or eval{
-                  require CPAN;
-                  CPAN::Shell->force('install',$p)
-               };
-            eval "use $p;1" ||
-               die "*** Please manually install $p from cpan.org first...\n"
-         }
-      }
-   }
-}
-chdir $curdir;
-use IO::CaptureOutput qw(capture);
 use Config;
 use CPAN;
 use CPAN::Config;
 use CPAN::LWP::UserAgent;
 use POSIX qw/strftime/;
+
+# Define metadata
+name            'Net-FullAuto';
+sign;
+version         '0.61';
+author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
+license         'gpl';
+perl_version    '5.006';
+
+BEGIN {
+
+   $main::curdir=&cwd;
+
+   sub menu {
+      my $m = shift;
+      my $choice;
+      while (1) {
+         print "$m->[0]\n";
+         print map { "\t$_. $m->[$_][0]\n" } (1..$#$m);
+         print "\n\n   PLEASE ENTER A CHOICE: ";
+         chomp ($choice = <>);
+         last if ( ($choice > 0) && ($choice <= $#$m ));
+         print "You chose '$choice'.  That is not a valid option.\n\n";
+      }
+      &{$m->[$choice][1]};
+   }
+
+   sub install_module {
+
+      my $p=$_[0];
+      eval { require $p };
+      if ($@) {
+         do {
+            eval "use $p;1" or
+            do {
+               my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+               (!defined($e) ||
+                  $e!~m/--(?:default|skip|testonly)/
+                  and -t STDIN
+                  or eval
+                     "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
+                  and exit)
+               and print"==> $p required."
+               and print "*** Installing $p\n"
+               and
+               do {
+                  if (eval '$>' and lc(`sudo -V`) =~ /version/) {
+                     system(
+                        'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+                     eval "use $p;1" ||
+                        system('sudo', $^X, "-MCPAN", "-e",
+                           "CPAN::Shell->force('install',$p)")
+                  }
+                  eval {
+                     require CPANPLUS;
+                     my $u=CPANPLUS::Shell->new();
+                     $u->shell;
+                     $u->dispatch_on_input(input=>'o conf force 1');
+                     $u->dispatch_on_input(input=>"install $p")
+                  };
+                  eval "use $p;1"
+                  or eval{
+                        require CPAN;
+                        CPAN::Shell->force('install',$p)
+                     };
+                  eval "use $p;1" ||
+                     die "*** Please manually install $p from cpan.org first...\n"
+               }
+            }
+         };
+         chdir $main::curdir;
+      }
+
+   }
+
+   eval { install_module('LWP') };
+   eval { install_module('IO::CaptureOutput') };
+   eval { install_module('Term::Menus') };
+
+};
+
+require Term::Menus;
+require IO::CaptureOutput;
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
@@ -111,8 +97,6 @@ if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
 BEGIN {
    unshift @ExtUtils::MakeMaker::Overridable, 'pm_to_blib';
 };
-
-use fai::Term::Menus;
 
 my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
@@ -141,8 +125,6 @@ $PREFIX='' if $PREFIX='/usr';
 my $editor='';my $selection='';
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 #if (1) {
-
-   require Term::Menus;
 
    my %Menu_win_to_cyg=(
 
@@ -831,7 +813,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
                   my $prefx=$savlines[$#savlines];
                   $prefx=~s/^Installing documentation: //;
                   $prefx=~s/docs \.\.\.\s*$//;
-                  $dblib=$prefx."lib/libdb-".$ver.".a";
+                  $dblib=$prefx.'lib';
                   $header_to_use=$prefx."include";
                   $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
                   $ENV{'BERKELEYDB_LIB'}=$dblib;
@@ -839,7 +821,6 @@ if ($get_DB_File || $get_BerkeleyDB) {
                   $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
                   $ENV{'DB_FILE_LIB'}=$dblib;
                   $ENV{'DB_FILE_NAME'}="-ldb-$ver";
-                  $ENV{'LD_LIBRARY_PATH'}=$dblib;
                }
             } else {
                if ($res->is_error(500)) {
@@ -881,35 +862,10 @@ if ($get_DB_File || $get_BerkeleyDB) {
    }
 }
 
-if (0) { ## This disables the following code testing for lynx
-
-unless (can_run('lynx')) {
-   my $timeout=120;my $a='';
-   eval {
-      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-      alarm $timeout;
-      print "\n       *** THIS SCREEN WILL TIMEOUT IN 2 MINUTES ***\n".
-            "\n       WARNING! : Cannot locate 'lynx'. This program ".
-            "\n                  is recommended for installing FullAuto".
-            "\n                  from the CPAN (Hint: goto www.gnu.org).".
-            "\n\n";
-      print "Press <ENTER> if you wish to continue, or 'N' to quit . . . [Y] ";$a=<STDIN>;
-      alarm 0;
-   };
-   if ($@) {
-      # timed out
-      exit;
-   } elsif ($a=~/^[Nn]$/s) {
-      exit;
-   }
-}
-
-} ## End disable block
-
 my $combined='';
 if ($get_DB_File) {
    my $p='DB_File';
-   capture {
+   IO::CaptureOutput::capture {
       do {
          eval "use $p;1" or
          do {
@@ -973,7 +929,7 @@ if ($get_DB_File) {
       my $i="export DB_FILE_INCLUDE=$ENV{'DB_FILE_INCLUDE'};"
            ."export DB_FILE_LIB=$ENV{'DB_FILE_LIB'};"
            ."export DB_FILE_NAME=$ENV{'DB_FILE_NAME'}";
-      capture {
+      IO::CaptureOutput::capture {
          system("cd $dotcpan[0];$i;$^X Makefile.PL;");
       } \undef, \$stderr;
       die $stderr if $stderr;
@@ -983,28 +939,28 @@ if ($get_DB_File) {
          chomp($ldl);
          my $fdl=$ldl.' -R'.$ENV{'DB_FILE_LIB'};
          $fdl=~s/\s*=\s*/=\"/;$fdl.='"';
-         capture {
+         IO::CaptureOutput::capture {
             system("cd $dotcpan[0];$CPAN::Config->{make} $fdl");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
-         capture {
+         IO::CaptureOutput::capture {
             system("cd $dotcpan[0];$CPAN::Config->{make} test");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
-         capture {
+         IO::CaptureOutput::capture {
             system("cd $dotcpan[0];$CPAN::Config->{make} install");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
       } else {
-         capture {
+         IO::CaptureOutput::capture {
             system("cd $dotcpan[0];$CPAN::Config->{make} install");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
-         capture {
+         IO::CaptureOutput::capture {
             system("cd $dotcpan[0];$CPAN::Config->{make} test");
          } \$stdout, \$stderr;
          print $stdout;
@@ -1017,7 +973,7 @@ if ($get_DB_File) {
    eval "use $p;1" ||
       die "*** Please manually install $p from cpan.org first...\n"
 }
-chdir $curdir;
+chdir $main::curdir;
 if ($get_BerkeleyDB) {
    do {
       my $p='BerkeleyDB';
@@ -1059,7 +1015,7 @@ if ($get_BerkeleyDB) {
       }
    }
 }
-chdir $curdir;
+chdir $main::curdir;
 my %hash=();
 eval {
    require DB_File;
@@ -1232,20 +1188,6 @@ if ($^O eq 'cygwin') {
 install_script 'bin/fullauto.pl';
 
 WriteAll;
-
-sub menu {
-    my $m = shift;
-    my $choice;
-    while (1) {
-    print "$m->[0]\n";
-    print map { "\t$_. $m->[$_][0]\n" } (1..$#$m);
-    print "\n\n   PLEASE ENTER A CHOICE: ";
-    chomp ($choice = <>);
-    last if ( ($choice > 0) && ($choice <= $#$m ));
-    print "You chose '$choice'.  That is not a valid option.\n\n";
-    }
-    &{$m->[$choice][1]};
-}
 
 sub find_editor {
    my $editor=$_[0];
