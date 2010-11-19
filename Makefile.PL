@@ -3,6 +3,7 @@ use Cwd qw/cwd/;
 use inc::Module::Install;
 use Config;
 use CPAN;
+use CPAN::Config;
 CPAN::HandleConfig->load;
 use CPAN::LWP::UserAgent;
 use POSIX qw/strftime/;
@@ -10,7 +11,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.62';
+version         '0.63';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -36,6 +37,7 @@ BEGIN {
    sub install_module {
 
       my $p=$_[0];
+      my $task=$_[1];
       eval { require $p };
       if ($@) {
          do {
@@ -54,22 +56,23 @@ BEGIN {
                do {
                   if (eval '$>' and lc(`sudo -V`) =~ /version/) {
                      system(
-                        'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+                        'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::$task $p");
                      eval "use $p;1" ||
                         system('sudo', $^X, "-MCPAN", "-e",
-                           "CPAN::Shell->force('install',$p)")
+                           "CPAN::Shell->notest($task,$p)")
                   }
                   eval {
                      require CPANPLUS;
                      my $u=CPANPLUS::Shell->new();
                      $u->shell;
+                     $u->dispatch_on_input(input=>'o conf notest 1');
                      $u->dispatch_on_input(input=>'o conf force 1');
-                     $u->dispatch_on_input(input=>"install $p")
+                     $u->dispatch_on_input(input=>"$task $p")
                   };
                   eval "use $p;1"
                   or eval{
                         require CPAN;
-                        CPAN::Shell->force('install',$p)
+                        CPAN::Shell->notest($task,$p)
                      };
                   eval "use $p;1" ||
                      die "*** Please manually install $p from cpan.org first...\n"
@@ -81,10 +84,26 @@ BEGIN {
 
    }
 
-   eval { install_module('LWP') };
-   eval { install_module('IO::CaptureOutput') };
+   eval { install_module('LWP','install') };
+   eval { install_module('IO::CaptureOutput','install') };
+   eval { install_module('ExtUtils::Depends','install') };
+   eval { install_module('Task::Weaken','install') };
+   eval { install_module('B::Utils','install') };
+   eval { require Data::Dump::Streamer };
+   if ($@) {
+      eval { install_module('Data::Dump::Streamer','get') };
+      opendir(DIR, $CPAN::Config->{build_dir}) or die $!;
+      my @dotcpan=();
+      while (my $item = readdir(DIR) ) {
+         next if ($item eq "." or $item eq "..");
+         push @dotcpan, $item;
+      }
+      close DIR;
+      @dotcpan = sort { -M $a <=> -M $b } @dotcpan;
+      system("cd \"$CPAN::Config->{build_dir}/$dotcpan[0]\";$^X Build.PL NODDS;");
+      system("cd \"$CPAN::Config->{build_dir}/$dotcpan[0]\";$^X build install;");
+   }
    eval { install_module('Term::Menus') };
-
 };
 
 require Term::Menus;
