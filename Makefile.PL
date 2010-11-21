@@ -4,6 +4,7 @@ use inc::Module::Install;
 use Config;
 use CPAN;
 use CPAN::Config;
+use File::stat;
 CPAN::HandleConfig->load;
 use CPAN::LWP::UserAgent;
 use POSIX qw/strftime/;
@@ -11,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.63';
+version         '0.64';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -19,6 +20,34 @@ perl_version    '5.006';
 BEGIN {
 
    $main::curdir=&cwd;
+
+   sub find_latest {
+      my $temp=0;
+      my $look=shift||'';
+      $look=~s/::/-/g;
+      $look='libwww' if $look eq 'LWP';
+      $look='TermReadKey' if $look eq 'Term-ReadKey';
+      my $d = new DirHandle $CPAN::Config->{build_dir};
+      my $new='';
+      if (defined $d) {
+         while (defined($_ = $d->read)) {
+            next if ($_ eq ".") || ($_ eq "..");
+            my $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
+            my $attrs = stat $file;
+            my $diff = time()-$attrs->mtime;
+            if ($temp == 0  && (!$look || $_=~/^$look/)) {
+              $temp=$diff;
+              $new=$file;
+            }
+            if ($diff<$temp) {
+               $temp=$diff;
+               $new=$_;
+            }
+         }      
+         print "***** Module Directory ",$new,"\n";
+         undef $d;
+      } return $new; 
+   }
 
    sub menu {
       my $m = shift;
@@ -38,8 +67,11 @@ BEGIN {
 
       my $p=$_[0];
       my $task=$_[1];
-      eval { require $p };
+      my $butil=$_[2];
+      my $getflag=0;
+      eval "require $p";
       if ($@) {
+         $getflag=1;
          do {
             eval "use $p;1" or
             do {
@@ -48,7 +80,8 @@ BEGIN {
                   $e!~m/--(?:default|skip|testonly)/
                   and -t STDIN
                   or eval
-                     "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
+                     "use ExtUtils::MakeMaker;".
+                     "WriteMakefile(PREREQ_PM=>{'$p'});1"
                   and exit)
                and print"==> $p required."
                and print "*** Installing $p\n"
@@ -56,10 +89,10 @@ BEGIN {
                do {
                   if (eval '$>' and lc(`sudo -V`) =~ /version/) {
                      system(
-                        'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::$task $p");
+                        'sudo',$^X,"-MCPANPLUS","-e","fetch $p");
                      eval "use $p;1" ||
                         system('sudo', $^X, "-MCPAN", "-e",
-                           "CPAN::Shell->notest($task,$p)")
+                           "CPAN::Shell->notest('get',$p)")
                   }
                   eval {
                      require CPANPLUS;
@@ -67,43 +100,63 @@ BEGIN {
                      $u->shell;
                      $u->dispatch_on_input(input=>'o conf notest 1');
                      $u->dispatch_on_input(input=>'o conf force 1');
-                     $u->dispatch_on_input(input=>"$task $p")
+                     $u->dispatch_on_input(input=>"get $p")
                   };
                   eval "use $p;1"
                   or eval{
                         require CPAN;
-                        CPAN::Shell->notest($task,$p)
+                        CPAN::Shell->notest('get',$p)
                      };
-                  eval "use $p;1" ||
-                     die "*** Please manually install $p from cpan.org first...\n"
+                  #eval "use $p;1" ||
+                  #   die "*** Please manually install $p".
+                  #       " from cpan.org first...\n"
                }
             }
          };
+         die $@ if $@;
+         if (($task eq 'install') && $getflag) {
+            my $dir=&find_latest($p);
+            print "*** Running $butil.PL\n";
+            system("cd \"$dir\";$^X $butil.PL");
+            if ($butil eq 'Makefile') {
+               print "*** Running make install\n";
+               system("cd \"$dir\";make install");
+            } else {
+               print "*** Running Build install\n";
+               system("cd \"$dir\";./Build install");
+            }
+         }
          chdir $main::curdir;
-      }
-
+      } else { print "*** $p Loaded Successfully\n" }
    }
 
-   eval { install_module('LWP','install') };
-   eval { install_module('IO::CaptureOutput','install') };
-   eval { install_module('ExtUtils::Depends','install') };
-   eval { install_module('Task::Weaken','install') };
-   eval { install_module('B::Utils','install') };
+   eval { install_module('IO::CaptureOutput','install','Build') };
+   if ($@) { print "IO::CaptureOutput ERROR: $@\n" }
+   eval { install_module('HTML::Tagset','install','Makefile') };
+   if ($@) { print "HTML::Tagset ERROR: $@\n" }
+   eval { install_module('HTML::Parser','install','Makefile') };
+   if ($@) { print "HTML::Parser ERROR: $@\n" }
+   eval { install_module('URI','install','Makefile') };
+   if ($@) { print "URI ERROR: $@\n" }
+   eval { install_module('LWP','install','Makefile') };
+   if ($@) { print "LWP ERROR: $@\n" }
+   eval { install_module('Task::Weaken','install','Makefile') };
+   if ($@) { print "Task::Weaken ERROR: $@\n" }
+   eval { install_module('ExtUtils::Depends','install','Makefile') };
+   if ($@) { print "ExtUtils::Depends ERROR $@\n" }
+   eval { install_module('B::Utils','install','Makefile') };
+   if ($@) { print "B::Utils ERROR: $@\n" }
    eval { require Data::Dump::Streamer };
    if ($@) {
       eval { install_module('Data::Dump::Streamer','get') };
-      opendir(DIR, $CPAN::Config->{build_dir}) or die $!;
-      my @dotcpan=();
-      while (my $item = readdir(DIR) ) {
-         next if ($item eq "." or $item eq "..");
-         push @dotcpan, $item;
-      }
-      close DIR;
-      @dotcpan = sort { -M $a <=> -M $b } @dotcpan;
-      system("cd \"$CPAN::Config->{build_dir}/$dotcpan[0]\";$^X Build.PL NODDS;");
-      system("cd \"$CPAN::Config->{build_dir}/$dotcpan[0]\";$^X build install;");
+      my $dir=&find_latest('Data::Dump::Streamer');
+      system("cd \"$dir\";$^X Build.PL NODDS;");
+      system("cd \"$dir\";./Build install;");
    }
-   eval { install_module('Term::Menus') };
+   eval { install_module('Term::ReadKey','install','Makefile') };
+   if ($@) { print "Term::ReadKey ERROR: $@\n" }
+   eval { install_module('Term::Menus','install','Makefile') };
+   if ($@) { print "Term::Menus ERROR: $@\n" }
 };
 
 require Term::Menus;
@@ -935,50 +988,43 @@ if ($get_DB_File) {
          }
       }
       die $combined unless $dbfilegz;
-      my @dotcpan=();
-      opendir(DIR, $CPAN::Config->{build_dir}) or die $!;
-      while (my $item = readdir(DIR) ) {
-         next if ($item eq "." or $item eq "..");
-         push @dotcpan, $item;
-      }
-      close DIR;
-      @dotcpan = sort { -M $a <=> -M $b } @dotcpan;
+      my $dir=&find_latest;
       my $i="export DB_FILE_INCLUDE=$ENV{'DB_FILE_INCLUDE'};"
            ."export DB_FILE_LIB=$ENV{'DB_FILE_LIB'};"
            ."export DB_FILE_NAME=$ENV{'DB_FILE_NAME'}";
       IO::CaptureOutput::capture {
-         system("cd $dotcpan[0];$i;$^X Makefile.PL;");
+         system("cd $dir;$i;$^X Makefile.PL;");
       } \undef, \$stderr;
       die $stderr if $stderr;
       if (($^O eq 'solaris') && ($Config{cc}=~/gcc/)) {
-         my $ldl=`cd $dotcpan[0];${greppath}grep LDDLFLAGS[^\\\)] Makefile`;
+         my $ldl=`cd $dir;${greppath}grep LDDLFLAGS[^\\\)] Makefile`;
          $ldl=~s/-G/-shared/;
          chomp($ldl);
          my $fdl=$ldl.' -R'.$ENV{'DB_FILE_LIB'};
          $fdl=~s/\s*=\s*/=\"/;$fdl.='"';
          IO::CaptureOutput::capture {
-            system("cd $dotcpan[0];$CPAN::Config->{make} $fdl");
+            system("cd $dir;$CPAN::Config->{make} $fdl");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
          IO::CaptureOutput::capture {
-            system("cd $dotcpan[0];$CPAN::Config->{make} test");
+            system("cd $dir;$CPAN::Config->{make} test");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
          IO::CaptureOutput::capture {
-            system("cd $dotcpan[0];$CPAN::Config->{make} install");
+            system("cd $dir;$CPAN::Config->{make} install");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
       } else {
          IO::CaptureOutput::capture {
-            system("cd $dotcpan[0];$CPAN::Config->{make} install");
+            system("cd $dir;$CPAN::Config->{make} install");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
          IO::CaptureOutput::capture {
-            system("cd $dotcpan[0];$CPAN::Config->{make} test");
+            system("cd $dir;$CPAN::Config->{make} test");
          } \$stdout, \$stderr;
          print $stdout;
          die "$stdout\n\n$stderr" if $stderr;
