@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.65';
+version         '0.66';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -68,6 +68,7 @@ BEGIN {
       my $p=$_[0];
       my $task=$_[1];
       my $butil=$_[2];
+      my $skiptest=$_[3];
       my $getflag=0;
       eval "require $p";
       if ($@) {
@@ -76,13 +77,14 @@ BEGIN {
             eval "use $p;1" or
             do {
                my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+               $e='skip' if defined($skiptest) or $task ne 'get';
                (!defined($e) ||
                   $e!~m/--(?:default|skip|testonly)/
                   and -t STDIN
                   or eval
                      "use ExtUtils::MakeMaker;".
                      "WriteMakefile(PREREQ_PM=>{'$p'});1"
-                  and exit)
+                  and return)
                and print"==> $p required."
                and print "*** Installing $p\n"
                and
@@ -138,7 +140,7 @@ BEGIN {
    if ($@) { print "HTML::Parser ERROR: $@\n" }
    eval { &fa_install_module('URI','install','Makefile') };
    if ($@) { print "URI ERROR: $@\n" }
-   eval { &fa_install_module('LWP','install','Makefile') };
+   eval { &fa_install_module('LWP','install','Makefile',1) };
    if ($@) { print "LWP ERROR: $@\n" }
    eval { &fa_install_module('Task::Weaken','install','Makefile') };
    if ($@) { print "Task::Weaken ERROR: $@\n" }
@@ -158,9 +160,6 @@ BEGIN {
    eval { &fa_install_module('Term::Menus','install','Makefile') };
    if ($@) { print "Term::Menus ERROR: $@\n" }
 };
-
-#require Term::Menus;
-#require IO::CaptureOutput;
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
@@ -196,7 +195,6 @@ $PREFIX='' if $PREFIX='/usr';
 
 my $editor='';my $selection='';
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
-#if (1) {
 
    my %Menu_win_to_cyg=(
 
@@ -359,7 +357,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                if ($res->is_success) {
                   $CPAN::Frontend->myprint(" + request successful.\n")
                      if $CPAN::DEBUG;
-#print "RES=",$res->is_success," and CWD=",cwd(),"\n";
                   open(CP,">setup.tar.gz") || die $!;
                   binmode(CP);
                   print CP $res->content;
@@ -617,7 +614,8 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
             "\n(Hint: Run Cygwin setup.exe and install OpenSSH ".
             "under the Category 'Net' ).".
             "\n\n";
-      print "Press <ENTER> if you wish to continue, or 'N' to quit . . . [Y] ";$a=<STDIN>;
+      print "Press <ENTER> if you wish to continue, or 'N' to quit . . . [Y] ";
+      $a=<STDIN>;
       alarm 0;
    };
    if ($@) {
@@ -720,7 +718,6 @@ if ($get_DB_File || $get_BerkeleyDB) {
          my @lib=`$find_cmd`;
          chomp($lib[0]);$dblib=$lib[0];last;
       }
-      #if (0) {
       if ($dblib) {
          $dblib=~s/^(.*)\/.*$/$1/;
          $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
