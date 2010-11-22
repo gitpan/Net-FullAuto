@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.64';
+version         '0.65';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -21,7 +21,7 @@ BEGIN {
 
    $main::curdir=&cwd;
 
-   sub find_latest {
+   sub fa_find_latest {
       my $temp=0;
       my $look=shift||'';
       $look=~s/::/-/g;
@@ -63,7 +63,7 @@ BEGIN {
       &{$m->[$choice][1]};
    }
 
-   sub install_module {
+   sub fa_install_module {
 
       my $p=$_[0];
       my $task=$_[1];
@@ -115,7 +115,7 @@ BEGIN {
          };
          die $@ if $@;
          if (($task eq 'install') && $getflag) {
-            my $dir=&find_latest($p);
+            my $dir=&fa_find_latest($p);
             print "*** Running $butil.PL\n";
             system("cd \"$dir\";$^X $butil.PL");
             if ($butil eq 'Makefile') {
@@ -130,37 +130,37 @@ BEGIN {
       } else { print "*** $p Loaded Successfully\n" }
    }
 
-   eval { install_module('IO::CaptureOutput','install','Build') };
+   eval { &fa_install_module('IO::CaptureOutput','install','Build') };
    if ($@) { print "IO::CaptureOutput ERROR: $@\n" }
-   eval { install_module('HTML::Tagset','install','Makefile') };
+   eval { &fa_install_module('HTML::Tagset','install','Makefile') };
    if ($@) { print "HTML::Tagset ERROR: $@\n" }
-   eval { install_module('HTML::Parser','install','Makefile') };
+   eval { &fa_install_module('HTML::Parser','install','Makefile') };
    if ($@) { print "HTML::Parser ERROR: $@\n" }
-   eval { install_module('URI','install','Makefile') };
+   eval { &fa_install_module('URI','install','Makefile') };
    if ($@) { print "URI ERROR: $@\n" }
-   eval { install_module('LWP','install','Makefile') };
+   eval { &fa_install_module('LWP','install','Makefile') };
    if ($@) { print "LWP ERROR: $@\n" }
-   eval { install_module('Task::Weaken','install','Makefile') };
+   eval { &fa_install_module('Task::Weaken','install','Makefile') };
    if ($@) { print "Task::Weaken ERROR: $@\n" }
-   eval { install_module('ExtUtils::Depends','install','Makefile') };
+   eval { &fa_install_module('ExtUtils::Depends','install','Makefile') };
    if ($@) { print "ExtUtils::Depends ERROR $@\n" }
-   eval { install_module('B::Utils','install','Makefile') };
+   eval { &fa_install_module('B::Utils','install','Makefile') };
    if ($@) { print "B::Utils ERROR: $@\n" }
    eval { require Data::Dump::Streamer };
    if ($@) {
-      eval { install_module('Data::Dump::Streamer','get') };
-      my $dir=&find_latest('Data::Dump::Streamer');
+      eval { &fa_install_module('Data::Dump::Streamer','get') };
+      my $dir=&fa_find_latest('Data::Dump::Streamer');
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   eval { install_module('Term::ReadKey','install','Makefile') };
+   eval { &fa_install_module('Term::ReadKey','install','Makefile') };
    if ($@) { print "Term::ReadKey ERROR: $@\n" }
-   eval { install_module('Term::Menus','install','Makefile') };
+   eval { &fa_install_module('Term::Menus','install','Makefile') };
    if ($@) { print "Term::Menus ERROR: $@\n" }
 };
 
-require Term::Menus;
-require IO::CaptureOutput;
+#require Term::Menus;
+#require IO::CaptureOutput;
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
@@ -231,7 +231,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                    '            emulates 5 other editors)', 
                   );
       my $tp='';
-      unless ($tp=find_editor('TextPad.exe')) {
+      unless ($tp=&fa_find_editor('TextPad.exe')) {
          if (-e "C:\\Program Files\\TextPad 5\\TextPad.exe") {
             $tp='default';
          }
@@ -441,7 +441,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       my $tp='';
       my $mount=`/bin/mount -p`;
       $mount=~s/^.*(\/\S+).*$/$1/s;
-      unless ($tp=find_editor('TextPad.exe')) {
+      unless ($tp=&fa_find_editor('TextPad.exe')) {
          if (-e $mount."/c/Program Files/TextPad 5/TextPad.exe") {
             $tp='default';
          }
@@ -988,7 +988,7 @@ if ($get_DB_File) {
          }
       }
       die $combined unless $dbfilegz;
-      my $dir=&find_latest;
+      my $dir=&fa_find_latest;
       my $i="export DB_FILE_INCLUDE=$ENV{'DB_FILE_INCLUDE'};"
            ."export DB_FILE_LIB=$ENV{'DB_FILE_LIB'};"
            ."export DB_FILE_NAME=$ENV{'DB_FILE_NAME'}";
@@ -1252,7 +1252,7 @@ install_script 'bin/fullauto.pl';
 
 WriteAll;
 
-sub find_editor {
+sub fa_find_editor {
    my $editor=$_[0];
    $editor=~s/^.*\///;
    $editor=~s/[.]exe$//;

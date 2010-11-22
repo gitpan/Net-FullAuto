@@ -24,6 +24,15 @@
 #
 ################################################################
 
+
+2010-11-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.65 released.
+
+        * Modified Makefile.PL again to load
+          Term::Menus dependencies.
+
+
 2010-11-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.64 released.
