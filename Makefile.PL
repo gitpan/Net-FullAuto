@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.66';
+version         '0.67';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -64,11 +64,32 @@ BEGIN {
    }
 
    sub fa_install_module {
+       my $stdout='';my $stderr='';
+       eval { require IO::CaptureOutput };
+       if ($@ || (!defined $_[4] || !$_[4])) {
+          eval { &fa_install_mod(@_) };
+          if ($@) {
+             return '',$@;
+          } else {
+             return '','';
+          }
+       } else {
+          eval {
+             require IO::CaptureOutput;
+             IO::CaptureOutput::capture {
+                &fa_install_mod(@_)
+             } \$stdout, \$stderr;
+          };
+          return $stdout,$stderr;
+       }
+   }
+
+   sub fa_install_mod {
 
       my $p=$_[0];
       my $task=$_[1];
-      my $butil=$_[2];
-      my $skiptest=$_[3];
+      my $butil=$_[2]||'';
+      my $skiptest=$_[3]||'';
       my $getflag=0;
       eval "require $p";
       if ($@) {
@@ -77,13 +98,12 @@ BEGIN {
             eval "use $p;1" or
             do {
                my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-               $e='skip' if defined($skiptest) or $task ne 'get';
+               $e='skip' if $skiptest or $task eq 'get';
                (!defined($e) ||
                   $e!~m/--(?:default|skip|testonly)/
                   and -t STDIN
                   or eval
-                     "use ExtUtils::MakeMaker;".
-                     "WriteMakefile(PREREQ_PM=>{'$p'});1"
+                     "ExtUtils::MakeMaker::WriteMakefile(PREREQ_PM=>{'$p'});1"
                   and return)
                and print"==> $p required."
                and print "*** Installing $p\n"
@@ -109,9 +129,6 @@ BEGIN {
                         require CPAN;
                         CPAN::Shell->notest('get',$p)
                      };
-                  #eval "use $p;1" ||
-                  #   die "*** Please manually install $p".
-                  #       " from cpan.org first...\n"
                }
             }
          };
@@ -132,33 +149,51 @@ BEGIN {
       } else { print "*** $p Loaded Successfully\n" }
    }
 
-   eval { &fa_install_module('IO::CaptureOutput','install','Build') };
-   if ($@) { print "IO::CaptureOutput ERROR: $@\n" }
-   eval { &fa_install_module('HTML::Tagset','install','Makefile') };
-   if ($@) { print "HTML::Tagset ERROR: $@\n" }
-   eval { &fa_install_module('HTML::Parser','install','Makefile') };
-   if ($@) { print "HTML::Parser ERROR: $@\n" }
-   eval { &fa_install_module('URI','install','Makefile') };
-   if ($@) { print "URI ERROR: $@\n" }
-   eval { &fa_install_module('LWP','install','Makefile',1) };
-   if ($@) { print "LWP ERROR: $@\n" }
-   eval { &fa_install_module('Task::Weaken','install','Makefile') };
-   if ($@) { print "Task::Weaken ERROR: $@\n" }
-   eval { &fa_install_module('ExtUtils::Depends','install','Makefile') };
-   if ($@) { print "ExtUtils::Depends ERROR $@\n" }
-   eval { &fa_install_module('B::Utils','install','Makefile') };
-   if ($@) { print "B::Utils ERROR: $@\n" }
+   sub fa_err_exit {
+       die "$_[0]\n\n*** Please manually install $_[1]".
+           " from cpan.org first...\n"
+   }
+
+   my $stdout='';my $stderr='';
+   ($stdout,$stderr)=&fa_install_module('IO::CaptureOutput','install','Build');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'IO::CaptureOutput') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('HTML::Tagset','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'HTML::Tagset') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('HTML::Parser','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'HTML::Parser') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('URI','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'URI') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile',1);
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'LWP') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Task::Weaken','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Task::Weaken') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('ExtUtils::Depends','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'ExtUtils::Depends') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'B::Utils') if $stderr;
    eval { require Data::Dump::Streamer };
    if ($@) {
-      eval { &fa_install_module('Data::Dump::Streamer','get') };
+      ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get','',1);
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Data::Dump::Streamer') if $stderr;
       my $dir=&fa_find_latest('Data::Dump::Streamer');
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   eval { &fa_install_module('Term::ReadKey','install','Makefile') };
-   if ($@) { print "Term::ReadKey ERROR: $@\n" }
-   eval { &fa_install_module('Term::Menus','install','Makefile') };
-   if ($@) { print "Term::Menus ERROR: $@\n" }
+   ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile');
+   &fa_err_exit($stderr,'Term::Menus') if $stderr;
+   print $stdout if $stdout;
 };
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
@@ -937,12 +972,13 @@ if ($get_DB_File) {
          eval "use $p;1" or
          do {
             my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+            $e='skip';
             (!defined($e) ||
                $e!~m/--(?:default|skip|testonly)/
                and -t STDIN
                or eval
-                  "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
-               and exit)
+                  "ExtUtils::MakeMaker::WriteMakefile(PREREQ_PM=>{'$p'});1"
+               and return)
             and print"==> $p required."
             and print "*** Getting $p\n"
             #and print "*** Installing $p\n"
@@ -950,11 +986,9 @@ if ($get_DB_File) {
             do {
                if (eval '$>' and lc(`sudo -V`) =~ /version/) {
                   system(
-                     'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::get $p");
-                     #'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+                     'sudo',$^X,"-MCPANPLUS","-e","fetch $p");
                   eval "use $p;1" ||
                      system('sudo', $^X, "-MCPAN", "-e",
-                        #"CPAN::Shell->force('install',$p)")
                         "CPAN::Shell->force('get',$p)")
                }
                eval {
@@ -962,13 +996,11 @@ if ($get_DB_File) {
                   my $u=CPANPLUS::Shell->new();
                   $u->shell;
                   $u->dispatch_on_input(input=>'o conf force 1');
-                  #$u->dispatch_on_input(input=>"install $p")
                   $u->dispatch_on_input(input=>"get $p")
                };
                eval "use $p;1"
                or eval{
                      require CPAN;
-                     #CPAN::Shell->force('install',$p) # HERE
                      CPAN::Shell->force('get',$p)
                   };
             }
@@ -1040,11 +1072,12 @@ if ($get_BerkeleyDB) {
       eval "use $p;1" or
       do {
          my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
+         $e='skip';
          (!defined($e) ||
             $e!~m/--(?:default|skip|testonly)/
             and -t STDIN
             or eval
-               "use ExtUtils::MakeMaker;WriteMakefile(PREREQ_PM=>{'$p'});1"
+               "ExtUtils::MakeMaker::WriteMakefile(PREREQ_PM=>{'$p'});1"
             and exit)
          and print"==> $p required."
          and print "*** Installing $p\n"
@@ -1052,7 +1085,7 @@ if ($get_BerkeleyDB) {
          do {
             if (eval '$>' and lc(`sudo -V`) =~ /version/) {
                system(
-                  'sudo',$^X,"-MCPANPLUS","-e","CPANPLUS::install $p");
+                  'sudo',$^X,"-MCPANPLUS","-e","install $p");
                eval "use $p;1" ||
                    system('sudo', $^X, "-MCPAN", "-e",
                      "CPAN::Shell->force('install',$p)")

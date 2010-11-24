@@ -25,6 +25,14 @@
 ################################################################
 
 
+2010-11-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.67 released.
+
+        * Modified Makefile.PL again to load
+          build dependencies.
+
+
 2010-11-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.66 released.
