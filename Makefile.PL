@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.67';
+version         '0.68';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -97,32 +97,17 @@ BEGIN {
          do {
             eval "use $p;1" or
             do {
-               my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-               $e='skip' if $skiptest or $task eq 'get';
-               (!defined($e) ||
-                  $e!~m/--(?:default|skip|testonly)/
-                  and -t STDIN
-                  or eval
-                     "ExtUtils::MakeMaker::WriteMakefile(PREREQ_PM=>{'$p'});1"
-                  and return)
-               and print"==> $p required."
+               print"==> $p required."
                and print "*** Installing $p\n"
                and
                do {
-                  if (eval '$>' and lc(`sudo -V`) =~ /version/) {
-                     system(
-                        'sudo',$^X,"-MCPANPLUS","-e","fetch $p");
-                     eval "use $p;1" ||
-                        system('sudo', $^X, "-MCPAN", "-e",
-                           "CPAN::Shell->notest('get',$p)")
-                  }
                   eval {
                      require CPANPLUS;
                      my $u=CPANPLUS::Shell->new();
                      $u->shell;
                      $u->dispatch_on_input(input=>'o conf notest 1');
                      $u->dispatch_on_input(input=>'o conf force 1');
-                     $u->dispatch_on_input(input=>"get $p")
+                     $u->dispatch_on_input(input=>"fetch $p")
                   };
                   eval "use $p;1"
                   or eval{
@@ -348,7 +333,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       exit if $selection eq ']quit[';
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
-          $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
+         $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
          my $Ua;
          CPAN::LWP::UserAgent->config;
          eval { $Ua = CPAN::LWP::UserAgent->new; };
@@ -971,26 +956,10 @@ if ($get_DB_File) {
       do {
          eval "use $p;1" or
          do {
-            my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-            $e='skip';
-            (!defined($e) ||
-               $e!~m/--(?:default|skip|testonly)/
-               and -t STDIN
-               or eval
-                  "ExtUtils::MakeMaker::WriteMakefile(PREREQ_PM=>{'$p'});1"
-               and return)
-            and print"==> $p required."
-            and print "*** Getting $p\n"
-            #and print "*** Installing $p\n"
+            print"==> $p required."
+            and print "*** Installing $p\n"
             and
             do {
-               if (eval '$>' and lc(`sudo -V`) =~ /version/) {
-                  system(
-                     'sudo',$^X,"-MCPANPLUS","-e","fetch $p");
-                  eval "use $p;1" ||
-                     system('sudo', $^X, "-MCPAN", "-e",
-                        "CPAN::Shell->force('get',$p)")
-               }
                eval {
                   require CPANPLUS;
                   my $u=CPANPLUS::Shell->new();
@@ -1071,15 +1040,7 @@ if ($get_BerkeleyDB) {
       my $p='BerkeleyDB';
       eval "use $p;1" or
       do {
-         my $e=$ENV{PERL_EXTUTILS_AUTOINSTALL};
-         $e='skip';
-         (!defined($e) ||
-            $e!~m/--(?:default|skip|testonly)/
-            and -t STDIN
-            or eval
-               "ExtUtils::MakeMaker::WriteMakefile(PREREQ_PM=>{'$p'});1"
-            and exit)
-         and print"==> $p required."
+         print"==> $p required."
          and print "*** Installing $p\n"
          and
          do {
