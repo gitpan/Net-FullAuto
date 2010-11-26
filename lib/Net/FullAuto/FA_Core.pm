@@ -43,13 +43,16 @@ package Net::FullAuto::FA_Core;
 #
 ## For compiling into MSWin32 setup executable with PAR::Packager
 #
-#  pp -o "Setup FullAuto v.XX MSWin32-x86.exe"
+#  pp -c -o "Setup FullAuto MSWin32-x86.exe" 
 #     -l C:\strawberry\perl\bin\libgcc_s_sjlj-1.dll Makefile.PL
-#     -M LWP -M Term::Menus -a fai -a bin -a ChangeLog -a inc 
-#     -a Module -a lib -a t -a META.yml -a LICENSE -a MANIFEST
-#     -a README --icon FA_Setup.ico
+#     -a bin -a ChangeLog -a inc -a lib -a t -a META.yml
+#     -a LICENSE -a MANIFEST -a README --icon FA_Setup.ico
 #
 #  http://download.oracle.com/berkeley-db/db-5.1.19.tar.gz
+#
+## For OpenSolaris - getting a dev environment
+#
+#  pfexec pkg install ss-dev
 #
 ## *************************************************************
 
@@ -1401,8 +1404,8 @@ sub plan {
          },
 
          Banner => "                 FullAuto Job Planning Menu\n\n".
-                   "   \"Always plan ahead. It wasn\'t raining when Noah\n".
-                   "    built the ark.\" -  Richard C. Cushing\n\n".
+                   "    \"Always plan ahead. It wasn\'t raining when Noah\n".
+                   "     built the ark.\" -  Richard C. Cushing\n\n".
                    "    Plan:  Indicated by a Plan Number, A FullAuto \"Plan\"\n".
                    "           is a Complete Job Definition composed of recorded\n".
                    "           User interaction Menu choices and Input. FullAuto\n".
@@ -6891,7 +6894,7 @@ sub select_dir
          } else {
             &Net::FullAuto::FA_Core::handle_error(
                "Target Directory - $dir CANNOT Be Located");
-         } $dir=~tr/\\/\//;$dir=~tr/\//\\/;$dir=~tr/\\/\\\\/;my $cnt=0;
+         } $dir=~tr/\\/\//;$dir=~tr/\//\\/;$dir=~s/\\/\\\\/g;my $cnt=0;
       } else {
          if (($hostlabel eq "__Master_${$}__"
                && $Net::FullAuto::FA_Core::OS eq 'cygwin') ||
@@ -12049,7 +12052,7 @@ sub get_drive
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my ($folder,$base_or_dest,$cmd_handle,$hostlabel)=@_;
    $cmd_handle||='';
-   my @drvs=();
+   my @drvs=();my $dir='';
    if (unpack('a1',$folder) eq '/' ||
          unpack('a1',$folder) eq '\\') {
       $dir=unpack('a1',$folder);
@@ -12057,7 +12060,7 @@ sub get_drive
    $dir=~tr/\\/\//;
    my $ms_dir=$dir;
    $ms_dir=~tr/\//\\/;
-   $ms_dir=~tr/\\/\\\\/;
+   $ms_dir=~s/\\/\\\\/g;
    if (exists $Net::FullAuto::FA_Core::drives{$hostlabel}) {
       $drvs=$Net::FullAuto::FA_Core::drives{$hostlabel};
    } else {
@@ -13441,7 +13444,8 @@ print "HEREEEEEEEEE1\n";
                $baseFH->{_uname} eq 'cygwin') {
             $msprxFH=$baseFH;
          } elsif ($bhostlabel ne "__Master_${$}__") {
-            &Net::FullAuto::FA_Core::handle_error('NO Microsoft OS Proxy Host Defined');
+            &Net::FullAuto::FA_Core::handle_error(
+               'NO Microsoft OS Proxy Host Defined');
          }
          if ($destFH->{_work_dirs}->{_tmp}) {
             if ($key eq '/') {
@@ -13464,7 +13468,7 @@ print "HEREEEEEEEEE1\n";
       } $basedir.='/' if $file;
       $destdir.='/' if $file;
       $destdir=~tr/\//\\/;
-      $destdir=~tr/\\/\\\\/;
+      $destdir=~s/\\/\\\\/g;
       if (exists $destFH->{_smb}) {
          $msprxFH=$destFH;
       } elsif ($dhostlabel ne "__Master_${$}__") {
