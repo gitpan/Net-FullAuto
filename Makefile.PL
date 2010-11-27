@@ -6,13 +6,12 @@ use CPAN;
 use CPAN::Config;
 use File::stat;
 CPAN::HandleConfig->load;
-use CPAN::LWP::UserAgent;
 use POSIX qw/strftime/;
 
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.69';
+version         '0.70';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -333,6 +332,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       exit if $selection eq ']quit[';
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
+         require CPAN::LWP::UserAgent;
          $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
          my $Ua;
          CPAN::LWP::UserAgent->config;
@@ -754,6 +754,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
          if ($CPAN::META->has_usable('LWP')) {
              $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
             my $Ua;
+            require CPAN::LWP::UserAgent;
             CPAN::LWP::UserAgent->config;
             eval { $Ua = CPAN::LWP::UserAgent->new; };
             if ($@) {
@@ -948,6 +949,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
       }
    }
 }
+chdir $main::curdir;
 
 my $combined='';
 if ($get_DB_File) {
@@ -1029,7 +1031,7 @@ if ($get_DB_File) {
       }
    };
    if ($@) {
-      die "$stderr\n*** Please manually install $p from cpan.org first...\n"
+      die "$@\n*** Please manually install $p from cpan.org first...\n"
    }
    eval "use $p;1" ||
       die "*** Please manually install $p from cpan.org first...\n"
@@ -1114,8 +1116,6 @@ requires        'Term::ReadKey'             => 0;
 requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
-requires        'DB_File'                   => 0;
-requires        'BerkeleyDB'                => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;
