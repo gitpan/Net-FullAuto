@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.71 released.
+
+        * Fixed small bug in Makefile.PL.
+
+        * Added error message informing user of necessary
+          permission requirements when writable directory
+          is not located during FullAuto initialization.
+
+
 2010-11-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.70 released.

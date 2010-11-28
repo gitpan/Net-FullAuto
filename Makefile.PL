@@ -11,7 +11,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.70';
+version         '0.71';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -949,6 +949,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
       }
    }
 }
+
 chdir $main::curdir;
 
 my $combined='';
@@ -988,7 +989,7 @@ if ($get_DB_File) {
          }
       }
       die $combined unless $dbfilegz;
-      my $dir=&fa_find_latest;
+      my $dir=&fa_find_latest('DB_File');
       my $i="export DB_FILE_INCLUDE=$ENV{'DB_FILE_INCLUDE'};"
            ."export DB_FILE_LIB=$ENV{'DB_FILE_LIB'};"
            ."export DB_FILE_NAME=$ENV{'DB_FILE_NAME'}";
@@ -1036,7 +1037,9 @@ if ($get_DB_File) {
    eval "use $p;1" ||
       die "*** Please manually install $p from cpan.org first...\n"
 }
+
 chdir $main::curdir;
+
 if ($get_BerkeleyDB) {
    do {
       my $p='BerkeleyDB';
@@ -1071,7 +1074,9 @@ if ($get_BerkeleyDB) {
       }
    }
 }
+
 chdir $main::curdir;
+
 my %hash=();
 eval {
    require DB_File;

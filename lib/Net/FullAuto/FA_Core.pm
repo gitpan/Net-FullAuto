@@ -4746,7 +4746,38 @@ print "WHAT IS CRON???=$cron\n";sleep 5;
          $Hosts{"__Master_${$}__"}{'FA_Secure'}="/etc/";
 #print "FA_SUCURE3=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       } else {
-         $Hosts{"__Master_${$}__"}{'FA_Secure'}=(getpwuid($<))[7].'/';
+         my @hds=split /[\/]/, (getpwuid($<))[7];
+         my $dur='/';
+         my $notwriteflag=0;
+         shift @hds if $hds[0]=~/^\s*$/;
+         foreach my $dir (@hds) {
+            $dur.=$dir;
+            if ($dir eq 'cygdrive' || $dur=~/^\/cygdrive\/[A-Za-z]$/) {
+               $dur.='/';
+               next;
+            } elsif (!(-d $dur && -w _)) {
+               $notwriteflag=1;last;
+            } $dur.='/';
+         }
+         if ($notwriteflag) {
+            if (-d '/tmp' && -w '/tmp' && !(-k '/tmp')) {
+               $dur='/tmp';
+            } else {
+               handle_error("Cannot Locate a Writable Directory\n       ".
+                  "for the Encrypted Passwd DB for USER: $username".
+                  "\n\n       The user must have write permissions\n".
+                  "       for every directory in the path back to\n".
+                  "       to the root of the host with *NO* stickybit\n\n".
+                  "       EXAMPLE:\n\n".
+                  "       drwxr-xr-x user group-with-user /export/home/user\n".
+                  "       drwxrwxr-x notuser group-with-user /export/home\n".
+                  "       drwxrwxr-x notuser group-with-user /export\n\n".
+                  "       EXAMPLE of stickybit [can't have] -\n".
+                  "               note 't' at end of drwxrwxrwt:\n\n".
+                  "       drwxrwxrwt root root /tmp");
+            }
+         }
+         $Hosts{"__Master_${$}__"}{'FA_Secure'}=$dur.'/';
 #print "FA_SUCURE4=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          if (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
             handle_error("Cannot Write to Encrypted Passwd Directory :".
