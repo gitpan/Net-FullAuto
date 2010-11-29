@@ -25,6 +25,14 @@
 ################################################################
 
 
+2010-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.72 released.
+
+        * added module requirements for Term::Menus to
+         "requires" list for Windows installations.
+
+
 2010-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.71 released.

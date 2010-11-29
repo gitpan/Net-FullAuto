@@ -11,7 +11,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.71';
+version         '0.72';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -1104,6 +1104,10 @@ if ($@) {
 
 #Specific dependencies
 requires        'Module::Load::Conditional' => 0;
+requires        'Task::Weaken'              => 0;
+requires        'ExtUtils::Depends'         => 0;
+requires        'B::Utils'                  => 0;
+requires        'Data::Dump::Streamer'      => 0;
 requires        'Term::Menus'               => 1.49;
 requires        'Tie::Cache'                => 0;
 requires        'MLDBM::Sync'               => 0;
