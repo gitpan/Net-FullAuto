@@ -11,7 +11,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.72';
+version         '0.73';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -26,11 +26,14 @@ BEGIN {
       $look=~s/::/-/g;
       $look='libwww' if $look eq 'LWP';
       $look='TermReadKey' if $look eq 'Term-ReadKey';
+      print "***** Looking for Most Recent \"$look Dir\" \n";
       my $d = new DirHandle $CPAN::Config->{build_dir};
       my $new='';
       if (defined $d) {
          while (defined($_ = $d->read)) {
             next if ($_ eq ".") || ($_ eq "..");
+            next if $_!~/^$look/;
+            next if $_=~/yml$/;
             my $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
             my $attrs = stat $file;
             my $diff = time()-$attrs->mtime;
@@ -332,11 +335,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       exit if $selection eq ']quit[';
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
-         require CPAN::LWP::UserAgent;
-         $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
+         require LWP::UserAgent;
+         print "Fetching with LWP:\n  $url\n";
          my $Ua;
-         CPAN::LWP::UserAgent->config;
-         eval { $Ua = CPAN::LWP::UserAgent->new; };
+         LWP::UserAgent->config;
+         eval { $Ua = LWP::UserAgent->new; };
          if ($@) {
             $CPAN::Frontend->mywarn(
                "ERROR: CPAN::LWP::UserAgent->new dies with $@\n");
@@ -353,7 +356,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $req->header('Accept' => 'text/html');
          my $res = $Ua->request($req);
          if ($res->is_success) {
-            $CPAN::Frontend->myprint(" + request successful.\n")
+            print " + request successful.\n"
                if $CPAN::DEBUG;
             open(CP,">setup.exe") || die $!;
             binmode(CP);
@@ -364,7 +367,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $req->header('Accept' => 'text/html');
             $res = $Ua->request($req);
             if ($res->is_success) {
-               $CPAN::Frontend->myprint(" + request successful.\n")
+               print " + request successful.\n"
                   if $CPAN::DEBUG;
                open(CP,">setup.exe") || die $!;
                binmode(CP);
@@ -375,7 +378,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $req->header('Accept' => 'text/html');
                $res = $Ua->request($req);
                if ($res->is_success) {
-                  $CPAN::Frontend->myprint(" + request successful.\n")
+                  print " + request successful.\n"
                      if $CPAN::DEBUG;
                   open(CP,">setup.tar.gz") || die $!;
                   binmode(CP);
@@ -752,11 +755,11 @@ if ($get_DB_File || $get_BerkeleyDB) {
             'http://www.oracle.com/technetwork/'.
             'database/berkeleydb/downloads/index.html';
          if ($CPAN::META->has_usable('LWP')) {
-             $CPAN::Frontend->myprint("Fetching with LWP:\n  $url\n");
+            print "Fetching with LWP:\n  $url\n";
             my $Ua;
-            require CPAN::LWP::UserAgent;
-            CPAN::LWP::UserAgent->config;
-            eval { $Ua = CPAN::LWP::UserAgent->new; };
+            require LWP::UserAgent;
+            LWP::UserAgent->config;
+            eval { $Ua = LWP::UserAgent->new; };
             if ($@) {
                $CPAN::Frontend->mywarn(
                   "ERROR: CPAN::LWP::UserAgent->new dies with $@\n");
@@ -773,7 +776,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
             $req->header('Accept' => 'text/html');
             my $res = $Ua->request($req);
             if ($res->is_success) {
-               $CPAN::Frontend->myprint(" + request successful.\n")
+               print " + request successful.\n"
                   if $CPAN::DEBUG;
                my $source=$res->content;
                my $site='download.oracle.com';
@@ -842,19 +845,19 @@ if ($get_DB_File || $get_BerkeleyDB) {
                $Ua->show_progress('true value');
                $res = $Ua->request($req);
                if ($res->is_success) {
-                  $CPAN::Frontend->myprint(" + request successful.\n")
+                  print " + request successful.\n"
                      if $CPAN::DEBUG;
                   print $fh $res->content;
                   close $fh;
                } elsif ($res->is_error(500)) {
-                  $CPAN::Frontend->myprint(sprintf(
+                  print(sprintf(
                      "LWP failed with code[%s], message[%s]\n".
                      "Please check your connection to the Internet!\n",
                      $res->code,
                      $res->message,
                   ));
                }
-               $CPAN::Frontend->myprint(qq{ + saved content to $file \n})
+               print(qq{ + saved content to $file \n})
                if $CPAN::DEBUG;
                `$CPAN::Config->{gzip} -d $filename`;
                $filename=~s/\.gz$//;
@@ -912,14 +915,14 @@ if ($get_DB_File || $get_BerkeleyDB) {
                }
             } else {
                if ($res->is_error(500)) {
-                  $CPAN::Frontend->myprint(sprintf(
+                  print(sprintf(
                      "LWP failed with code[%s], message[%s]\n".
                      "Please check your connection to the Internet!\n",
                      $res->code,
                      $res->message,
                   ));
                } else {
-                  $CPAN::Frontend->myprint(sprintf(
+                  print(sprintf(
                      "LWP failed with code[%s], message[%s]\n",
                      $res->code,
                      $res->message,
