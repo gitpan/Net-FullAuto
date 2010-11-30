@@ -27,6 +27,13 @@
 
 2010-11-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.74 released.
+
+        * Removed LWP::UserAgent->config in Makefile.PL
+
+
+2010-11-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.73 released.
 
         * Changed CPAN::LWP::UserAgent to just LWP::UserAgent

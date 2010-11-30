@@ -11,7 +11,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.73';
+version         '0.74';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -338,11 +338,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          require LWP::UserAgent;
          print "Fetching with LWP:\n  $url\n";
          my $Ua;
-         LWP::UserAgent->config;
          eval { $Ua = LWP::UserAgent->new; };
          if ($@) {
             $CPAN::Frontend->mywarn(
-               "ERROR: CPAN::LWP::UserAgent->new dies with $@\n");
+               "ERROR: LWP::UserAgent->new dies with $@\n");
          } else {
             my($var);
             $Ua->proxy('http', $var)
@@ -758,11 +757,10 @@ if ($get_DB_File || $get_BerkeleyDB) {
             print "Fetching with LWP:\n  $url\n";
             my $Ua;
             require LWP::UserAgent;
-            LWP::UserAgent->config;
             eval { $Ua = LWP::UserAgent->new; };
             if ($@) {
                $CPAN::Frontend->mywarn(
-                  "ERROR: CPAN::LWP::UserAgent->new dies with $@\n");
+                  "ERROR: LWP::UserAgent->new dies with $@\n");
             } else {
                my($var);
                $Ua->proxy('http', $var)
