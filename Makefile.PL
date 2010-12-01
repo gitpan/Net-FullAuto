@@ -1,5 +1,6 @@
 # Load the Module::Install bundled in ./inc/
 use Cwd qw/cwd/;
+use lib '.';
 use inc::Module::Install;
 use Config;
 use CPAN;
@@ -11,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.75';
+version         '0.76';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -335,13 +336,13 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       exit if $selection eq ']quit[';
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
-         require LWP::UserAgent;
+         FA::LWP::UserAgent->config;
          print "Fetching with LWP:\n  $url\n";
          my $Ua;
-         eval { $Ua = LWP::UserAgent->new; };
+         eval { $Ua = FA::LWP::UserAgent->new; };
          if ($@) {
             $CPAN::Frontend->mywarn(
-               "ERROR: LWP::UserAgent->new dies with $@\n");
+               "ERROR: FA::LWP::UserAgent->new dies with $@\n");
          } else {
             my($var);
             $Ua->proxy('http', $var)
@@ -511,7 +512,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                Banner => $banner,
 
          );
-         $selection=Menu(\%Menu_select_editor);
+         $selection=Term::Menus::Menu(\%Menu_select_editor);
       } else {
          %Menu_select_editor=(
 
@@ -525,7 +526,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                Banner => $banner,
 
          );
-         $selection=Menu(\%Menu_select_editor);
+         $selection=Term::Menus::Menu(\%Menu_select_editor);
       }
       if ($selection=~/TextPad/) {
          if ($tp eq 'default') {
@@ -565,7 +566,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
             Banner => $banner,
 
          );
-         $selection=Menu(\%Menu_select_editor);
+         $selection=Term::Menus::Menu(\%Menu_select_editor);
          if ($selection=~/vi/) {
             $editor='"/usr/bin/vi"';
          } elsif ($selection=~/emacs/) {
@@ -754,13 +755,13 @@ if ($get_DB_File || $get_BerkeleyDB) {
             'http://www.oracle.com/technetwork/'.
             'database/berkeleydb/downloads/index.html';
          if ($CPAN::META->has_usable('LWP')) {
+            FA::LWP::UserAgent->config;
             print "Fetching with LWP:\n  $url\n";
             my $Ua;
-            require LWP::UserAgent;
-            eval { $Ua = LWP::UserAgent->new; };
+            eval { $Ua = FA::LWP::UserAgent->new; };
             if ($@) {
                $CPAN::Frontend->mywarn(
-                  "ERROR: LWP::UserAgent->new dies with $@\n");
+                  "ERROR: FA::LWP::UserAgent->new dies with $@\n");
             } else {
                my($var);
                $Ua->proxy('http', $var)
@@ -865,9 +866,9 @@ if ($get_DB_File || $get_BerkeleyDB) {
                }
                close FH;
                my $uniq='';
-               $filename=~/^.*?_(.*).tar$/;
+               $filename=~/^.*(......).tar$/;
                my $uniq=$1;
-               $filename=~s/_.*.tar$//;
+               $filename=~s/........tar$//;
                `mv $filename ${filename}_$uniq`;
                my $args='';
                if ($PREFIX) {
@@ -1619,3 +1620,140 @@ sub MY::pm_to_blib {
    $inherited;
 
 }
+
+package FA::LWP::UserAgent;
+use strict;
+our @ISA = qw(LWP::UserAgent); # inherits from LWP::UserAgent
+use vars qw(@ISA $USER $PASSWD $SETUPDONE);
+# we delay requiring LWP::UserAgent and setting up inheritance until we need it
+
+$FA::LWP::UserAgent::VERSION = $FA::LWP::UserAgent::VERSION = "1.94";
+
+sub config {
+print "HELLO and $SETUPDONE\n";
+    return if $SETUPDONE;
+    if ($CPAN::META->has_usable('LWP::UserAgent')) {
+        require LWP::UserAgent;
+        @ISA = qw(Exporter LWP::UserAgent); ## no critic
+        $SETUPDONE++;
+    } else {
+        $CPAN::Frontend->mywarn("  LWP::UserAgent not available\n");
+    }
+}
+
+sub get_basic_credentials {
+    my($self, $realm, $uri, $proxy) = @_;
+    if ($USER && $PASSWD) {
+        return ($USER, $PASSWD);
+    }
+    if ( $proxy ) {
+        ($USER,$PASSWD) = $self->get_proxy_credentials();
+    } else {
+        ($USER,$PASSWD) = $self->get_non_proxy_credentials();
+    }
+    return($USER,$PASSWD);
+}
+
+sub get_proxy_credentials {
+    my $self = shift;
+    my ($user, $password);
+    if ( defined $CPAN::Config->{proxy_user} ) {
+        $user = $CPAN::Config->{proxy_user};
+        $password = $CPAN::Config->{proxy_pass} || "";
+        return ($user, $password);
+    }
+    my $username_prompt = "\nProxy authentication needed!
+ (Note: to permanently configure username and password run
+   o conf proxy_user your_username
+   o conf proxy_pass your_password
+     )\nUsername:";
+    ($user, $password) =
+        _get_username_and_password_from_user($username_prompt);
+    return ($user,$password);
+}
+
+sub get_non_proxy_credentials {
+    my $self = shift;
+    my ($user,$password);
+    if ( defined $CPAN::Config->{username} ) {
+        $user = $CPAN::Config->{username};
+        $password = $CPAN::Config->{password} || "";
+        return ($user, $password);
+    }
+    my $username_prompt = "\nAuthentication needed!
+     (Note: to permanently configure username and password run
+       o conf username your_username
+       o conf password your_password
+     )\nUsername:";
+
+    ($user, $password) =
+        _get_username_and_password_from_user($username_prompt);
+    return ($user,$password);
+}
+
+sub _get_username_and_password_from_user {
+    my $username_message = shift;
+    my ($username,$password);
+
+    ExtUtils::MakeMaker->import(qw(prompt));
+    $username = prompt($username_message);
+        if ($CPAN::META->has_inst("Term::ReadKey")) {
+            Term::ReadKey::ReadMode("noecho");
+        }
+    else {
+        $CPAN::Frontend->mywarn(
+            "Warning: Term::ReadKey seems not to be available, your password will be echoed to the terminal!\n"
+        );
+    }
+    $password = prompt("Password:");
+
+        if ($CPAN::META->has_inst("Term::ReadKey")) {
+            Term::ReadKey::ReadMode("restore");
+        }
+        $CPAN::Frontend->myprint("\n\n");
+    return ($username,$password);
+}
+
+# mirror(): Its purpose is to deal with proxy authentication. When we
+# call SUPER::mirror, we relly call the mirror method in
+# LWP::UserAgent. LWP::UserAgent will then call
+# $self->get_basic_credentials or some equivalent and this will be
+# $self->dispatched to our own get_basic_credentials method.
+
+# Our own get_basic_credentials sets $USER and $PASSWD, two globals.
+
+# 407 stands for HTTP_PROXY_AUTHENTICATION_REQUIRED. Which means
+# although we have gone through our get_basic_credentials, the proxy
+# server refuses to connect. This could be a case where the username or
+# password has changed in the meantime, so I'm trying once again without
+# $USER and $PASSWD to give the get_basic_credentials routine another
+# chance to set $USER and $PASSWD.
+
+# mirror(): Its purpose is to deal with proxy authentication. When we
+# call SUPER::mirror, we relly call the mirror method in
+# LWP::UserAgent. LWP::UserAgent will then call
+# $self->get_basic_credentials or some equivalent and this will be
+# $self->dispatched to our own get_basic_credentials method.
+
+# Our own get_basic_credentials sets $USER and $PASSWD, two globals.
+
+# 407 stands for HTTP_PROXY_AUTHENTICATION_REQUIRED. Which means
+# although we have gone through our get_basic_credentials, the proxy
+# server refuses to connect. This could be a case where the username or
+# password has changed in the meantime, so I'm trying once again without
+# $USER and $PASSWD to give the get_basic_credentials routine another
+# chance to set $USER and $PASSWD.
+
+sub mirror {
+    my($self,$url,$aslocal) = @_;
+    my $result = $self->SUPER::mirror($url,$aslocal);
+print "HOWDY\n";
+    if ($result->code == 407) {
+        undef $USER;
+        undef $PASSWD;
+        $result = $self->SUPER::mirror($url,$aslocal);
+    }
+    $result;
+}
+
+1;

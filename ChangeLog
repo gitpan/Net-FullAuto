@@ -27,12 +27,22 @@
 
 2010-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.76 released.
+
+        * Changed bash -ic to bash -lc for cygwin setup in
+          Makefile.PL
+
+        * Fixed uniq capture
+
+        * Added override package for LWP::UserAgent to improve
+          compatibility with older CPAN installations
+
+
+2010-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.75 released.
 
         * Added BerkeleyDB::Manager to "requires" list in
-          Makefile.PL
-
-        * Changed bash -ic to bash -lc for cygwin setup in
           Makefile.PL
 
 
