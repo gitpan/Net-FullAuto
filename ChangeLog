@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.75 released.
+
+        * Added BerkeleyDB::Manager to "requires" list in
+          Makefile.PL
+
+        * Changed bash -ic to bash -lc for cygwin setup in
+          Makefile.PL
+
+
 2010-11-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.74 released.

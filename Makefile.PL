@@ -11,7 +11,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.74';
+version         '0.75';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -423,10 +423,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $cygpath=~s/\\/\//g;
          system($setup_cmd);
          if ($^O eq 'cygwin') {
-            system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -ic '.
+            system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
                    '"/usr/bin/cpan -i Net::FullAuto"');
          } else {
-            system('cmd /c C:\\cygwin\\bin\\bash -ic '.
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
                    '"/usr/bin/cpan -i Net::FullAuto"');
          }
          exit;
@@ -1126,6 +1126,7 @@ requires        'Term::ReadKey'             => 0;
 requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
+requires        'BerkeleyDB::Manager'       => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;
