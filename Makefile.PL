@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.76';
+version         '0.77';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -408,8 +408,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'-s http://cygwin.mirrors.pair.com"';
          } else {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
-                      .'make,openssh,perl,perl-libwin32,db4.5 -X -A -q '
-                      .'-s http://cygwin.mirrors.pair.com"';
+                      .'make,openssh,perl,perl-libwin32,db4.5'
+                      .' -X -A -q -s http://cygwin.mirrors.pair.com"';
          }
          if ($selection=~/[Ww]ordpad/) {
             $editor='"'.'/cygdrive'.
@@ -859,6 +859,20 @@ if ($get_DB_File || $get_BerkeleyDB) {
                print(qq{ + saved content to $file \n})
                if $CPAN::DEBUG;
                `$CPAN::Config->{gzip} -d $filename`;
+               unless ($CPAN::Config->{gzip}) {
+                  if (-e '/usr/bin/gzip') {
+                     $CPAN::Config->{gzip}='/usr/bin/gzip';
+                  } elsif (-e '/usr/local/bin/gzip') {
+                     $CPAN::Config->{gzip}='/usr/local/bin/gzip';
+                  }
+               }
+               unless ($CPAN::Config->{tar}) {
+                  if (-e '/usr/bin/tar') {
+                     $CPAN::Config->{tar}='/usr/bin/tar';
+                  } elsif (-e '/usr/local/bin/tar') {
+                     $CPAN::Config->{tar}='/usr/local/bin/tar';
+                  }
+               }
                $filename=~s/\.gz$//;
                open(FH, $CPAN::Config->{tar}." xvf $filename|");
                while (my $line=<FH>) {
@@ -880,6 +894,13 @@ if ($get_DB_File || $get_BerkeleyDB) {
                   print $line;
                }
                close FH;
+               unless ($CPAN::Config->{make}) {
+                  if (-e '/usr/bin/make') {
+                     $CPAN::Config->{make}='/usr/bin/make';
+                  } elsif (-e '/usr/local/bin/make') {
+                     $CPAN::Config->{make}='/usr/local/bin/make';
+                  }
+               }
                open(FH,"cd ${filename}_$uniq/build_unix;".
                    $CPAN::Config->{make}." install|")
                   || warn $!;

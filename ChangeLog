@@ -27,6 +27,14 @@
 
 2010-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.77 released.
+
+        * Added tests to find gzip, tar and make for cygwin in
+          Makefile.PL
+
+
+2010-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.76 released.
 
         * Changed bash -ic to bash -lc for cygwin setup in
