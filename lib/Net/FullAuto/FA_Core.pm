@@ -4742,6 +4742,9 @@ print "WHAT IS CRON???=$cron\n";sleep 5;
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
       #if (-d $FA_Core_path && -w _) {
       if (-d "/etc" && -w _) {
+         opendir(TESTDIR,"/etc");
+         my $tgid=(stat(WORKING_DIR_HANDLE))[5];
+print "TGRP=$tgid\n";sleep 10;
          #$Hosts{"__Master_${$}__"}{'FA_Secure'}=$FA_Core_path;
          $Hosts{"__Master_${$}__"}{'FA_Secure'}="/etc/";
 #print "FA_SUCURE3=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";

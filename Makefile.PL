@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.77';
+version         '0.78';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -179,10 +179,22 @@ BEGIN {
    ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
+   if ($^O eq 'cygwin') {
+      ($stdout,$stderr)=&fa_install_module('Win32::API',
+         'install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Win32::API') if $stderr;
+      ($stdout,$stderr)=&fa_install_module('Win32::DriveInfo',
+         'install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Win32::DriveInfo') if $stderr;
+   }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
 };
+
+require Term::Menus;
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
@@ -404,11 +416,13 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          if ($selection!~/[Ww]ordpad/s) {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
                       .'make,openssh,perl,perl-libwin32,db4.5,'
+                      .'libdb4.5-devel,ncurses,'
                       .$selection.' -X -A -q '
                       .'-s http://cygwin.mirrors.pair.com"';
          } else {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
-                      .'make,openssh,perl,perl-libwin32,db4.5'
+                      .'make,openssh,perl,perl-libwin32,db4.5,'
+                      .'libdb4.5-devel,ncurses'
                       .' -X -A -q -s http://cygwin.mirrors.pair.com"';
          }
          if ($selection=~/[Ww]ordpad/) {
@@ -701,6 +715,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
       print "\nSearching for latest verison of BerkeleyDB.\n".
             "This may take up to five minutes ...\n\n";
       foreach my $dir ('/usr/','/opt/',(getpwuid $>)[7].'/') {
+         next unless -d $dir;
          opendir(DIR, $dir) or die $!;
          while (my $file = readdir(DIR) ) {
             next if ($file eq "." or $file eq ".." or $file eq "doc" or
@@ -1651,7 +1666,6 @@ use vars qw(@ISA $USER $PASSWD $SETUPDONE);
 $FA::LWP::UserAgent::VERSION = $FA::LWP::UserAgent::VERSION = "1.94";
 
 sub config {
-print "HELLO and $SETUPDONE\n";
     return if $SETUPDONE;
     if ($CPAN::META->has_usable('LWP::UserAgent')) {
         require LWP::UserAgent;
