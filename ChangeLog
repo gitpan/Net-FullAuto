@@ -25,6 +25,25 @@
 ################################################################
 
 
+2010-12-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.79 released.
+
+        * Fixed logic to find module build dir in Makefile.PL
+
+        * Fixed timeout bug in output parser
+
+        * Added alarm timeout for password function when ssh
+          makes new connection and dialogue asks for permission
+          to connect. Timeout is used for when FullAuto runs in
+          cron, or on a server by another process or service with
+          no user interaction. The situation can be remedied by
+          using the --authorize_connect argument when first
+          connecting to a new remote host.
+
+        * Cleaned up a slew of unused variables in FA_Core.pm
+
+
 2010-12-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.78 released.

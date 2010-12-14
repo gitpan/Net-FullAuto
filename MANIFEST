@@ -24,8 +24,8 @@ lib/Net/FullAuto/FA_Core.pm
 LICENSE
 Makefile.PL
 MANIFEST
+SIGNATURE
 META.yml
 README
 t/test.t
 t/0-signature.t
-SIGNATURE                                Public-key signature (added by MakeMaker)

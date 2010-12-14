@@ -443,7 +443,7 @@ our $unattended='';our $fullauto='';
 our %base_shortcut_info=();our @dhostlabels=();
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
-our $tieperms='0666';
+our $tieperms=0666;
 our $tieflags=O_CREAT|O_RDWR;
 our $specialperms='none';
 {

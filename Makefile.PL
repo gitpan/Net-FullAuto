@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.78';
+version         '0.79';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -24,21 +24,30 @@ BEGIN {
    sub fa_find_latest {
       my $temp=0;
       my $look=shift||'';
+      unless ($look) {
+         die "ERROR - No argument provided to &fa_find_latest().\n";
+      }
       $look=~s/::/-/g;
       $look='libwww' if $look eq 'LWP';
       $look='TermReadKey' if $look eq 'Term-ReadKey';
       print "***** Looking for Most Recent \"$look Dir\" \n";
       my $d = new DirHandle $CPAN::Config->{build_dir};
-      my $new='';
+      if (!(defined $d) || !(-d $d)) {
+         $d=(getpwuid $>)[7].'/.cpan/build';
+         unless (-d $d) {
+            die "ERROR - Can't locate .cpan/build directory";
+         }
+      }
+      my $new='';my $file='';
       if (defined $d) {
          while (defined($_ = $d->read)) {
             next if ($_ eq ".") || ($_ eq "..");
             next if $_!~/^$look/;
             next if $_=~/yml$/;
-            my $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
+            $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
             my $attrs = stat $file;
             my $diff = time()-$attrs->mtime;
-            if ($temp == 0  && (!$look || $_=~/^$look/)) {
+            if ($temp == 0 && $_=~/^$look/) {
               $temp=$diff;
               $new=$file;
             }
@@ -46,7 +55,8 @@ BEGIN {
                $temp=$diff;
                $new=$_;
             }
-         }      
+         }
+         $new=$file if !$new && $file;
          print "***** Module Directory ",$new,"\n";
          undef $d;
       } return $new; 
