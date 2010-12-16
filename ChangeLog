@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-12-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.81 released.
+
+        * Fixed testpid() to work with
+          IO::CaptureOutput::capture.
+
+        * Added Password: test to when looking for cmd prompt
+          after login attempt (needed for Solaris).
+
+
 2010-12-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.80 released.

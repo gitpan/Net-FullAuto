@@ -1665,13 +1665,16 @@ sub testpid
    $cmd=[ "${bashpath}bash",'-c',"if ${killpath}kill -0 $pid"
           ." \012then echo 1\012else echo 0\012fi"
           ." | ${sedpath}sed -e \'s/^/stdout: /' 2>&1" ];
-   my $stdout=0;my $stderr='';
-
-   my $mystdout='';my $ignore='';
+   my $mystdout='';my $stdout='';my $stderr='';
    IO::CaptureOutput::capture sub {
-      ($ignore,$stdout)=&setuid_cmd($cmd,5);
+      &setuid_cmd($cmd,5);
            }, \$mystdout;
-   chomp $stdout;chomp $stderr;
+   chomp $mystdout;
+   if ($mystdout=~s/^stdout: ?//) {
+      $stdout=$mystdout;
+   } elsif ($mystdout) {
+      $stderr=$mystdout;
+   }
    print $Net::FullAuto::FA_Core::MRLOG
       "\nppppppp &main::testpid() ppppppp STDOUT ",
       "==>$stdout<== and STDERR ==>$stderr<==",
@@ -5286,7 +5289,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WAITING FOR CMDPROMPT=$line<==\n"
                $passerror=1;&give_semaphore(1234);
                return;
             }
-            if ($line=~/Permission denied/s) {
+            if ($line=~/Permission denied|Password:/s) {
 ## ADD - TELL USER ABOUT MISSING CRON CREDS ON CMD LINE
                die "Permission denied";
             }
@@ -6275,12 +6278,17 @@ sub cwd
 sub setuid_cmd
 {
    my @topcaller=caller;
-   print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_Core::debug;
+   #print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n"
+   #   if $Net::FullAuto::FA_Core::debug;
+   # NOTE: the CALLER line is commmented because it breaks
+   #       this routine when set. Anything printing to
+   #       stdout from this routine will clash with
+   #       output from the cmd and confuse IO::CaptureOutput
+   #       which wraps this routine.
    print $Net::FullAuto::FA_Core::MRLOG "setuid_cmd() CALLER=",
-      (join ' ',@topcaller),"\n" if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-      # if $Net::FullAuto::FA_Core::log &&
-      # -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      (join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $cmd=shift;
    my $timeout=shift;
    $timeout||='';
