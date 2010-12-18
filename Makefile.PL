@@ -12,7 +12,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.81';
+version         '0.82';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -199,6 +199,12 @@ BEGIN {
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Win32::DriveInfo') if $stderr;
    }
+   my $cpanmvalue=$ENV{PERL5_CPANM_IS_RUNNING}||'';
+   undef $ENV{PERL5_CPANM_IS_RUNNING};
+   ($stdout,$stderr)=&fa_install_module('JSON','install','Makefile');
+   &fa_err_exit($stderr,'JSON') if $stderr;
+   print $stdout if $stdout;
+   $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;

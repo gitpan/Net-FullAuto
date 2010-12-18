@@ -25,6 +25,13 @@
 ################################################################
 
 
+2010-12-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.82 released.
+
+        * Added JSON to pre-req treatment to defeat prompt.
+
+
 2010-12-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.81 released.
