@@ -25,6 +25,14 @@
 ################################################################
 
 
+2010-12-18  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.83 released.
+
+        * Temporarily undef $ENV{PERL5_CPAN_IS_RUNNING} in
+          order to defeat JSON user prompt.
+
+
 2010-12-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.82 released.
