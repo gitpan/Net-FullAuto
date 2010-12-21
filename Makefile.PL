@@ -1,10 +1,17 @@
 # Load the Module::Install bundled in ./inc/
+BEGIN {
+   use CPAN;
+   my $mycpantest=0;
+   my $cpantest=0;
+   $mycpantest=1 if -e $cpandir."/CPAN/MyConfig.pm";
+   $cpantest=1 unless $mycpantest;
+   use if ($mycpantest), "CPAN::MyConfig";
+   use if ($cpantest), "CPAN::Config";
+};
 use Cwd qw/cwd/;
 use lib '.';
 use inc::Module::Install;
 use Config;
-use CPAN;
-use CPAN::Config;
 use File::stat;
 CPAN::HandleConfig->load;
 use POSIX qw/strftime/;
@@ -12,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.83';
+version         '0.84';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -611,6 +618,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
          $editor='\'\'';
       }
    }
+} else {
+   chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
 
 if ($^O eq 'cygwin' && !can_cc()) {
@@ -722,13 +731,15 @@ if ($get_DB_File || $get_BerkeleyDB) {
    }
    if ($findpath && $xargspath && $greppath) {
       my @output=();
-      my $testgrep=`${greppath}grep -H 2>&1`;
+      my $testgrep =`${greppath}grep -H 2>&1`;
+      my $testgrep2=`${greppath}grep 2>&1`;
       my $grepopt='';
-      if (-1==index $testgrep,'illegal option') {
+      if ((-1==index $testgrep,'illegal option')
+            && (-1==index $testgrep2,'-insvxbhwyu')) {
          $grepopt='-H ';
       }
       my $find_cmd1="${findpath}find ";
-      my $find_cmd2=" -type f -name \"*.h\" ".
+      my $find_cmd2=" -name \"*.h\" ".
                    "| ${xargspath}xargs ${greppath}grep ".
                    "${grepopt}DB_VERSION_STRING";
       print "\nSearching for latest verison of BerkeleyDB.\n".
@@ -750,7 +761,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
             if (-d $dir.$file) {
                print "Searching $dir$file ...\n";
                my @subout=`$find_cmd1\"$dir$file\"$find_cmd2`;      
-               push @output, @subout,  
+               push @output, @subout;
             }
          }
       }
@@ -762,6 +773,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
                     $version!~/db.h:.*DB_VERSION_STRING/;
             my @fileparts=split 'db.h:', $version;
             $fileparts[1]=~s/^.*DB (\d+[^:]+):.*$/$1/;
+print "WHAT IS THIS=$fileparts[1] and $fileparts[0]\n";<STDIN>;
             $verhash{$fileparts[1]}=$fileparts[0]; 
          }
       }
@@ -771,7 +783,7 @@ if ($get_DB_File || $get_BerkeleyDB) {
          $vr=~s/^(^\d+[.]\d+).*$/$1/;
          chomp($vr);
          $ver=$vr;
-         my $find_cmd="${findpath}find /usr -type f -name \"libdb-".$ver.".a\"";
+         my $find_cmd="${findpath}find /usr -name \"libdb-".$ver.".a\"";
          my @lib=`$find_cmd`;
          chomp($lib[0]);$dblib=$lib[0];last;
       }
@@ -1182,7 +1194,7 @@ requires        'Term::ReadKey'             => 0;
 requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
-requires        'BerkeleyDB::Manager'       => 0;
+#requires        'BerkeleyDB::Manager'       => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;

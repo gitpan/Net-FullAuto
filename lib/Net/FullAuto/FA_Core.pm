@@ -111,7 +111,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use MLDBM::Sync;                      # this gets the default, SDBM_File
    use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
    use Fcntl qw(:DEFAULT);               # import symbols O_CREAT & O_RDWR
-   use BerkeleyDB::Manager;
+   #use BerkeleyDB::Manager;
    use Time::Local;
    use Crypt::CBC;
    use Crypt::DES;
@@ -457,14 +457,12 @@ our $specialperms='none';
    }
    if (-u $ex) {
       umask(077);
-      $tieperms=0;
+      #$tieperms=0;
       $specialperms='setuid';
    } elsif (-g $ex) {
       umask(007);
-      $tieperms=0;
+      #$tieperms=0;
       $specialperms='setgid';
-   } elsif ($^O eq 'aix') {
-      $tieperms=0;
    }
 };
 
@@ -3731,9 +3729,9 @@ sub getpasswd
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db","<==\n"
          if -1<index $MRLOG,'*';
 
-if (0) {
 ##### BEGIN BerekeleyDB Implementation
-print "WHAT IS THEIS=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
+#print "WHAT IS THEIS=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";<STDIN>;
+if (0) {
       my $bdbm = BerkeleyDB::Manager->new(
                  home => $Hosts{"__Master_${$}__"}{'FA_Secure'},
                  db_class => "BerkeleyDB::Hash",
@@ -4790,21 +4788,6 @@ print "WHAT IS CRON???=$cron\n";sleep 5;
       }
    } $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
-
-if (0) {
-      @groupinfo=getgrgid((@{stat('/etc')})[5]);
-print "GROUPNAME=$groupinfo[0]<== and LAST=$groupinfo[$#groupinfo]\n";
-my $usnam=getlogin || getpwuid($<);
-my @groups_ = scalar getgrgid( ( getpwnam $usnam )[ 3 ] );
-
-while ( my ( $name, $users ) = ( getgrent )[ 0, -1 ] ) {
-#print "NAME=$name and USERS=$users\n";
-    $users =~ /\b$usnam\b/ and push @groups_, $name
-    }
-
-#print "$usnam : @groups_\n";
-}
-
       #if (-d $FA_Core_path && -w _) {
       if (-d "/etc" && -w _) {
          #$Hosts{"__Master_${$}__"}{'FA_Secure'}=$FA_Core_path;
@@ -4820,35 +4803,10 @@ while ( my ( $name, $users ) = ( getgrent )[ 0, -1 ] ) {
             if ($dir eq 'cygdrive' || $dur=~/^\/cygdrive\/[A-Za-z]$/) {
                $dur.='/';
                next;
-            } elsif (!(-d $dur && -w _)) {
-               $notwriteflag=1;last;
             } $dur.='/';
-         }
-         if ($notwriteflag) {
-            if (-d '/tmp' && -w '/tmp' && !(-k '/tmp')) {
-               $dur='/tmp';
-            } else {
-               handle_error("Cannot Locate a Writable Directory\n       ".
-                  "for the Encrypted Passwd DB for USER: $username".
-                  "\n\n       The user must have write permissions\n".
-                  "       for every directory in the path back to\n".
-                  "       to the root of the host with *NO* stickybit\n\n".
-                  "       EXAMPLE:\n\n".
-                  "       drwxr-xr-x user group-with-user /export/home/user\n".
-                  "       drwxrwxr-x notuser group-with-user /export/home\n".
-                  "       drwxrwxr-x notuser group-with-user /export\n\n".
-                  "       EXAMPLE of stickybit [can't have] -\n".
-                  "               note 't' at end of drwxrwxrwt:\n\n".
-                  "       drwxrwxrwt root root /tmp");
-            }
          }
          $Hosts{"__Master_${$}__"}{'FA_Secure'}=$dur.'/';
 #print "FA_SUCURE4=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
-         if (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
-            handle_error("Cannot Write to Encrypted Passwd Directory :".
-               "\n\n             ".
-               $Hosts{"__Master_${$}__"}{'FA_Secure'});
-         }
       }
    } elsif (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
       handle_error("Cannot Write to Encrypted Passwd Directory :".
@@ -19115,7 +19073,7 @@ use strict;
 use MLDBM::Sync;                       # this gets the default, SDBM_File
 use MLDBM qw(DB_File Storable);        # use Storable for serializing
 use Fcntl qw(:DEFAULT);                # import symbols O_CREAT & O_RDWR
-use BerkeleyDB::Manager;
+#use BerkeleyDB::Manager;
 
 sub new
 {

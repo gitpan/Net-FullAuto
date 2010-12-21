@@ -25,6 +25,16 @@
 ################################################################
 
 
+2010-12-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.84 released.
+
+        * Added conditional to load CPAN::MyConfig.
+
+        * Removed -type f from find in Makefile.PL so
+          symbolic links can be located
+
+
 2010-12-18  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.83 released.
