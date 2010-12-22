@@ -19,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.84';
+version         '0.85';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -240,7 +240,6 @@ if (exists $Config{prefix} &&
 }
 
 foreach my $arg (@ARGV) {
-print "ARG=$arg<==\n";
    if ($arg=~/INSTALL_*CYGWIN\s*=\*1/i) {
       $install_cygwin_without_asking=1;
       last;
@@ -773,7 +772,6 @@ if ($get_DB_File || $get_BerkeleyDB) {
                     $version!~/db.h:.*DB_VERSION_STRING/;
             my @fileparts=split 'db.h:', $version;
             $fileparts[1]=~s/^.*DB (\d+[^:]+):.*$/$1/;
-print "WHAT IS THIS=$fileparts[1] and $fileparts[0]\n";<STDIN>;
             $verhash{$fileparts[1]}=$fileparts[0]; 
          }
       }
@@ -1813,7 +1811,6 @@ sub _get_username_and_password_from_user {
 sub mirror {
     my($self,$url,$aslocal) = @_;
     my $result = $self->SUPER::mirror($url,$aslocal);
-print "HOWDY\n";
     if ($result->code == 407) {
         undef $USER;
         undef $PASSWD;

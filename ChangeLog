@@ -25,6 +25,13 @@
 ################################################################
 
 
+2010-12-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.85 released.
+
+        * Remove testing print statements from Makefile.PL.
+
+
 2010-12-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.84 released.
