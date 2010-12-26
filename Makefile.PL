@@ -19,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.85';
+version         '0.86';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -785,7 +785,8 @@ if ($get_DB_File || $get_BerkeleyDB) {
          my @lib=`$find_cmd`;
          chomp($lib[0]);$dblib=$lib[0];last;
       }
-      if ($dblib) {
+      my $major_minor_ver=substr($ver,0,(rindex $ver,'.'));
+      if ($dblib && $major_minor_ver>=4.5) {
          $dblib=~s/^(.*)\/.*$/$1/;
          $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
          $ENV{'BERKELEYDB_LIB'}=$dblib;

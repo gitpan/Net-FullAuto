@@ -121,6 +121,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Email::Sender::Simple qw(sendmail);
    use Email::Sender::Transport::SMTP qw();
    use File::stat;
+   use File::Path;
    use MIME::Entity;
    use Module::Load::Conditional qw[can_load];
    use Net::Telnet;
@@ -256,19 +257,6 @@ BEGIN {
          $fa_menu='fa_menu.pm';
       };
    }
-
-   our $fasetuid='fasetuid.pm';
-   if (-f substr($0,0,(rindex $0,'/')+1).$fasetuid) {
-      if ($> ne $< || $<==(stat $0)[4]) {
-         require $fasetuid;
-      } else {
-         die "FATAL ERROR! - ".substr($0,0,(rindex $0,'/')+1).
-             "$fasetuid exists but $0 is NOT running with setuid"
-      }
-   } elsif ($> ne $<) {
-      die "FATAL ERROR! - ".Cannot Locate substr($0,0,(rindex $0,'/')+1).
-          "$fasetuid required when $0 is running with setuid"
-   } else { $fasetuid='' }
 
    our $bashpath='';
    if (-e '/usr/bin/bash') {
@@ -457,11 +445,9 @@ our $specialperms='none';
    }
    if (-u $ex) {
       umask(077);
-      #$tieperms=0;
       $specialperms='setuid';
    } elsif (-g $ex) {
       umask(007);
-      #$tieperms=0;
       $specialperms='setgid';
    }
 };
@@ -1082,54 +1068,7 @@ $SIG{ ALRM } = sub{ open(AL,">>ALRM.txt");
 $SIG{ CHLD } = 'IGNORE';
 #$SIG{ INT } = sub{ &cleanup() };
 
-my @Hosts_tmp=@{&check_Hosts($fa_host)};
-my @Hosts=();
-if ($fasetuid) {
-   my %setuid_hash=();my %labels=();
-   foreach my $setuid (@{&check_Hosts($fasetuid)}) {
-      if (exists $labels{${$setuid}{'Label'}}) {
-         &handle_error(
-            "DUPLICATE LABEL DETECTED - ${$setuid}{'Label'}".
-            "\n       In File - $fasetuid");
-      } $labels{${$setuid}{'Label'}}='';
-      $setuid_hash{${$setuid}{'Label'}}=$setuid;
-   }
-   foreach my $host (@Hosts_tmp) {
-      my %tmphash=();
-      if (exists $setuid_hash{${$host}{'Label'}}) {
-         foreach my $key (keys %{$host}) {
-            if (exists ${$setuid_hash{${$host}{'Label'}}}{$key}) {
-               $tmphash{$key}=
-                  ${$setuid_hash{${$host}{'Label'}}}{$key};
-            } else {
-               $tmphash{$key}=${$host}{$key};
-            }
-         }
-         foreach my $key (keys %{$setuid_hash{${$host}{'Label'}}}) {
-            if (!exists $tmphash{$key}) {
-               $tmphash{$key}=${$setuid_hash{${$host}{'Label'}}}{$key};
-            }
-         }
-         push @Hosts, \%tmphash if keys %tmphash;
-      } else {
-         push @Hosts, {%{$host}};
-      }
-   }
-   foreach my $hash (@Hosts_tmp) {
-      foreach my $key (keys %{$hash}) {
-         if (ref $hash{$key} eq ARRAY) {
-            undef @{$hash{$key}};
-            delete $hash{$key};
-         } elsif (ref $hash{$key} eq HASH) {
-            undef %{$hash{$key}};
-            delete $hash{$key};
-         } else {
-            undef $hash{$key};
-            delete $hash{$key};
-         }
-      } undef %{$hash};
-   } undef @Hosts_tmp;
-} else { @Hosts=@Hosts_tmp;undef @Hosts_tmp }
+my @Hosts=@{&check_Hosts($fa_host)};
 
 sub version
 {
@@ -4708,7 +4647,6 @@ sub fa_login
       $passwd[1]=unpack('a8',$passwd[0])
    }
    if ($cron) {
-print "WHAT IS CRON???=$cron\n";sleep 5;
       $batch=']Batch[';
       $unattended=']Unattended[';
       $fullauto=']FullAuto[';
@@ -4788,12 +4726,23 @@ print "WHAT IS CRON???=$cron\n";sleep 5;
       }
    } $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
+print "DO WE GET HERE?\n";<STDIN>;
       #if (-d $FA_Core_path && -w _) {
-      if (-d "/etc" && -w _) {
-         #$Hosts{"__Master_${$}__"}{'FA_Secure'}=$FA_Core_path;
-         $Hosts{"__Master_${$}__"}{'FA_Secure'}="/etc/";
+      if ($specialperms ne 'none' && -d $FA_Core_path && -w _) {
+         unless (-d "$FA_Core_path/db/Password/") {
+            File::Path::make_path("$FA_Core_path/db/Password/");
+         }
+         $Hosts{"__Master_${$}__"}{'FA_Secure'}=
+            "FA_Core_path/db/Password/";
+      } elsif (-d "/var" && -w _) {
+         unless (-d "/var/db/Berkeley/FullAuto/Password/") {
+            File::Path::make_path("/var/db/Berkeley/FullAuto/Password/");
+         }
+         $Hosts{"__Master_${$}__"}{'FA_Secure'}=
+            "/var/db/Berkeley/FullAuto/Password/";
 #print "FA_SUCURE3=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       } else {
+print "HERE\n";
          my @hds=split /[\/]/, (getpwuid($<))[7];
          my $dur='/';
          my $notwriteflag=0;
@@ -4805,7 +4754,12 @@ print "WHAT IS CRON???=$cron\n";sleep 5;
                next;
             } $dur.='/';
          }
-         $Hosts{"__Master_${$}__"}{'FA_Secure'}=$dur.'/';
+         unless (-d "${dur}.fullauto/db/Password/") {
+            File::Path::make_path(
+               "${dur}.fullauto/db/Password/");
+         }
+         $Hosts{"__Master_${$}__"}{'FA_Secure'}=
+            "${dur}.fullauto/db/Password/";
 #print "FA_SUCURE4=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       }
    } elsif (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
