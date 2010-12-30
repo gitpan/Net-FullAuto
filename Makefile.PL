@@ -19,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.86';
+version         '0.87';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -704,13 +704,10 @@ if (-e "/bin/grep") {
 } elsif (-e "/usr/local/bin/grep") {
    $greppath="/usr/local/bin/";
 }
-my $get_DB_File=0;
-eval { require DB_File };
-$get_DB_File=1 if $@;
 my $get_BerkeleyDB=0;
 eval { require BerkeleyDB };
 $get_BerkeleyDB=1 if $@;
-if ($get_DB_File || $get_BerkeleyDB) {
+if ($get_BerkeleyDB) {
    # Let's find if Berkeley DB is already on the system
    my $findpath='';
    if (-e "/bin/find") {
@@ -1020,94 +1017,6 @@ if ($get_DB_File || $get_BerkeleyDB) {
 
 chdir $main::curdir;
 
-my $combined='';
-if ($get_DB_File) {
-   my $p='DB_File';
-   IO::CaptureOutput::capture {
-      do {
-         eval "use $p;1" or
-         do {
-            print"==> $p required."
-            and print "*** Installing $p\n"
-            and
-            do {
-               eval {
-                  require CPANPLUS;
-                  my $u=CPANPLUS::Shell->new();
-                  $u->shell;
-                  $u->dispatch_on_input(input=>'o conf force 1');
-                  $u->dispatch_on_input(input=>"get $p")
-               };
-               eval "use $p;1"
-               or eval{
-                     require CPAN;
-                     CPAN::Shell->force('get',$p)
-                  };
-            }
-         }
-      }
-   } \$combined, \$combined;
-   my $stdout='';my $stderr='';
-   eval {
-      my $dbfilegz='';
-      my @combinedsplit=split "\n", $combined;
-      foreach my $line (@combinedsplit) {
-         if ($line=~/^Checksum for (.*) ok$/) {
-            $dbfilegz=$1;
-         }
-      }
-      die $combined unless $dbfilegz;
-      my $dir=&fa_find_latest('DB_File');
-      my $i="export DB_FILE_INCLUDE=$ENV{'DB_FILE_INCLUDE'};"
-           ."export DB_FILE_LIB=$ENV{'DB_FILE_LIB'};"
-           ."export DB_FILE_NAME=$ENV{'DB_FILE_NAME'}";
-      IO::CaptureOutput::capture {
-         system("cd $dir;$i;$^X Makefile.PL;");
-      } \undef, \$stderr;
-      die $stderr if $stderr;
-      if (($^O eq 'solaris') && ($Config{cc}=~/gcc/)) {
-         my $ldl=`cd $dir;${greppath}grep LDDLFLAGS[^\\\)] Makefile`;
-         $ldl=~s/-G/-shared/;
-         chomp($ldl);
-         my $fdl=$ldl.' -R'.$ENV{'DB_FILE_LIB'};
-         $fdl=~s/\s*=\s*/=\"/;$fdl.='"';
-         IO::CaptureOutput::capture {
-            system("cd $dir;$CPAN::Config->{make} $fdl");
-         } \$stdout, \$stderr;
-         print $stdout;
-         die "$stdout\n\n$stderr" if $stderr;
-         IO::CaptureOutput::capture {
-            system("cd $dir;$CPAN::Config->{make} test");
-         } \$stdout, \$stderr;
-         print $stdout;
-         die "$stdout\n\n$stderr" if $stderr;
-         IO::CaptureOutput::capture {
-            system("cd $dir;$CPAN::Config->{make} install");
-         } \$stdout, \$stderr;
-         print $stdout;
-         die "$stdout\n\n$stderr" if $stderr;
-      } else {
-         IO::CaptureOutput::capture {
-            system("cd $dir;$CPAN::Config->{make} install");
-         } \$stdout, \$stderr;
-         print $stdout;
-         die "$stdout\n\n$stderr" if $stderr;
-         IO::CaptureOutput::capture {
-            system("cd $dir;$CPAN::Config->{make} test");
-         } \$stdout, \$stderr;
-         print $stdout;
-         die "$stdout\n\n$stderr" if $stderr;
-      }
-   };
-   if ($@) {
-      die "$@\n*** Please manually install $p from cpan.org first...\n"
-   }
-   eval "use $p;1" ||
-      die "*** Please manually install $p from cpan.org first...\n"
-}
-
-chdir $main::curdir;
-
 if ($get_BerkeleyDB) {
    do {
       my $p='BerkeleyDB';
@@ -1147,11 +1056,13 @@ chdir $main::curdir;
 
 my %hash=();
 eval {
-   require DB_File;
-   my $db = tie %hash, "DB_File", "fullauto_test_for_db_creation.db" 
-      || die "Cannot tie fullauto_test_for_db_creation.db: $!" ;
-   undef $db ;
-   untie %hash ;
+   require BerkeleyDB;
+   my $db = tie %hash, "BerkeleyDB::Btree",
+          -Filename => "fullauto_test_for_db_creation.db",
+          -Flags =>  BerkeleyDB::DB_CREATE()
+      or die "Cannot tie fullauto_test_for_db_creation.db: $!";
+   undef $db;
+   untie %hash;
    unlink "fullauto_test_for_db_creation.db";
 };
 if ($@) {
@@ -1178,7 +1089,6 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Term::Menus'               => 1.49;
 requires        'Tie::Cache'                => 0;
-requires        'MLDBM::Sync'               => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
 requires        'Crypt::DES'                => 0;
@@ -1193,7 +1103,6 @@ requires        'Term::ReadKey'             => 0;
 requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
-#requires        'BerkeleyDB::Manager'       => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install;

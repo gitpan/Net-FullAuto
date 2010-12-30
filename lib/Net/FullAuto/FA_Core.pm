@@ -108,16 +108,13 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    no warnings;
    use Sys::Hostname;
    our $local_hostname=hostname;
-   use MLDBM::Sync;                      # this gets the default, SDBM_File
-   use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
-   use Fcntl qw(:DEFAULT);               # import symbols O_CREAT & O_RDWR
-   #use BerkeleyDB::Manager;
+   use BerkeleyDB;
+   use Data::Dump::Streamer;
    use Time::Local;
    use Crypt::CBC;
    use Crypt::DES;
    use Cwd qw(getcwd);
    use English;
-   use Fcntl qw(:DEFAULT :flock);
    use Email::Sender::Simple qw(sendmail);
    use Email::Sender::Transport::SMTP qw();
    use File::stat;
@@ -413,7 +410,8 @@ our $username='';our @passwd=('','');our $fa_code='';
 our $localhost='';our %localhost=();our $uhray='';
 our @RCM_Link=();our @FTM_Link=();our $cleanup=0;
 our $starting_memory=0;our $custom_code_module_file='';
-our %sync_dbm_obj=();our %tiedb=();our @ascii_que=();
+#our %sync_dbm_obj=();
+our %tiedb=();our @ascii_que=();
 our %Connections=();our $tranback=0;our @ascii=();
 our %base_excluded_dirs=();our %base_excluded_files=(); 
 our %hours=();our %month=();our %Hosts=();our %Maps=();
@@ -598,19 +596,20 @@ sub cleanup {
    } else {
       semctl(34, 0, SETVAL, -1);
    } my $tm='';my $ob='';my %cleansync=();
-   my @clkeys=();$_[0]||='';
-   foreach my $key (keys %sync_dbm_obj) {
-      if (index $key,'_') {
-         ($tm,$ob)=split /_/, $key;
-         push @clkeys, $key;
-      }
-   }
-   foreach my $key (@clkeys) {
-      delete $Net::FullAuto::FA_Core::sync_dbm_obj{$key};
-   }
-   foreach my $key (keys %sync_dbm_obj) {
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$key}->UnLock;
-   }
+   #my @clkeys=();
+   $_[0]||='';
+   #foreach my $key (keys %sync_dbm_obj) {
+   #   if (index $key,'_') {
+   #      ($tm,$ob)=split /_/, $key;
+   #      push @clkeys, $key;
+   #   }
+   #}
+   #foreach my $key (@clkeys) {
+   #   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$key};
+   #}
+   #foreach my $key (keys %sync_dbm_obj) {
+   #   $Net::FullAuto::FA_Core::sync_dbm_obj{$key}->UnLock;
+   #}
    my $new_cmd='';my $cmd='';my $clean_master='';
    my @cmd=();my %did_tran=();
    foreach my $hostlabel (keys %Processes) {
@@ -618,13 +617,11 @@ sub cleanup {
          foreach my $type (reverse sort keys
                            %{$Processes{$hostlabel}{$id}}) {
             my ($cnct_type,$id_type)=split /_/, $type;
-
 my $show1="CNCT_TYPE=$cnct_type and HOSTLABEL=$hostlabel "
          ."and PROCESS=".$Processes{$hostlabel}{$id}{$type}
          ." and DeploySMB=$DeploySMB_Proxy[0]<==\n"; 
 print $show1 if $debug;
 print $Net::FullAuto::FA_Core::MRLOG $show1 if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-
             if ($cnct_type eq 'cmd'
                     && $hostlabel eq $DeploySMB_Proxy[0]) {
                my ($cmd_fh,$cmd_pid,$shell_pid,$cmd)=
@@ -1604,7 +1601,7 @@ sub testpid
           ." | ${sedpath}sed -e \'s/^/stdout: /' 2>&1" ];
    my $mystdout='';my $stdout='';my $stderr='';
    IO::CaptureOutput::capture sub {
-      &setuid_cmd($cmd,5);
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
            }, \$mystdout;
    chomp $mystdout;
    if ($mystdout=~s/^stdout: ?//) {
@@ -2401,27 +2398,33 @@ sub handle_error
       $command=${$track}[2];
       $suberr=${$track}[3] if defined ${$track}[3] && ${$track}[3];
       $suberr||='';
-      $tie_err="can't open tie to ${trackdb}.db";
-      my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-         %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-        'MLDBM::Sync',
-         "${trackdb}.db",
-         $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-         &Net::FullAuto::FA_Core::handle_error("$tie_err :\n        ".($!));
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-print $Net::FullAuto::FA_Core::MRLOG "GOT THIS FAR INTO TRACKBEFLOCK\n";
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-print $Net::FullAuto::FA_Core::MRLOG "GOT THIS FAR INTO TRACKAFTLOCK\n";
-      my $tref=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$invoked[2]};
-      if (exists ${$tref}{"${hostlabel}_$command"}
+      my $dbenv = BerkeleyDB::Env->new(
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or &handle_error(
+         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb = BerkeleyDB::Btree->new(
+                 -Filename => "${trackdb}.db",
+                 -Flags    => DB_CREATE,
+                 -Env      => $dbenv
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $tref='';
+      my $status=$bdb->db_get($invoked[2],$tref);
+      $tref=eval $tref;
+      if (!$status && exists ${$tref}{"${hostlabel}_$command"}
             && ${$tref}{"${hostlabel}_$command"}
             eq $error) {
-         foreach my $key (keys %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}}) {
-            if ($key!=$invoked[2]) {
-                delete ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$key};
-            }
+         # loop the contents of the file
+         my ($k,$v) = ("","") ;
+         my $cursor = $bdb->db_cursor() ;
+         while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+            if ($k!=$invoked[2]) {
+               $bdb->db_del($k);
+            } 
          }
+         undef $cursor;
+         undef $bdb;
          if ($Net::FullAuto::FA_Core::OS eq 'cygwin') {
             if (keys %Net::FullAuto::FA_Core::semaphores) {
                foreach my $ipc_key (keys %Net::FullAuto::FA_Core::semaphores) {
@@ -2435,11 +2438,16 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT THIS FAR INTO TRACKAFTLOCK\n";
       } elsif ($suberr && exists ${$tref}{"${hostlabel}_$suberr"}
             && ${$tref}{"${hostlabel}_$suberr"}
             eq $suberr) {
-         foreach my $key (keys %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}}) {
-            if ($key!=$invoked[2]) {
-               delete ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$key};
+         # loop the contents of the file
+         my ($k,$v) = ("","") ;
+         my $cursor = $bdb->db_cursor() ;
+         while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+            if ($k!=$invoked[2]) {
+               $bdb->db_del($k);
             }
          }
+         undef $cursor;
+         undef $bdb;
          if ($Net::FullAuto::FA_Core::OS eq 'cygwin') {
             if (keys %Net::FullAuto::FA_Core::semaphores) {
                foreach my $ipc_key (keys %Net::FullAuto::FA_Core::semaphores) {
@@ -2452,19 +2460,21 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT THIS FAR INTO TRACKAFTLOCK\n";
          } return 1,'';
       } else {
          ${$tref}{"${hostlabel}_$command"}=$error;
-         ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$invoked[2]}=$tref;
+         my $put_tref=Data::Dump::Streamer::Dump($tref)->Out();
+         $status=$bdb->db_put($invoked[2],$put_tref);
+         undef $bdb;
          $return=1;
       }
-      foreach my $key (keys %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}}) {
-         if ($key!=$invoked[2]) {
-            delete ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$key};
+      # loop the contents of the file
+      my ($k,$v) = ("","") ;
+      my $cursor = $bdb->db_cursor() ;
+      while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+         if ($k!=$invoked[2]) {
+            $bdb->db_del($k);
          }
       }
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-      undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-      delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+      undef $cursor;
+      undef $bdb;
    } my $errtxt='';
    if (10<length $error && unpack('a11',$error) ne 'FATAL ERROR') {
       $error=~s/\s*$//s;$error=~s/^\s*//s;
@@ -2752,7 +2762,16 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS USE?=$use\n" if $Net::FullAuto::FA
 
 sub pty_do_cmd
 {
-#print "PTY_CALLER=",caller,"\n";
+   my @topcaller=caller;
+   print "\nINFO: FA_Core::pty_do_cmd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if !$Net::FullAuto::FA_Core::cron &&
+      $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG
+      "\nFA_Core::pty_do_cmd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my ($cmd,@args)=@_;
    my $pty='';my $pty_err='';my $try=0;
    my $capture = IO::Capture::Stderr->new();
@@ -3044,7 +3063,7 @@ my $onemore=0;
          if $loop++!=1; # sleep;
       eval {
          my $all_lines='';my $loop2=0;
-         while (my $line=$filehandle->get(Timeout=>5)) {
+         while (my $line=$filehandle->get(Timeout=>30)) {
 #print "CLEAN_LINE=$line and ${$Net::FullAuto::FA_Core::uhray}[0]_-<==\n";
             chomp($line=~tr/\0-\11\13-\37\177-\377//d);
             $all_lines.=$line;
@@ -3554,7 +3573,9 @@ sub getpasswd
    my $ms_domain='';my $errmsg='';
    my $track='';my $prox='';
    my $pass='';my $save_passwd='';
-   my $cmd_type='';
+   my $cmd_type='';my $status='';
+   my $encrypted_passwd='';
+   my $bdb='';
    if (defined $_[2] && $_[2]) {
       if ($_[2] eq '__force__') {
          $force=1;
@@ -3667,46 +3688,19 @@ sub getpasswd
       print $MRLOG "PASSWDDB=",
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db","<==\n"
          if -1<index $MRLOG,'*';
-
-##### BEGIN BerekeleyDB Implementation
-#print "WHAT IS THEIS=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";<STDIN>;
-if (0) {
-      my $bdbm = BerkeleyDB::Manager->new(
-                 home => $Hosts{"__Master_${$}__"}{'FA_Secure'},
-                 db_class => "BerkeleyDB::Hash",
-                      # the default class for new DBs
-      );
-      my $bdb  = $bdbm->open_db( file => "foo" ); # defaults
-
-      $bdbm->txn_do(sub {
-                $bdb->db_put("foo", "bar");
-                die "error!"; # rolls back
-      });
-
-      # fetch all key/value pairs as a Data::Stream::Bulk
-      my $pairs = $bdbm->cursor_stream( db => $bdb );
-
-      print "PAIRS=$pairs\n";<STDIN>;
-      $bdbm->close_db("foo");
-
-##### END BerekeleyDB Implementation
-}
-
-      my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-         %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},'MLDBM::Sync',
-         $Hosts{"__Master_${$}__"}{'FA_Secure'}.
-         "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-         &handle_error("$tie_err :\n        ".($!));
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-
-      eval {
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-      };
-      if ($@) { &Net::FullAuto::FA_Core::handle_error('DYING FROM PASSWORD LOCK') }
-
-      $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel};
+      my $dbenv = BerkeleyDB::Env->new(
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or &handle_error(
+         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      $bdb = BerkeleyDB::Btree->new(
+                 -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                 -Flags    => DB_CREATE,
+                 -Env      => $dbenv
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      $status=$bdb->db_get($passlabel,$href);
+      $href=eval $href;
       $href||={};
       print $MRLOG "HREF=$href and KEY=$key and KEYS=",
          (join "\n",keys %{$href}),"<==\n" 
@@ -3720,20 +3714,17 @@ if (0) {
          ($stdout,$stderr)=
             &Net::FullAuto::FA_Core::cmd("${pspath}ps -e",'__escape__');
          &Net::FullAuto::FA_Core::handle_error($stderr,'__cleanup__') if $stderr;
+         my $encrypted_passwd=${$href}{$key};
          foreach my $ky (keys %{$href}) {
             if ($ky=~/_X_(\d+)_X_\d+$/) {
                my $one=$1;
                delete ${$href}{$ky} if (-1==index $stdout,$one);
             }
          }
-         my $encrypted_passwd=
-            ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel}{$key};
-         ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel}=$href;
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-         undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};$pass='';
-         delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+         my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+         $status=$bdb->db_put($passlabel,$put_href);
+         undef $bdb; 
+         $pass='';
          eval {
             $pass=$cipher->decrypt($encrypted_passwd);
             chop $pass if $pass eq substr($pass,0,(rindex $pass,'.')).'X';
@@ -3752,18 +3743,11 @@ if (0) {
                }
             }
          }
-         ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel}=$href;
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-         undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-         delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+         my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+         $status=$bdb->db_put($passlabel,$put_href);
+         undef $bdb;
       } else {
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-         undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-         delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+         undef $bdb;
       }
       &scrub_passwd_file($passlabel,$login_id);
    } elsif (!$force && (exists $Net::FullAuto::FA_Core::tosspass{$key})) {
@@ -3919,16 +3903,19 @@ if (0) {
       }
    }
    unless ($Net::FullAuto::FA_Core::tosspass) {
-      $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-         %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},'MLDBM::Sync',
-         $Hosts{"__Master_${$}__"}{'FA_Secure'}.
-         "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-         &handle_error("$tie_err :\n        ".($!));
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-      $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel};
+      my $dbenv = BerkeleyDB::Env->new(
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or &handle_error(
+         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      $bdb = BerkeleyDB::Btree->new(
+                 -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                 -Flags    => DB_CREATE,
+                 -Env      => $dbenv
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      $status=$bdb->db_get($passlabel,$href);
+      $href=eval $href;
       while (delete ${$href}{$key}) {}
       $save_passwd.='X' if $save_passwd
          eq substr($Net::FullAuto::FA_Core::progname,0,
@@ -3937,12 +3924,9 @@ if (0) {
          $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
       my $new_encrypted=$cipher->encrypt($save_passwd);
       ${$href}{$key}=$new_encrypted;
-      ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel}=$href;
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-      undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-      delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+      my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+      $status=$bdb->db_put($passlabel,$put_href);
+      undef $bdb;
    } else {
       $Net::FullAuto::FA_Core::tosspass{$key}=$save_passwd;
    }
@@ -4726,7 +4710,6 @@ sub fa_login
       }
    } $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
-print "DO WE GET HERE?\n";<STDIN>;
       #if (-d $FA_Core_path && -w _) {
       if ($specialperms ne 'none' && -d $FA_Core_path && -w _) {
          unless (-d "$FA_Core_path/db/Password/") {
@@ -4742,7 +4725,6 @@ print "DO WE GET HERE?\n";<STDIN>;
             "/var/db/Berkeley/FullAuto/Password/";
 #print "FA_SUCURE3=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       } else {
-print "HERE\n";
          my @hds=split /[\/]/, (getpwuid($<))[7];
          my $dur='/';
          my $notwriteflag=0;
@@ -4884,29 +4866,30 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       my $kind='prod';
       $kind='test' if $Net::FullAuto::FA_Core::test
          && !$Net::FullAuto::FA_Core::prod;
-      my $tie_err="can't open tie to "
-         . $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'}
-         ."${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
-      my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE6=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-         %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-         'MLDBM::Sync',
-         $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'}.
-         "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-         &handle_error($tie_err);
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-      foreach my $hostn (keys %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}}) {
-         my $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostn};
-         foreach my $key (keys %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}{$hostn}}) {
+      my $dbenv = BerkeleyDB::Env->new(
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or &handle_error(
+         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb = BerkeleyDB::Btree->new(
+                 -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                 -Flags    => DB_CREATE,
+                 -Env      => $dbenv
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      # print the contents of the file
+      my ($k,$v) = ("","") ;
+      my $cursor = $bdb->db_cursor() ;
+      while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+         my $href=eval $v;
+         foreach my $key (keys %{eval $v}) {
             if ($key=~/\d+$/) {
                while (delete $href->{$key}) {}
                next
             }
-            my $encrypted_passwd=
-               ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostn}{$key};
+            my $href_2='';
+            $status=$bdb->db_get($k,$href_2);
+            my $encrypted_passwd=${$href_2}{$key};
             $pass=$cipher->decrypt($encrypted_passwd);
             if ($pass && $pass!~tr/\0-\37\177-\377//) {
                print "Updated $key\n";
@@ -4915,15 +4898,12 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE6=",$Hosts{"__Master_${$}__"}{'FA
                   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
                my $new_encrypted=$cipher->encrypt($pass);
                $href->{$key}=$new_encrypted;
-               #${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostn}=$href;
             } else { print "Skipping $key\n" }
-         } ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostn}=$href;
+         } my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+         $status=$bdb->db_put($k,$put_href);
       }
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-      undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-      delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+      undef $cursor ;
+      undef $bdb ;
       &cleanup();
    }
 
@@ -5328,23 +5308,21 @@ print $Net::FullAuto::FA_Core::MRLOG
 
          my $kind='prod';
          $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
-         my $tie_err="can't open tie to "
-                 . $Hosts{"__Master_${$}__"}{'FA_Secure'}
-                 ."${progname}_${kind}_passwds.db";
-         my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
+         my $dbenv = BerkeleyDB::Env->new(
+                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         ) or &handle_error(
+            "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+         my $bdb = BerkeleyDB::Btree->new(
+                    -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                    -Flags    => DB_CREATE,
+                    -Env      => $dbenv
+         ) or &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
 print $Net::FullAuto::FA_Core::MRLOG
    "FA_SUCURE7=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-              %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-              'MLDBM::Sync',
-              $Hosts{"__Master_${$}__"}{'FA_Secure'}.
-              "${progname}_${kind}_passwds.db",
-              $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-              &handle_error($tie_err);
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
 print $Net::FullAuto::FA_Core::MRLOG
    "PAST THE TIE TO PASSWD DB\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -5373,7 +5351,9 @@ print $Net::FullAuto::FA_Core::MRLOG
          } else {
             $key="${username}_X_${login_id}_X_${host__label}";
          }
-         my $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$host__label};
+         my $href='';
+         my $status=$bdb->db_get($host__label,$href);
+         $href=eval $href;
          foreach my $ky (keys %{$href}) {
             if ($ky eq $key) {
                while (delete $href->{$key}) {}
@@ -5389,12 +5369,9 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             $href->{$key}=$new_encrypted;
-            ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$host__label}=$href;
-            $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-            undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-            delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-            untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-            delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+            my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+            $status=$bdb->db_put($host__label,$put_href);
+            undef $bdb;
          } else {
             $tosspass{$key}=$passwd[0];
          }
@@ -5560,32 +5537,32 @@ sub passwd_db_update
    my $cmd_type=$_[3];
    my $kind='prod';
    $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
-   my $tie_err="can't open tie to "
-              . $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'}
-              ."${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
-   my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-
+   my $dbenv = BerkeleyDB::Env->new(
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb = BerkeleyDB::Btree->new(
+              -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+              -Flags    => DB_CREATE,
+              -Env      => $dbenv
+   ) or &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
 print $Net::FullAuto::FA_Core::MRLOG
          "FA_SUCURE8=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n"
          if $Net::FullAuto::FA_Core::log &&
          -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-        %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-        'MLDBM::Sync',
-        $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'}.
-        "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-        $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-        &handle_error($tie_err);
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
    if ($hostlabel eq "__Master_${$}__") {
-      foreach my $hostlab (keys %Net::FullAuto::FA_Core::same_host_as_Master) {
-         next if $hostlab eq "__Master_${$}__";
-         $hostlabel=$hostlab;
+      # print the contents of the file
+      my ($k,$v) = ("","") ;
+      my $cursor = $bdb->db_cursor() ;
+      while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+         next if $k eq "__Master_${$}__";
+         $hostlabel=$k;
          $local_host_flag=1;
          last;
       }
+      undef $cursor ;
       if (!$local_host_flag) {
          $hostlabel=$local_hostname;
          $local_host_flag=1;
@@ -5603,7 +5580,9 @@ print $Net::FullAuto::FA_Core::MRLOG
       $key="${username}_X_${login_id}_X_"
           .$hostlabel;
    }
-   my $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostlabel};
+   my $href='';
+   my $status=$bdb->db_get($hostlabel,$href);
+   $href=eval $href;
    foreach my $ky (keys %{$href}) {
       if ($ky eq $key) {
          while (delete $href->{"$key"}) {}
@@ -5615,12 +5594,9 @@ print $Net::FullAuto::FA_Core::MRLOG
       $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
    my $new_encrypted=$cipher->encrypt($passwd);
    $href->{$key}=$new_encrypted;
-   ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostlabel}=$href;
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-   undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-   delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+   my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+   $status=$bdb->db_put($hostlabel,$put_href);
+   undef $bdb;
 
 }
 
@@ -5629,20 +5605,18 @@ sub su_scrub
    my $hostlabel=$_[0];my $login_id='';my $cmd_type=$_[1];
    my $kind='prod';
    $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
-   my $tie_err="can't open tie to "
-              . $Hosts{"__Master_${$}__"}{'FA_Secure'}
-              ."${progname}_${kind}_passwds.db";
-   my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
+   my $dbenv = BerkeleyDB::Env->new(
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb = BerkeleyDB::Btree->new(
+              -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+              -Flags    => DB_CREATE,
+              -Env      => $dbenv
+   ) or &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-        %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-        'MLDBM::Sync',
-        $Hosts{"__Master_${$}__"}{'FA_Secure'}.
-        "${progname}_${kind}_passwds.db",
-        $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) or
-        &handle_error("$tie_err :\n        ".($!));
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
    my $local_host_flag=0;
    if ($hostlabel eq "__Master_${$}__") {
       foreach my $hostlab (keys %Net::FullAuto::FA_Core::same_host_as_Master) {
@@ -5655,7 +5629,9 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA
    } elsif (exists $Net::FullAuto::FA_Core::same_host_as_Master{$hostlabel}) {
       $local_host_flag=1;
    }
-   my $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostlabel};
+   my $href='';
+   my $status=$bdb->db_get($hostlabel,$href);
+   $href=eval $href;
    my $key='';
    if ($local_host_flag) {
       $key="${username}_X_"
@@ -5678,12 +5654,9 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA
       $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
    my $new_encrypted=$cipher->encrypt($Net::FullAuto::FA_Core::passwd[0]);
    $href->{$key}=$new_encrypted;
-   ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostlabel}=$href;
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-   undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-   delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+   my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+   $status=$bdb->db_put($hostlabel,$put_href);
+   undef $bdb;
 
 }
 
@@ -5731,29 +5704,25 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
                 ." UNIX group.\n       Contact your system administrator.\n";
          my $kind='prod';
          $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
-         my $tdie="can't open tie to "
-                 . $Hosts{"__Master_${$}__"}{'FA_Secure'}
-                 ."${progname}_${kind}_passwds.db: ";
-         my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
+         my $dbenv = BerkeleyDB::Env->new(
+                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         ) or &handle_error(
+            "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+         my $bdb = BerkeleyDB::Btree->new(
+                    -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                    -Flags    => DB_CREATE,
+                    -Env      => $dbenv
+         ) or &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-              %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-              'MLDBM::Sync',
-              $Hosts{"__Master_${$}__"}{'FA_Secure'}.
-              "${progname}_${kind}_passwds.db",
-              $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) or
-              &handle_error($tdie);
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-         my $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostlabel};
+         my $href='';
+         my $status=$bdb->db_get($hostlabel,$href);
+         $href=eval $href;
          my $key="${username}_X_${su_id}_X_${hostlabel}";
          while (delete $href->{$key}) {}
-         ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$hostlabel}=$href;
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-         undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-         delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+         $status=$bdb->db_put($hostlabel,$href);
+         undef $bdb;
    print $Net::FullAuto::FA_Core::MRLOG "DYING HERE WITH LOCK PROB" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          return '',"$die       $!";
       }
@@ -6237,6 +6206,9 @@ sub setuid_cmd
       while (my $line=<KID>) {
          $output.=$line;
       }
+open (HELLO,">>hello.txt");
+print HELLO "WHAT=".$output."<=";
+CORE::close HELLO;
       CORE::close(KID);
    } else { # child
       my @temp     = ($EUID, $EGID);
@@ -6255,6 +6227,9 @@ sub setuid_cmd
          $ENV{PATH} = '';
          $ENV{ENV}  = '';
       }
+open (HELLO,">>hello.txt");
+print HELLO "ONE=$one and TWO=$two and THREE=$three and FOUR=$four<=\n";
+CORE::close HELLO;
       if ($four) {
          exec $one, $two, $three, $four ||
             &handle_error("Couldn't exec: $cmd_err".($!),'-1');
@@ -6505,21 +6480,20 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       my $kind='prod';
       $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
       return unless exists $Hosts{"__Master_${$}__"}{'FA_Secure'};
-      my $tdie="can't open tie to "
-              . $Hosts{"__Master_${$}__"}{'FA_Secure'}
-              ."${progname}_${kind}_passwds.db: ";
-      my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-#print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE11=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-           %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-           'MLDBM::Sync',
-           $Hosts{"__Master_${$}__"}{'FA_Secure'}.
-           "${progname}_${kind}_passwds.db",
-           $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) or
-           &handle_error($tdie); 
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-      my $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel};
+      my $dbenv = BerkeleyDB::Env->new(
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or &handle_error(
+         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb = BerkeleyDB::Btree->new(
+                 -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                 -Flags    => DB_CREATE,
+                 -Env      => $dbenv
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $href='';
+      my $status=$bdb->db_get($passlabel,$href);
+      $href=eval $href;
       my $flag=0;my $successflag=0;
       foreach my $ky (keys %{$href}) {
          if ($ky eq $key) {
@@ -6530,12 +6504,9 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
             $flag=1
          }
       }
-      ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$passlabel}=$href if $flag;
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-      undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-      delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+      my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+      $status=$bdb->db_put($passlabel,$put_href);
+      undef $bdb;
       return $successflag;
    }
 
@@ -7642,17 +7613,20 @@ print "FTR_RETURN3\n";
                                    {'FA_Secure'}
                                   ."${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
 print "DBPATHHHH=$dbpath<==\n";sleep 2;
-                        my $tie_err="can't open tie to $dbpath";
-                        my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-                        $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-                           %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-                           'MLDBM::Sync',$dbpath,
-                           $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) or
-                           &Net::FullAuto::FA_Core::handle_error("$tie_err: ");
-                        $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->
-                           SyncCacheSize('100K');
-                        $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-                        my $href=${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$host};
+                        my $dbenv = BerkeleyDB::Env->new(
+                              -Home  => $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'},
+                              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                        ) or &handle_error(
+                           "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+                        my $bdb = BerkeleyDB::Btree->new(
+                             -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                             -Flags    => DB_CREATE,
+                             -Env      => $dbenv
+                        ) or &handle_error(
+                           "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+                        my $href='';
+                        my $status=$bdb->db_get($host,$href);
+                        $href=eval $href;
                         my $key="${Net::FullAuto::FA_Core::username}_X_"
                                ."${Net::FullAuto::FA_Core::username}_X_${host}";
                         while (delete $href->{"$key"}) {}
@@ -7662,12 +7636,9 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         my $new_encrypted=$cipher->encrypt(
                               $recurse_passwd);
                         $href->{$key}=$new_encrypted;
-                        ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$host}=$href;
-                        $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-                        undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-                        delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-                        untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-                        delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+                        my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+                        $status=$bdb->db_put($host,$put_href);
+                        undef $bdb;
                      }
                      $ftr_cmd->{_cmd_handle}->cmd(
                         "export PS1='_funkyPrompt_';unset PROMPT_COMMAND");
@@ -15472,7 +15443,6 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                               or &Net::FullAuto::FA_Core::handle_error(
                               "couldn't launch ssh subprocess");
                         }
-#print "CMD_PIDSSHHHHHHHHHHH=$cmd_pid<=========\n";
                         $cmd_handle=Net::Telnet->new(Fhopen => $cmd_handle,
                            Timeout => $cdtimeout);
                         if ($su_id) {
@@ -15763,7 +15733,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      print "\nRem_Command::cmd_login() $ct ",
-                        "LOOKING FOR SHELL AFTER PASSWORD OUTPUT ($Timeout=5):",
+                        "LOOKING FOR SHELL AFTER PASSWORD OUTPUT (Timeout=5):",
                         "\n       ==>$line<==\n       ",
                         "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                         "\n       at Line ",__LINE__,"\n\n"
@@ -19024,10 +18994,7 @@ sub READLINE {
 package Net::FullAuto::FA_DB;
 
 use strict;
-use MLDBM::Sync;                       # this gets the default, SDBM_File
-use MLDBM qw(DB_File Storable);        # use Storable for serializing
-use Fcntl qw(:DEFAULT);                # import symbols O_CREAT & O_RDWR
-#use BerkeleyDB::Manager;
+use BerkeleyDB;
 
 sub new
 {
@@ -19085,25 +19052,23 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    &Net::FullAuto::FA_Core::give_semaphore($ipc_key);
    $line="${hostlabel}|%|$line";
    ${$self->{_host_queried}}{"$hostlabel"}='-';
-   my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-      %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-      'MLDBM::Sync',
-      "$self->{_dbfile}.db",
-      $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-      &Net::FullAuto::FA_Core::handle_error("$tie_err :\n        ".($!));
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
+   my $dbenv = BerkeleyDB::Env->new(
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+      "cannot open environment for DB: $BerkeleyDB::Error\n");
+   my $bdb = BerkeleyDB::Btree->new(
+              -Filename => "$self->{_dbfile}.db",
+              -Flags    => DB_CREATE,
+              -Env      => $dbenv
+   ) or &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n");
 print "ADDING LINE=$line<==\n" if $debug;
 print $Net::FullAuto::FA_Core::MRLOG "ADDING LINE=$line<==\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{"$line"}=time;
-   ${$self->{_line_queried}}{"$line"}='-';
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-   undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-   delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+   my $status=$bdb->db_put($line,time);
+   undef $bdb;
+   ${$self->{_line_queried}}{$line}='-';
    return 1,'';
 }
 
@@ -19157,19 +19122,30 @@ print $Net::FullAuto::FA_Core::MRLOG "TIMEINFO=> MT=$mt HR=$hr DY=$dy MN=$mn FY=
 print "STARTING TIE\n" if $debug;
 print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-		   %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},'MLDBM::Sync',
-		   "$self->{_dbfile}.db",
-		   $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-	   &Net::FullAuto::FA_Core::handle_error("$tie_err :\n        ".($!));
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
+   my $dbenv = BerkeleyDB::Env->new(
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+      "cannot open environment for DB: $BerkeleyDB::Error\n");
+   my $bdb = BerkeleyDB::Btree->new(
+              -Filename => "$self->{_dbfile}.db",
+              -Flags    => DB_CREATE,
+              -Env      => $dbenv
+   ) or &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n");
 print "DONE WITH TIE\n" if $debug;
 print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $result=0;
-   my %dbcopy=%{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
+   my $dbcopy='';my $status='';
+   # print the contents of the file
+   my ($k, $v) = ("", "") ;
+   my $cursor = $bdb->db_cursor() ;
+   my %dbcopy=();
+   while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+      $dbcopy{$k}=$v;
+   }
+   undef $cursor ;
    if (exists $dbcopy{$line}) {
       ${$self->{_line_queried}}{$line}='-';
       $result='File has Already been Transferred';
@@ -19179,14 +19155,10 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
    } elsif (!$hr && testtime(\%dbcopy,$filename,$size,
          $mn,$dy,$rx1,$rx2,$hostlabel)) {
       ${$self->{_line_queried}}{$line}='-';
-      ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$line}=time;
+      $status=$bdb->db_put($line,time);
       $result='File has Already been Transferred';
    } elsif (!$Net::FullAuto::FA_Core::cron) {
-      $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-      undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-      untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-      delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+      undef $bdb;
       if (time-$timestamp<600 && $timestamp<time) {
          ${$self->{_line_queried}}{$line}='-';
          return 'File Less then 10 Minutes Old','';
@@ -19204,20 +19176,19 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
       } elsif ($output eq ']quit[') {
          &Net::FullAuto::FA_Core::cleanup()
       } elsif ($output eq 'Do NOT Transfer EVER') {
-         my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-            %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},'MLDBM::Sync',
-            "$self->{_dbfile}.db",
-            $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-            &Net::FullAuto::FA_Core::handle_error("$tie_err :\n        ".($!));
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-         ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$line}=time;
-         $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-         undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-         untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-         delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+         my $dbenv = BerkeleyDB::Env->new(
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         ) or &handle_error(
+            "cannot open environment for DB: $BerkeleyDB::Error\n");
+         my $bdb = BerkeleyDB::Btree->new(
+                 -Filename => "$self->{_dbfile}.db",
+                 -Flags    => DB_CREATE,
+                 -Env      => $dbenv
+         ) or &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n");
+         my $status=$bdb->db_put($line,time);
+         undef $bdb;
          ${$self->{_line_queried}}{$line}='-';
          return 'User Declines to EVER Transfer File','';
       } else {
@@ -19248,11 +19219,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          }
       }
    }
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-   undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-   delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+   undef $bdb;
    return $result,'';
 }
 
@@ -19294,25 +19261,28 @@ sub mod
 {
    our $debug=$Net::FullAuto::FA_Core::debug;
    my $self=shift;
-   my $tie_err="can't open tie to $self->{_dbfile}.db";
-   my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-      %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-      'MLDBM::Sync',
-      "$self->{_dbfile}.db",
-      $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-      &Net::FullAuto::FA_Core::handle_error("$tie_err :\n        ".($!));
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
+   my $dbenv = BerkeleyDB::Env->new(
+           -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+      "cannot open environment for DB: $BerkeleyDB::Error\n");
+   my $bdb = BerkeleyDB::Btree->new(
+           -Filename => "$self->{_dbfile}.db",
+           -Flags    => DB_CREATE,
+           -Env      => $dbenv
+   ) or &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n");
    my $banner="\n   Please Pick a SkipDB Entry to Delete :";
-   my @output=keys %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
+   my ($k,$v) = ("","") ;
+   my $cursor = $bdb->db_cursor() ;
+   my @output=();
+   while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+      push @output, $k;
+   }
+   undef $cursor;
    my $output=&Menus::pick(\@output,$banner,7);
-   delete ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$output};
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-   undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-   delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+   my $status=$bdb->db_del($output);
+   undef $bdb;
 }
 
 sub close
@@ -19321,28 +19291,28 @@ sub close
    our $debug=$Net::FullAuto::FA_Core::debug;
 print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron && $debug;
    my $self=shift;
-   my $tie_err="can't open tie to $self->{_dbfile}.db";
-   my $synctimepid=time."_".$$."_".$Net::FullAuto::FA_Core::increment++;
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}=tie(
-      %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}},
-      'MLDBM::Sync',
-      "$self->{_dbfile}.db",
-      $Net::FullAuto::FA_Core::tieflags,$Net::FullAuto::FA_Core::tieperms) ||
-      &Net::FullAuto::FA_Core::handle_error("$tie_err :\n        ".($!));
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->SyncCacheSize('100K');
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->Lock;
-   foreach my $line (keys %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}}) {
-      my $hostlabel=substr($line,0,(index $line,'|%|'));
+   my $dbenv = BerkeleyDB::Env->new(
+           -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+      "cannot open environment for DB: $BerkeleyDB::Error\n");
+   my $bdb = BerkeleyDB::Btree->new(
+           -Filename => "$self->{_dbfile}.db",
+           -Flags    => DB_CREATE,
+           -Env      => $dbenv
+   ) or &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n");
+   my ($k,$v) = ("","") ;
+   my $cursor = $bdb->db_cursor() ;
+   while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+      my $hostlabel=substr($k,0,(index $k,'|%|'));
       if (exists ${$self->{_host_queried}}{$hostlabel}
-            && !exists ${$self->{_line_queried}}{$line}) {
-         delete ${$Net::FullAuto::FA_Core::tiedb{$synctimepid}}{$line};
+            && !exists ${$self->{_line_queried}}{$k}) {
+         my $status=$bdb->db_del($k);
       }
    }
-   $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid}->UnLock;
-   undef $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$synctimepid};
-   untie %{$Net::FullAuto::FA_Core::tiedb{$synctimepid}};
-   delete $Net::FullAuto::FA_Core::tiedb{$synctimepid};
+   undef $cursor ;
+   undef $bdb ;
 }
 
 package Net::FullAuto::Getline;

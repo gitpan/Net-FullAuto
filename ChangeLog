@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-12-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.87 released.
+
+        * Removed all code utilizing MLDBM and DB_File and
+          replaced with BerkeleyDB in order to use MVCC.
+
+        * Added use of Data::Dump::Streamer to use with
+          BerkeleyDB
+
+
 2010-12-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.86 released.
