@@ -1067,6 +1067,23 @@ $SIG{ CHLD } = 'IGNORE';
 
 my @Hosts=@{&check_Hosts($fa_host)};
 
+sub grep_for_string_existence_only
+{
+   my $file=$_[0];
+   my $pattern=$_[1];
+   my $return_value=0;
+   eval {
+      open(FH,"<$file");
+      while (my $line=<FH>) {
+         if ($line=~/$pattern/) {
+            $return_value=1;
+            last;
+         }
+      }
+   };
+   return $return_value;
+}
+
 sub version
 {
 can_load(modules => { Net::FullAuto => 0 });
@@ -5082,7 +5099,8 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
                ## Wait for password prompt.
                my $ignore='';
                ($ignore,$stderr)=
-                  &File_Transfer::wait_for_ftr_passwd_prompt($localhost,$timeout);
+                  &File_Transfer::wait_for_ftr_passwd_prompt(
+                     $localhost,$timeout);
                if ($stderr) {
                   if ($lc_cnt==$#RCM_Link) {
                      die $stderr;
@@ -6206,9 +6224,6 @@ sub setuid_cmd
       while (my $line=<KID>) {
          $output.=$line;
       }
-open (HELLO,">>hello.txt");
-print HELLO "WHAT=".$output."<=";
-CORE::close HELLO;
       CORE::close(KID);
    } else { # child
       my @temp     = ($EUID, $EGID);
@@ -6227,9 +6242,6 @@ CORE::close HELLO;
          $ENV{PATH} = '';
          $ENV{ENV}  = '';
       }
-open (HELLO,">>hello.txt");
-print HELLO "ONE=$one and TWO=$two and THREE=$three and FOUR=$four<=\n";
-CORE::close HELLO;
       if ($four) {
          exec $one, $two, $three, $four ||
             &handle_error("Couldn't exec: $cmd_err".($!),'-1');
@@ -9614,12 +9626,14 @@ sub wait_for_ftr_passwd_prompt
 
    ## Wait for password prompt.
    my @topcaller=caller;
-   print "\nINFO: File_Transfer::wait_for_ftr_passwd_prompt() (((((((CALLER))))))):\n       ",
+   print "\nINFO: File_Transfer::wait_for_ftr_passwd_prompt() ",
+      "(((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if !$Net::FullAuto::FA_Core::cron &&
       $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG
-      "\nINFO: File_Transfer::wait_for_ftr_passwd_prompt() (((((((CALLER))))))):\n       ",
+      "\nINFO: File_Transfer::wait_for_ftr_passwd_prompt() ",
+      "(((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -9629,9 +9643,11 @@ sub wait_for_ftr_passwd_prompt
    my $eval_stdout='';my $eval_stderr='';$@='';
    my $connect_err=0;my $count=0;
    $filehandle->{_cmd_handle}->autoflush(1);
+   my $starttime=time;my $firstflag=0;
    eval {
       while (1) {
-         PW: while (my $line=$filehandle->{_cmd_handle}->get(Timeout=>$timeout)) {
+         PW: while (my $line=$filehandle->{_cmd_handle}->get(
+               Timeout=>$timeout)) {
             $SIG{ALRM} = sub { die "read timed-out:do_slave\n" }; # \n required
             alarm $timeout+1;
             print $Net::FullAuto::FA_Core::MRLOG
@@ -9643,6 +9659,23 @@ sub wait_for_ftr_passwd_prompt
                "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
                if !$Net::FullAuto::FA_Core::cron && $debug;
             $lin.=$line;
+            if (!$firstflag && 5<=time()-$starttime) {
+               $firstflag=1;
+               unless (-e $Net::FullAuto::FA_Core::home_dir.'/.ssh' &&
+                     &Net::FullAuto::FA_Core::grep_for_string_existence_only(
+                     $Net::FullAuto::FA_Core::home_dir.'/.ssh/known_hosts',
+                     qr/^localhost/)) {
+                  print "\n\n   ############### NOTICE ###############".
+                        "\n   It appears that this is the first time".
+                        "\n   FullAuto is starting on this host. If".
+                        "\n   so, it may take a few *MINUTES* for the".
+                        "\n   intial configurtion of Secure Shell".
+                        "\n   to complete. All future FullAuto".
+                        "\n   startups will go MUCH faster. Please".
+                        "\n   be patient and when the next prompt".
+                        "\n   eventually appears, please type 'yes'.";
+               }
+            }
             if (-1<index $line,'Permission denied') {
                alarm 0;
                die 'Permission denied';
@@ -9754,7 +9787,8 @@ print $Net::FullAuto::FA_Core::MRLOG "wait_for_ftr_passwd_prompt() GETGOTPASS!!=
                $lin=~s/^.*(Warning.*)$/$1/s;
                print "\n$lin";sleep 1;
                print $Net::FullAuto::FA_Core::MRLOG $lin
-                  if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             }
          } alarm 0;
          last if $gotpass;

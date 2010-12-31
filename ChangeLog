@@ -25,6 +25,17 @@
 ################################################################
 
 
+2010-12-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.88 released.
+
+        * HAPPY NEW YEAR!!
+
+        * Added test for first invocation and NOTICE message
+          to advice patience with slow first startup due to
+          the need for ssh to negotiate initial encryption.
+
+
 2010-12-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.87 released.
