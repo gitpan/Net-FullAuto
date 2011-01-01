@@ -27,9 +27,16 @@
 
 2010-12-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
-        * Version 0.88 released.
+        * Version 0.89 released.
 
         * HAPPY NEW YEAR!!
+
+        * Added 'Plan' functionality. (Not yet usable).
+
+
+2010-12-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.88 released.
 
         * Added test for first invocation and NOTICE message
           to advice patience with slow first startup due to

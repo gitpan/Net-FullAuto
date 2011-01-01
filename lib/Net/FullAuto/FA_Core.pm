@@ -1013,6 +1013,34 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
       &scrub_passwd_file($master_hostlabel,
          $username);
    }
+   if ($Net::FullAuto::FA_Core::plan) {
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
+         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+      }
+      my $dbenv = BerkeleyDB::Env->new(
+         -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or &handle_error(
+         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb = BerkeleyDB::Btree->new(
+         -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
+         -Flags    => DB_CREATE,
+         -Env      => $dbenv
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $plan_number=${$Net::FullAuto::FA_Core::plan}{'Number'}||'';
+      my $plan_title =${$Net::FullAuto::FA_Core::plan}{'Title'}||'';
+      my $put_plan=Data::Dump::Streamer::Dump(
+            $Net::FullAuto::FA_Core::plan)->Out();
+      if ($plan_number) {
+         $status=$bdb->db_put($plan_number,$put_plan);
+         print "\n\n       ################ NEW PLAN ##################\n\n",
+               "          Number: $plan_number\n",
+               "          Title:  $plan_title\n\n",
+               "       WAS SUCCESSFULLY CREATED!\n";
+      }
+      undef $bdb;
+   }
    if ((!$Net::FullAuto::FA_Core::cron || $Net::FullAuto::FA_Core::debug)
          && !$Net::FullAuto::FA_Core::quiet) {
       if ($OS ne 'cygwin') {
@@ -1332,7 +1360,7 @@ sub plan {
          Item_1 => {
 
              Text => 'Accept Defaults and Create New Plan',
-             Result => sub { return '' },
+             #Result => sub { return '' },
 
          },
          Item_2 => {
@@ -1375,7 +1403,63 @@ sub plan {
    );
 
    my $output=&Menu(\%plan_menu);
-   return $output;
+
+   if ($output ne ']quit[') {
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
+         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+      }
+      my $dbenv = BerkeleyDB::Env->new(
+         -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or &handle_error(
+        "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb = BerkeleyDB::Btree->new(
+         -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
+         -Flags    => DB_CREATE,
+         -Env      => $dbenv
+      ) or &handle_error(
+        "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $new_plan_number=0;
+      my ($k,$v) = ("","") ;
+      if ($output eq 'Accept Defaults and Create New Plan') {
+         my $cursor = $bdb->db_cursor() ;
+         $status=$cursor->c_get($k, $v, DB_LAST);
+         $new_plan_number=++$k;
+         undef $cursor;
+         my $plan={ 'Number' =>$new_plan_number,
+                    'Created'=>$Net::FullAuto::FA_Core::invoked[2],
+                    'Creator'=>$Net::FullAuto::FA_Core::username,
+                    'Host'   =>$Net::FullAuto::FA_Core::hostname,
+                    'Plan'   =>[] };
+         undef $bdb;
+         return $plan;
+      } elsif ($output eq 'Work with Existing Plans') {
+         my $cursor = $bdb->db_cursor() ;
+         while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+            my $planhash=eval $v;
+            push @plans, pack(A10,$k).$planhash->{'Title'};
+         }
+         my %existing=(
+
+               Label => 'existing',
+               Item_1=> {
+                 
+                  Text => "]C[",
+                  Convey => \@plans
+
+               },
+               Banner=> '   Select a Plan to work with:'
+         );
+         my $outp=Menu(\%existing);
+         undef $cursor;
+         undef $bdb;
+         undef $Net::FullAuto::FA_Core::plan;
+         &cleanup();         
+      }
+   } else {
+      undef $Net::FullAuto::FA_Core::plan;
+      &cleanup();
+   }
 
 }
 
@@ -2415,8 +2499,11 @@ sub handle_error
       $command=${$track}[2];
       $suberr=${$track}[3] if defined ${$track}[3] && ${$track}[3];
       $suberr||='';
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}."Track") {
+         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}."Track");
+      }
       my $dbenv = BerkeleyDB::Env->new(
-                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track',
                  -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -3705,8 +3792,11 @@ sub getpasswd
       print $MRLOG "PASSWDDB=",
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db","<==\n"
          if -1<index $MRLOG,'*';
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+      }
       my $dbenv = BerkeleyDB::Env->new(
-                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                  -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -3920,8 +4010,11 @@ sub getpasswd
       }
    }
    unless ($Net::FullAuto::FA_Core::tosspass) {
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+      }
       my $dbenv = BerkeleyDB::Env->new(
-                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                  -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -4729,17 +4822,17 @@ sub fa_login
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
       #if (-d $FA_Core_path && -w _) {
       if ($specialperms ne 'none' && -d $FA_Core_path && -w _) {
-         unless (-d "$FA_Core_path/db/Password/") {
-            File::Path::make_path("$FA_Core_path/db/Password/");
+         unless (-d "$FA_Core_path/db/") {
+            File::Path::make_path("$FA_Core_path/db/");
          }
          $Hosts{"__Master_${$}__"}{'FA_Secure'}=
-            "FA_Core_path/db/Password/";
+            "FA_Core_path/db/";
       } elsif (-d "/var" && -w _) {
-         unless (-d "/var/db/Berkeley/FullAuto/Password/") {
-            File::Path::make_path("/var/db/Berkeley/FullAuto/Password/");
+         unless (-d "/var/db/Berkeley/FullAuto/") {
+            File::Path::make_path("/var/db/Berkeley/FullAuto/");
          }
          $Hosts{"__Master_${$}__"}{'FA_Secure'}=
-            "/var/db/Berkeley/FullAuto/Password/";
+            "/var/db/Berkeley/FullAuto/";
 #print "FA_SUCURE3=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       } else {
          my @hds=split /[\/]/, (getpwuid($<))[7];
@@ -4753,12 +4846,12 @@ sub fa_login
                next;
             } $dur.='/';
          }
-         unless (-d "${dur}.fullauto/db/Password/") {
+         unless (-d "${dur}.fullauto/db/") {
             File::Path::make_path(
-               "${dur}.fullauto/db/Password/");
+               "${dur}.fullauto/db/");
          }
          $Hosts{"__Master_${$}__"}{'FA_Secure'}=
-            "${dur}.fullauto/db/Password/";
+            "${dur}.fullauto/db/";
 #print "FA_SUCURE4=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       }
    } elsif (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
@@ -4883,8 +4976,11 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       my $kind='prod';
       $kind='test' if $Net::FullAuto::FA_Core::test
          && !$Net::FullAuto::FA_Core::prod;
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+      }
       my $dbenv = BerkeleyDB::Env->new(
-                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                  -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -5326,8 +5422,11 @@ print $Net::FullAuto::FA_Core::MRLOG
 
          my $kind='prod';
          $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+         unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+         }
          my $dbenv = BerkeleyDB::Env->new(
-                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -5555,8 +5654,11 @@ sub passwd_db_update
    my $cmd_type=$_[3];
    my $kind='prod';
    $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+   }
    my $dbenv = BerkeleyDB::Env->new(
-              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -5623,8 +5725,11 @@ sub su_scrub
    my $hostlabel=$_[0];my $login_id='';my $cmd_type=$_[1];
    my $kind='prod';
    $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+   }
    my $dbenv = BerkeleyDB::Env->new(
-              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -5722,8 +5827,11 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
                 ." UNIX group.\n       Contact your system administrator.\n";
          my $kind='prod';
          $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+         unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+         }
          my $dbenv = BerkeleyDB::Env->new(
-                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -6492,8 +6600,11 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       my $kind='prod';
       $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
       return unless exists $Hosts{"__Master_${$}__"}{'FA_Secure'};
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+      }
       my $dbenv = BerkeleyDB::Env->new(
-                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                  -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -7625,8 +7736,11 @@ print "FTR_RETURN3\n";
                                    {'FA_Secure'}
                                   ."${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
 print "DBPATHHHH=$dbpath<==\n";sleep 2;
+                        unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+                           File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+                        }
                         my $dbenv = BerkeleyDB::Env->new(
-                              -Home  => $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'},
+                              -Home  => $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                         ) or &handle_error(
                            "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -19086,8 +19200,11 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    &Net::FullAuto::FA_Core::give_semaphore($ipc_key);
    $line="${hostlabel}|%|$line";
    ${$self->{_host_queried}}{"$hostlabel"}='-';
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+   }
    my $dbenv = BerkeleyDB::Env->new(
-              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
@@ -19156,8 +19273,11 @@ print $Net::FullAuto::FA_Core::MRLOG "TIMEINFO=> MT=$mt HR=$hr DY=$dy MN=$mn FY=
 print "STARTING TIE\n" if $debug;
 print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+   }
    my $dbenv = BerkeleyDB::Env->new(
-              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+              -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
@@ -19210,8 +19330,11 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
       } elsif ($output eq ']quit[') {
          &Net::FullAuto::FA_Core::cleanup()
       } elsif ($output eq 'Do NOT Transfer EVER') {
+         unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+         }
          my $dbenv = BerkeleyDB::Env->new(
-                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
                  -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n");
@@ -19295,8 +19418,11 @@ sub mod
 {
    our $debug=$Net::FullAuto::FA_Core::debug;
    my $self=shift;
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+   }
    my $dbenv = BerkeleyDB::Env->new(
-           -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+           -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
            -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
@@ -19325,8 +19451,11 @@ sub close
    our $debug=$Net::FullAuto::FA_Core::debug;
 print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron && $debug;
    my $self=shift;
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+   }
    my $dbenv = BerkeleyDB::Env->new(
-           -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'},
+           -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
            -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
