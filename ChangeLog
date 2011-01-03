@@ -25,6 +25,20 @@
 ################################################################
 
 
+2011-01-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.90 released.
+
+        * Fixed last "known" error condition when running under
+          Cygwin/Windows.
+
+        * Modified Makefile.PL to do optional registry
+          modification.
+
+        * Now forcing build and install of very latest
+          BerkeleyDB in order to enhance reliability.
+
+
 2010-12-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.89 released.

@@ -3451,7 +3451,7 @@ sub master_transfer_dir
       print "\nTTTTTTT cd /tmp TTTTTTT OUTPUT ==>$output<== and STDERR ==>$stderr<==",
          "\n       at Line ",__LINE__,"\n\n"
          if !$Net::FullAuto::FA_Core::cron && $debug;
-      if (!$stderr || ($stderr eq 'cd /tmp 2>&1')) {
+      if (!$stderr || ($stderr=~/^.*cd \/tmp 2[>][&]1$/)) {
          $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($localhost,'cmd /c chdir',
                  $localhost->{'hostlabel'}[0]);
          my ($drive,$path)=unpack('a1 x1 a*',$curdir);
@@ -3476,6 +3476,7 @@ sub master_transfer_dir
             &handle_error($stderr,'-2','__cleanup__') if $stderr;
          }
       }
+print "CD TO TMP STDERR=$stderr<==\n";
       if ((${$work_dirs}{_tmp},${$work_dirs}{_tmp_mswin})
             =&File_Transfer::get_drive(
             '/tmp','Target','',"__Master_${$}__")) {
@@ -5252,6 +5253,7 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
                           _cmd_type=>'ssh',
                           _connect=>$_connect },$timeout);
                   if ($stderr) {
+print "WHAT THE HECK IS HTE STDERR=$stderr<==\n";
                      if ($lc_cnt==$#RCM_Link) {
                         die $stderr;
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
@@ -5275,18 +5277,27 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
          if (!$cron && !$debug && !$quiet) {
             if ($OS ne 'cygwin') {
                print $blanklines;
-            } else { print "\n\n" }
+            } else {
+               print "\n\n" unless $login_Mast_error;
+            }
             # Logging (1)
-            print "--> Logging into $host via $cmd_type  . . .\n\n";
+            print "--> Logging into $host via $cmd_type",
+                  "  . . .\n\n" unless $login_Mast_error;
          } elsif ($debug) {
-            print "--> Logging (1) into $host via $cmd_type  . . .\n\n";
+            print "LOGIN MASTER HOST ERROR: ",
+                  "$login_Mast_error\n" if $login_Mast_error;
+            print "--> Logging (1) into $host via $cmd_type",
+                  "  . . .\n\n";
          }
 
          my $newpw='';$passline=__LINE__+1;
          while (my $line=$local_host->get) {
+print "WAITING FOR CMDPROMPT=$line<==\n"
+      if !$Net::FullAuto::FA_Core::cron &&
+      $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "WAITING FOR CMDPROMPT=$line<==\n"
-   if $Net::FullAuto::FA_Core::log &&
-   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             my $output='';
             ($output=$line)=~s/login:.*//s;
             if ($OS eq 'cygwin' && $line=~/^$password\n/) {
@@ -5502,7 +5513,8 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
 
          if (($OS ne 'cygwin') && $su_id) {
             my $cfh_ignore='';my $cfh_error='';
-            ($cfh_ignore,$cfh_error)=&clean_filehandle($local_host);
+            ($cfh_ignore,$cfh_error)=&clean_filehandle(
+               $local_host);
             &handle_error($cfh_error,'-1') 
                if $cfh_error;
             my $ignore='';
@@ -5515,18 +5527,22 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
          if ($OS eq 'cygwin') {
             my $wloop=0;
             while (1) {
-               ($localhost->{_cygdrive},$stderr)=Rem_Command::cmd(
+               ($localhost->{_cygdrive},$stderr)=
+                  Rem_Command::cmd(
                   $localhost,"${mountpath}mount -p");
                $localhost->{_cygdrive}=~s/^.*(\/\S+).*$/$1/s;
                last if $localhost->{_cygdrive} && unpack('a1',
                   $localhost->{_cygdrive}) eq '/';
                my $cfh_ignore='';my $cfh_error='';
-               ($cfh_ignore,$cfh_error)=&clean_filehandle($local_host);
+               ($cfh_ignore,$cfh_error)=&clean_filehandle(
+                  $local_host);
                &handle_error($cfh_error,'-1')  
-            } $localhost->{_cygdrive_regex}=qr/^$localhost->{_cygdrive}\//;
+            } $localhost->{_cygdrive_regex}=
+                 qr/^$localhost->{_cygdrive}\//;
          }
 
-         $localhost->{_work_dirs}=&master_transfer_dir($localhost);
+         $localhost->{_work_dirs}=&master_transfer_dir(
+            $localhost);
 
          if ($su_id) {
             $Connections{"__Master_${$}____%-$su_id"}
@@ -5547,31 +5563,41 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                $@=~s/INSECURE/Insecure/s;
             }
          }
-         $username=getlogin() || (getpwuid($<))[0] || "Intruder!!"
-            if !$username;
+         $username=getlogin() || (getpwuid($<))[0]
+            || "Intruder!!" if !$username;
          $login_id=$username if !$login_id;
          $login_Mast_error=$@;
          $localhost->{_sh_pid}||='';
          $localhost->{_cmd_pid}||='';
          if ((-1<index $@,'Not a GLOB reference') ||
-               (-1<index $@,'Write failed: Connection reset by peer')) {
+               (-1<index $@,
+               'Write failed: Connection reset by peer')) {
             print $Net::FullAuto::FA_Core::MRLOG
                "$@ and SH_PID=$localhost->{_sh_pid}",
                " and CMD_PID=$localhost->{_cmd_pid}\n"
                if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             ($stdout,$stderr)=
-               &Net::FullAuto::FA_Core::kill($localhost->{_sh_pid},9)
+               &Net::FullAuto::FA_Core::kill(
+                  $localhost->{_sh_pid},9)
                if exists $localhost->{_sh_pid} &&
-               &Net::FullAuto::FA_Core::testpid($localhost->{_sh_pid});
+               &Net::FullAuto::FA_Core::testpid(
+                  $localhost->{_sh_pid});
             ($stdout,$stderr)=
-               &Net::FullAuto::FA_Core::kill($localhost->{_cmd_pid},9)
-               if &Net::FullAuto::FA_Core::testpid($localhost->{_cmd_pid});
-            $login_Mast_error='';$retrys++;next; 
+               &Net::FullAuto::FA_Core::kill(
+                  $localhost->{_cmd_pid},9)
+               if &Net::FullAuto::FA_Core::testpid(
+                  $localhost->{_cmd_pid});
+            #$login_Mast_error='';
+            #$login_Mast_error=$@ if -1<index $@,
+            #   'Write failed: Connection reset by peer';
+            $retrys++;next; 
          } elsif ((-1<index $@,'Address already in use' ||
-               -1<index $@,'Connection refused') && $retrys<2) {
+               -1<index $@,'Connection refused')
+               && $retrys<2) {
             my $warn="$@\n       Waiting ".int $fatimeout/3
-                    ." seconds for re-attempt . . .\n       ".($!);
+                    ." seconds for re-attempt . . .\n       "
+                    .($!);
             warn $warn if (!$cron || $debug) && !$quiet;
             print $MRLOG $warn
                if $log && -1<index $MRLOG,'*';
@@ -12262,12 +12288,12 @@ sub get_drive
          my $result=&Net::FullAuto::FA_Core::test_dir($cmd_handle->{_cmd_handle},
             $cmd_handle->{_cygdrive}."/$drv/$dir/");
          if ($result ne 'NODIR') {
-            if ($ms_dir && $ms_dir ne '\\') {
+            if ($ms_dir && $ms_dir ne '\\\\') {
                push @drvs, "$drv:\\$ms_dir\\";
             } else { push @drvs, "$drv:\\" }
          }
       } elsif (-d "$drv:\\$ms_dir") {
-         if ($ms_dir && $ms_dir ne '\\') {
+         if ($ms_dir && $ms_dir ne '\\\\') {
             push @drvs, "$drv:\\$ms_dir\\";
          } else { push @drvs, "$drv:\\" }
       }
@@ -18510,7 +18536,9 @@ print "FOURTEEN003\n";
                   $starttime=time();$select_timeout=$cmtimeout;
                   $restart_attempt=1;
                }
-            } $stderr=$lastline if $lastline=~/Connection to.*closed/s;
+            }
+#print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEE\n";
+            $stderr=$lastline if $lastline=~/Connection to.*closed/s;
 print $Net::FullAuto::FA_Core::MRLOG "cmd() STDERRBOTTOM=$stderr<== and LASTLINE=$lastline<==\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             if ($stderr!~s/^\s*$//s) {
@@ -18519,8 +18547,10 @@ print $Net::FullAuto::FA_Core::MRLOG "cmd() STDERRBOTTOM=$stderr<== and LASTLINE
             }
          }
       };
+#print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEXXXXXXXXXXX\n";
       $self->{_cmd_handle}->autoflush(0)
          if defined fileno $self->{_cmd_handle};
+#print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEUUUUUUUUUUU\n";
       my $eval_error='';
       if ($@) {
          print "\nEEEEEEE *just thrown* EEEEEEE RAW ERROR: $@".
@@ -18548,6 +18578,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cmd() STDERRBOTTOM=$stderr<== and LASTLINE
          $self->{_cmd_handle}->timeout($svtimeout);
       }
       $eval_error=$stderr if $stderr && !$eval_error; 
+#print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEOOOOOOOOOOOOO\n";
       if ($eval_error) {
          chomp($eval_error=~tr/\0-\11\13-\37\177-\377//d);
          $eval_error=~s/^\s+//;
@@ -18704,6 +18735,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETURNING ERROR=$eval_error\n"
             return $stdout,$eval_error;
          } else { &Net::FullAuto::FA_Core::handle_error($eval_error) }
       }
+#print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEMMMMMMMMMM\n";
       pop @FA_Core::pid_ts if $pid_ts;
       $stdout||='';$stderr||='';
       &Net::FullAuto::FA_Core::give_semaphore($sem) if $sem;
@@ -18711,6 +18743,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WE EVER REALLY GET HERE? ".
    "and STDOUT=$stdout<== and STDERR=$stderr<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEENNNNNNNNNN\n";
       if ($wantarray) {
          return $stdout,$stderr;
       } else { return $stdout }

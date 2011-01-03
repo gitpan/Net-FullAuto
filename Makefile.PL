@@ -19,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.89';
+version         '0.90';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -783,7 +783,7 @@ if ($get_BerkeleyDB) {
          chomp($lib[0]);$dblib=$lib[0];last;
       }
       my $major_minor_ver=substr($ver,0,(rindex $ver,'.'));
-      if ($dblib && $major_minor_ver>=4.5) {
+      if ($ENV{AUTOMATED_TESTING} || ($dblib && $major_minor_ver>=5.1)) {
          $dblib=~s/^(.*)\/.*$/$1/;
          $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
          $ENV{'BERKELEYDB_LIB'}=$dblib;
@@ -1079,6 +1079,77 @@ if ($@) {
    }
    $die.="\n\n";
    die $die;
+}
+
+sub windows_xp {
+   my $output=`cmd /c ver`;
+   if ($output=~/Windows XP/s) {
+      return 1;
+   } else {
+      return 0;
+   }
+}
+
+if ($^O eq 'cygwin' && &windows_xp) {
+   my $regc='regtool -v check "/HKLM/Software/Microsoft/'.
+            'Windows/CurrentVersion/Explorer/AlwaysUnloadDLL" 2>&1';
+   my $outp=`$regc`;
+   my $notthere=0;
+   if ($outp=~/key\s+exists/s) {
+      my $regc='regtool -v list "/HKLM/Software/Microsoft/'.
+            'Windows/CurrentVersion/Explorer/AlwaysUnloadDLL" 2>&1';
+      my $outp=`$regc`;
+      if ($outp!~/\(REG_SZ\) = \"1\"/) {
+         $notthere=1; 
+      }
+   } else { $notthere=1 }
+   if ($notthere) {
+      eval {
+         my $timeout=120;
+         $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+         alarm $timeout;
+         print "\n       *** THIS SCREEN WILL TIMEOUT IN 2 MINUTES ***\n".
+               "\n       IMPORTANT! : FullAuto is VERY Memory Intensive.".
+               "\n                  Setup has detected that a recommended".
+               "\n                  Windows XP registry setting does NOT".
+               "\n                  exist. As a result, Windows XP does".
+               "\n                  not remove DLL's from memory when an".
+               "\n                  an application exits, but keeps them".
+               "\n                  in memory for a time in order to speed".
+               "\n                  up application startup *in case* the".
+               "\n                  the app is restarted. Cygwin and ssh".
+               "\n                  load DLLs and with repeated invocation".
+               "\n                  (which is common FullAuto usage),".
+               "\n                  memory can 'max' out and cause all".
+               "\n                  active FullAuto and Cygwin processes".
+               "\n                  to freeze and hang.".
+               "\n\n       Therefore, it is *HIGHLY* recommended that this".
+               "\n       registry setting exist:\n".
+               "\n       /HKLM/Software/Microsoft/Windows/CurrentVersion/".
+               "Explorer/AlwaysUnload DLL\n".
+               "\n       FullAuto setup can do this for you, but only with".
+               "\n       your approval. Would you like FullAuto setup to".
+               "\n       attempt to insert this registry setting?".
+               "\n\n       (If you do not wish FullAuto setup to".
+               "\n       perform this step, type 'N' and setup will".
+               "\n       continue WITHOUT modifying the Windows registry.)".
+               "\n\n";
+         print "Type <Y> if you wish to FullAuto setup to modify the registry,\n".
+               "or 'N' to proceed without this step . . . [N] ";$
+         a=<STDIN>;
+         alarm 0;
+      };
+      if ($@) {
+         # timed out
+         #exit;
+      } elsif ($a=~/^[Yy]$/s) {
+         $regc='cmd /c "REG ADD HKLM\\Software\\Microsoft\\Windows\\'.
+               'CurrentVersion\\Explorer\\AlwaysUnloadDLL /ve /t REG_SZ /d 1" 2>&1';
+         $outp=`$regc`;
+         print $outp."\n";
+      }
+
+   }
 }
 
 #Specific dependencies
