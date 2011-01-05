@@ -19,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.90';
+version         '0.91';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -441,13 +441,13 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          if ($selection!~/[Ww]ordpad/s) {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
                       .'make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,'
+                      .'libdb4.5-devel,ncurses,cron'
                       .$selection.' -X -A -q '
                       .'-s http://cygwin.mirrors.pair.com"';
          } else {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
                       .'make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses'
+                      .'libdb4.5-devel,ncurses,cron'
                       .' -X -A -q -s http://cygwin.mirrors.pair.com"';
          }
          if ($selection=~/[Ww]ordpad/) {

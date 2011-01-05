@@ -612,6 +612,7 @@ sub cleanup {
    #}
    my $new_cmd='';my $cmd='';my $clean_master='';
    my @cmd=();my %did_tran=();
+   my $kill_arg=($OS eq 'cygwin')?'f':9;
    foreach my $hostlabel (keys %Processes) {
       foreach my $id (keys %{$Processes{$hostlabel}}) {
          foreach my $type (reverse sort keys
@@ -638,11 +639,11 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_1=$line\n"
                         $line=~s/\s*$//s;
                         last if $line=~/_funkyPrompt_$/s;
                         last if $line=~/Killed by signal 2\.$/s;
-                        ($stdout,$stderr)=&kill($shell_pid,9)
+                        ($stdout,$stderr)=&kill($shell_pid,$kill_arg)
                            if &testpid($shell_pid);
                         if ($cmd_pid) {
                            if (&testpid($cmd_pid)) {
-                              ($stdout,$stderr)=&kill($cmd_pid,9);
+                              ($stdout,$stderr)=&kill($cmd_pid,$kill_arg);
                               $next=1;return;
                            }
                         }
@@ -693,7 +694,8 @@ print "clean_ERRORRRRR=$@\n" if $debug;
                         }
                      }
                   } $did_tran{$hostlabel}='-';
-               } ($stdout,$stderr)=&kill($shell_pid,9) if &testpid($shell_pid);
+               } ($stdout,$stderr)=&kill($shell_pid,$kill_arg)
+                    if &testpid($shell_pid);
             }
             if ($cnct_type eq 'ftm') {
                my ($ftp_fh,$ftp_pid,$shell_pid,$ig_nore)=
@@ -745,8 +747,10 @@ print "WHAT IS THE LINE_2 EVALERROR=$@<====\n" if $debug;
                         && $clean_master!=2;
                   } $did_tran{$hostlabel}='-';
                }
-               ($stdout,$stderr)=&kill($shell_pid,9) if &testpid($shell_pid);
-               ($stdout,$stderr)=&kill($ftp_pid,9) if &testpid($ftp_pid);
+               ($stdout,$stderr)=&kill($shell_pid,$kill_arg)
+                  if &testpid($shell_pid);
+               ($stdout,$stderr)=&kill($ftp_pid,$kill_arg)
+                  if &testpid($ftp_pid);
                $ftp_fh->close(); 
             } else {
                my ($cmd_fh,$cmd_pid,$shell_pid,$cmd)=
@@ -863,8 +867,8 @@ print "IN !WASALOCAL AND !GONE<====\n";
                            print "WOW - GOT TO CLEAN_FILEHANDLE\n";
                            my $cfh_ignore='';my $cfh_error='';
                            ($cfh_ignore,$cfh_error)=&clean_filehandle($cmd_fh);
-                           ($stdout,$stderr)=&kill($shell_pid,9);
-                           ($stdout,$stderr)=&kill($cmd_pid,9);
+                           ($stdout,$stderr)=&kill($shell_pid,$kill_arg);
+                           ($stdout,$stderr)=&kill($cmd_pid,$kill_arg);
                            print "GOT OUT OF CLEAN_FILEHANDLE\n";
                            last;
                         }
@@ -951,12 +955,12 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT EVEN FARTHER HERE\n"
                         "LINE ".__LINE__." ERROR=$@\n"
                         if $@ && $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                     ($stdout,$stderr)=&kill($shell_pid,9)
+                     ($stdout,$stderr)=&kill($shell_pid,$kill_arg)
                   }
 print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  ($stdout,$stderr)=&kill($cmd_pid,9) if &testpid($cmd_pid);
+                  ($stdout,$stderr)=&kill($cmd_pid,$kill_arg) if &testpid($cmd_pid);
                }
             }
          }
@@ -1002,8 +1006,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          $localhost->cmd("rm -f *${pid_ts}*");
       }
    }
-   ($stdout,$stderr)=&kill($localhost->{_cmd_pid},9);
-   ($stdout,$stderr)=&kill($localhost->{_sh_pid},9);
+   ($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
+   ($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg);
    %{$localhost}=();$localhost='';
    %Processes=();
    %Connections=();
@@ -5257,7 +5261,7 @@ print "WHAT THE HECK IS HTE STDERR=$stderr<==\n";
                      if ($lc_cnt==$#RCM_Link) {
                         die $stderr;
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
-                        ($stdout,$stderr)=&kill($cmd_pid,9)
+                        ($stdout,$stderr)=&kill($cmd_pid,$kill_arg)
                            if &testpid($cmd_pid);
                         $Net::FullAuto::FA_Core::slave='_slave_';next
                      } elsif (3<$try_count++) {
@@ -5579,13 +5583,13 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             ($stdout,$stderr)=
                &Net::FullAuto::FA_Core::kill(
-                  $localhost->{_sh_pid},9)
+                  $localhost->{_sh_pid},$kill_arg)
                if exists $localhost->{_sh_pid} &&
                &Net::FullAuto::FA_Core::testpid(
                   $localhost->{_sh_pid});
             ($stdout,$stderr)=
                &Net::FullAuto::FA_Core::kill(
-                  $localhost->{_cmd_pid},9)
+                  $localhost->{_cmd_pid},$kill_arg)
                if &Net::FullAuto::FA_Core::testpid(
                   $localhost->{_cmd_pid});
             #$login_Mast_error='';
@@ -6541,7 +6545,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
             }
          };
          if ($@) {
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,9)
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg)
                if &Net::FullAuto::FA_Core::testpid($cmd_pid);
             $cmd_handle->close;
             if ($next--) {
@@ -6794,7 +6798,8 @@ sub close
          }
       };
       eval { $self->{_ftp_handle}->close };
-      ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($self->{_ftp_pid},9)
+      ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+            $self->{_ftp_pid},$kill_arg)
          if &Net::FullAuto::FA_Core::testpid($self->{_ftp_pid});
       foreach my $h_id (keys %Net::FullAuto::FA_Core::Connections) {
          if ($self eq $Net::FullAuto::FA_Core::Connections{$h_id}) {
@@ -7951,6 +7956,7 @@ sub ftm_login
    my $hostlabel=$_[0];
    my $new_master=$_[1]||'';
    my $_connect=$_[2]||'';
+   my $kill_arg=($OS eq 'cygwin')?'f':9;
    my ($ip,$hostname,$use,$ms_share,$ms_domain,
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
        $owner,$group,$fttimeout,$transfer_dir,$rcm_chain,
@@ -8518,13 +8524,13 @@ print "WHAT IS THE FTP_EVAL_ERROR1111=$@\n";
                                        {$hlabel}{$sid}{$type}}[0]) {
                                     ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
                                        ${$Net::FullAuto::FA_Core::Processes
-                                       {$hlabel}{$sid}{$type}}[2],9) if
+                                       {$hlabel}{$sid}{$type}}[2],$kill_arg) if
                                        &Net::FullAuto::FA_Core::testpid(
                                        ${$Net::FullAuto::FA_Core::Processes
                                        {$hlabel}{$sid}{$type}}[2]);
                                     ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
                                        ${$Net::FullAuto::FA_Core::Processes
-                                       {$hlabel}{$sid}{$type}}[1],9) if
+                                       {$hlabel}{$sid}{$type}}[1],$kill_arg) if
                                        &Net::FullAuto::FA_Core::testpid(
                                        ${$Net::FullAuto::FA_Core::Processes
                                        {$hlabel}{$sid}{$type}}[1]);
@@ -8873,11 +8879,11 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                               $ftp_handle->cmd('bye');
                               die "ftp: connect: $m";
                            } elsif ($retrys++<2) {
-                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,9)
+                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg)
                                  if &Net::FullAuto::FA_Core::testpid($shell_pid)
                                  && $shell_pid ne $Net::FullAuto::FA_Core::localhost->{_sh_pid};
 print "FTP_PID=$ftp_pid<== and ==>$localhost->{_cmd_pid}<==\n";
-                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($ftp_pid,9)
+                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($ftp_pid,$kill_arg)
                                  if &Net::FullAuto::FA_Core::testpid($ftp_pid)
                                  && $ftp_pid ne $Net::FullAuto::FA_Core::localhost->{_cmd_pid};
                               $ftp_handle->close if defined fileno $ftp_handle;
@@ -8934,11 +8940,11 @@ print "FTP_PID=$ftp_pid<== and ==>$localhost->{_cmd_pid}<==\n";
                                  }
                               }
                            } else {
-                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,9)
+                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg)
                                  if &Net::FullAuto::FA_Core::testpid($shell_pid)
                                  && $shell_pid ne $Net::FullAuto::FA_Core::localhost->{_sh_pid};
 print "FTP_PID=$ftp_pid\n";
-                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($ftp_pid,9)
+                              ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($ftp_pid,$kill_arg)
                                  if &Net::FullAuto::FA_Core::testpid($ftp_pid)
                                  && $ftp_pid ne $Net::FullAuto::FA_Core::localhost{_cmd_pid};
                               &Net::FullAuto::FA_Core::handle_error("ftp: connect: $m\n       "
@@ -9723,10 +9729,10 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
                while (my $line=$ftp_handle->get) {
                   last if $line=~/_funkyPrompt_|221 Goodbye/s;
                }
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,9)
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg)
                   if &Net::FullAuto::FA_Core::testpid($shell_pid)
                   && $shell_pid ne $Net::FullAuto::FA_Core::localhost->{_sh_pid};
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($ftp_pid,9)
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($ftp_pid,$kill_arg)
                   if &Net::FullAuto::FA_Core::testpid($ftp_pid)
                   && $ftp_pid ne $Net::FullAuto::FA_Core::localhost{_cmd_pid};
                $ftp_handle->close;
@@ -15339,6 +15345,7 @@ sub cmd_login
    my $new_master=$_[1]||0;
    my $_connect=$_[2]||'';
    my $override_login_id=$_[3]||'';
+   my $kill_arg=($Net::FullAuto::FA_Core::OS eq 'cygwin')?'f':9;
    my $timeout=$_[4]||$Net::FullAuto::FA_Core::timeout;
 print "WE GOT HOSTLABEL=$hostlabel<==\n" if !$Net::FullAuto::FA_Core::cron && $debug;
 print $Net::FullAuto::FA_Core::MRLOG "WE GOT HOSTLABEL=$hostlabel<==\n"
@@ -15526,9 +15533,9 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                            if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         chomp($line=~tr/\0-\37\177-\377//d);
                         if (-1<index $line,'Connection refused') {
-                           ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,9)
+                           ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg)
                               if &Net::FullAuto::FA_Core::testpid($shell_pid);
-                           ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,9)
+                           ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg)
                               if &Net::FullAuto::FA_Core::testpid($cmd_pid);
                            if ($su_id) {
                               delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$su_id}
@@ -16203,9 +16210,9 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETR
                   delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
                      {"cmd_id_$Net::FullAuto::FA_Core::pcnt"}
                }
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,9) if
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg) if
                   $shell_pid && &Net::FullAuto::FA_Core::testpid($shell_pid);
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,9) if
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg) if
                   &Net::FullAuto::FA_Core::testpid($cmd_pid);
                $cmd_handle->close;next;
             } else {
@@ -16224,18 +16231,18 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETR
                {$su_id}{"cmd_su_$Net::FullAuto::FA_Core::pcnt"}) {
             delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$su_id}
                {"cmd_su_$Net::FullAuto::FA_Core::pcnt"};
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,9) if $shell_pid
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg) if $shell_pid
                && &Net::FullAuto::FA_Core::testpid($shell_pid);
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,9) if 
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg) if 
                &Net::FullAuto::FA_Core::testpid($cmd_pid);
             $cmd_handle->close;
          } elsif (exists $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
                {"cmd_id_$Net::FullAuto::FA_Core::pcnt"}) {
             delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
                {"cmd_id_$Net::FullAuto::FA_Core::pcnt"};
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,9) if $shell_pid
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg) if $shell_pid
                && &Net::FullAuto::FA_Core::testpid($shell_pid);
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,9) if   
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg) if   
                &Net::FullAuto::FA_Core::testpid($cmd_pid);
             $cmd_handle->close;
          }
@@ -17187,6 +17194,7 @@ sub cmd
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $self=$_[0];
+   my $kill_arg=($Net::FullAuto::FA_Core::OS eq 'cygwin')?'f':9;
    my @args=@_;shift @args;shift @args;
    my $debug=$Net::FullAuto::FA_Core::debug;
    my $command=$_[1];$command||='';
@@ -17349,7 +17357,7 @@ sub cmd
                                     $self->{_connect});
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
          ($stdout,$stderr)=$new_cmd->cmd($command,@args);
-         ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($new_cmd->{_cmd_pid},9) if   
+         ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($new_cmd->{_cmd_pid},$kill_arg) if   
             &Net::FullAuto::FA_Core::testpid($new_cmd->{_cmd_pid});
          $new_cmd->{_cmd_handle}->close;
          &Net::FullAuto::FA_Core::give_semaphore($sem) if $sem;
@@ -17993,9 +18001,15 @@ print $Net::FullAuto::FA_Core::MRLOG "LAST_LINE=$last_line and OUTPUT=$output<=\
                               my $llc=length $live_command;
                               $output=unpack("x$llc a*",$output);
                               $first=0;$growoutput=$output;
-                              $growoutput=~s/^.*($cmd_prompt)$/$1/s;
+                              $growoutput=~s/^(.*)$cmd_prompt$/$1/s;
 print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                              if ($output=~/$cmd_prompt$/s &&
+                                    $growoutput!~/$cmd_prompt$/s) {
+                                 $growoutput=$output;
+                                 $output='';
+                                 $command_stripped_from_output=1;
+                              }
                               $output='';
                            } elsif (-1<index $ptest,'1stdout:') {
                               $output=~s/^.*?1(?:\s|\s*\[[AK]|\<)*
@@ -18614,7 +18628,7 @@ print $Net::FullAuto::FA_Core::MRLOG "MADE IT TO LOGOUT ERROR HANDLING\n"
                || $self->{_work_dirs}->{_cwd_mswin};
 print $Net::FullAuto::FA_Core::MRLOG "CURDIR=$curdir\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($self->{_cmd_pid},9) if
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($self->{_cmd_pid},$kill_arg) if
                &Net::FullAuto::FA_Core::testpid($self->{_cmd_pid});
             $self->{_cmd_handle}->close;
             if (!exists $same_host_as_Master{$self->{_hostlabel}->[0]}) {
@@ -18847,11 +18861,11 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE GETTING NEW HANDLE\n" if $Net::Full
                      {$hlabel}{$sid}{$type}}[0]) {
 print "THISKILL2=${$Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}}[2]\n";
                   ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(${$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type}}[2],9) if
+                     {$hlabel}{$sid}{$type}}[2],$kill_arg) if
                      &Net::FullAuto::FA_Core::testpid(${$Net::FullAuto::FA_Core::Processes
                      {$hlabel}{$sid}{$type}}[2]);
                   ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(${$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type}}[1],9) if
+                     {$hlabel}{$sid}{$type}}[1],$kill_arg) if
                      &Net::FullAuto::FA_Core::testpid(${$Net::FullAuto::FA_Core::Processes
                      {$hlabel}{$sid}{$type}}[1]);
 print "THISKILL1=${$Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}}[1]\n";

@@ -25,6 +25,18 @@
 ################################################################
 
 
+2011-01-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.91 released.
+
+        * Fixed output when entire output returns in one
+          string (happens mostly on AIX).
+
+        * Changed 'kill' on Cygwin to use kill -f instead of
+          kill -9 (which gets permission denied on Windows
+          2008 Server).
+
+
 2011-01-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.90 released.
