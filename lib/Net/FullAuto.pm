@@ -34,7 +34,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.91';
+our $VERSION='0.92';
 
 
 use 5.005;
@@ -1510,7 +1510,8 @@ Brian M. Kelly <Brian.Kelly@fullautosoftware.net>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
+Copyright (C) 2000, 2001, 2002, 2003, 2004
+              2005, 2006, 2007, 2010, 2011
 by Brian M. Kelly.
 
 This program is free software; you can redistribute it and/or

@@ -403,7 +403,7 @@ our $blanklines='';our $oldpasswd='';our $authorize_connect='';
 our $scrub=0;our $pcnt=0;our $chk_id='';our $d_sub='';
 our $deploy_info='';our $f_sub='';our $updatepw=0;
 our $shown='';our $websphere_not_running=0;
-our $master_hostlabel='';our $cron=0;our $random=0;
+our $master_hostlabel='';our $random=0;
 our $parent_menu='';our @menu_args=();our $savetran=0;
 our $MRLOG='';our @pid_ts=();our %drives=();
 our $username='';our @passwd=('','');our $fa_code='';
@@ -573,6 +573,11 @@ if ($OS eq 'cygwin') {
 sub cleanup {
 
    my @topcaller=caller;
+   my $param_one=$_[0];
+   my $param_two=$_[1]||='';
+   unless (defined $param_one) {
+      $param_one='';
+   }
    print "\nINFO: main::cleanup() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if !$Net::FullAuto::FA_Core::cron &&
@@ -596,20 +601,6 @@ sub cleanup {
    } else {
       semctl(34, 0, SETVAL, -1);
    } my $tm='';my $ob='';my %cleansync=();
-   #my @clkeys=();
-   $_[0]||='';
-   #foreach my $key (keys %sync_dbm_obj) {
-   #   if (index $key,'_') {
-   #      ($tm,$ob)=split /_/, $key;
-   #      push @clkeys, $key;
-   #   }
-   #}
-   #foreach my $key (@clkeys) {
-   #   delete $Net::FullAuto::FA_Core::sync_dbm_obj{$key};
-   #}
-   #foreach my $key (keys %sync_dbm_obj) {
-   #   $Net::FullAuto::FA_Core::sync_dbm_obj{$key}->UnLock;
-   #}
    my $new_cmd='';my $cmd='';my $clean_master='';
    my @cmd=();my %did_tran=();
    my $kill_arg=($OS eq 'cygwin')?'f':9;
@@ -1017,31 +1008,38 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
       &scrub_passwd_file($master_hostlabel,
          $username);
    }
-   if ($Net::FullAuto::FA_Core::plan) {
+   if ($Net::FullAuto::FA_Core::makeplan) {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
          File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
          -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
          -Flags    => DB_CREATE,
+         -Compare    => sub { $_[0] <=> $_[1] },
          -Env      => $dbenv
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-      my $plan_number=${$Net::FullAuto::FA_Core::plan}{'Number'}||'';
-      my $plan_title =${$Net::FullAuto::FA_Core::plan}{'Title'}||'';
+      my $plan_number=${$Net::FullAuto::FA_Core::makeplan}{'Number'}||'';
+      my $plan_title =${$Net::FullAuto::FA_Core::makeplan}{'Title'}||'';
       my $put_plan=Data::Dump::Streamer::Dump(
-            $Net::FullAuto::FA_Core::plan)->Out();
+            $Net::FullAuto::FA_Core::makeplan)->Out();
       if ($plan_number) {
-         $status=$bdb->db_put($plan_number,$put_plan);
-         print "\n\n       ################ NEW PLAN ##################\n\n",
-               "          Number: $plan_number\n",
-               "          Title:  $plan_title\n\n",
-               "       WAS SUCCESSFULLY CREATED!\n";
+         my $pregx=qr/\]quit\[|INT|ERROR/;
+         unless ($Net::FullAuto::FA_Core::plan_ignore_error) {
+            $pregx=qr/\]quit\[|INT/;
+         }
+         unless ($param_two=~/$pregx/) {
+            $status=$bdb->db_put($plan_number,$put_plan);
+            print "\n\n       ################ NEW PLAN ##################\n\n",
+                  "          Number: $plan_number\n",
+                  "          Title:  $plan_title\n\n",
+                  "       WAS SUCCESSFULLY CREATED!\n";
+         }
       }
       undef $bdb;
    }
@@ -1071,7 +1069,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          && $Hosts{"__Master_${$}__"}{'LogFile'}) {
       unlink $Hosts{"__Master_${$}__"}{'LogFile'};
    }
-   return 1 if $_[0];
+   return 1 if $param_one;
    exit 0;
 
 };
@@ -1086,16 +1084,15 @@ $SIG{ INT } = sub{
                        if $Net::FullAuto::FA_Core::log &&
                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
-                    $cleanup=1;&cleanup() };
+                    $cleanup=1;&cleanup('','INT') };
 our $alarm_sounded=0;
 $SIG{ ALRM } = sub{ open(AL,">>ALRM.txt");
                     print AL scalar(localtime())."\n";
                     close AL;
                     $alarm_sounded=1;
                     print "CAUGHT AN ALRM!!\n";
-                    $cleanup=1;&cleanup() };
+                    $cleanup=1;&cleanup('','ALRM') };
 $SIG{ CHLD } = 'IGNORE';
-#$SIG{ INT } = sub{ &cleanup() };
 
 my @Hosts=@{&check_Hosts($fa_host)};
 
@@ -1124,7 +1121,7 @@ my $version=<<VERSION;
 This is Net::FullAuto, v$Net::FullAuto::VERSION
 (See  fullauto -V  or  fa -V  for more detail)
 
-Copyright 2000-2010, Brian M. Kelly
+Copyright 2000-2011, Brian M. Kelly
 
 FullAuto may be copied only under the terms of the GNU General Public License,
 which may be found in the FullAuto source distribution.
@@ -1414,12 +1411,13 @@ sub plan {
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
          -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
          -Flags    => DB_CREATE,
+         -Compare  => sub { $_[0] <=> $_[1] },
          -Env      => $dbenv
       ) or &handle_error(
         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
@@ -1430,38 +1428,46 @@ sub plan {
          $status=$cursor->c_get($k, $v, DB_LAST);
          $new_plan_number=++$k;
          undef $cursor;
-         my $plan={ 'Number' =>$new_plan_number,
-                    'Created'=>$Net::FullAuto::FA_Core::invoked[2],
-                    'Creator'=>$Net::FullAuto::FA_Core::username,
-                    'Host'   =>$Net::FullAuto::FA_Core::hostname,
-                    'Plan'   =>[] };
+         my $plann={ 'Number' =>$new_plan_number,
+                     'Created'=>$Net::FullAuto::FA_Core::invoked[2],
+                     'Creator'=>$Net::FullAuto::FA_Core::username,
+                     'Host'   =>$Net::FullAuto::FA_Core::hostname,
+                     'Plan'   =>[] };
          undef $bdb;
-         return $plan;
+         return $plann;
       } elsif ($output eq 'Work with Existing Plans') {
          my $cursor = $bdb->db_cursor() ;
          while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
             my $planhash=eval $v;
             push @plans, pack(A10,$k).$planhash->{'Title'};
          }
-         my %existing=(
+         if (-1<$#plans) {
+            my %existing=(
 
-               Label => 'existing',
-               Item_1=> {
+                  Label => 'existing',
+                  Item_1=> {
                  
-                  Text => "]C[",
-                  Convey => \@plans
+                     Text => "]C[",
+                     Convey => \@plans
 
-               },
-               Banner=> '   Select a Plan to work with:'
-         );
-         my $outp=Menu(\%existing);
-         undef $cursor;
-         undef $bdb;
-         undef $Net::FullAuto::FA_Core::plan;
-         &cleanup();         
+                  },
+                  Banner=> '   Select a Plan to work with:'
+            );
+            my $outp=Menu(\%existing);
+            undef $cursor;
+            undef $bdb;
+            undef $Net::FullAuto::FA_Core::makeplan;
+            &cleanup();
+         } else {
+            print "\n\n   ########################### NOTE ".
+                  "###########################\n\n".
+                  "   *NO* Plans have been \"made\" with ".
+                  "this FullAuto installation.\n\n";
+            &cleanup();
+         }
       }
    } else {
-      undef $Net::FullAuto::FA_Core::plan;
+      undef $Net::FullAuto::FA_Core::makeplan;
       &cleanup();
    }
 
@@ -2508,12 +2514,13 @@ sub handle_error
       }
       my $dbenv = BerkeleyDB::Env->new(
                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track',
-                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
                  -Filename => "${trackdb}.db",
                  -Flags    => DB_CREATE,
+                 -Compare    => sub { $_[0] <=> $_[1] },
                  -Env      => $dbenv
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
@@ -2639,7 +2646,7 @@ sub handle_error
          } return 0,'';
       }
    } elsif ($cleanup) {
-      &cleanup($return);
+      &cleanup($return,'ERROR');
    } else {
 print "WE ARE GOING TO DIE IN HANDLE_ERROR and CALLER=",(join ' ',@topcaller),"\n"
 if !$Net::FullAuto::FA_Core::cron && $debug;
@@ -3480,7 +3487,7 @@ sub master_transfer_dir
             &handle_error($stderr,'-2','__cleanup__') if $stderr;
          }
       }
-print "CD TO TMP STDERR=$stderr<==\n";
+#print "CD TO TMP STDERR=$stderr<==\n";
       if ((${$work_dirs}{_tmp},${$work_dirs}{_tmp_mswin})
             =&File_Transfer::get_drive(
             '/tmp','Target','',"__Master_${$}__")) {
@@ -3802,7 +3809,7 @@ sub getpasswd
       }
       my $dbenv = BerkeleyDB::Env->new(
                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       $bdb = BerkeleyDB::Btree->new(
@@ -4020,7 +4027,7 @@ sub getpasswd
       }
       my $dbenv = BerkeleyDB::Env->new(
                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       $bdb = BerkeleyDB::Btree->new(
@@ -4687,8 +4694,9 @@ sub fa_login
                 'random'                => \$random,
                 'timeout=i'             => \$cltimeout,
                 'prod'                  => \$prod,
-                'plan'                  => \$plan,
-                'p'                     => \$plan,
+                'plan_ignore_error:s'   => \$plan_ignore_error,
+                'plan:s'                => \$plan,
+                'p:s'                   => \$plan,
                 'test'                  => \$test_arg,
                 'tosspass'              => \$tosspass,
                 'edit:s'                => \$edit,
@@ -4745,12 +4753,15 @@ sub fa_login
          && 7<length $passwd[0]) {
       $passwd[1]=unpack('a8',$passwd[0])
    }
-   if ($cron) {
+   if (defined $cron) {
+      if ($cron) {
+         $plan=$cron;
+      }
       $batch=']Batch[';
       $unattended=']Unattended[';
       $fullauto=']FullAuto[';
       $cron=']Cron[';
-   }
+   } 
 
    print "\n  Starting $progname . . .\n" if (!$cron || $debug)
          && !$quiet;
@@ -4986,7 +4997,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       }
       my $dbenv = BerkeleyDB::Env->new(
                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -5257,7 +5268,6 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
                           _cmd_type=>'ssh',
                           _connect=>$_connect },$timeout);
                   if ($stderr) {
-print "WHAT THE HECK IS HTE STDERR=$stderr<==\n";
                      if ($lc_cnt==$#RCM_Link) {
                         die $stderr;
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
@@ -5442,7 +5452,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          }
          my $dbenv = BerkeleyDB::Env->new(
                     -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          my $bdb = BerkeleyDB::Btree->new(
@@ -5609,9 +5619,9 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
          } elsif (!$cron || (unpack('a3',$@) eq 'pid') ||
                (-1<index $login_Mast_error,$passline)) {
             if ($retrys<2 && -1<index $login_Mast_error,'timed-out') {
-print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETRYING LOGINMASTERERROR=$login_Mast_error\n";
+#print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETRYING LOGINMASTERERROR=$login_Mast_error\n";
                my $psoutput=`${pspath}ps`;
-print $Net::FullAuto::FA_Core::MRLOG "PSOUTPUTTTTTTTTTTTT=$psoutput<==\n";
+#print $Net::FullAuto::FA_Core::MRLOG "PSOUTPUTTTTTTTTTTTT=$psoutput<==\n";
                $retrys++;
                if (-1<index $login_Mast_error,'read') {
                   next;
@@ -5665,9 +5675,30 @@ print $Net::FullAuto::FA_Core::MRLOG "PSOUTPUTTTTTTTTTTTT=$psoutput<==\n";
 
       } last;
    }
-   if (defined $plan) {
-      $plan=&plan();
-      cleanup() if $plan eq ']quit[';
+   if (defined $plan_ignore_error && !$plan_ignore_error) {
+      $Net::FullAuto::FA_Core::makeplan=&plan();
+      cleanup() if $Net::FullAuto::FA_Core::makeplan eq ']quit[';
+   } elsif (defined $plan && !$plan) {
+      $Net::FullAuto::FA_Core::makeplan=&plan();
+      cleanup() if $Net::FullAuto::FA_Core::makeplan eq ']quit[';
+   } elsif ($plan || $plan_ignore_error) {
+      $plan||=$plan_ignore_error||='';
+      my $dbenv = BerkeleyDB::Env->new(
+         -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      ) or &handle_error(
+         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb = BerkeleyDB::Btree->new(
+         -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
+         -Flags    => DB_CREATE,
+         -Compare  => sub { $_[0] <=> $_[1] },
+         -Env      => $dbenv
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $pref='';
+      my $status=$bdb->db_get($plan,$pref);
+      $plan=eval $pref;
+      $plan=$Net::FullAuto::FA_Core::plan->{Plan};
    }
    return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
 
@@ -5689,7 +5720,7 @@ sub passwd_db_update
    }
    my $dbenv = BerkeleyDB::Env->new(
               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -5760,7 +5791,7 @@ sub su_scrub
    }
    my $dbenv = BerkeleyDB::Env->new(
               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -5862,7 +5893,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
          }
          my $dbenv = BerkeleyDB::Env->new(
                     -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          my $bdb = BerkeleyDB::Btree->new(
@@ -6635,7 +6666,7 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       }
       my $dbenv = BerkeleyDB::Env->new(
                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -6798,6 +6829,7 @@ sub close
          }
       };
       eval { $self->{_ftp_handle}->close };
+      my $kill_arg=($Net::FullAuto::FA_Core::OS eq 'cygwin')?'f':9;
       ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
             $self->{_ftp_pid},$kill_arg)
          if &Net::FullAuto::FA_Core::testpid($self->{_ftp_pid});
@@ -7555,7 +7587,7 @@ sub ftr_cmd
                my $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
                           'cmd /c chdir',$hostlabel);
             }
-print "CURDIRRRRR=$curdir<==\n";
+#print "CURDIRRRRR=$curdir<==\n";
             my ($drive,$path)=unpack('a1 x1 a*',$curdir);
             ${$work_dirs}{_pre_mswin}=$curdir.'\\';
             $path=~tr/\\/\//;
@@ -7772,7 +7804,7 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         }
                         my $dbenv = BerkeleyDB::Env->new(
                               -Home  => $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
                         ) or &handle_error(
                            "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
                         my $bdb = BerkeleyDB::Btree->new(
@@ -7956,7 +7988,7 @@ sub ftm_login
    my $hostlabel=$_[0];
    my $new_master=$_[1]||'';
    my $_connect=$_[2]||'';
-   my $kill_arg=($OS eq 'cygwin')?'f':9;
+   my $kill_arg=($Net::FullAuto::FA_Core::OS eq 'cygwin')?'f':9;
    my ($ip,$hostname,$use,$ms_share,$ms_domain,
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
        $owner,$group,$fttimeout,$transfer_dir,$rcm_chain,
@@ -15791,7 +15823,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      print "\nRem_Command::cmd_login() $ct ",
-                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT ($Timeout=$tymeout):",
+                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT (Timeout=$tymeout):",
                         "\n       ==>$line<==\n       ",
                         "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                         "\n       at Line ",__LINE__,"\n\n"
@@ -18001,7 +18033,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LAST_LINE=$last_line and OUTPUT=$output<=\
                               my $llc=length $live_command;
                               $output=unpack("x$llc a*",$output);
                               $first=0;$growoutput=$output;
-                              $growoutput=~s/^(.*)$cmd_prompt$/$1/s;
+                              $growoutput=~s/^(.*)($cmd_prompt)*$/$1/s;
 print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                               if ($output=~/$cmd_prompt$/s &&
@@ -18520,7 +18552,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT AT THE BOTTOM==>$growoutput<==\n"
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                } elsif ($starttime && (($cmtimeout<time()-$starttime)
                      || ($select_timeout<time()-$starttime))) {
-print $Net::FullAuto::FA_Core::MRLOG "ELSFI AT THE BOTTOM==>$growoutput<==\n";
+#print $Net::FullAuto::FA_Core::MRLOG "ELSFI AT THE BOTTOM==>$growoutput<==\n";
                   if (!$restart_attempt) {
 print "FOURTEEN003\n";
                      $self->{_cmd_handle}->print("\003");
@@ -19252,12 +19284,13 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    }
    my $dbenv = BerkeleyDB::Env->new(
               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
               -Filename => "$self->{_dbfile}.db",
               -Flags    => DB_CREATE,
+              -Compare    => sub { $_[0] <=> $_[1] },
               -Env      => $dbenv
    ) or &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n");
@@ -19325,12 +19358,13 @@ print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
    }
    my $dbenv = BerkeleyDB::Env->new(
               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
               -Filename => "$self->{_dbfile}.db",
               -Flags    => DB_CREATE,
+              -Compare    => sub { $_[0] <=> $_[1] },
               -Env      => $dbenv
    ) or &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n");
@@ -19382,12 +19416,13 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          }
          my $dbenv = BerkeleyDB::Env->new(
                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n");
          my $bdb = BerkeleyDB::Btree->new(
                  -Filename => "$self->{_dbfile}.db",
                  -Flags    => DB_CREATE,
+                 -Compare    => sub { $_[0] <=> $_[1] },
                  -Env      => $dbenv
          ) or &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n");
@@ -19470,12 +19505,13 @@ sub mod
    }
    my $dbenv = BerkeleyDB::Env->new(
            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
            -Filename => "$self->{_dbfile}.db",
            -Flags    => DB_CREATE,
+           -Compare    => sub { $_[0] <=> $_[1] },
            -Env      => $dbenv
    ) or &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n");
@@ -19503,12 +19539,13 @@ print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron 
    }
    my $dbenv = BerkeleyDB::Env->new(
            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
            -Filename => "$self->{_dbfile}.db",
            -Flags    => DB_CREATE,
+           -Compare    => sub { $_[0] <=> $_[1] },
            -Env      => $dbenv
    ) or &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n");
