@@ -427,7 +427,7 @@ our $prod=0;our $force_pause_for_exceed=0;our $tosspass=0;
 our $timeout=30;our $cltimeout='X';our $slave=0;
 our %email_defaults=();our $increment=0;our %tosspass=();
 our $email_defaults='';our %semaphores=();our $batch='';
-our $unattended='';our $fullauto='';
+our $unattended='';our $fullauto='';our $service='';
 our %base_shortcut_info=();our @dhostlabels=();
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
@@ -4699,6 +4699,8 @@ sub fa_login
                 'p:s'                   => \$plan,
                 'test'                  => \$test_arg,
                 'tosspass'              => \$tosspass,
+                'daemon'                => \$service,
+                'service'               => \$service,
                 'edit:s'                => \$edit,
                 'e:s'                   => \$edit,
                 'v'                     => \$version,
