@@ -1209,6 +1209,19 @@ sub Menu
    return &Term::Menus::Menu(@_);
 }
 
+sub get_now_am_pm
+{
+   my $t=unpack(a5,(split / /, scalar localtime(time))[3]);
+   my $i=unpack('a2',$t);
+   if ($i<12) {
+      substr($t,0,1)='' if $i<10;
+      return $t.'am';
+   } else {
+      substr($t,0,2)=unpack(a2,$t)-12 unless $t==12;
+      return $t.'pm';
+   }
+}
+
 sub ls_timestamp
 {
 
@@ -4657,8 +4670,8 @@ sub fa_login
    my $arg_to_fa_code_sub=substr($custom_code_module_file,0,-3).'-arg=s';
 
    my $man=0;my $help=0;my $userflag=0;my $passerror=0;
-   my $test_arg=0;my $oldcipher='';
-   our $debug=0;my @holdARGV=@ARGV;@menu_args=();
+   my $test_arg=0;my $oldcipher='';my $password_from='';
+   our $debug=0;my @holdARGV=@ARGV;@menu_args=();my $username_from='';
 
    Getopt::Long::Configure ("bundling");
    &GetOptions(
@@ -4670,13 +4683,13 @@ sub fa_login
                 'log:s'                 => \$log,
                 'l:s'                   => \$log, 
                  man                    => \$man,
-                'password=s'            => \$passwd[0],
+                'password:s'            => \$passwrd,
                 'quiet'                 => \$quiet,
                 'oldpassword=s'         => \$oldpasswd,
                 'oldcipher=s'           => \$oldcipher,
                 'updatepw'              => \$updatepw,
-                'local-login-id=s'      => \$username,
-                'login=s'               => \$username,
+                'local-login-id=s'      => \$usrname,
+                'login=s'               => \$usrname,
                 'code=s'                => \$cust_subname_in_fa_code_module_file,
                 $name_of_fa_code_file   => \$cust_subname_in_fa_code_module_file,
                 'subroutine'            => \$cust_subname_in_fa_code_module_file,
@@ -4719,6 +4732,23 @@ sub fa_login
    } elsif ($prod) {
       $test=0;
    }
+   my $save_main_pass=0;
+   if (defined $passwrd) {
+      if ($passwrd) {
+         $passwd[0]=$passwrd;
+         $password_from='cmd_line_arg';
+      } else {
+         $save_main_pass=1;
+      } undef $passwrd;
+   }
+   if (defined $usrname) {
+      $username=$usrname;
+      $username_from='cmd_line_arg';
+      $userflag=1;
+   } else {
+      $username=getlogin || getpwuid($<);
+   }
+
    if (-1<$#_ && $_[0] && $_[0]!~/^\d+$/) {
       if ($#_ && $#_%2!=0) {
          my $key='';my $margs=0;
@@ -4731,10 +4761,11 @@ sub fa_login
                } elsif ($key eq 'login') {
                   $username=$arg;
                } elsif ($key eq 'password') {
+                  $password_from='fa_login_arg';
                   $arg=~/^(.*)$/;
                   $passwd[0]=$1;
-               } elsif ($key eq 'user_arg' ||
-                     $key eq 'user-arg') {
+               } elsif ($key eq 'sub_arg' ||
+                     $key eq 'sub-arg') {
                   @menu_args=() if !$margs;
                   $margs=1;
                   push @menu_args, $arg;
@@ -4768,12 +4799,6 @@ sub fa_login
    print "\n  Starting $progname . . .\n" if (!$cron || $debug)
          && !$quiet;
    sleep 2 if $debug;
-
-   if ($username) {
-      $userflag=1;
-   } else {
-      $username=getlogin || getpwuid($<);
-   }
 
    my $su_scrub='';my $login_Mast_error='';my $id='';my $use='';
    my $hostlabel='';my $mainuser='';my $retrys='';
@@ -4906,6 +4931,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          $usrname=~s/\s*$//;
          next if $usrname=~/^\d/ || !$usrname && !$uid;
          $username= ($usrname) ? $usrname : $uid;
+         $username_from='user_input';
          $userflag=1;
          last;
       }
@@ -5099,7 +5125,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
 
          if ($login_Mast_error) {
             if ($login_Mast_error=~/[Ll]ogin|sion den/) {
-               $userflag='';$username='';@passwd=();
+               $userflag=0;$username='';@passwd=();
                chomp($login_Mast_error);
             } else {
                chomp($login_Mast_error);
@@ -5132,6 +5158,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $usrname=~s/\s*$//;
                   next if $usrname=~/^\d/ || !$usrname && !$uid;
                   $username= ($usrname) ? $usrname : $uid;
+                  $username_from='user_input';
                   $userflag=1;
                   last;
                }
@@ -5139,12 +5166,210 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                &handle_error($login_Mast_error);
             }
          }
-
-         if (!$passwd[0] && !$cron) {
+         if ($save_main_pass || $password_from eq 'cmd_line_arg'
+               || $password_from eq 'fa_login_arg') {
+            my $kind='prod';
+            $kind='test' if $Net::FullAuto::FA_Core::test &&
+                     !$Net::FullAuto::FA_Core::prod;
+            unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+               File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+               'Passwds');
+            }
+            my $dbenv = BerkeleyDB::Env->new(
+                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
+                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+            ) or &handle_error(
+               "cannot open environment for DB: $BerkeleyDB::Error\n",
+               '',$track);
+            my $bdb = BerkeleyDB::Btree->new(
+                    -Filename =>
+                       "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                    -Flags    => DB_CREATE,
+                    -Env      => $dbenv
+            ) or &handle_error(
+               "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+            my $href='';
+            my $status=$bdb->db_get('localhost',$href);
+            $href=eval $href;
+#delete ${$href}{"gatekeeper_$username"};
+            if (exists ${$href}{"gatekeeper_$username"}) {
+               my $contents=eval ${$href}{"gatekeeper_$username"};
+               my $ignore_expiration=${$contents}[1];
+               my $now=time;
+#print "WHAT IS IGNORED EXP=$ignore_expiration and PASSWORD FROM=$password_from\n";
+               if ($now<$ignore_expiration) {
+                  print "\n  Saved Password will Expire: ".
+                        scalar localtime($ignore_expiration)."\n"
+                        if !$cron && !$quiet;
+                  $cipher = new Crypt::CBC('X%xP3&Tq',
+                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+                  my $decrypted=$cipher->decrypt(${$contents}[0]);
+                  $password=$passwd[0]=$decrypted;
+                  if ($password_from eq 'cmd_line_arg') {
+                     if ($passwd[0] ne ${$contents}[0]) {
+                        my $exp_seconds=choose_pass_expiration();
+                        my $arr=[$passwd[0],$exp_seconds];
+                        ${$href}{"gatekeeper_$username"}=
+                           Data::Dump::Streamer::Dump($arr)->Out();
+                        my $put_href=
+                           Data::Dump::Streamer::Dump($href)->Out();
+                        $status=$bdb->db_put('localhost',$put_href);
+                        undef $bdb;
+                     }
+                  } elsif ($password_from eq 'fa_login_arg') {
+                     if ($passwd[0] ne ${${$href}{"gatekeeper_$username"}}[0]) {
+                        my $exp_seconds=choose_pass_expiration();
+                        my $arr=[$passwd[0],$exp_seconds];
+                        ${$href}{"gatekeeper_$username"}=
+                           Data::Dump::Streamer::Dump($arr)->Out();
+                        my $put_href=
+                           Data::Dump::Streamer::Dump($href)->Out();
+                        $status=$bdb->db_put('localhost',$put_href);
+                        undef $bdb;
+                     } 
+                  }
+               } elsif ($password_from eq 'cmd_line_arg') {
+                  my $exp_seconds=choose_pass_expiration();
+                  $cipher = new Crypt::CBC('X%xP3&Tq',
+                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+                  my $new_encrypted=$cipher->encrypt($passwd[0]);
+                  my $arr=[$new_encrypted,$exp_seconds];
+                  ${$href}{"gatekeeper_$username"}=
+                     Data::Dump::Streamer::Dump($arr)->Out();
+                  my $put_href=
+                     Data::Dump::Streamer::Dump($href)->Out();
+                  $status=$bdb->db_put('localhost',$put_href);
+                  undef $bdb;
+                  print "\n  Saved Password will Expire: ".
+                        scalar localtime($exp_seconds)."\n"
+                        if !$cron && !$quiet;
+               } elsif ($password_from eq 'fa_login_arg') {
+                  my $exp_seconds=choose_pass_expiration();
+                  $cipher = new Crypt::CBC('X%xP3&Tq',
+                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+                  my $new_encrypted=$cipher->encrypt($passwd[0]);
+                  my $arr=[$new_encrypted,$exp_seconds];
+                  ${$href}{"gatekeeper_$username"}=
+                     Data::Dump::Streamer::Dump($arr)->Out();
+                  my $put_href=
+                     Data::Dump::Streamer::Dump($href)->Out();
+                  $status=$bdb->db_put('localhost',$put_href);
+                  undef $bdb;
+                  print "\n  Saved Password will Expire: ".
+                        scalar localtime($exp_seconds)."\n"
+                        if !$cron && !$quiet;
+               } else {
+                  print "\n  NOTICE!: Saved Password --EXPIRED-- on ".
+                        scalar localtime($ignore_expiration)."\n";
+                  print "\n  Password: ";
+                  ReadMode 2;
+                  &give_semaphore(1234);
+                  my $pas=<STDIN>;
+                  $pas=~/^(.*)$/;
+                  $passwd[0]=$1;
+                  $sem=take_semaphore(1234);
+                  ReadMode 0;
+                  chomp($passwd[0]);
+                  print "\n\n";
+                  $passwd[1]=$passwd[0];
+                  $passwd[1]=unpack('a8',$passwd[0])
+                     if 7<length $passwd[0];
+                  $password_from='user_input';
+                  my $exp_seconds=choose_pass_expiration();
+#print "WHAT IS EXP_SECONDS=$exp_seconds\n";<STDIN>;
+#print "WHAT IS OUTCOME=",scalar localtime($exp_seconds),"\n";<STDIN>;
+                  $cipher = new Crypt::CBC('X%xP3&Tq',
+                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+                  my $new_encrypted=$cipher->encrypt($passwd[0]);
+                  my $arr=[$new_encrypted,$exp_seconds];
+                  ${$href}{"gatekeeper_$username"}=
+                     Data::Dump::Streamer::Dump($arr)->Out();
+                  my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+                  $status=$bdb->db_put('localhost',$put_href);
+                  undef $bdb;
+                  print "\n  Saved Password will Expire: ".
+                        scalar localtime($exp_seconds)."\n"
+                        if !$cron && !$quiet;
+                  }
+            } elsif ($passwd[0]) {
+               my $exp_seconds=choose_pass_expiration();
+#print "WHAT IS EXP_SECONDS=$exp_seconds\n";<STDIN>;
+#print "WHAT IS OUTCOME=",scalar localtime($exp_seconds),"\n";<STDIN>;
+               $cipher = new Crypt::CBC('X%xP3&Tq',
+                  $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+               my $new_encrypted=$cipher->encrypt($passwd[0]);
+               my $arr=[$new_encrypted,$exp_seconds];
+               ${$href}{"gatekeeper_$username"}=
+                  Data::Dump::Streamer::Dump($arr)->Out();
+               my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+               $status=$bdb->db_put('localhost',$put_href);
+               undef $bdb;
+               print "\n  Saved Password will Expire: ".
+                     scalar localtime($exp_seconds)."\n"
+                     if !$cron && !$quiet;
+            } else {
+               print "\n  Password: ";
+               ReadMode 2;
+               &give_semaphore(1234);
+               my $pas=<STDIN>;
+               $pas=~/^(.*)$/;
+               $passwd[0]=$1;
+               $sem=take_semaphore(1234);
+               ReadMode 0;
+               chomp($passwd[0]);
+               print "\n\n";
+               $passwd[1]=$passwd[0];
+               $passwd[1]=unpack('a8',$passwd[0])
+                  if 7<length $passwd[0];
+               $password_from='user_input';
+               my $exp_seconds=choose_pass_expiration();
+#print "WHAT IS EXP_SECONDS=$exp_seconds\n";<STDIN>;
+#print "WHAT IS OUTCOME=",scalar localtime($exp_seconds),"\n";<STDIN>;
+               $cipher = new Crypt::CBC('X%xP3&Tq',
+                  $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+               my $new_encrypted=$cipher->encrypt($passwd[0]);
+               my $arr=[$new_encrypted,$exp_seconds];
+               ${$href}{"gatekeeper_$username"}=
+                  Data::Dump::Streamer::Dump($arr)->Out();
+               my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+               $status=$bdb->db_put('localhost',$put_href);
+               undef $bdb;
+               print "\n  Saved Password will Expire: ".
+                     scalar localtime($exp_seconds)."\n"
+                     if !$cron && !$quiet;
+            }
+         } elsif (!$passwd[0] && !$cron) {
+            my $kind='prod';
+            $kind='test' if $Net::FullAuto::FA_Core::test &&
+                     !$Net::FullAuto::FA_Core::prod;
+            unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+               File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+               'Passwds');
+            }
+            my $dbenv = BerkeleyDB::Env->new(
+                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
+                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+            ) or &handle_error(
+               "cannot open environment for DB: $BerkeleyDB::Error\n",
+               '',$track);
+            my $bdb = BerkeleyDB::Btree->new(
+                    -Filename =>
+                       "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                    -Flags    => DB_CREATE,
+                    -Env      => $dbenv
+            ) or &handle_error(
+               "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+            my $href='';
+            my $status=$bdb->db_get('localhost',$href);
+            $href=eval $href;
+            delete ${$href}{"gatekeeper_$username"};
+            my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+            $status=$bdb->db_put('localhost',$put_href);
+            undef $bdb;
             print "\n  Password: ";
             ReadMode 2;
             &give_semaphore(1234);
-            my $pas=<STDIN>;
+            $pas=<STDIN>;
             $pas=~/^(.*)$/;
             $passwd[0]=$1;
             $sem=take_semaphore(1234);
@@ -5154,6 +5379,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             $passwd[1]=$passwd[0];
             $passwd[1]=unpack('a8',$passwd[0])
                if 7<length $passwd[0];
+            $password_from='user_input';
          }
          $login_id=$username;
          $password=$passwd[0];
@@ -5705,6 +5931,363 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
    return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
 
 } ## END of &fa_login
+
+sub choose_pass_expiration
+{
+
+   my $notice=$_[0]||'';
+   local @munths=('January  ','February ','March    ',
+      'April    ','May      ','June     ','July     ',
+      'August   ','September','October  ','November ',
+      'December ');
+   local @ouh_ers=('12:00am',' 1:00am',' 2:00am',' 3:00am',' 4:00am',
+                   ' 5:00am',' 6:00am',' 7:00am',' 8:00am',' 9:00am',
+                   '10:00am','11:00am','12:00pm',' 1:00pm',' 2:00pm',
+                   ' 3:00pm',' 4:00pm',' 5:00pm',' 6:00pm',' 7:00pm',
+                   ' 8:00pm',' 9:00pm','10:00pm','11:00pm');
+   local %mdates=();
+   my $endyear=$curyear + 20;
+   my $lastday='';
+   local $today=unpack('x2a2',$invoked[7]);
+   local $curmonth=unpack('a2',$invoked[7]);
+   local $fullmonth=$munths[$curmonth-1];
+   $fullmonth=~s/\s*$//;
+   $todays_date="$fullmonth $today, $curyear";
+   #$curmonth='04';
+   foreach my $year ($curyear..$endyear) {
+      $dates{$year}={};my $cnt=0;
+      if ($year ne $curyear) {
+         $curmonth=1; 
+      }
+      foreach my $mth ($curmonth..12) {
+         $lastday=POSIX::mktime(0,0,0,0,$mth-1+1,$year-1900,0,0,-1);
+         my $d=localtime($lastday);
+         my @d=split ' ',$d;
+         $mdates{$year}{$munths[$cnt++]}=$d[2];
+      }
+   }
+   my $fulldays=sub { my ($a,$b)=('','');
+                      ($a,$b)=split / +/, ']P[';
+                      $a=substr($a,1);
+                      $b=substr($b,0,-1);
+                      my $c=pack('A9',$a);
+                      my @n=();
+                      my $s=1;
+                      $s=$today if $b eq $curyear;
+                      foreach my $d ($s..$mdates{$b}{$c}) {
+                         $d='0'.$d if length $d==1;   
+                         push @n, $a.' '.$d.', '.$b;
+                      }
+                      return @n };
+   my $hours=sub { my $date_chosen=']P[';
+                   $date_chosen=substr($date_chosen,1,-1);
+                   if ($date_chosen eq $todays_date) {
+                      my $in=$invoked[4]+1;
+                      return (@ouh_ers[$in..23])
+                   } else { return @ouh_ers } };
+   my $showmins=sub { my $datechosen=']P[';
+                      $datechosen=substr($datechosen,1,-1);
+                      my @hrmn=();
+                      if ($datechosen eq $todays_date) {
+                         my $now=unpack('a2',(split ':',&get_now_am_pm)[1]);
+                         $now++;
+                         foreach my $hr (@ouh_ers[$invoked[4]..23]) {
+                            foreach my $mn ($now..59) {
+                               if (length $mn==1) {
+                                  $mn='0'.$mn;
+                               }
+                               push @hrmn, unpack('a3',$hr).$mn.unpack('x5a2',$hr);
+                            } $now=0;
+                         } return @hrmn;
+                      } else {
+                         foreach my $hr (@ouh_ers[0..23]) {
+                            foreach my $mn (0..59) {
+                               if (length $mn==1) {
+                                  $mn='0'.$mn;
+                               }
+                               push @hrmn, unpack('a3',$hr).$mn.unpack('x5a2',$hr);
+                            }
+                         } return @hrmn;
+                      }
+                    };
+   my %show_mins=(
+
+      Label => 'show_mins',
+      Item_1=> {
+         
+         Text => "]C[",
+         Convey => $showmins,
+         #Return => "]P[",
+         Result => sub{ my $previous_selection='"]P[{select_cal_days}"';
+                        return substr($previous_selection,1,-1)." ".']S[' }
+ 
+      },
+      Banner=> "   (The current time is ".&get_now_am_pm.")\n\n".
+               "   Please Select a Password Expiration Time :",
+
+   );
+   my %select_hour=(
+
+      Label => 'select_hour',
+      Item_1=> {
+
+         Text => "Show Minutes",
+         Result => \%show_mins,
+
+      },
+      Item_2=> {
+
+         Text => "]C[",
+         Convey => $hours,
+         Result => sub{ my $previous_selection=']P[';
+                        return substr($previous_selection,1,-1)." ".']S[' }
+
+      },
+      Banner=> "   (The current time is ".&get_now_am_pm.")\n\n".
+               "   Please Select a Password Expiration Time :",
+
+   );
+   my %select_cal_days=(
+
+      Label => 'select_cal_days',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => $fulldays,
+         Result => \%select_hour,
+
+      },
+      Banner=> '   Please Select a Password Expiration Date :'
+   );
+   my $cal_months=sub { my $yr=']P[';
+                        my @munnths=();
+                        my $cmonth=$curmonth-1;
+                        if ($curyear==$yr) {
+                           if ($curmonth==12) {
+                              @munnths=$munths[11];
+                           } else {
+                              @munnths=@munths[$cmonth..11];
+                           }
+                        } else {
+                           @munnths=@munths;
+                        }
+                        my @new=map { $_.' '.']P[' } @munnths;
+                        return @new }; 
+   my %select_cal_months=(
+
+      Label => 'select_cal_months',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => $cal_months,
+         Result => \%select_cal_days,
+      },
+      Banner=> '   Please Select a Month :'
+   );
+   my %calendar_years=(
+
+      Label => 'calendar_years',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => [$curyear..$endyear],
+         Result => \%select_cal_months,
+
+      },
+      Banner=> '   Please Select a Year :'
+   );
+   my %select_minutes=(
+
+      Label => 'select_minutes',
+      Item_1=> {
+
+         Text => "1  Minute",
+
+      },
+      Item_2=> {
+
+         Text => "]C[  Minutes",
+         Convey => [2,3,4,5,6,7,8,9],
+
+      },
+      Item_3=> {
+
+         Text => "]C[ Minutes",
+         Convey => [10..60],
+
+      },
+      Banner => '   Choose Time :',
+
+   );
+   my %select_hours=(
+
+      Label => 'select_hours',
+      Item_1=> {
+
+         Text => "1  Hour",
+
+      },
+      Item_2=> {
+
+         Text => "]C[  Hours",
+         Convey => [2,3,4,5,6,7,8,9],
+
+      },
+      Item_3=> {
+
+         Text => "]C[ Hours",
+         Convey => [10..24],
+
+      },
+      Banner => '   Choose Time :',
+
+   );
+   my %select_days=(
+
+      Label => 'select_days',
+      Item_1=> {
+
+         Text => "1  Day",
+
+      },
+      Item_2=> {
+
+         Text => "]C[  Days",
+         Convey => [2,3,4,5,6,7,8,9],
+
+      },
+      Item_3=> {
+
+         Text => "]C[ Days",
+         Convey => [10..365],
+
+      },
+      Banner => '   Choose Time :',
+
+   );
+   my %select_weeks=(
+
+      Label => 'select_weeks',
+      Item_1=> {
+
+         Text => "1  Week",
+
+      },
+      Item_2=> {
+
+         Text => "]C[  Weeks",
+         Convey => [2,3,4,5,6,7,8,9],
+
+      },
+      Item_3=> {
+
+         Text => "]C[ Weeks",
+         Convey => [10..53],
+
+      },
+      Banner => '   Choose Time :',
+
+   );
+   my %select_months=(
+
+      Label => 'select_time',
+      Item_1=> {
+
+         Text => "1  Month",
+
+      },
+      Item_2=> {
+
+         Text => "]C[  Months",
+         Convey => [2,3,4,5,6,7,8,9],
+
+      },
+      Item_3=> {
+
+         Text => "]C[ Minutes",
+         Convey => [10..12],
+
+      },
+      Banner => '   Choose Time :',
+
+   );
+   my %pass_ask_exp=(
+
+      Label => 'pass_ask_exp',
+      Item_1=> {
+
+         Text => "FULL CALENDAR",
+         Result => \%calendar_years,
+
+      },
+      Item_2=> {
+
+         Text => "Number of MINUTES",
+         Result => \%select_minutes,
+
+      },
+      Item_3=> {
+
+         Text => "Number of HOURS",
+         Result => \%select_hours,
+
+      },
+      Item_4=> {
+
+         Text => "Number of DAYS",
+         Result => \%select_days,
+
+      },
+      Item_5=> {
+
+         Text => "Number of WEEKS",
+         Result => \%select_weeks,
+
+      },
+      Item_6=> {
+
+         Text => "Number of MONTHS",
+         Result => \%select_months,
+
+      },
+      Banner => $notice.
+                "   Choose the Expiration Time of the local saving\n".
+                "   of ${username}\'s Password via one of the following\n".
+                "   selection methods (Password is Saved with Encryption):",
+
+   );
+   my $selection=&Menu(\%pass_ask_exp);
+#print "SELECTION=$selection\n";
+   &cleanup if $selection eq ']quit[';
+   my ($num,$type)=('','');
+   ($num,$type)=split /\s+/, $selection;
+   if ($num=~/^\w/) {
+      my @d=split /,* +/, $selection;
+      $mn=unpack('a3',$d[0]);
+#print "MN=$mn and D=$d[0]\n";
+      if (defined $d[3] && $d[3]) {
+         my $ap=substr($d[3],-2);
+         my ($h,$m)=('','');
+         ($h,$m)=split ':',substr($d[3],0,-2);
+         $h+=12 if $ap eq 'pm' && $h!=12;
+         return &Net::FullAuto::FA_Core::timelocal(
+            0,$m,$h,$d[1],$Net::FullAuto::FA_Core::month{$mn}-1,$d[2]);
+      }
+      return &Net::FullAuto::FA_Core::timelocal(
+         0,0,0,$d[1],$Net::FullAuto::FA_Core::month{$mn}-1,$d[2]);
+   } elsif ($type=~/Min/) {
+      return time + $num * 60;
+   } elsif ($type=~/Hour/) {
+      return time + $num * 3600;
+   } elsif ($type=~/Day/)  {
+      return time + $num * 43200;
+   } elsif ($type=~/Week/) {
+      return time + $num * 302400; 
+   } elsif ($type=~/Month/) {
+      return time + $num * 9072000;
+   }
+
+}
 
 sub passwd_db_update
 {

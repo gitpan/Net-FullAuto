@@ -25,6 +25,14 @@
 ################################################################
 
 
+2011-01-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.94 released.
+
+        * Added functionality to save main password in
+          encrypted format with an expiration feature.
+
+
 2011-01-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.93 released.
