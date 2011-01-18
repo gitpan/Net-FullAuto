@@ -56,11 +56,12 @@ package Net::FullAuto::FA_Core;
 #
 ## *************************************************************
 
-BEGIN {
+#use strict;
+our $progname=substr($0,(rindex $0,'/')+1);
+our $OS=$^O;
+our @tran=('','',0,$$."_".$^T,'',0);
 
-   our $progname=substr($0,(rindex $0,'/')+1);
-   our $OS=$^O;
-   our $customdir='Net/FullAuto/Custom';
+BEGIN {
 
    if ($^O eq 'cygwin') {
       require Win32::Semaphore;
@@ -107,7 +108,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
 {
    no warnings;
    use Sys::Hostname;
-   our $local_hostname=hostname;
+   our $local_hostname=&Sys::Hostname::hostname;
    use BerkeleyDB;
    use Data::Dump::Streamer;
    use Time::Local;
@@ -138,10 +139,10 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Tie::Cache;
    use IO::Pty;
    use POSIX qw(setsid uname);
-   use strict;
 };
 
 BEGIN {
+   my $customdir='Net/FullAuto/Custom';
    $ENV{OS}='' if !$ENV{OS};
    my $md_='';our $thismonth='';our $thisyear='';
    ($md_,$thismonth,$thisyear)=(localtime)[3,4,5];
@@ -157,7 +158,6 @@ BEGIN {
    $hms=~s/^(\d\d):(\d\d):(\d\d)$/h${1}m${2}s${3}/;
    my $hr=$1;my $mn=$2;my $sc=$3;
    our @invoked=($^T, $tm, $mdy, $hms, $hr, $mn, $sc, $mdyyyy);
-   our @tran=('','',0,$$."_".$^T,'',0);
    our $curyear=$thisyear + 1900;
    our $curcen=unpack('a2',$curyear);
 
@@ -374,7 +374,7 @@ BEGIN {
    }
 
    our $pingpath='';
-   if ($OS eq 'cygwin') {
+   if ($^O eq 'cygwin') {
       my $windir=$ENV{'WINDIR'};
       $windir=~s/\\/\//g;
       $pingpath="$windir/system32/";
@@ -391,6 +391,7 @@ BEGIN {
    our $termwidth=''; our $termheight='';
    if (!$Net::FullAuto::FA_Core::cron || $Net::FullAuto::FA_Core::debug) {
       eval {
+         no strict 'subs';
          ($termwidth, $termheight) = GetTerminalSize(STDOUT);
       };
       if ($@) {
@@ -575,6 +576,7 @@ sub cleanup {
    my @topcaller=caller;
    my $param_one=$_[0];
    my $param_two=$_[1]||='';
+   my ($stdout,$stderr,$track)=('','','');
    unless (defined $param_one) {
       $param_one='';
    }
@@ -599,6 +601,7 @@ sub cleanup {
          }
       }
    } else {
+      no strict 'subs';
       semctl(34, 0, SETVAL, -1);
    } my $tm='';my $ob='';my %cleansync=();
    my $new_cmd='';my $cmd='';my $clean_master='';
@@ -612,7 +615,7 @@ sub cleanup {
 my $show1="CNCT_TYPE=$cnct_type and HOSTLABEL=$hostlabel "
          ."and PROCESS=".$Processes{$hostlabel}{$id}{$type}
          ." and DeploySMB=$DeploySMB_Proxy[0]<==\n"; 
-print $show1 if $debug;
+print $show1 if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG $show1 if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             if ($cnct_type eq 'cmd'
                     && $hostlabel eq $DeploySMB_Proxy[0]) {
@@ -630,6 +633,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_1=$line\n"
                         $line=~s/\s*$//s;
                         last if $line=~/_funkyPrompt_$/s;
                         last if $line=~/Killed by signal 2\.$/s;
+                        my ($stdout,$stderr)=('','');
                         ($stdout,$stderr)=&kill($shell_pid,$kill_arg)
                            if &testpid($shell_pid);
                         if ($cmd_pid) {
@@ -643,15 +647,15 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_1=$line\n"
                   }; next if $next;
                }
                if ($@) {
-print "clean_ERRORRRRR=$@\n" if $debug;
+print "clean_ERRORRRRR=$@\n" if $Net::FullAuto::FA_Core::debug;
                } 
                if (exists $Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}) {
                   my $tmpdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[0];
                   my $tdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[1];
-                  ($output,$stderr)=Rem_Command::cmd(
+                  ($stdout,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_fh,
                     _hostlabel=>[ $hostlabel,'' ] },"cd $tmpdir");
-                  ($output,$stderr)=Rem_Command::cmd(
+                  ($stdout,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_fh,
                     _hostlabel=>[ $hostlabel,'' ] },"rm -rf $tdir");
                }
@@ -661,7 +665,8 @@ print "clean_ERRORRRRR=$@\n" if $debug;
                if ($cmd) {
                   # DO ps cmd and find pid and then kill
                }
-               if ($tran[0] && !exists $did_tran{$hostlabel}) {
+               if ($Net::FullAuto::FA_Core::tran[0]
+                     && !exists $did_tran{$hostlabel}) {
                   $clean_master=1;
                   $clean_master=2 if $tran[2];
                      if ($tran[1] eq $hostlabel &&
@@ -697,7 +702,8 @@ print "clean_ERRORRRRR=$@\n" if $debug;
                           # of this routine.
                      SC: while (defined fileno $ftp_fh) {
                         $ftp_fh->print("\004");
-print "FTP_FH_ERRMSG=",$ftp_fh->errmsg,"\n" if $ftp_fh->errmsg && $debug;
+print "FTP_FH_ERRMSG=",$ftp_fh->errmsg,"\n" if $ftp_fh->errmsg
+      && $Net::FullAuto::FA_Core::debug;
                         while (my $line=$ftp_fh->get) {
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_2=$line\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -720,7 +726,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_2=$line\n"
                      }
                   };
                   if ($@) {
-print "WHAT IS THE LINE_2 EVALERROR=$@<====\n" if $debug;
+print "WHAT IS THE LINE_2 EVALERROR=$@<====\n" if $Net::FullAuto::FA_Core::debug;
                      if ((-1<index $@,'read error: Connection aborted')
                            || (-1<index $@,'read timed-out')
                            || (-1<index $@,'filehandle isn')
@@ -783,7 +789,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() SHOULD BE LAST CC=$line\n"
                      }
                   };
 print "WOW I ACTUALLY GOT OUT3 and GONE=$gone and WASALOCAL=$was_a_local AND CMD_ERR=",
-   $cmd_fh->errmsg,"<==\n" if $debug;
+   $cmd_fh->errmsg,"<==\n" if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG
    "cleanup() I AM OUT OF CC and EVALERR=$@ ".
    "and WAS=$was_a_local and GONE=$gone<==\n"
@@ -806,10 +812,10 @@ print $Net::FullAuto::FA_Core::MRLOG "IN !WASALOCAL AND !GONE<====\n";
 print "IN !WASALOCAL AND !GONE<====\n";
                      my $tmpdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[0];
                      my $tdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[1];
-                     ($output,$stderr)=Rem_Command::cmd(
+                     ($stdout,$stderr)=Rem_Command::cmd(
                      { _cmd_handle=>$cmd_fh,
                        _hostlabel=>[ $hostlabel,'' ] },"cd $tmpdir");
-                     ($output,$stderr)=Rem_Command::cmd(
+                     ($stdout,$stderr)=Rem_Command::cmd(
                      { _cmd_handle=>$cmd_fh,
                        _hostlabel=>[ $hostlabel,'' ] },"rm -rf $tdir");
                   }
@@ -852,7 +858,7 @@ print "IN !WASALOCAL AND !GONE<====\n";
                      if ($was_a_local) {
                         $localhost->cmd("rm -f transfer$tran[3]*tar");
                      } elsif (!$gone) {
-                        if ($alarm_sounded) {
+                        if ($Net::FullAuto::FA_Core::alarm_sounded) {
                            print "WE ARE TRYING SOMETHING and ALRM SOUNDED\n";
                            $cmd_fh->print("\003");
                            print "WOW - GOT TO CLEAN_FILEHANDLE\n";
@@ -967,11 +973,11 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          my $cfh_ignore='';my $cfh_error='';
          ($cfh_ignore,$cfh_error)=&clean_filehandle($localhost->{_cmd_handle});
          &handle_error("CLEANUP ERROR -> $cfh_error",'-1') if $cfh_error;
-         ($output,$stderr)=$localhost->cmd("cd $master_transfer_dir");
+         ($stdout,$stderr)=$localhost->cmd("cd $master_transfer_dir");
          &handle_error("CLEANUP ERROR -> $stderr",'-1') if $stderr;
-         ($output,$stderr)=
+         ($stdout,$stderr)=
             $localhost->cmd("rm -f transfer${tran[3]}*tar");
-         ($output,$stderr)=
+         ($stdout,$stderr)=
             $localhost->cmd("rm -f transfer${tran[3]}*tar")
             if $stderr;
          &handle_error("CLEANUP ERROR -> $stderr",'-1') if $stderr;
@@ -1034,7 +1040,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
             $pregx=qr/\]quit\[|INT/;
          }
          unless ($param_two=~/$pregx/) {
-            $status=$bdb->db_put($plan_number,$put_plan);
+            my $status=$bdb->db_put($plan_number,$put_plan);
             print "\n\n       ################ NEW PLAN ##################\n\n",
                   "          Number: $plan_number\n",
                   "          Title:  $plan_title\n\n",
@@ -1094,7 +1100,7 @@ $SIG{ ALRM } = sub{ open(AL,">>ALRM.txt");
                     $cleanup=1;&cleanup('','ALRM') };
 $SIG{ CHLD } = 'IGNORE';
 
-my @Hosts=@{&check_Hosts($fa_host)};
+my @Hosts=@{&check_Hosts($Net::FullAuto::FA_Core::fa_host)};
 
 sub grep_for_string_existence_only
 {
@@ -1115,7 +1121,7 @@ sub grep_for_string_existence_only
 
 sub version
 {
-can_load(modules => { Net::FullAuto => 0 });
+can_load(modules => { "Net::FullAuto" => 0 });
 my $version=<<VERSION;
 
 This is Net::FullAuto, v$Net::FullAuto::VERSION
@@ -1758,7 +1764,7 @@ sub get_master_info
    my $Local_HostName='';my $Local_FullHostName='';
    my $Local_IP_Address='';
    $Local_HostName=(uname)[1];
-   $Local_HostName=hostname if !$Local_HostName;
+   $Local_HostName=&Sys::Hostname::hostname if !$Local_HostName;
    my $addr='';
    if ($OS ne 'cygwin') {
       $addr=gethostbyname($Local_HostName) ||
@@ -1862,7 +1868,7 @@ sub check_Hosts
 
 }
 
-$Hosts{"__Master_${$}__"}{'HostName'}=hostname if
+$Hosts{"__Master_${$}__"}{'HostName'}=&Sys::Hostname::hostname if
    !exists $Hosts{"__Master_${$}__"}{'HostName'};
 $Hosts{"__Master_${$}__"}{'IP'}='' if
    !exists $Hosts{"__Master_${$}__"}{'IP'};
@@ -4105,6 +4111,7 @@ sub check_if_websphere_is_running
    my ($cmd_handle,$applic)=@_;
    return if $websphere_not_running==1;
    my @ls=$cmd_handle->cmd("ls -C1 /usr/WebSphere/AppServer/bin");
+   my $wscp_UX||='';
    @ls=grep { /^wscp/ } @ls;
    print "--> Verifying that WebSphere is Offline ...\n";
    my $wscp_sub = sub {
@@ -7200,7 +7207,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
 sub print
 {
 my @topcaller=caller;
-print "PARENTPRINTCALLER=",(join ' ',@topcaller),"\n" if $debug;
+print "PARENTPRINTCALLER=",(join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "PARENTPRINTCALLER=",(join ' ',@topcaller),
       "\nand ARGS=@_\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    return Net::Telnet::print(@_);
