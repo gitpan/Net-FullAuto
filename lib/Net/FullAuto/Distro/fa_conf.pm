@@ -26,8 +26,9 @@ package fa_conf;
 #
 ################################################################
 
-require Exporter;
+use strict;
 use warnings;
+require Exporter;
 our @ISA     = qw(Exporter);
 our @EXPORT  = qw(@editor);
 
@@ -38,7 +39,7 @@ our @EXPORT  = qw(@editor);
 ##  ADD SETTINGS HERE:
 ##  -------------------------------------------------------------
 
-# $editor = '';
+# our $editor = '';
 
 #################################################################
 ##  Do NOT alter code BELOW this block.

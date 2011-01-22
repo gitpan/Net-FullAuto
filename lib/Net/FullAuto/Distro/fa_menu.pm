@@ -26,23 +26,31 @@ package fa_menu;
 #
 ################################################################
 
+use strict;
+use warnings;
 require Exporter;
 our @ISA = qw(Exporter);
+our $VERSION = 1.00;
+
+#################################################################
+##  Do NOT alter code ABOVE this block.
+#################################################################
+##  -------------------------------------------------------------
+##  ADD CUSTOM MENU BLOCKS HERE:
+##  -------------------------------------------------------------
 
 our @EXPORT = qw(%Menu_1 %Menu_2 %Menu_5 %Menu_15 %Menu_30);
-
-our $start_menu_ref=\%Menu_1;
 
 my @PortalApps=(
    'Member-Employer-Framework','Provider (Physician)',
    'Broker','Broker-Employer','Broker Rate Tool',
 );
 
-@StaticAppDestinations=('ProdWeb01','ProdWeb02','ProdWeb03','ProdWeb04',
-                        'ProdWeb05','ProdWeb06','ProdWeb07','ProdWeb08',
-                        'ProdWeb09','ProdWeb10');
+my @StaticAppDestinations=('ProdWeb01','ProdWeb02','ProdWeb03','ProdWeb04',
+                           'ProdWeb05','ProdWeb06','ProdWeb07','ProdWeb08',
+                           'ProdWeb09','ProdWeb10');
 
-%Menu_1=(
+our %Menu_1=(
 
    Label  => 'Menu_1',
    Item_1 => {
@@ -72,7 +80,9 @@ my @PortalApps=(
    Banner => "\n   Choose a Task to Perform :"
 );
 
-%Menu_2=(
+our $start_menu_ref=\%Menu_1;
+
+our %Menu_2=(
    
    Label  => 'Menu_2',
    Item_1 => {
@@ -86,7 +96,7 @@ my @PortalApps=(
    Banner => "\n   Choose a Task to Perform :"
 );
 
-%Menu_30=(
+our %Menu_30=(
 
    Label  => 'Menu_30',
    Item_1 => {
@@ -107,7 +117,7 @@ my @PortalApps=(
    Banner => "\n   Choose a Task to Perform :"
 );
 
-%Menu_5=(
+our %Menu_5=(
 
    Label  => 'Menu_5',
    Item_1 => {
@@ -122,7 +132,7 @@ my @PortalApps=(
    Banner => "\n   Choose a Task to Perform :"
 );
 
-%Menu_15=(
+our %Menu_15=(
 
    Label  => 'Menu_15',
    Item_1 => {

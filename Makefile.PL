@@ -19,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.95';
+version         '0.96';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -1655,7 +1655,7 @@ sub MY::pm_to_blib {
    
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
-      $inherited .= "\t\$(SED) \'s/^#[ ]*\\(.\\)editor[ ]*[=].*/".
+      $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
                  '\\1'."editor = $editor;/g\' ".
                  "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
                  "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";

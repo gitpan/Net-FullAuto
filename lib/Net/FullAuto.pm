@@ -34,10 +34,13 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.95';
+our $VERSION='0.96';
 
 
 use 5.005;
+
+use strict;
+use warnings;
 
 BEGIN {
    my @ARGS=@ARGV;
@@ -68,6 +71,24 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(fa_login);
 
 use Term::Menus;
+use Tie::Cache;
+use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
+use MLDBM::Sync;                      # this gets the default, SDBM_File
+use Sort::Versions;
+use Crypt::CBC;
+use Crypt::DES;
+use JSON;
+use URI;
+use HTTP::Date;
+use IO::Capture::Stderr;
+use IO::CaptureOutput;
+use Capture::Tiny;
+use Net::Telnet;
+use Email::Sender;
+use MIME::Entity;
+use IO::Pty;
+use DB_File;
+use BerkeleyDB;
 
 sub fa_login
 {
@@ -1510,8 +1531,7 @@ Brian M. Kelly <Brian.Kelly@fullautosoftware.net>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2000, 2001, 2002, 2003, 2004
-              2005, 2006, 2007, 2010, 2011
+Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
 by Brian M. Kelly.
 
 This program is free software; you can redistribute it and/or

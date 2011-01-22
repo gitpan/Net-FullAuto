@@ -26,12 +26,13 @@ package fa_host;
 #
 ################################################################
 
-require Exporter;
+use strict;
 use warnings;
+require Exporter;
 our @ISA     = qw(Exporter);
 our @EXPORT  = qw(@Hosts);
 
-@Hosts = (
+our @Hosts = (
 #################################################################
 ##  Do NOT alter code ABOVE this block.
 #################################################################

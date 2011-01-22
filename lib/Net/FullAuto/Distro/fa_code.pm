@@ -26,9 +26,10 @@ package fa_code;
 #
 ################################################################
 
+use strict;
+use warnings;
 our $test=0;our $timeout=0;
 require Exporter;
-use warnings;
 #use threads ();
 #use Thread::Queue;
 our @ISA = qw(Exporter Net::FullAuto::FA_Core);
@@ -65,7 +66,7 @@ $timeout=90;
 ##############################################
 
 ######## SET PASSWORD FILE LOCATION  #########
-if ($OS eq 'cygwin') {
+if ($^O eq 'cygwin') {
    $passwd_file_loc="/passwds_ms";
 } else {
    $passwd_file_loc="/passwds_ux"

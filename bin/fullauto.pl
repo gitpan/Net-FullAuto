@@ -29,6 +29,9 @@ eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
 #
 ################################################################
 
+use strict;
+use warnings;
+
 BEGIN {
 
    my $edit=0;my $earg='';my $cnt=0;

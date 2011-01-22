@@ -32,12 +32,13 @@ package fa_maps;
 #
 #################################################################
 
-require Exporter;
+use strict;
 use warnings;
+require Exporter;
 our @ISA     = qw(Exporter);
 our @EXPORT  = qw(@Maps);
 
-@Maps = (
+our @Maps = (
 #################################################################
 ##  Do NOT alter code ABOVE this block.
 #################################################################
