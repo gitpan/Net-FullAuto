@@ -151,6 +151,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use IO::Capture::Stderr;
    use IO::CaptureOutput;
    use Capture::Tiny;
+   use String::Random;
    use Symbol qw(qualify_to_ref);
    use Tie::Cache;
    use IO::Pty;
@@ -433,8 +434,8 @@ our $username='';our @passwd=('','');our $fa_code='';
 our $localhost={};our %localhost=();our $uhray='';
 our @RCM_Link=();our @FTM_Link=();our $cleanup=0;
 our $starting_memory=0;our $custom_code_module_file='';
-our %email_addresses=();our $debug=0;
-our %tiedb=();our @ascii_que=();
+our %email_addresses=();our $debug=0;our %tiedb=();
+our @ascii_que=();our $passetts=['','','','','','','','','',''];
 our %Connections=();our $tranback=0;our @ascii=();
 our %base_excluded_dirs=();our %base_excluded_files=(); 
 our %hours=();our %month=();our %Hosts=();our %Maps=();
@@ -3819,6 +3820,7 @@ sub getpasswd
       }
    }
    my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
+   #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
       $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
    my $local_host_flag=0;my $href='';
    if (exists $same_host_as_Master{$passlabel} ||
@@ -4119,6 +4121,7 @@ sub getpasswd
          eq substr($Net::FullAuto::FA_Core::progname,0,
          (rindex $Net::FullAuto::FA_Core::progname,'.'));
       $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
+      #$cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
          $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
       my $new_encrypted=$cipher->encrypt($save_passwd);
       ${$href}{$key}=$new_encrypted;
@@ -4735,7 +4738,7 @@ sub fa_login
    my $arg_to_fa_code_sub=substr($custom_code_module_file,0,-3).'-arg=s';
 
    my $man=0;my $help=0;my $userflag=0;my $passerror=0;
-   my $test_arg=0;my $oldcipher='';my $password_from='';my $sem='';
+   my $test_arg=0;my $oldcipher='';my $password_from='user_input';my $sem='';
    my @holdARGV=@ARGV;@menu_args=();my $username_from='';
    my $cust_subname_in_fa_code_module_file;
 
@@ -5193,7 +5196,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
 
          if ($login_Mast_error) {
             if ($login_Mast_error=~/[Ll]ogin|sion den/) {
-               $userflag=0;$username='';@passwd=();
+               $userflag=0;@passwd=();#$username='';
                chomp($login_Mast_error);
             } else {
                chomp($login_Mast_error);
@@ -5234,105 +5237,104 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                &handle_error($login_Mast_error);
             }
          }
-         if ($save_main_pass || $password_from eq 'cmd_line_arg'
-               || $password_from eq 'fa_login_arg') {
-            my $kind='prod';
-            $kind='test' if $Net::FullAuto::FA_Core::test &&
-                     !$Net::FullAuto::FA_Core::prod;
-            unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-               File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-               'Passwds');
-            }
-            my $dbenv = BerkeleyDB::Env->new(
-                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
-            ) or &handle_error(
-               "cannot open environment for DB: $BerkeleyDB::Error\n",
-               '',$track);
-            my $bdb = BerkeleyDB::Btree->new(
-               -Filename =>
-                       "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE,
-               -Env      => $dbenv
-            ) or &handle_error(
-               "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-            my $href='';
+         my $kind='prod';
+         $kind='test' if $Net::FullAuto::FA_Core::test &&
+                  !$Net::FullAuto::FA_Core::prod;
+         unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+            'Passwds');
+         }
+         my $dbenv = BerkeleyDB::Env->new(
+                 -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
+                 -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+         ) or &handle_error(
+            "cannot open environment for DB: $BerkeleyDB::Error\n",
+            '',$track);
+         my $bdb = BerkeleyDB::Btree->new(
+            -Filename =>
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+            -Flags    => DB_CREATE,
+            -Env      => $dbenv
+         ) or &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+         my $href={};my $dcipher='';
+         if ($save_main_pass || $password_from ne 'user_input') {
             my $status=$bdb->db_get('localhost',$href);
             $href=~s/\$HASH\d*\s*=\s*//s;
+#print "HREF=$href\n";
             $href=eval $href;
-#delete ${$href}{"gatekeeper_$username"};
-            if (exists ${$href}{"gatekeeper_$username"}) {
-               my $contents=eval ${$href}{"gatekeeper_$username"};
-               my $ignore_expiration=${$contents}[1]||0;
+#delete ${$href}{"gatekeep_$username"};
+            if (exists ${$href}{"gatekeep_$username"}) {
+               my $zyxarray=${$href}{"passetts_$username"};
+               $zyxarray=~s/\$ARRAY\d*\s*=\s*//s;
+               $passetts=eval $zyxarray;
+               undef $zyxarray;
+               my $ignore_expiration=$passetts->[1]||0;
                my $now=time;
 #print "WHAT IS IGNORED EXP=$ignore_expiration and PASSWORD FROM=$password_from\n";
                if ($now<$ignore_expiration) {
-                  print "\n  Saved Password will Expire: ".
+                  $passetts->[9]=$dcipher = new Crypt::CBC(
+                     ${$href}{"gatekeep_$username"},
+                     $Net::FullAuto::FA_Core::Hosts{
+                     "__Master_${$}__"}{'Cipher'});
+                  my $rstr=new String::Random;
+                  if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+                     ${$href}{"gatekeep_$username"}=
+                        $rstr->randpattern("........");
+                  } else {
+                     ${$href}{"gatekeep_$username"}=
+                        $rstr->randpattern("..............");
+                  }
+                  my $ecipher = new Crypt::CBC(
+                     ${$href}{"gatekeep_$username"},
+                     $Net::FullAuto::FA_Core::Hosts{
+                     "__Master_${$}__"}{'Cipher'});
+                  my $tpess=$dcipher->decrypt($passetts->[0]);
+                  my $skipflag=0;
+                  if ($password_from ne 'user_input') {
+                     if ($passwd[0] ne $tpess) {
+                        undef $tpess;
+                        $passetts->[0]=$ecipher->encrypt($passwd[0]);
+                        $passetts->[9]=$dcipher=$ecipher;
+                        $skipflag=1;
+                     } else {
+                        print "\n  Saved Password matches outside input!\n"; 
+                     }
+                  }
+                  unless ($skipflag) {
+                     undef $tpess;
+                     print "\n  Saved Password will Expire: ".
                         scalar localtime($ignore_expiration)."\n"
                         if !$Net::FullAuto::FA_Core::cron &&
                         !$Net::FullAuto::FA_Core::quiet;
-                  my $cipher = new Crypt::CBC('X%xP3&Tq',
-                     $Net::FullAuto::FA_Core::Hosts{
-                     "__Master_${$}__"}{'Cipher'});
-                  my $decrypted=$cipher->decrypt(${$contents}[0]);
-                  $password=$passwd[0]=$decrypted;
-                  if ($password_from eq 'cmd_line_arg') {
-                     if ($passwd[0] ne ${$contents}[0]) {
-                        my $exp_seconds=choose_pass_expiration();
-                        my $arr=[$passwd[0],$exp_seconds];
-                        ${$href}{"gatekeeper_$username"}=
-                           Data::Dump::Streamer::Dump($arr)->Out();
-                        my $put_href=
-                           Data::Dump::Streamer::Dump($href)->Out();
-                        $status=$bdb->db_put('localhost',$put_href);
-                        undef $bdb;
-                     }
-                  } elsif ($password_from eq 'fa_login_arg') {
-                     if ($passwd[0] ne ${${$href}{"gatekeeper_$username"}}[0]) {
-                        my $exp_seconds=choose_pass_expiration();
-                        my $arr=[$passwd[0],$exp_seconds];
-                        ${$href}{"gatekeeper_$username"}=
-                           Data::Dump::Streamer::Dump($arr)->Out();
-                        my $put_href=
-                           Data::Dump::Streamer::Dump($href)->Out();
-                        $status=$bdb->db_put('localhost',$put_href);
-                        undef $bdb;
-                     } 
+                     $tpess=$ecipher->encrypt(
+                        $dcipher->decrypt($passetts->[0]));
+                     my $arr=[$tpess,$ignore_expiration];
+                     undef $tpess;
+                     ${$href}{"passetts_$username"}=
+                        Data::Dump::Streamer::Dump($arr)->Out();
+                     my $put_href=
+                        Data::Dump::Streamer::Dump($href)->Out();
+                     $status=$bdb->db_put('localhost',$put_href);
+                     undef $bdb;
                   }
-               } elsif ($password_from eq 'cmd_line_arg') {
-                  my $exp_seconds=choose_pass_expiration();
-                  my $cipher = new Crypt::CBC('X%xP3&Tq',
+                  $save_main_pass=0;
+               } elsif ($password_from ne 'user_input') {
+                  my $rstr=new String::Random;
+                  if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+                     ${$href}{"gatekeep_$username"}=
+                        $rstr->randpattern("........");
+                  } else {
+                     ${$href}{"gatekeep_$username"}=
+                        $rstr->randpattern("..............");
+                  }
+                  my $ecipher = new Crypt::CBC(
+                     ${$href}{"gatekeep_$username"},
                      $Net::FullAuto::FA_Core::Hosts{
                      "__Master_${$}__"}{'Cipher'});
-                  my $new_encrypted=$cipher->encrypt($passwd[0]);
-                  my $arr=[$new_encrypted,$exp_seconds];
-                  ${$href}{"gatekeeper_$username"}=
-                     Data::Dump::Streamer::Dump($arr)->Out();
-                  my $put_href=
-                     Data::Dump::Streamer::Dump($href)->Out();
-                  $status=$bdb->db_put('localhost',$put_href);
-                  undef $bdb;
-                  print "\n  Saved Password will Expire: ".
-                        scalar localtime($exp_seconds)."\n"
-                        if !$Net::FullAuto::FA_Core::cron &&
-                        !$Net::FullAuto::FA_Core::quiet;
-               } elsif ($password_from eq 'fa_login_arg') {
-                  my $exp_seconds=choose_pass_expiration();
-                  my $cipher = new Crypt::CBC('X%xP3&Tq',
-                     $Net::FullAuto::FA_Core::Hosts{
-                     "__Master_${$}__"}{'Cipher'});
-                  my $new_encrypted=$cipher->encrypt($passwd[0]);
-                  my $arr=[$new_encrypted,$exp_seconds];
-                  ${$href}{"gatekeeper_$username"}=
-                     Data::Dump::Streamer::Dump($arr)->Out();
-                  my $put_href=
-                     Data::Dump::Streamer::Dump($href)->Out();
-                  $status=$bdb->db_put('localhost',$put_href);
-                  undef $bdb;
-                  print "\n  Saved Password will Expire: ".
-                        scalar localtime($exp_seconds)."\n"
-                        if !$Net::FullAuto::FA_Core::cron &&
-                        !$Net::FullAuto::FA_Core::quiet;
+                  $passetts->[0]=$ecipher->encrypt($passwd[0]);
+                  $passetts->[9]=$dcipher=$ecipher;
+                  $save_main_pass=1;
                } else {
                   print "\n  NOTICE!: Saved Password --EXPIRED-- on ".
                         scalar localtime($ignore_expiration)."\n";
@@ -5349,41 +5351,38 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $passwd[1]=$passwd[0];
                   $passwd[1]=unpack('a8',$passwd[0])
                      if 7<length $passwd[0];
-                  $password_from='user_input';
-                  my $exp_seconds=choose_pass_expiration();
-#print "WHAT IS EXP_SECONDS=$exp_seconds\n";<STDIN>;
-#print "WHAT IS OUTCOME=",scalar localtime($exp_seconds),"\n";<STDIN>;
-                  my $cipher = new Crypt::CBC('X%xP3&Tq',
-                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-                  my $new_encrypted=$cipher->encrypt($passwd[0]);
-                  my $arr=[$new_encrypted,$exp_seconds];
-                  ${$href}{"gatekeeper_$username"}=
-                     Data::Dump::Streamer::Dump($arr)->Out();
-                  my $put_href=Data::Dump::Streamer::Dump($href)->Out();
-                  $status=$bdb->db_put('localhost',$put_href);
-                  undef $bdb;
-                  print "\n  Saved Password will Expire: ".
-                        scalar localtime($exp_seconds)."\n"
-                        if !$Net::FullAuto::FA_Core::cron &&
-                        !$Net::FullAuto::FA_Core::quiet;
+                  my $rstr=new String::Random;
+                  if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+                     ${$href}{"gatekeep_$username"}=
+                        $rstr->randpattern("........");
+                  } else {
+                     ${$href}{"gatekeep_$username"}=
+                        $rstr->randpattern("..............");
                   }
+                  my $ecipher = new Crypt::CBC(
+                     ${$href}{"gatekeep_$username"},
+                     $Net::FullAuto::FA_Core::Hosts{
+                     "__Master_${$}__"}{'Cipher'});
+                  $passetts->[0]=$ecipher->encrypt($passwd[0]);
+                  $passetts->[9]=$dcipher=$ecipher;
+                  $save_main_pass=1;
+               }
             } elsif ($passwd[0]) {
-               my $exp_seconds=choose_pass_expiration();
-#print "WHAT IS EXP_SECONDS=$exp_seconds\n";<STDIN>;
-#print "WHAT IS OUTCOME=",scalar localtime($exp_seconds),"\n";<STDIN>;
-               my $cipher = new Crypt::CBC('X%xP3&Tq',
-                  $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-               my $new_encrypted=$cipher->encrypt($passwd[0]);
-               my $arr=[$new_encrypted,$exp_seconds];
-               ${$href}{"gatekeeper_$username"}=
-                  Data::Dump::Streamer::Dump($arr)->Out();
-               my $put_href=Data::Dump::Streamer::Dump($href)->Out();
-               $status=$bdb->db_put('localhost',$put_href);
-               undef $bdb;
-               print "\n  Saved Password will Expire: ".
-                     scalar localtime($exp_seconds)."\n"
-                     if !$Net::FullAuto::FA_Core::cron &&
-                     !$Net::FullAuto::FA_Core::quiet;
+               my $rstr=new String::Random;
+               if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+                  ${$href}{"gatekeep_$username"}=
+                     $rstr->randpattern("........");
+               } else {
+                  ${$href}{"gatekeep_$username"}=
+                     $rstr->randpattern("..............");
+               }
+               my $ecipher = new Crypt::CBC(
+                  ${$href}{"gatekeep_$username"},
+                  $Net::FullAuto::FA_Core::Hosts{
+                  "__Master_${$}__"}{'Cipher'});
+               $passetts->[0]=$ecipher->encrypt($passwd[0]);
+               $passetts->[9]=$dcipher=$ecipher;
+#print "WHAT IS GATEKEEP=",${$href}{"gatekeep_$username"},"\n";
             } else {
                print "\n  Password: ";
                ReadMode 2;
@@ -5397,51 +5396,28 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                print "\n\n";
                $passwd[1]=$passwd[0];
                $passwd[1]=unpack('a8',$passwd[0])
-                  if 7<length $passwd[0];
-               $password_from='user_input';
-               my $exp_seconds=choose_pass_expiration();
-#print "WHAT IS EXP_SECONDS=$exp_seconds\n";<STDIN>;
-#print "WHAT IS OUTCOME=",scalar localtime($exp_seconds),"\n";<STDIN>;
-               my $cipher = new Crypt::CBC('X%xP3&Tq',
-                  $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-               my $new_encrypted=$cipher->encrypt($passwd[0]);
-               my $arr=[$new_encrypted,$exp_seconds];
-               ${$href}{"gatekeeper_$username"}=
-                  Data::Dump::Streamer::Dump($arr)->Out();
-               my $put_href=Data::Dump::Streamer::Dump($href)->Out();
-               $status=$bdb->db_put('localhost',$put_href);
-               undef $bdb;
-               print "\n  Saved Password will Expire: ".
-                     scalar localtime($exp_seconds)."\n"
-                     if !$Net::FullAuto::FA_Core::cron &&
-                     !$Net::FullAuto::FA_Core::quiet;
+               if 7<length $passwd[0];
+               my $rstr=new String::Random;
+               if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+                  ${$href}{"gatekeep_$username"}=
+                     $rstr->randpattern("........");
+               } else {
+                  ${$href}{"gatekeep_$username"}=
+                     $rstr->randpattern("..............");
+               }
+#print "WHAT IS GATEKEEP2=",${$href}{"gatekeep_$username"},"\n";
+               my $ecipher = new Crypt::CBC(
+                  ${$href}{"gatekeep_$username"},
+                  $Net::FullAuto::FA_Core::Hosts{
+                  "__Master_${$}__"}{'Cipher'});
+               $passetts->[0]=$ecipher->encrypt($passwd[0]);
+               $passetts->[9]=$dcipher=$ecipher;
             }
          } elsif (!$passwd[0] && !$Net::FullAuto::FA_Core::cron) {
-            my $kind='prod';
-            $kind='test' if $Net::FullAuto::FA_Core::test &&
-                     !$Net::FullAuto::FA_Core::prod;
-            unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-               File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-               'Passwds');
-            }
-            my $dbenv = BerkeleyDB::Env->new(
-                    -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                    -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
-            ) or &handle_error(
-               "cannot open environment for DB: $BerkeleyDB::Error\n",
-               '',$track);
-            my $bdb = BerkeleyDB::Btree->new(
-               -Filename =>
-                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE,
-               -Env      => $dbenv
-            ) or &handle_error(
-               "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-            my $href='';
             my $status=$bdb->db_get('localhost',$href);
             $href=~s/\$HASH\d*\s*=\s*//s;
             $href=eval $href;
-            delete ${$href}{"gatekeeper_$username"};
+            delete ${$href}{"gatekeep_$username"};
             my $put_href=Data::Dump::Streamer::Dump($href)->Out();
             $status=$bdb->db_put('localhost',$put_href);
             undef $bdb;
@@ -5457,12 +5433,26 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             print "\n\n";
             $passwd[1]=$passwd[0];
             $passwd[1]=unpack('a8',$passwd[0])
-               if 7<length $passwd[0];
-            $password_from='user_input';
+            if 7<length $passwd[0];
+            my $rstr=new String::Random;
+            if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+               ${$href}{"gatekeep_$username"}=
+                  $rstr->randpattern("........");
+            } else {
+               ${$href}{"gatekeep_$username"}=
+                  $rstr->randpattern("..............");
+            }
+            my $ecipher = new Crypt::CBC(
+               ${$href}{"gatekeep_$username"},
+               $Net::FullAuto::FA_Core::Hosts{
+               "__Master_${$}__"}{'Cipher'});
+            $passetts->[0]=$ecipher->encrypt($passwd[0]);
+            $passetts->[9]=$dcipher=$ecipher;
          }
          $login_id=$username;
          $password=$passwd[0];
          $passwd[2]='';
+         $passetts->[2]='';
 
          $host='localhost';
          my $lc_cnt=-1;
@@ -5595,7 +5585,7 @@ print "OUTPUT FROM NEW::TELNET=$line<==\n";
 print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         $local_host->print($password);
+         $local_host->print($dcipher->decrypt($passetts->[0]));
 
          if (!$Net::FullAuto::FA_Core::cron &&
                !$Net::FullAuto::FA_Core::debug &&
@@ -5756,17 +5746,17 @@ print $Net::FullAuto::FA_Core::MRLOG
             &handle_error($cfh_error,'-1') if $cfh_error;
          }
 
-         my $kind='prod';
+         $kind='prod';
          $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
             File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
          }
-         my $dbenv = BerkeleyDB::Env->new(
+         $dbenv = BerkeleyDB::Env->new(
                     -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-         my $bdb = BerkeleyDB::Btree->new(
+         $bdb = BerkeleyDB::Btree->new(
                     -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
                     -Flags    => DB_CREATE,
                     -Env      => $dbenv
@@ -5804,31 +5794,67 @@ print $Net::FullAuto::FA_Core::MRLOG
          } else {
             $key="${username}_X_${login_id}_X_${host__label}";
          }
-         my $href='';
-         my $status=$bdb->db_get($host__label,$href);
-         $href=~s/\$HASH\d*\s*=\s*//s;
-         $href=eval $href;
-         foreach my $ky (keys %{$href}) {
+         my $lref={};
+         my $status=$bdb->db_get($host__label,$lref);
+         $lref=~s/\$HASH\d*\s*=\s*//s;
+         $lref=eval $lref;
+         foreach my $ky (keys %{$lref}) {
             if ($ky eq $key) {
-               while (delete $href->{$key}) {}
+               while (delete $lref->{$key}) {}
             } elsif ($ky=~/_X_\d+_X_(\d+)$/ && $1+604800<$invoked[0]) {
-               while (delete $href->{$ky}) {}
+               while (delete $lref->{$ky}) {}
             }
          }
          unless ($tosspass) {
-            my $cipher = new Crypt::CBC($passwd[1],
-               $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-            my $new_encrypted=$cipher->encrypt($passwd[0]);
+            my $cipher='';
+            if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+               my $ps=$dcipher->decrypt($passetts->[0]);
+               if (8<length $ps) {
+                  $cipher = new Crypt::CBC(unpack('a8',$ps),
+                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+                  $passwd[1]=$ps;
+                  undef $ps;
+               } else {
+                  $cipher = new Crypt::CBC($ps,
+                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+                  $passwd[1]=$ps;
+                  undef $ps;
+               }
+            } else {
+               my $ps=$dcipher->decrypt($passetts->[0]);
+               $cipher = new Crypt::CBC($ps,
+                  $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+               $passwd[1]=$ps;
+               undef $ps;
+            }
+            my $new_encrypted=$cipher->encrypt($dcipher->decrypt($passetts->[0]));
 print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            $href->{$key}=$new_encrypted;
-            my $put_href=Data::Dump::Streamer::Dump($href)->Out();
-            $status=$bdb->db_put($host__label,$put_href);
-            undef $bdb;
+            $lref->{$key}=$new_encrypted;
+            #$lref->{$key}=$passetts->[0];
+            my $put_lref=Data::Dump::Streamer::Dump($lref)->Out();
+            my $status=$bdb->db_put($host__label,$put_lref);
          } else {
             $tosspass{$key}=$passwd[0];
          }
+         if ($save_main_pass) {
+            $passetts->[1]=&choose_pass_expiration();
+            if (!$Net::FullAuto::FA_Core::cron &&
+                  !$Net::FullAuto::FA_Core::quiet) { 
+               print "\n  Saved Password will Expire: ".
+                     scalar localtime($passetts->[1])."\n";
+               sleep 2;
+            }
+            my @tpass=@{$passetts}[0..1];
+            ${$href}{"passetts_$username"}=
+               Data::Dump::Streamer::Dump(\@tpass)->Out();
+#print "WHAT IS THIS=",${$href}{"passetts_$username"},"\n";<STDIN>;
+            my $put_href=
+               Data::Dump::Streamer::Dump($href)->Out();
+            my $status=$bdb->db_put('localhost',$put_href);
+         }
+         undef $bdb;
          if ($switch_user) {
             my $ignore='';
             ($ignore,$su_err)=&su($local_host,$hostlabel,
@@ -6300,11 +6326,12 @@ sub choose_pass_expiration
       },
       Item_3=> {
 
-         Text => "]C[ Minutes",
+         Text => "]C[ Months",
          Convey => [10..12],
 
       },
-      Banner => '   Choose Time :',
+      Banner => "   Choose Time in Months (A Month is 30 Days)\n\n".
+                "   [Hint: Use FULL CALENDAR for more precision]:",
 
    );
    my %pass_ask_exp=(
@@ -6357,7 +6384,7 @@ sub choose_pass_expiration
    &cleanup if $selection eq ']quit[';
    my ($num,$type)=('','');
    ($num,$type)=split /\s+/, $selection;
-   if ($num=~/^\w/) {
+   if ($num!~/^\d/) {
       my @d=split /,* +/, $selection;
       $mn=unpack('a3',$d[0]);
 #print "MN=$mn and D=$d[0]\n";
@@ -6376,11 +6403,11 @@ sub choose_pass_expiration
    } elsif ($type=~/Hour/) {
       return time + $num * 3600;
    } elsif ($type=~/Day/)  {
-      return time + $num * 43200;
+      return time + $num * 86400;
    } elsif ($type=~/Week/) {
-      return time + $num * 302400; 
+      return time + $num * 604800; 
    } elsif ($type=~/Month/) {
-      return time + $num * 9072000;
+      return time + $num * 2592000;
    }
 
 }
@@ -6456,6 +6483,7 @@ print $Net::FullAuto::FA_Core::MRLOG
       }
    }
    my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
+   #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
       $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
    my $new_encrypted=$cipher->encrypt($passwd);
    $href->{$key}=$new_encrypted;
@@ -6520,8 +6548,10 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA
       }
    }
    my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
+   #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
       $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
    my $new_encrypted=$cipher->encrypt($Net::FullAuto::FA_Core::passwd[0]);
+   #my $new_encrypted=$cipher->encrypt($Net::FullAuto::FA_Core::passetts->[0]);
    $href->{$key}=$new_encrypted;
    my $put_href=Data::Dump::Streamer::Dump($href)->Out();
    $status=$bdb->db_put($hostlabel,$put_href);
@@ -8541,6 +8571,7 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         my $mr="__Master_${$}__";
                         my $cipher=Crypt::CBC->new({ 'key' => 
                               $Net::FullAuto::FA_Core::passwd[1], 'cipher' =>
+                              #$Net::FullAuto::FA_Core::passetts->[1], 'cipher' =>
                               $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'} });
                         my $new_encrypted=$cipher->encrypt(
                               $recurse_passwd);
@@ -8736,6 +8767,7 @@ sub ftm_login
    my $ms_ms_domain='';my $ms_ms_share='';my $ftm_type='';
    my $desthostlabel='';my $p_uname='',my $fpx_passwd='';
    my $ftm_passwd=$Net::FullAuto::FA_Core::passwd[2]||$Net::FullAuto::FA_Core::passwd[0];
+   #my $ftm_passwd=$Net::FullAuto::FA_Core::passetts->[2]||$Net::FullAuto::FA_Core::passetts->[0];
    my $ftp_pid='';my $fpx_pid='';my $smb=0;
    my @errorstack=();
    my ($output,$stdout,$stderr)=('','','');
