@@ -25,6 +25,14 @@
 ################################################################
 
 
+2011-01-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.98 released.
+
+        * Implemented Full Calendar menuing for Scheduled Job
+          creation.
+
+
 2011-01-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.97 released.

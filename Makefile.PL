@@ -19,7 +19,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.97';
+version         '0.98';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -925,7 +925,7 @@ if ($get_BerkeleyDB) {
                $filename=~/^.*(......).tar$/;
                my $uniq=$1;
                $filename=~s/........tar$//;
-               `mv $filename ${filename}_$uniq`;
+               `mv -f $filename ${filename}_$uniq`;
                my $args='';
                if ($PREFIX) {
                   $args=' --prefix="'.$PREFIX.'"';
@@ -1402,6 +1402,9 @@ sub MY::tools_other {
    use Config;
 
    my $inherited = shift->SUPER::tools_other(@_);
+
+   $inherited =~
+      s/^MV.*$/MV = mv -f/m;
 
    $inherited =~
       s/^(MV.*)$/$1\nSED = sed/m;

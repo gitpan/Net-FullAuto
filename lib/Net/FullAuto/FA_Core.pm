@@ -112,14 +112,14 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $progname memnow take_semaphore
                   give_semaphore $savetran %hours
                   $increment %month ls_timestamp
-                  cleanup $dest_first_hash
+                  cleanup $dest_first_hash %days
                   test_file test_dir timelocal
                   %GLOBAL @GLOBAL $MRLOG $^O
                   $funkyprompt handle_error
                   $quiet $batch $unattended
                   $passwd_file_loc $fullauto
                   %email_addresses @plans
-                  %email_defaults);
+                  %email_defaults $service);
 
 {
    no warnings;
@@ -426,10 +426,10 @@ our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
 our $scrub=0;our $pcnt=0;our $chk_id='';our $d_sub='';
 our $deploy_info='';our $f_sub='';our $updatepw=0;
-our $shown='';our $websphere_not_running=0;
+our $shown='';our $websphere_not_running=0;my @hours=();
 our $master_hostlabel='';our $random=0;our @plans=();
 our $parent_menu='';our @menu_args=();our $savetran=0;
-our $MRLOG='';our @pid_ts=();our %drives=();
+our $MRLOG='';our @pid_ts=();our %drives=();our @month=();
 our $username='';our @passwd=('','');our $fa_code='';
 our $localhost={};our %localhost=();our $uhray='';
 our @RCM_Link=();our @FTM_Link=();our $cleanup=0;
@@ -442,11 +442,11 @@ our %hours=();our %month=();our %Hosts=();our %Maps=();
 our %same_host_as_Master=("__Master_${$}__"=>'-','localhost'=>'-');
 our @same_host_as_Master=();our $dest_first_hash='';
 our %file_rename=();our %rename_file=();our $quiet='';
-our %filerename=();our %renamefile=();
+our %filerename=();our %renamefile=();our %fullmonth=();
 our %Processes=();our %shellpids=();our %ftpcwd=();
 our @DeploySMB_Proxy=('');our @DeployRCM_Proxy=('');
 our @DeployFTM_Proxy=('');our $master_transfer_dir='';
-our %perms=();our @ApacheNode=();our $test=0;
+our %perms=();our @ApacheNode=();our $test=0;our %days=();
 our $prod=0;our $force_pause_for_exceed=0;our $tosspass=0;
 our $timeout=30;our $cltimeout='X';our $slave=0;
 our %email_defaults=();our $increment=0;our %tosspass=();
@@ -486,12 +486,41 @@ our $specialperms='none';
         '05p'=>'17','06p'=>'18','07p'=>'19','08p'=>'20',
         '09p'=>'21','10p'=>'22','11p'=>'23','12p'=>'12');
 
+@hours=('12:00am',' 1:00am',' 2:00am',' 3:00am',' 4:00am',
+        ' 5:00am',' 6:00am',' 7:00am',' 8:00am',' 9:00am',
+        '10:00am','11:00am','12:00pm',' 1:00pm',' 2:00pm',
+        ' 3:00pm',' 4:00pm',' 5:00pm',' 6:00pm',' 7:00pm',
+        ' 8:00pm',' 9:00pm','10:00pm','11:00pm');
+
 %month=('01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
         '05'=>'May','06'=>'Jun','07'=>'Jul','08'=>'Aug',
         '09'=>'Sep','10'=>'Oct','11'=>'Nov','12'=>'Dec',
         'Jan'=>'01','Feb'=>'02','Mar'=>'03','Apr'=>'04',
         'May'=>'05','Jun'=>'06','Jul'=>'07','Aug'=>'08',
         'Sep'=>'09','Oct'=>'10','Nov'=>'11','Dec'=>'12');
+
+@month=('January  ','February ','March    ',
+        'April    ','May      ','June     ','July     ',
+        'August   ','September','October  ','November ',
+        'December ');
+
+%fullmonth=('Jan'=>'January','Feb'=>'February','Mar'=>'March',
+            'Apr'=>'April','May'=>'May','Jun'=>'June',
+            'Jul'=>'July','Aug'=>'August','Sep'=>'September',
+            'Sept'=>'September','Oct'=>'October',
+            'Nov'=>'November','Dec'=>'December',
+            'January'=>'Jan','February'=>'Feb','March'=>'Mar',
+            'April'=>'Apr','May'=>'May','June'=>'Jun',
+            'July'=>'Jul','August'=>'Aug','September'=>'Sep',
+            'October'=>'Oct','November'=>'Nov',
+            'December'=>'Dec');
+
+%days=('Mon'=>'Monday','Tue'=>'Tuesday','Tues'=>'Tuesday',
+       'Wed'=>'Wednesday','Thu'=>'Thursday','Thur'=>'Thursday',
+       'Thurs'=>'Thursday','Fri'=>'Friday','Sat'=>'Saturday',
+       'Sun'=>'Sunday','Monday'=>'Mon','Tuesday'=>'Tue',
+       'Wednesday'=>'Wed','Thursday'=>'Thu','Friday'=>'Fri',
+       'Sat'=>'Saturday','Sun'=>'Sunday');
 
 %perms=('rwx'=>'7','rw-'=>'6','r-x'=>'5','r--'=>'4',
         '-wx'=>'3','-w-'=>'2','--x'=>'1','---'=>'0',
@@ -1237,6 +1266,25 @@ sub Menu
    return &Term::Menus::Menu(@_);
 }
 
+sub get_today
+{
+   my @what=split / +/, scalar localtime(time);
+   my $day=$days{$what[0]};
+   my $month=$fullmonth{$what[1]};
+   my $what="$day, $month $what[2], $what[4]";
+   return $what;
+}
+
+sub get_tomorrow
+{
+   my $t=time+86400;
+   my @what=split / +/, scalar localtime($t);
+   my $day=$days{$what[0]};
+   my $month=$fullmonth{$what[1]};
+   my $what="$day, $month $what[2], $what[4]";
+   return $what;
+}
+
 sub get_now_am_pm
 {
    my $t=unpack('a5',(split / /, scalar localtime(time))[3]);
@@ -1244,8 +1292,10 @@ sub get_now_am_pm
    if ($i<12) {
       substr($t,0,1)='' if $i<10;
       return $t.'am';
+   } elsif ($i==12) {
+      return $t.'pm';
    } else {
-      substr($t,0,2)=unpack('a2',$t)-12 unless $t eq '12';
+      substr($t,0,2)=unpack('a2',$t)-12;
       return $t.'pm';
    }
 }
@@ -1377,6 +1427,90 @@ sub edit {
    exit;
 }
 
+my $today=unpack('x2a2',$invoked[7]);
+my $curmonth=unpack('a2',$invoked[7]);
+my $fullmonth=$month[$curmonth-1];
+$fullmonth=~s/\s*$//;
+my $todays_date="$fullmonth $today, $curyear";
+my $endyear=$curyear + 20;
+my %mdates=();
+my $lastday='';
+my $showmins=sub { package showmins;
+                   my $datechosen=']P[';
+                   $datechosen=~s/^(?:Today|Tomorrow) - //;
+                   $datechosen=~s/^[A-Za-z]+, //;
+                   my @hrmn=();
+                   if ($datechosen eq $todays_date) {
+                      my $now=unpack('a2',(split ':',
+                         &Net::FullAuto::FA_Core::get_now_am_pm)[1]);
+                      $now++;
+                      foreach my $hr (@hours[$invoked[4]..23]) {
+                         foreach my $mn ($now..59) {
+                            if (length $mn==1) {
+                               $mn='0'.$mn;
+                            }
+                            push @hrmn, unpack('a3',$hr).$mn.unpack('x5a2',$hr);
+                         } $now=0;
+                      } return @hrmn;
+                   } else {
+                      foreach my $hr (@hours[0..23]) {
+                         foreach my $mn (0..59) {
+                            if (length $mn==1) {
+                               $mn='0'.$mn;
+                            }
+                            push @hrmn, unpack('a3',$hr).$mn.unpack('x5a2',$hr);
+                         }
+                      } return @hrmn;
+                   }
+                 };
+my $hours=sub { package hours;
+                my $date_chosen=']P[';
+                $date_chosen=~s/^(?:Today|Tomorrow) - //;
+                $date_chosen=~s/^[A-Za-z]+, //;
+                if ($date_chosen eq $todays_date) {
+                   my $in=$invoked[4]+1;
+                   return (@hours[$in..23])
+                } else { return @hours } };
+my $cal_months=sub { package cal_months;
+                     my $yr=']P[';
+                     my @munths=();
+                     my $cmonth=$curmonth-1;
+                     if ($curyear==$yr) {
+                        if ($curmonth==12) {
+                           @munths=$month[11];
+                        } else {
+                           @munths=@month[$cmonth..11];
+                        }
+                     } else {
+                        @munths=@month;
+                     }
+                     my @new=map { $_.' '.']P[' } @munths;
+                     return @new };
+foreach my $year ($curyear..$endyear) {
+   my $cnt=0;
+   if ($year ne $curyear) {
+      $curmonth=1;
+   }
+   foreach my $mth ($curmonth..12) {
+      $lastday=POSIX::mktime(0,0,0,0,$mth-1+1,$year-1900,0,0,-1);
+      my $d=localtime($lastday);
+      my @d=split ' ',$d;
+      $mdates{$year}{$month[$cnt++]}=$d[2];
+   }
+}
+my $fulldays=sub { package fulldays;
+                   my ($a,$b)=('','');
+                   ($a,$b)=split / +/, ']P[';
+                   my $c=pack('A9',$a);
+                   my @n=();
+                   my $s=1;
+                   $s=$today if $b eq $curyear;
+                   foreach my $d ($s..$mdates{$b}{$c}) {
+                      $d='0'.$d if length $d==1;
+                      push @n, $a.' '.$d.', '.$b;
+                   }
+                   return @n };
+
 sub plan {
 
    my $track='';
@@ -1401,6 +1535,303 @@ sub plan {
 
    );
 
+   my %select_min_for_invocation=(
+
+      Label => 'select_min_for_invocation',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => $showmins,
+         Result => sub{ return 'select_min_for_invocation '.
+                   ']P[{one_time_launch} '.
+                   ']S[ | ]P[{choose_from_fullauto_plans}' }
+
+      },
+      Banner=> "   (The current time is ".&get_now_am_pm." ".
+                   POSIX::strftime("%Z", localtime()).")\n\n".
+               "   Please Select a Job Invocation Time :",
+
+   );
+
+   my %select_hour_for_invocation=(
+
+      Label => 'select_hour_for_invocation',
+      Item_1=> {
+
+         Text => "Show Minutes",
+         Result => \%select_min_for_invocation,
+
+      },
+      Item_2=> {
+
+         Text => "]C[",
+         Convey => $hours,
+         Result => sub{ return 'select_hour_for_invocation '.
+                   ']P[{one_time_launch} '.
+                   ']S[ | ]P[{choose_from_fullauto_plans}' }
+
+      },
+      Banner=> "   (The current time is ".&get_now_am_pm." ".
+                   POSIX::strftime("%Z", localtime()).")\n\n".
+               "   Please Select a Job Invocation Time for\n\n   ]P[ :",
+
+   );
+
+   my %select_cal_mins_for_plan=(
+
+      Label => 'select_cal_mins_for_plan',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => $showmins,
+         Result => sub{ return 'select_cal_mins_for_plan '.
+                   ']|[ ]P[{select_cal_months_for_plan} '.
+                   ']|[ ]P[{select_cal_days_for_plan} '.
+                   ']|[ ]P[{select_cal_hours_for_plan} ]|[ '.
+                   ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
+
+      },
+      Banner=> "   (The current time is ".&get_now_am_pm." ".
+                   POSIX::strftime("%Z", localtime()).")\n\n".
+               "   Please Select a Job Invocation Time :", 
+   );
+
+   my %select_cal_hours_for_plan=(
+
+      Label => 'select_cal_hours_for_plan',
+      Item_1=> {
+
+         Text => "Show Minutes",
+         Negate => [ 'Item_2' ],
+         Result => \%select_cal_mins_for_plan,
+
+      },
+      Item_2=> {
+
+         Text => "]C[",
+         Convey => $hours,
+         Negate => [ 'Item_1' ],
+         Result => sub{ return 'select_cal_hours_for_plan '.
+                   ']|[ ]P[{select_cal_months_for_plan} '.
+                   ']|[ ]P[{select_cal_days_for_plan} ]|[ '.
+                   ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
+
+      },
+      Banner=> "   (The current time is ".&get_now_am_pm." ".
+                   POSIX::strftime("%Z", localtime()).")\n\n".
+               "   Please Select a Job Invocation Time :",
+
+   );
+
+   my %select_cal_days_for_plan=(
+
+      Label => 'select_cal_days_for_plan',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => $fulldays,
+         Result => \%select_cal_hours_for_plan,
+
+      },
+      Banner=> '   Please Select a Job cal_days Invocation Time :'
+   );
+
+   my %select_cal_months_for_plan=(
+
+      Label => 'select_cal_months_for_plan',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => $cal_months,
+         Result => \%select_cal_days_for_plan,
+      },
+      Banner=> '   Please Select a Month :'
+   );
+
+   my %calendar_years_for_plan=(
+
+      Label => 'calendar_years_for_plan',
+      Item_1=> {
+
+         Text => "]C[",
+         Convey => [$curyear..$endyear],
+         Result => \%select_cal_months_for_plan,
+
+      },
+      Banner=> '   Please Select a Year :'
+   );
+
+   my %select_recurrent_minutes=(
+
+      Label => 'select_recurrent_minutes',
+      Item_1=> {
+
+         Text => "Minute  ]C[",
+         #Convey => $showmins,
+         Convey => [0..59],
+         Result => sub{ return '][[ select_recurrent_minutes '.
+                   ']|[ ]P[{select_recurrent_months} '.
+                   ']|[ ]P[{select_recurrent_days} '.
+                   ']|[ ]P[{select_recurrent_hours} ]|[ '.
+                   ']S[ ]|[ ]P[{choose_from_fullauto_plans} ]][' }
+
+      },
+      Select=> "Many",
+      Banner=> "   (The current time is ".&get_now_am_pm." ".
+                   POSIX::strftime("%Z", localtime()).")\n\n".
+               "   Select the --MINUTE(S)-- of the Day Where\n\n   ".
+                   "Plan -  ]P[{choose_from_fullauto_plans}".
+                   "\n\n   Will be Run :",
+
+   );
+
+   my %select_recurrent_hours=(
+
+         Label  => 'select_recurrent_hours',
+         #Item_1=> {
+
+         #   Text => "Show Minutes",
+         #   Negate => [ 'Item_2' ],
+         #   Result => \%select_recurrent_minutes,
+
+         #},
+         Item_1 => {
+
+              Text => 'Hour  ]C[',
+              Convey => $hours,
+              Result => \%select_recurrent_minutes,
+              #Negate => [ 'Item_1' ],
+              #Result => sub{ return 'select_recurrent_hours '.
+              #          ']|[ ]P[{select_recurrent_months} '.
+              #          ']|[ ]P[{select_recurrent_days} ]|[ '.
+              #          ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
+
+         },
+         Select => 'Many',
+         Banner => "   Select the --HOUR(S)-- of the Day Where\n\n   ".
+                   "Plan -  ]P[{choose_from_fullauto_plans}".
+                   "\n\n   Will be Run :",
+
+   );
+
+   my %select_recurrent_days=(
+
+         Label  => 'select_recurrent_days',
+         Item_1 => {
+
+              Text => 'Day  ]C[',
+              Convey => [1..31],
+              Result => \%select_recurrent_hours,
+
+         },
+         Select => 'Many',
+         Banner => "   Select the --DAY(S)-- of the Month Where\n\n   ".
+                   "Plan -  ]P[{choose_from_fullauto_plans}".
+                   "\n\n   Will be Run :",
+
+   );
+
+   my %select_recurrent_months=(
+
+         Label  => 'select_recurrent_months',
+         Item_1 => {
+
+              Text => ']C[',
+              Convey => \@month,
+              Result => \%select_recurrent_days,
+
+         },
+         Select => 'Many',
+         Banner => "   Select the --MONTH(S)-- where\n\n   ".
+                   "Plan -  ]P[{choose_from_fullauto_plans}".
+                   "\n\n   Will be Run :",
+
+   );
+
+   my %one_time_launch=(
+
+         Label  => 'one_time_launch',
+         Item_1 => {
+
+              Text => 'FULL CALENDAR',
+              Result => \%calendar_years_for_plan,
+
+         },
+         Item_2 => {
+
+              Text => "]C[", 
+              Convey => sub { return 'Today - '.&get_today() },
+              Result => \%select_hour_for_invocation,
+
+         },
+         Item_3 => {
+
+              Text => "]C[",
+              Convey => sub { return 'Tomorrow - '.&get_tomorrow() },
+              Result => \%select_hour_for_invocation,
+
+         },
+         Banner => "   Select Invocation Time for\n\n   ".
+                   "Plan -  ]P[{choose_from_fullauto_plans}",
+
+   );
+
+   my %select_type_of_scheduled_plan=(
+
+         Label  => 'select_type_of_scheduled_plan',
+         Item_1 => {
+ 
+              Text => 'This Plan will Launch Recurrently',
+              Result => \%select_recurrent_months,
+
+         },
+         Item_2 => {
+
+              Text => 'This Plan will Launch One Time Only',
+              Result => \%one_time_launch,
+
+         },
+         Banner => "   Select Type of Scheduled Job for\n\n   Plan -  ]P["
+
+   );
+
+   my %choose_from_fullauto_plans=(
+
+         Label  => 'choose_from_fullauto_plans',
+         Item_1 => {
+
+              Text => "]C[",
+              Convey => sub { return @{&Net::FullAuto::FA_Core::getplans()} },
+              Result => \%select_type_of_scheduled_plan,
+
+         },
+         Banner => "   Select a Plan to Schedule:",
+  
+   );
+ 
+   my %setup_new_sched_job_menu=(
+
+         Label  => 'setup_new_sched_job_menu',
+         Item_1 => {
+
+              Text => 'Choose a FullAuto Plan to Schedule',
+              Result => \%choose_from_fullauto_plans,
+
+         },
+         Item_2 => {
+
+              Text => 'Choose a FullAuto Custom Code Block to Schedule',
+
+         },
+         Item_3 => {
+
+              Text => 'Set up a Non-FullAuto Task to Schedule',
+
+         },
+         Banner => '   Select a Task to Perform',
+
+   );
+
    my %plan_menu=(
 
          Label  => 'plan_menu',
@@ -1419,6 +1850,7 @@ sub plan {
          Item_3 => {
 
              Text => 'Set Up a New Scheduled Job',
+             Result => \%setup_new_sched_job_menu,
 
          },
          Item_4 => {
@@ -1450,6 +1882,11 @@ sub plan {
    );
 
    my $output=&Menu(\%plan_menu);
+   &cleanup() if $output=~/\]quit\[/i;
+
+$output=join ' ', @{$output} if ref $output eq 'ARRAY';
+
+print "OUTPUT=$output\n";<STDIN>;
 
    if ($output ne ']quit[') {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
@@ -1482,25 +1919,20 @@ sub plan {
          undef $bdb;
          return $plann;
       } elsif ($output eq 'Work with Existing Plans') {
-         my $cursor = $bdb->db_cursor() ;
-         while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
-            my $planhash=eval $v;
-            push @plans, pack('A10',$k).$planhash->{'Title'};
-         }
-         if (-1<$#plans) {
+         my $plans=getplans($bdb);
+         if (-1<$#{$plans}) {
             my %existing=(
 
                   Label => 'existing',
                   Item_1=> {
                  
                      Text => "]C[",
-                     Convey => \@plans
+                     Convey => $plans
 
                   },
                   Banner=> '   Select a Plan to work with:'
             );
             my $outp=Menu(\%existing);
-            undef $cursor;
             undef $bdb;
             undef $Net::FullAuto::FA_Core::makeplan;
             &cleanup();
@@ -1517,6 +1949,44 @@ sub plan {
       &cleanup();
    }
 
+}
+
+sub openplandb {
+
+   my $track='';
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+   ) or &handle_error(
+     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
+      -Flags    => DB_CREATE,
+      -Compare  => sub { $_[0] <=> $_[1] },
+      -Env      => $dbenv
+   ) or &handle_error(
+     "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   return $bdb;
+}
+
+sub getplans {
+
+   my $bdb=openplandb;
+   my $cursor=$bdb->db_cursor();
+   my @plans=();
+   my ($k,$v)=('','');
+   while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+      $v=~s/\$HASH\d*\s*=\s*//s;
+      my $planhash=eval $v;
+      $planhash->{'Title'}||='';
+      push @plans, pack('A10',$k).$planhash->{'Title'};
+   }
+   undef $cursor;
+   undef $bdb;
+   return \@plans;
 }
 
 sub sysreadline(*;$) {
@@ -4690,7 +5160,7 @@ sub fa_login
              || $loc eq 'connect_telnet_ssh') {
           my $die="\n       FATAL ERROR - \"Local\" has "
                  ."*NOT* been Properly\n              Defined in the "
-                 ."\"$Net::FullAuto::FA_core::fa_host\" File."
+                 ."\"$Net::FullAuto::FA_Core::fa_host\" File."
                  ."\n              This "
                  ."Element must have one of the following\n"
                  ."              Values:\n\n       "
@@ -5298,12 +5768,12 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         $passetts->[9]=$dcipher=$ecipher;
                         $skipflag=1;
                      } else {
-                        print "\n  Saved Password matches outside input!\n"; 
+                        print "\n   Saved Password matches outside input!\n"; 
                      }
                   }
                   unless ($skipflag) {
                      undef $tpess;
-                     print "\n  Saved Password will Expire: ".
+                     print "\n   Saved Password will Expire: ".
                         scalar localtime($ignore_expiration)."\n"
                         if !$Net::FullAuto::FA_Core::cron &&
                         !$Net::FullAuto::FA_Core::quiet;
@@ -5842,14 +6312,13 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
             $passetts->[1]=&choose_pass_expiration();
             if (!$Net::FullAuto::FA_Core::cron &&
                   !$Net::FullAuto::FA_Core::quiet) { 
-               print "\n  Saved Password will Expire: ".
+               print "\n   Saved Password will Expire: ".
                      scalar localtime($passetts->[1])."\n";
                sleep 2;
             }
             my @tpass=@{$passetts}[0..1];
             ${$href}{"passetts_$username"}=
                Data::Dump::Streamer::Dump(\@tpass)->Out();
-#print "WHAT IS THIS=",${$href}{"passetts_$username"},"\n";<STDIN>;
             my $put_href=
                Data::Dump::Streamer::Dump($href)->Out();
             my $status=$bdb->db_put('localhost',$put_href);
@@ -6053,84 +6522,7 @@ sub choose_pass_expiration
 {
 
    my $notice=$_[0]||'';
-   our @munths=('January  ','February ','March    ',
-      'April    ','May      ','June     ','July     ',
-      'August   ','September','October  ','November ',
-      'December ');
-   our @ouh_ers=('12:00am',' 1:00am',' 2:00am',' 3:00am',' 4:00am',
-                   ' 5:00am',' 6:00am',' 7:00am',' 8:00am',' 9:00am',
-                   '10:00am','11:00am','12:00pm',' 1:00pm',' 2:00pm',
-                   ' 3:00pm',' 4:00pm',' 5:00pm',' 6:00pm',' 7:00pm',
-                   ' 8:00pm',' 9:00pm','10:00pm','11:00pm');
-   our %mdates=();
-   my $endyear=$curyear + 20;
-   my $lastday='';
-   our $today=unpack('x2a2',$invoked[7]);
-   our $curmonth=unpack('a2',$invoked[7]);
-   our $fullmonth=$munths[$curmonth-1];
-   $fullmonth=~s/\s*$//;
-   our $todays_date="$fullmonth $today, $curyear";
    #$curmonth='04';
-   foreach my $year ($curyear..$endyear) {
-      my $cnt=0;
-      if ($year ne $curyear) {
-         $curmonth=1; 
-      }
-      foreach my $mth ($curmonth..12) {
-         $lastday=POSIX::mktime(0,0,0,0,$mth-1+1,$year-1900,0,0,-1);
-         my $d=localtime($lastday);
-         my @d=split ' ',$d;
-         $mdates{$year}{$munths[$cnt++]}=$d[2];
-      }
-   }
-   my $fulldays=sub { package fulldays; 
-                      my ($a,$b)=('','');
-                      ($a,$b)=split / +/, ']P[';
-                      $a=substr($a,1);
-                      $b=substr($b,0,-1);
-                      my $c=pack('A9',$a);
-                      my @n=();
-                      my $s=1;
-                      $s=$today if $b eq $curyear;
-                      foreach my $d ($s..$mdates{$b}{$c}) {
-                         $d='0'.$d if length $d==1;   
-                         push @n, $a.' '.$d.', '.$b;
-                      }
-                      return @n };
-   my $hours=sub { package hours; 
-                   my $date_chosen=']P[';
-                   $date_chosen=substr($date_chosen,1,-1);
-                   if ($date_chosen eq $todays_date) {
-                      my $in=$invoked[4]+1;
-                      return (@ouh_ers[$in..23])
-                   } else { return @ouh_ers } };
-   my $showmins=sub { package showmins;
-                      my $datechosen=']P[';
-                      $datechosen=substr($datechosen,1,-1);
-                      my @hrmn=();
-                      if ($datechosen eq $todays_date) {
-                         my $now=unpack('a2',(split ':',
-                            &Net::FullAuto::FA_Core::get_now_am_pm)[1]);
-                         $now++;
-                         foreach my $hr (@ouh_ers[$invoked[4]..23]) {
-                            foreach my $mn ($now..59) {
-                               if (length $mn==1) {
-                                  $mn='0'.$mn;
-                               }
-                               push @hrmn, unpack('a3',$hr).$mn.unpack('x5a2',$hr);
-                            } $now=0;
-                         } return @hrmn;
-                      } else {
-                         foreach my $hr (@ouh_ers[0..23]) {
-                            foreach my $mn (0..59) {
-                               if (length $mn==1) {
-                                  $mn='0'.$mn;
-                               }
-                               push @hrmn, unpack('a3',$hr).$mn.unpack('x5a2',$hr);
-                            }
-                         } return @hrmn;
-                      }
-                    };
    my %show_mins=(
 
       Label => 'show_mins',
@@ -6138,12 +6530,12 @@ sub choose_pass_expiration
          
          Text => "]C[",
          Convey => $showmins,
-         #Return => "]P[",
          Result => sub{ my $previous_selection='"]P[{select_cal_days}"';
                         return substr($previous_selection,1,-1)." ".']S[' }
  
       },
-      Banner=> "   (The current time is ".&get_now_am_pm.")\n\n".
+      Banner=> "   (The current time is ".&get_now_am_pm." ".
+                   POSIX::strftime("%Z", localtime()).")\n\n".
                "   Please Select a Password Expiration Time :",
 
    );
@@ -6161,10 +6553,11 @@ sub choose_pass_expiration
          Text => "]C[",
          Convey => $hours,
          Result => sub{ my $previous_selection=']P[';
-                        return substr($previous_selection,1,-1)." ".']S[' }
+                        return $previous_selection." ".']S[' }
 
       },
-      Banner=> "   (The current time is ".&get_now_am_pm.")\n\n".
+      Banner=> "   (The current time is ".&get_now_am_pm." ".
+                   POSIX::strftime("%Z", localtime()).")\n\n".
                "   Please Select a Password Expiration Time :",
 
    );
@@ -6180,21 +6573,6 @@ sub choose_pass_expiration
       },
       Banner=> '   Please Select a Password Expiration Date :'
    );
-   my $cal_months=sub { package cal_months;
-                        my $yr=']P[';
-                        my @munnths=();
-                        my $cmonth=$curmonth-1;
-                        if ($curyear==$yr) {
-                           if ($curmonth==12) {
-                              @munnths=$munths[11];
-                           } else {
-                              @munnths=@munths[$cmonth..11];
-                           }
-                        } else {
-                           @munnths=@munths;
-                        }
-                        my @new=map { $_.' '.']P[' } @munnths;
-                        return @new }; 
    my %select_cal_months=(
 
       Label => 'select_cal_months',
