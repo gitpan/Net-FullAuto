@@ -25,6 +25,14 @@
 ################################################################
 
 
+2011-02-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9911 released.
+
+        * Fixed some runtime bugs that surfaced with the
+          'use strict' pragma on Ubuntu Linux.
+
+
 2011-02-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.991 released.
