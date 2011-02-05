@@ -307,6 +307,15 @@ BEGIN {
       $sedpath='/usr/local/bin/';
    }
 
+   our $printfpath='';
+   if (-e '/usr/bin/printf') {
+      $printfpath='/usr/bin/';
+   } elsif (-e '/bin/printf') {
+      $printfpath='/bin/';
+   } elsif (-e '/usr/local/bin/printf') {
+      $printfpath='/usr/local/bin/';
+   }
+
    our $pspath='';
    if (-e '/usr/bin/ps') {
       $pspath='/usr/bin/';
@@ -452,7 +461,8 @@ our $timeout=30;our $cltimeout='X';our $slave=0;
 our %email_defaults=();our $increment=0;our %tosspass=();
 our $email_defaults='';our %semaphores=();our $batch='';
 our $unattended='';our $fullauto='';our $service='';
-our %base_shortcut_info=();our @dhostlabels=();
+our %base_shortcut_info=();our @dhostlabels=();our %monthconv=();
+our %hourconv=();our @weekdays=();our %weekdaysconv=();
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
 our $tieperms=0666;
@@ -492,6 +502,20 @@ our $specialperms='none';
         ' 3:00pm',' 4:00pm',' 5:00pm',' 6:00pm',' 7:00pm',
         ' 8:00pm',' 9:00pm','10:00pm','11:00pm');
 
+%hourconv=('12:00am'=>0,' 1:00am'=>1,' 2:00am'=>2,' 3:00am'=>3,
+           ' 4:00am'=>4,' 5:00am'=>5,' 6:00am'=>6,' 7:00am'=>7,
+           ' 8:00am'=>8,' 9:00am'=>9,'10:00am'=>10,'11:00am'=>11,
+           '12:00pm'=>12,' 1:00pm'=>13,' 2:00pm'=>14,' 3:00pm'=>15,
+           ' 4:00pm'=>16,' 5:00pm'=>17,' 6:00pm'=>18,' 7:00pm'=>19,
+           ' 8:00pm'=>20,' 9:00pm'=>21,'10:00pm'=>22,'11:00pm'=>23);
+
+@weekdays=('Sunday   ','Monday   ','Tuesday  ','Wednesday',
+           'Thursday ','Friday   ','Saturday ');
+
+%weekdaysconv=('Sunday   '=>1,'Monday   '=>2,'Tuesday  '=>3,
+               'Wednesday'=>4,'Thursday '=>5,'Friday   '=>6,
+               'Saturday '=>7);
+
 %month=('01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
         '05'=>'May','06'=>'Jun','07'=>'Jul','08'=>'Aug',
         '09'=>'Sep','10'=>'Oct','11'=>'Nov','12'=>'Dec',
@@ -503,6 +527,11 @@ our $specialperms='none';
         'April    ','May      ','June     ','July     ',
         'August   ','September','October  ','November ',
         'December ');
+
+%monthconv=('January '=>1,'February'=>2,'March   '=>3,
+            'April   '=>4,'May     '=>5,'June    '=>6,
+            'July    '=>7,'August  '=>8,'September'=>9,
+            'October '=>10,'November'=>11,'December'=>12);
 
 %fullmonth=('Jan'=>'January','Feb'=>'February','Mar'=>'March',
             'Apr'=>'April','May'=>'May','Jun'=>'June',
@@ -809,7 +838,8 @@ print "WHAT IS THE LINE_2 EVALERROR=$@<====\n" if $Net::FullAuto::FA_Core::debug
                           # handled by the "if ($@)" block at the bottom
                           # of this routine.
                      CC: while (defined fileno $cmd_fh) {
-                        $cmd_fh->print("printf $funkyprompt");
+                        $cmd_fh->print($Net::FullAuto::FA_Core::printfpath.
+                                       "printf $funkyprompt");
                         while (my $line=$cmd_fh->get) {
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -1671,6 +1701,7 @@ sub plan {
          Convey => [0..59],
          Result => sub{ return '][[ select_recurrent_minutes '.
                    ']|[ ]P[{select_recurrent_months} '.
+                   ']|[ ]P[{select_recurrent_weekdays} '.
                    ']|[ ]P[{select_recurrent_days} '.
                    ']|[ ]P[{select_recurrent_hours} ]|[ '.
                    ']S[ ]|[ ]P[{choose_from_fullauto_plans} ]][' }
@@ -1731,6 +1762,23 @@ sub plan {
 
    );
 
+   my %select_recurrent_weekdays=(
+
+         Label  => 'select_recurrent_weekdays',
+         Item_1 => {
+
+              Text => ']C[',
+              Convey => \@weekdays,
+              Result => \%select_recurrent_days,
+
+         },
+         Select => 'Many',
+         Banner => "   Select the --WEEKDAY(S)-- Where\n\n   ".
+                   "Plan -  ]P[{choose_from_fullauto_plans}".
+                   "\n\n   Will be Run :",
+
+   );
+
    my %select_recurrent_months=(
 
          Label  => 'select_recurrent_months',
@@ -1738,7 +1786,7 @@ sub plan {
 
               Text => ']C[',
               Convey => \@month,
-              Result => \%select_recurrent_days,
+              Result => \%select_recurrent_weekdays,
 
          },
          Select => 'Many',
@@ -1884,9 +1932,10 @@ sub plan {
    my $output=&Menu(\%plan_menu);
    &cleanup() if $output=~/\]quit\[/i;
 
-$output=join ' ', @{$output} if ref $output eq 'ARRAY';
+print "WHAT IS OUTPUTFRESH=$output\n";
+my $outp=join ' ', @{$output} if ref $output eq 'ARRAY';
 
-print "OUTPUT=$output\n";<STDIN>;
+print "OUTPUT=$outp\n";
 
    if ($output ne ']quit[') {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
@@ -1905,7 +1954,7 @@ print "OUTPUT=$output\n";<STDIN>;
       ) or &handle_error(
         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
       my $new_plan_number=0;
-      my ($k,$v) = ("","") ;
+      my ($k,$v) = ('','') ;
       if ($output eq 'Accept Defaults and Create New Plan') {
          my $cursor = $bdb->db_cursor() ;
          my $status=$cursor->c_get($k, $v, DB_LAST);
@@ -1943,7 +1992,162 @@ print "OUTPUT=$output\n";<STDIN>;
                   "this FullAuto installation.\n\n";
             &cleanup();
          }
+      } elsif (ref $output eq 'ARRAY' && $output->[0]
+                  eq 'select_recurrent_minutes') {
+         my ($monthstring,$weekdaysstring,$daystring,
+             $hourstring,$minstring,$weekstring)=
+             ('','','','','');
+         if (ref $output->[1] eq 'ARRAY') {
+            if ($#{$output->[1]}==11) {
+               $monthstring='*';
+            } elsif ($#{$output->[1]}==0) {
+               $monthstring=$monthconv{${$output->[1]}[0]};
+            } else {
+               my $cnt=$monthconv{${$output->[1]}[0]};
+               my $save_start=$cnt;
+               foreach my $month (@{$output->[1]}) {
+                  unless ($cnt++==$monthconv{$month}) {
+                     $save_start=-1;
+                  }
+                  $monthstring.=$monthconv{$month}.',';
+               }
+               if (-1<$save_start) {
+                  $monthstring=$save_start.'-'.
+                     $monthconv{${$output->[1]}
+                     [$#{$output->[1]}]};
+               } else {
+                  chop $monthstring;
+               }
+            }
+         } else {
+            $monthstring=$monthconv{$output->[1]};
+         }
+         if (ref $output->[2] eq 'ARRAY') {
+            if ($#{$output->[2]}==6) {
+               $weekdaysstring='*';
+            } elsif ($#{$output->[2]}==0) {
+               $weekdaysstring=$weekdaysconv{${$output->[2]}[0]};
+            } else {
+               my $cnt=$weekdaysconv{${$output->[2]}[0]};
+               my $save_start=$cnt;
+               foreach my $weekday (@{$output->[2]}) {
+                  unless ($cnt++==$weekdaysconv{$weekday}) {
+                     $save_start=-1;
+                  }
+                  $weekdaysstring.=$weekdaysconv{$weekday}.',';
+               }
+               if (-1<$save_start) {
+                  $weekdaysstring=$save_start.'-'.
+                     $weekdaysconv{${$output->[2]}
+                     [$#{$output->[2]}]};
+               } else {
+                  chop $weekdaysstring;
+               }
+            }
+         } else {
+            $weekdaysstring=$weekdaysconv{$output->[2]};
+         }
+         if (ref $output->[3] eq 'ARRAY') {
+            if ($#{$output->[3]}==30) {
+               $daystring='*';
+            } elsif ($#{$output->[3]}==0) {
+               $daystring=unpack('x5 a*',${$output->[3]}[0]);
+            } else {
+               my $cnt=unpack('x5 a*',${$output->[3]}[0]);
+               my $save_start=$cnt;
+               foreach my $day (@{$output->[3]}) {
+                  $day=unpack('x5 a*',$day);
+                  unless ($cnt++==$day) {
+                     $save_start=-1;
+                  }
+                  $daystring.=$day.',';
+               } 
+               if (-1<$save_start) {
+                  $daystring=$save_start.'-'.
+                     ${$output->[3]}[$#{$output->[3]}];
+               } else {
+                  chop $daystring;
+               }
+            }
+         } else {
+            $daystring=unpack('x5 a*',{$output->[3]});
+         }
+         if (ref $output->[4] eq 'ARRAY') {
+            if ($#{$output->[4]}==23) {
+               $hourstring='*';
+            } elsif ($#{$output->[4]}==0) {
+               $hourstring=$hourconv{${$output->[4]}[0]};
+            } else {
+               my $cnt=$hourconv{unpack('x6 a*',${$output->[4]}[0])};
+               my $save_start=$cnt;
+               foreach my $hour (@{$output->[4]}) {
+                  unless ($cnt++==$hourconv{unpack('x6 a*',$hour)}) {
+                     $save_start=-1;
+                  }
+                  $hourstring.=$hourconv{unpack('x6 a*',$hour)}.',';
+               }
+               if (-1<$save_start) {
+                  $hourstring=$save_start.'-'.
+                     $hourconv{unpack('x6 a*',${$output->[4]}
+                     [$#{$output->[4]}])};
+               } else {
+                  chop $hourstring;
+               }
+            } 
+         } else {
+            $hourstring=$hourconv{unpack('x6 a*',$output->[4])};
+         }
+         if (ref $output->[5] eq 'ARRAY') {
+            if ($#{$output->[5]}==59) {
+               $minstring='*';
+            } elsif ($#{$output->[5]}==0) {
+               $minstring=unpack('x8 a*',${$output->[5]}[0]);
+            } else {
+               my $cnt=unpack('x8 a*',${$output->[5]}[0]);
+               my $save_start=$cnt;
+               foreach my $minute (@{$output->[5]}) {
+                  $minute=unpack('x8 a*',$minute);
+                  unless ($cnt++==$minute) {
+                     $save_start=-1;
+                  }
+                  $minstring.=$minute.',';
+               }
+               if (-1<$save_start) {
+                  $minstring=$save_start.'-'.
+                     ${$output->[5]}[$#{$output->[5]}];
+               } else {
+                  chop $minstring;
+               }
+            }
+         } else {
+            $minstring=unpack('x8 a*',$output->[5]);
+         }
+         my $cronstring=$minstring.' '.$hourstring.' '.$daystring.' '.
+               $monthstring.' '.$weekdaysstring;
+         print "CRONSTRING=$cronstring\n";
+         our $crontabpath='';
+         if (-e '/usr/bin/crontab') {
+            $crontabpath='/usr/bin/';
+         } elsif (-e '/bin/crontab') {
+            $crontabpath='/bin/';
+         } elsif (-e '/usr/local/bin/crontab') {
+            $crontabpath='/usr/local/bin/';
+         }
+         my ($stdout,$stderr)=('','');
+         ($stdout,$stderr)=cmd("${crontabpath}crontab -l");
+         if ($stderr && -1<index $stderr,'no crontab') {
+            ($stdout,$stderr)=cmd($Net::FullAuto::FA_Core::printfpath.
+               "printf \"$cronstring ".
+               "/usr/bin/date >> date2.txt\012\"".'| crontab -'); 
+         } elsif ($stdout=~/^\s*[^#].*$/m) {
+            print "WE GOT CRON CONTENTS=$stdout<==\n";
+         }
+print "STDOUTCRONT=$stdout<==\n";
+print "STDERRCRONT=$stderr<==\n";
+
       }
+      undef $Net::FullAuto::FA_Core::makeplan;
+      &cleanup();
    } else {
       undef $Net::FullAuto::FA_Core::makeplan;
       &cleanup();
@@ -3576,7 +3780,8 @@ sub test_dir
    my ($cmd_handle,$tdir)=@_;my $test_result=0;
    my $shell_cmd="if\n[[ -d $tdir ]]\nthen\nif\n[[ -w $tdir ]]"
                 ."\nthen\necho WRITE\nelse\necho READ\nfi\n"
-                ."else\necho NODIR\nfi;printf \\\\055";
+                ."else\necho NODIR\nfi;".
+                $Net::FullAuto::FA_Core::printfpath."printf \\\\055";
    my $cnt=5;
    while ($cnt--) {
       $cmd_handle->print($shell_cmd);
@@ -3693,7 +3898,8 @@ my $onemore=0;
       $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
       $filehandle->print('cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                         '|| printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
+                         '|| '.$Net::FullAuto::FA_Core::printfpath.
+                         'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
                          '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                          '\\\\137\\\\055 2>/dev/null');
       if ($loop==100) {
@@ -3836,7 +4042,8 @@ sub attempt_cmd_xtimes
          &handle_error($cfh_error,'-1') if $cfh_error;
          select(undef,undef,undef,0.02);
          $cmd_handle->print(
-            'printf \\\\041\\\\041;$cmd;printf \\\\045\\\\045');
+            $Net::FullAuto::FA_Core::printfpath.'printf \\\\041\\\\041;$cmd;'.
+            $Net::FullAuto::FA_Core::printfpath.'printf \\\\045\\\\045');
          my $allins='';my $ct=0;
          while (my $line=$cmd_handle->get) {
             chomp($line=~tr/\0-\37\177-\377//d);
@@ -3849,7 +4056,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<==\n"
                last;
             } else {
                $cmd_handle->
-                  print('printf \\\\055');
+                  print($Net::FullAuto::FA_Core::printfpath.'printf \\\\055');
             }
             if ($ct++==10) {
                $cmd_handle->print;
@@ -6154,7 +6361,10 @@ print $Net::FullAuto::FA_Core::MRLOG "ERROR LOCALLLLLLLLLLLLLLLLLLLL_sh_pid=$loc
             if (!$localhost->{_sh_pid}) {
                $localhost->print;
                $localhost->print(
-                  'printf \\\\041\\\\041;echo $$;printf \\\\045\\\\045');
+                  $Net::FullAuto::FA_Core::printfpath.
+                  'printf \\\\041\\\\041;echo $$;'.
+                  $Net::FullAuto::FA_Core::printfpath.
+                  'printf \\\\045\\\\045');
                my $allins='';my $ct=0;
                while (1) {
                   eval {
@@ -16872,7 +17082,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
             $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
             $cmd_handle->print('cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                         '|| printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
+                         '|| '.$Net::FullAuto::FA_Core::printfpath.
+                         'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
                          '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                          '\\\\137\\\\055 2>/dev/null');
             my $output='';my $ct=0;my $tymeout=2;
@@ -17000,7 +17211,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         &Net::FullAuto::FA_Core::get_prompt();
                      $cmd_handle->print('cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                         '|| printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
+                         '|| '.$Net::FullAuto::FA_Core::printfpath.
+                         'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
                          '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                          '\\\\137\\\\055 2>/dev/null');
                   } elsif ($sshloginid &&
@@ -17015,7 +17227,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                            &Net::FullAuto::FA_Core::get_prompt();
                         $cmd_handle->print('cmd /Q /C "set /A '
                            .${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                           '|| printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2]
+                           '|| '.$Net::FullAuto::FA_Core::printfpath.
+                           'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2]
                            .'\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                            '\\\\137\\\\055 2>/dev/null');
                      }
@@ -17074,7 +17287,9 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
             if ($shell=~/\/?bash[']*$/ || $shell=~/\/?ksh[']*$/ || $shell=~/\/?sh[']*$/) {
                my $fp=$funkyprompt;
                $fp=~s/\\\\/\\\\\\\\/g;
-               $cmd_handle->print("PS1=`printf $fp`;export PS1;unset PROMPT_COMMAND");
+               $cmd_handle->print("PS1=`${Net::FullAuto::FA_Core::printfpath}".
+                                  "printf $fp`;export PS1;".
+                                  "unset PROMPT_COMMAND");
                my $out='';
                while (my $line=$cmd_handle->get) {
                   $out.=$line;
@@ -17091,7 +17306,9 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                   "\n       at Line ",__LINE__,"\n\n"
                   if !$Net::FullAuto::FA_Core::cron &&
                      $Net::FullAuto::FA_Core::debug;
-               $cmd_handle->print("set prompt=`printf $funkyprompt`");
+               $cmd_handle->print("set prompt=`".
+                            ${Net::FullAuto::FA_Core::printfpath}."printf ".
+                            "$funkyprompt`");
                $cmd_handle->print;
                my $out='';
                while (my $line=$cmd_handle->get) {
@@ -17131,7 +17348,10 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
             if (!$shell_pid) {
                $cmd_handle->print;my $ct=0;
                $cmd_handle->print(
-                  'printf \\\\041\\\\041;echo $$;printf \\\\045\\\\045');
+                  $Net::FullAuto::FA_Core::printfpath.
+                  'printf \\\\041\\\\041;echo $$;'.
+                  $Net::FullAuto::FA_Core::printfpath.
+                  'printf \\\\045\\\\045');
                my $allins='';$ct=0;
                while (1) {
                   eval {
@@ -17215,7 +17435,10 @@ print $Net::FullAuto::FA_Core::MRLOG
             $cmd_handle->print;
             if (!$uname) {
                $cmd_handle->print(
-                  'printf \\\\041\\\\041;uname;printf \\\\045\\\\045');
+                  $Net::FullAuto::FA_Core::printfpath.
+                  'printf \\\\041\\\\041;uname;'.
+                  $Net::FullAuto::FA_Core::printfpath.
+                  'printf \\\\045\\\\045');
                my $allins='';my $ct=0;
                while (my $line=$cmd_handle->get) {
                   chomp($line=~tr/\0-\37\177-\377//d);
