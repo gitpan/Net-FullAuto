@@ -12,6 +12,7 @@ use Cwd qw/cwd/;
 use lib '.';
 use inc::Module::Install;
 use Config;
+use DirHandle;
 use File::stat;
 CPAN::HandleConfig->load;
 use POSIX qw/strftime/;
@@ -19,7 +20,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.99';
+version         '0.100';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
