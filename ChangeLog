@@ -27,6 +27,15 @@
 
 2011-02-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.101 released.
+
+        * CAPN Indexing of Version 100 failed (I'm *not*
+          surprised). Going to version 101 "should" fix the
+          issue.
+
+
+2011-02-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.100 released.
 
         * Added 'use DirHandle' to Makefile.PL in attempt to
