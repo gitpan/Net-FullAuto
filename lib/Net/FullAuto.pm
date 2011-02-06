@@ -6,7 +6,7 @@ package Net::FullAuto;
 #
 #   Net::FullAuto is powerful network process automation
 #   software that has been in un-released development for
-#   more than seven years. For this reason, you may find
+#   more than eleven years. For this reason, you may find
 #   it to be useful for many process automation projects.
 #   Because it has been worked on for so long, it may appear
 #   to be stable, and pass a number of non-intensive tests.
@@ -34,7 +34,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.9911';
+our $VERSION='0.9912';
 
 
 use 5.005;
@@ -72,8 +72,6 @@ our @EXPORT = qw(fa_login);
 
 use Term::Menus;
 use Tie::Cache;
-use MLDBM qw(MLDBM::Sync::SDBM_File); # ext SDBM_File, handles values > 1024
-use MLDBM::Sync;                      # this gets the default, SDBM_File
 use Sort::Versions;
 use Crypt::CBC;
 use Crypt::DES;
@@ -87,7 +85,6 @@ use Net::Telnet;
 use Email::Sender;
 use MIME::Entity;
 use IO::Pty;
-use DB_File;
 use BerkeleyDB;
 
 sub fa_login

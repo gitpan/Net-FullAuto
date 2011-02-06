@@ -6,7 +6,7 @@ package fa_conf;
 #
 #   Net::FullAuto is powerful network process automation
 #   software that has been in un-released development for
-#   more than seven years. For this reason, you may find
+#   more than eleven years. For this reason, you may find
 #   it to be useful for many process automation projects.
 #   Because it has been worked on for so long, it may appear
 #   to work well, and pass a number of non-intensive tests.

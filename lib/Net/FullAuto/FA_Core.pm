@@ -6,7 +6,7 @@ package Net::FullAuto::FA_Core;
 #
 #   Net::FullAuto is powerful network process automation
 #   software that has been in un-released development for
-#   more than seven years. For this reason, you may find
+#   more than eleven years. For this reason, you may find
 #   it to be useful for many process automation projects.
 #   Because it has been worked on for so long, it may appear
 #   to work well, and pass a number of non-intensive tests.
@@ -29,7 +29,7 @@ package Net::FullAuto::FA_Core;
 ## ******* Misc Notes ******************************************
 ## For Testing Multiple Iterations in a BASH shell environment
 #
-#  num=0; while (( $num < 1000 )); do ./fullauto.pl --login *******
+#  num=0; while (( $num < 1000 )); do fullauto.pl --login *******
 #  --password ******** --code hello_world --log; let num+=1;
 #  echo "FINISHED NUM=$num"; done
 #
@@ -53,6 +53,15 @@ package Net::FullAuto::FA_Core;
 ## For OpenSolaris - getting a dev environment
 #
 #  pfexec pkg install ss-dev
+#
+## For Slow SSH on Cygwin
+#
+#  verify that the fifth field in the user entry in /etc/passwd
+#  references the correct host name of the machine.
+#  loginId,U-WRONGHOSTNAME\loginId,S-1-5-21-...
+#  -to- loginId,U-RIGHTHOSTNAME\loginId,S-1-5-21...
+#
+#  Also - in the /etc/ssh_config, set UseDNS to no.
 #
 ## *************************************************************
 
@@ -78,19 +87,21 @@ our $curyear=$thisyear + 1900;
 our $curcen=unpack('a2',$curyear);
 our @invoked=($^T, $tm, $mdy, $hms, $hr, $mn, $sc, $mdyyyy);
 
-if ($^O eq 'cygwin') {
-   require Win32::Semaphore;
-} else {
-   if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
-      print "\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
-            "\n                      is required to use FullAuto".
-            "\n                      on Windows - goto www.cygwin.com.".
-            "\n\n       \(Be sure to install OpenSSH and the sshd ".
-            "service\).\n\n";
-      exit;
+BEGIN {
+   if ($^O eq 'cygwin') {
+      require Win32::Semaphore;
+   } else {
+      if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+         print "\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
+               "\n                      is required to use FullAuto".
+               "\n                      on Windows - goto www.cygwin.com.".
+               "\n\n       \(Be sure to install OpenSSH and the sshd ".
+               "service\).\n\n";
+         exit;
+      }
+      require IPC::Semaphore;
+      require IPC::SysV;import IPC::SysV qw(IPC_CREAT SETVAL);
    }
-   require IPC::Semaphore;
-   require IPC::SysV;import IPC::SysV qw(IPC_CREAT SETVAL);
 }
 
 use warnings;
@@ -1177,7 +1188,7 @@ $SIG{ ALRM } = sub{ open(AL,">>ALRM.txt");
                     print AL scalar(localtime())."\n";
                     close AL;
                     $alarm_sounded=1;
-                    print "CAUGHT AN ALRM!!\n";
+                    print "CAUGHT AN ALRM!! FROM ",caller,"\n";
                     $cleanup=1;&cleanup('','ALRM') };
 $SIG{ CHLD } = 'IGNORE';
 
@@ -1932,7 +1943,7 @@ sub plan {
    my $output=&Menu(\%plan_menu);
    &cleanup() if $output=~/\]quit\[/i;
 
-print "WHAT IS OUTPUTFRESH=$output\n";
+#print "WHAT IS OUTPUTFRESH=$output\n";
 my $outp=join ' ', @{$output} if ref $output eq 'ARRAY';
 
 print "OUTPUT=$outp\n";
@@ -3762,7 +3773,7 @@ sub test_file
             $test_result='READ';
             $leave=1;
          } elsif ($line=~/^NOFILE/m) {
-            $test_result=0;
+            $test_result='NOFILE';
             $leave=1;
          }
          if ($line=~/_funkyPrompt_/s) {
@@ -4210,29 +4221,38 @@ sub master_transfer_dir
          "\n       at Line ",__LINE__,"\n\n"
          if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
       if (!$stderr || ($stderr=~/^.*cd \/tmp 2[>][&]1$/)) {
-         $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($localhost,'cmd /c chdir',
-                 $localhost->{'hostlabel'}[0]);
-         my ($drive,$path)=unpack('a1 x1 a*',$curdir);
-         my $tdir=$localhost->{_cygdrive}.'/'
-                 .lc($drive).$path.'/';
-         $tdir=~tr/\\/\//;
-         $testd=&test_dir($localhost->{_cmd_handle},$tdir);
-         print $Net::FullAuto::FA_Core::MRLOG
-            "\nDDDDDDD &test_dir() of $tdir DDDDDDD OUTPUT ==>$testd<==",
-            "\n       at Line ",__LINE__,"\n\n"
-            if $Net::FullAuto::FA_Core::log &&
-            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         print "\nDDDDDDD &test_dir of $tdir DDDDDDD OUTPUT ==>$testd<==",
-            "\n       at Line ",__LINE__,"\n\n"
-            if !$Net::FullAuto::FA_Core::cron &&
-               $Net::FullAuto::FA_Core::debug;
-         if ($testd eq 'WRITE') {
-            ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$curdir.'\\';
-            ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=$tdir;
-            return $work_dirs;
-         } else {
-            ($output,$stderr)=$localhost->cmd('cd -')
-            &handle_error($stderr,'-2','__cleanup__') if $stderr;
+         my $cnt=2;
+         while ($cnt--) {
+            $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes(
+                    $localhost,'cmd /c chdir',
+                    $localhost->{'hostlabel'}[0]);
+            my ($drive,$path)=unpack('a1 x1 a*',$curdir);
+            my $tdir=$localhost->{_cygdrive}.'/'
+                    .lc($drive).$path.'/';
+            $tdir=~tr/\\/\//;
+            $testd=&test_dir($localhost->{_cmd_handle},$tdir);
+            print $Net::FullAuto::FA_Core::MRLOG
+               "\nDDDDDDD &test_dir() of $tdir DDDDDDD OUTPUT ==>$testd<==",
+               "\n       at Line ",__LINE__,"\n\n"
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            print "\nDDDDDDD &test_dir of $tdir DDDDDDD OUTPUT ==>$testd<==",
+               "\n       at Line ",__LINE__,"\n\n"
+               if !$Net::FullAuto::FA_Core::cron &&
+                  $Net::FullAuto::FA_Core::debug;
+            if ($testd eq 'WRITE') {
+               ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$curdir.'\\';
+               ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=$tdir;
+               return $work_dirs;
+            } elsif ($testd eq 'READ' || $testd eq 'NOFILE') {
+               last;
+            } else {
+               ($output,$stderr)=$localhost->cmd('cd -')
+               &handle_error($stderr,'-2','__cleanup__') if $stderr;
+            }
+            my $cfh_ignore='';my $cfh_error='';
+            ($cfh_ignore,$cfh_error)=&clean_filehandle($localhost);
+            &handle_error($cfh_error,'-1') if $cfh_error;
          }
       }
 #print "CD TO TMP STDERR=$stderr<==\n";
@@ -4350,7 +4370,6 @@ sub master_transfer_dir_no_telnet_login
          && -d $Hosts{"__Master_${$}__"}{'TransferDir'}
          && -w _) {
       $master_transfer_dir=$Hosts{"__Master_${$}__"}{'TransferDir'};
-print "HEREWEARE\n";<STDIN>;
       if (unpack('x1 a1',"$master_transfer_dir") eq ':') {
          my ($drive,$path)=unpack('a1 @2 a*',$master_transfer_dir);
          $path=~tr/\\/\//;
@@ -4496,9 +4515,16 @@ sub getpasswd
          $su_login=1;
       }
    }
-   my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
-   #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
-      $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+   my $cipher='';
+   if ($Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+      $cipher = new Crypt::CBC(unpack('a8',
+         $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0])),
+         $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+   } else {
+      $cipher = new Crypt::CBC(
+         $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
+         $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+   }
    my $local_host_flag=0;my $href='';
    if (exists $same_host_as_Master{$passlabel} ||
          ($passlabel eq "__Master_${$}__")) {
@@ -4797,9 +4823,26 @@ sub getpasswd
       $save_passwd.='X' if $save_passwd
          eq substr($Net::FullAuto::FA_Core::progname,0,
          (rindex $Net::FullAuto::FA_Core::progname,'.'));
-      $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
+      my $cipher='';my $mr="__Master_${$}__";
+      if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+         if (8<length $Net::FullAuto::FA_Core::dcipher->decrypt(
+               $passetts->[0])) {
+            $cipher = new Crypt::CBC(unpack('a8',
+               $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0])),
+               $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+         } else {
+            $cipher = new Crypt::CBC(
+               $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
+               $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+         }
+      } else {
+         $cipher = new Crypt::CBC(
+            $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
+            $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+      }
+      #$cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
       #$cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
-         $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+      #   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
       my $new_encrypted=$cipher->encrypt($save_passwd);
       ${$href}{$key}=$new_encrypted;
       my $put_href=Data::Dump::Streamer::Dump($href)->Out();
@@ -5527,11 +5570,12 @@ sub fa_login
            (!defined $_[0] || !$_[0] || $_[0]=~/^\d+$/)) {
       $test=$_[1];
    }
-   $passwd[1]=$passwd[0];
-   if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/
-         && 7<length $passwd[0]) {
-      $passwd[1]=unpack('a8',$passwd[0])
-   }
+   #$passwd[1]=$passwd[0];
+   #if (exists $Hosts{"__Master_${$}__"}{'Cipher'} &&
+   #      $Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/
+   #      && 7<length $passwd[0]) {
+      #$passwd[1]=unpack('a8',$passwd[0])
+   #}
    if (defined $cron) {
       if ($cron) {
          $plan=$cron;
@@ -5554,12 +5598,13 @@ sub fa_login
    my $ip='';my $hostname='';my $fullhostname='';my $passline='';
    my $host=''; my $cmd_type='';my $cmd_pid='';my $login_id;
    my $password='';my $track='';
-   if (-1<index $Hosts{"__Master_${$}__"}{'HostName'},'.') {
+   if (exists $Hosts{"__Master_${$}__"}{'HostName'} &&
+         -1<index $Hosts{"__Master_${$}__"}{'HostName'},'.') {
       $hostname=substr($Hosts{"__Master_${$}__"}{'HostName'},0
-              ,(index $Hosts{"__Master_${$}__"}{'HostName'},'.'));
+              ,(index $Hosts{"__Master_${$}__"}{'HostName'},'.'))||'';
       $fullhostname=$Hosts{"__Master_${$}__"}{'HostName'};
    } else {
-      $fullhostname=$hostname=$Hosts{"__Master_${$}__"}{'HostName'};
+      $fullhostname=$hostname=$Hosts{"__Master_${$}__"}{'HostName'}||'';
    } my $suroot='';
    foreach my $host (keys %same_host_as_Master) {
       next if $host eq "__Master_${$}__";
@@ -5935,7 +5980,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          ) or &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
          my $href={};my $dcipher='';
-         if ($save_main_pass || $password_from ne 'user_input') {
+         if ($save_main_pass || $password_from ne 'user_input' ||
+               -1<index $login_Mast_error,'Not a GLOB reference') {
             my $status=$bdb->db_get('localhost',$href);
             $href=~s/\$HASH\d*\s*=\s*//s;
 #print "HREF=$href\n";
@@ -5974,13 +6020,14 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         $passetts->[0]=$ecipher->encrypt($passwd[0]);
                         $passetts->[9]=$dcipher=$ecipher;
                         $skipflag=1;
+                        undef $passwd[0];
                      } else {
-                        print "\n   Saved Password matches outside input!\n"; 
+                        print "\n  Saved Password matches outside input!\n"; 
                      }
                   }
                   unless ($skipflag) {
                      undef $tpess;
-                     print "\n   Saved Password will Expire: ".
+                     print "\n  Saved Password will Expire: ".
                         scalar localtime($ignore_expiration)."\n"
                         if !$Net::FullAuto::FA_Core::cron &&
                         !$Net::FullAuto::FA_Core::quiet;
@@ -6012,6 +6059,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $passetts->[0]=$ecipher->encrypt($passwd[0]);
                   $passetts->[9]=$dcipher=$ecipher;
                   $save_main_pass=1;
+                  undef $passwd[0];
                } else {
                   print "\n  NOTICE!: Saved Password --EXPIRED-- on ".
                         scalar localtime($ignore_expiration)."\n";
@@ -6025,9 +6073,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   ReadMode 0;
                   chomp($passwd[0]);
                   print "\n\n";
-                  $passwd[1]=$passwd[0];
-                  $passwd[1]=unpack('a8',$passwd[0])
-                     if 7<length $passwd[0];
+                  #$passwd[1]=$passwd[0];
+                  #$passwd[1]=unpack('a8',$passwd[0])
+                  #   if 7<length $passwd[0];
                   my $rstr=new String::Random;
                   if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
                      ${$href}{"gatekeep_$username"}=
@@ -6043,6 +6091,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $passetts->[0]=$ecipher->encrypt($passwd[0]);
                   $passetts->[9]=$dcipher=$ecipher;
                   $save_main_pass=1;
+                  undef $passwd[0];
                }
             } elsif ($passwd[0]) {
                my $rstr=new String::Random;
@@ -6059,8 +6108,10 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   "__Master_${$}__"}{'Cipher'});
                $passetts->[0]=$ecipher->encrypt($passwd[0]);
                $passetts->[9]=$dcipher=$ecipher;
+               undef $passwd[0];
 #print "WHAT IS GATEKEEP=",${$href}{"gatekeep_$username"},"\n";
             } else {
+#print "LOGIN_MAST_ERROR2=$login_Mast_error and BDB=$bdb<==\n";
                print "\n  Password: ";
                ReadMode 2;
                &give_semaphore(1234);
@@ -6071,9 +6122,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                ReadMode 0;
                chomp($passwd[0]);
                print "\n\n";
-               $passwd[1]=$passwd[0];
-               $passwd[1]=unpack('a8',$passwd[0])
-               if 7<length $passwd[0];
+               #$passwd[1]=$passwd[0];
+               #$passwd[1]=unpack('a8',$passwd[0])
+               #if 7<length $passwd[0];
                my $rstr=new String::Random;
                if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
                   ${$href}{"gatekeep_$username"}=
@@ -6089,8 +6140,12 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   "__Master_${$}__"}{'Cipher'});
                $passetts->[0]=$ecipher->encrypt($passwd[0]);
                $passetts->[9]=$dcipher=$ecipher;
+               undef $passwd[0];
             }
-         } elsif (!$passwd[0] && !$Net::FullAuto::FA_Core::cron) {
+         #} elsif (!$passwd[0] && !$Net::FullAuto::FA_Core::cron) {
+         } elsif ((!defined $Net::FullAuto::FA_Core::dcipher ||
+               !$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]))
+               && !$Net::FullAuto::FA_Core::cron) {
             my $status=$bdb->db_get('localhost',$href);
             $href=~s/\$HASH\d*\s*=\s*//s;
             $href=eval $href;
@@ -6098,6 +6153,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             my $put_href=Data::Dump::Streamer::Dump($href)->Out();
             $status=$bdb->db_put('localhost',$put_href);
             undef $bdb;
+#print "LOGIN_MAST_ERROR=$login_Mast_error<== AND NO BDB\n";
             print "\n  Password: ";
             ReadMode 2;
             &give_semaphore(1234);
@@ -6108,11 +6164,12 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             ReadMode 0;
             chomp($passwd[0]);
             print "\n\n";
-            $passwd[1]=$passwd[0];
-            $passwd[1]=unpack('a8',$passwd[0])
-            if 7<length $passwd[0];
+            #$passwd[1]=$passwd[0];
+            #$passwd[1]=unpack('a8',$passwd[0])
+            #if 7<length $passwd[0];
             my $rstr=new String::Random;
-            if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+            if (exists $Hosts{"__Master_${$}__"}{'Cipher'} 
+               && $Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
                ${$href}{"gatekeep_$username"}=
                   $rstr->randpattern("........");
             } else {
@@ -6125,9 +6182,27 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                "__Master_${$}__"}{'Cipher'});
             $passetts->[0]=$ecipher->encrypt($passwd[0]);
             $passetts->[9]=$dcipher=$ecipher;
+            undef $passwd[0];
+         } else {
+            my $rstr=new String::Random;
+            if (exists $Hosts{"__Master_${$}__"}{'Cipher'}
+               && $Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+               ${$href}{"gatekeep_$username"}=
+                  $rstr->randpattern("........");
+            } else {
+               ${$href}{"gatekeep_$username"}=
+                  $rstr->randpattern("..............");
+            }
+            my $ecipher = new Crypt::CBC(
+               ${$href}{"gatekeep_$username"},
+               $Net::FullAuto::FA_Core::Hosts{
+               "__Master_${$}__"}{'Cipher'});
+            $passetts->[0]=$ecipher->encrypt($passwd[0]);
+            $passetts->[9]=$dcipher=$ecipher;
+            undef $passwd[0];
          }
          $login_id=$username;
-         $password=$passwd[0];
+         #$password=$passwd[0];
          $passwd[2]='';
          $passetts->[2]='';
 
@@ -6167,7 +6242,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                $localhost->{_cmd_handle}=$local_host;
                while (my $line=$local_host->get) {
                   chomp($line=~tr/\0-\37\177-\377//d);
-print "OUTPUT FROM NEW::TELNET=$line<==\n";
+#print "OUTPUT FROM NEW::TELNET=$line<==\n";
 #print $Net::FullAuto::FA_Core::MRLOG "OUTPUT FROM NEW::TELNET=$line<==\n";
 #      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   if (7<length $line && unpack('a8',$line) eq 'Insecure') {
@@ -6284,19 +6359,26 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
 
          my $newpw='';$passline=__LINE__+1;
          while (my $line=$local_host->get) {
-print "WAITING FOR CMDPROMPT=$line<==\n"
-      if !$Net::FullAuto::FA_Core::cron &&
-      $Net::FullAuto::FA_Core::debug;
-print $Net::FullAuto::FA_Core::MRLOG "WAITING FOR CMDPROMPT=$line<==\n"
-      if $Net::FullAuto::FA_Core::log &&
-      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            print "WAITING FOR CMDPROMPT=$line<== at Line ",__LINE__,"\n"
+               if !$Net::FullAuto::FA_Core::cron &&
+               $Net::FullAuto::FA_Core::debug;
+            print $Net::FullAuto::FA_Core::MRLOG
+               "WAITING FOR CMDPROMPT=$line<== at Line: ",__LINE__,"\n"
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             my $output='';
             ($output=$line)=~s/login:.*//s;
-            if ($^O eq 'cygwin' && $line=~/^$password\n/) {
-               $local_host->print("\032");
-               $local_host->close;
-               $passerror=1;&give_semaphore(1234);
-               return;
+            if ($^O eq 'cygwin') {
+               my $pass_test=$dcipher->decrypt($passetts->[0]);
+               if ($line=~/^$pass_test\n/) {
+                  undef $pass_test;
+                  $local_host->print("\032");
+                  $local_host->close;
+                  $passerror=1;&give_semaphore(1234);
+                  return;
+               } else {
+                  undef $pass_test;
+               }
             }
             if ($line=~/Permission denied|Password:/s) {
 ## ADD - TELL USER ABOUT MISSING CRON CREDS ON CMD LINE
@@ -6414,12 +6496,22 @@ print $Net::FullAuto::FA_Core::MRLOG
          if (!$mainuser && (exists $Hosts{$hostlabel}{'LoginID'}) &&
                ($Hosts{$hostlabel}{'LoginID'} ne $login_id)) {
             $switch_user=$Hosts{$hostlabel}{'LoginID'};
-            $passwd[0]=$passwd[2]=$password=
-               &Net::FullAuto::FA_Core::getpasswd($hostlabel,
-               $switch_user,'',$stderr,'__su__');
-            $passwd[1]=$passwd[0];
-            $passwd[1]=unpack('a8',$passwd[0])
-               if 7<length $passwd[0];
+            #$passwd[0]=$passwd[2]=$password=
+            #   &Net::FullAuto::FA_Core::getpasswd($hostlabel,
+            #   $switch_user,'',$stderr,'__su__');
+            my $ecipher = new Crypt::CBC(
+               ${$href}{"gatekeep_$username"},
+               $Net::FullAuto::FA_Core::Hosts{
+               "__Master_${$}__"}{'Cipher'});
+            #$passetts->[0]=$ecipher->encrypt($passwd[0]);
+            $passetts->[0]=$ecipher->encrypt(
+               &Net::FullAuto::FA_Core::getpasswd(
+               $hostlabel,$switch_user,'',$stderr,
+               '__su__'));
+            $passetts->[9]=$dcipher=$ecipher;
+            #$passwd[1]=$passwd[0];
+            #$passwd[1]=unpack('a8',$passwd[0])
+            #   if 7<length $passwd[0];
             $login_id=$username=$switch_user;
             my $cfh_ignore='';my $cfh_error='';
             ($cfh_ignore,$cfh_error)=&clean_filehandle($local_host);
@@ -6486,43 +6578,37 @@ print $Net::FullAuto::FA_Core::MRLOG
             }
          }
          unless ($tosspass) {
-            my $cipher='';
+            my $cipher='';my $mr="__Master_${$}__";
             if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-               my $ps=$dcipher->decrypt($passetts->[0]);
-               if (8<length $ps) {
-                  $cipher = new Crypt::CBC(unpack('a8',$ps),
-                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-                  $passwd[1]=$ps;
-                  undef $ps;
+               if (8<length $dcipher->decrypt($passetts->[0])) {
+                  $cipher = new Crypt::CBC(unpack('a8',
+                     $dcipher->decrypt($passetts->[0])),
+                     $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
                } else {
-                  $cipher = new Crypt::CBC($ps,
-                     $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-                  $passwd[1]=$ps;
-                  undef $ps;
+                  $cipher = new Crypt::CBC($dcipher->decrypt($passetts->[0]),
+                     $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
                }
             } else {
-               my $ps=$dcipher->decrypt($passetts->[0]);
-               $cipher = new Crypt::CBC($ps,
-                  $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-               $passwd[1]=$ps;
-               undef $ps;
+               $cipher = new Crypt::CBC($dcipher->decrypt($passetts->[0]),
+                  $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
             }
-            my $new_encrypted=$cipher->encrypt($dcipher->decrypt($passetts->[0]));
+            my $new_encrypted=$cipher->encrypt(
+                  $dcipher->decrypt($passetts->[0]));
 print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             $lref->{$key}=$new_encrypted;
-            #$lref->{$key}=$passetts->[0];
             my $put_lref=Data::Dump::Streamer::Dump($lref)->Out();
             my $status=$bdb->db_put($host__label,$put_lref);
          } else {
-            $tosspass{$key}=$passwd[0];
+            #$tosspass{$key}=$passwd[0];
+            $tosspass{$key}=$dcipher->decrypt($passetts->[0]);
          }
          if ($save_main_pass) {
             $passetts->[1]=&choose_pass_expiration();
             if (!$Net::FullAuto::FA_Core::cron &&
                   !$Net::FullAuto::FA_Core::quiet) { 
-               print "\n   Saved Password will Expire: ".
+               print "\n  Saved Password will Expire: ".
                      scalar localtime($passetts->[1])."\n";
                sleep 2;
             }
@@ -6679,7 +6765,8 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                   -1<index($login_Mast_error,'ation is d')) {
                $su_scrub=&scrub_passwd_file($hostlabel,$su_id);
                next;
-            } else {
+            } elsif (defined $Net::FullAuto::FA_Core::dcipher) {
+$password=$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]);
                &passwd_db_update($hostlabel,$login_id,$password,$cmd_type);
             }
          }
@@ -7004,7 +7091,7 @@ sub passwd_db_update
 {
    my @topcaller=caller;
    print "main::passwd_db_update() CALLER="
-      ,(join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::debug;
+      ,(join ' ',@topcaller),"\n";# if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "main::passwd_db_update() CALLER=",
       (join ' ',@topcaller),"\n" if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $hostlabel=$_[0];my $login_id=$_[1];my $passwd=$_[2];
@@ -7070,9 +7157,25 @@ print $Net::FullAuto::FA_Core::MRLOG
          while (delete $href->{"$ky"}) {}
       }
    }
-   my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
+   my $cipher='';my $mr="__Master_${$}__";
+   if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+      if (8<length $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0])) {
+         $cipher = new Crypt::CBC(unpack('a8',
+            $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0])),
+            $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+      } else {
+         $cipher = new Crypt::CBC(
+            $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
+            $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+      }
+   } else {
+      $cipher = new Crypt::CBC(
+         $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
+         $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+   }
+   #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
    #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
-      $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+   #   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
    my $new_encrypted=$cipher->encrypt($passwd);
    $href->{$key}=$new_encrypted;
    my $put_href=Data::Dump::Streamer::Dump($href)->Out();
@@ -7135,10 +7238,28 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA
          while (delete $href->{$ky}) {}
       }
    }
-   my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
+   my $cipher='';my $mr="__Master_${$}__";
+   if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+      if (8<length $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0])) {
+         $cipher = new Crypt::CBC(unpack('a8',
+            $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0])),
+            $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+      } else {
+         $cipher = new Crypt::CBC(
+            $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
+            $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+      }
+   } else {
+      $cipher = new Crypt::CBC(
+         $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
+         $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+   }
+   #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
    #my $cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
-      $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
-   my $new_encrypted=$cipher->encrypt($Net::FullAuto::FA_Core::passwd[0]);
+   #   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
+   #my $new_encrypted=$cipher->encrypt($Net::FullAuto::FA_Core::passwd[0]);
+   my $new_encrypted=$cipher->encrypt(
+         $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]));
    #my $new_encrypted=$cipher->encrypt($Net::FullAuto::FA_Core::passetts->[0]);
    $href->{$key}=$new_encrypted;
    my $put_href=Data::Dump::Streamer::Dump($href)->Out();
@@ -7665,7 +7786,7 @@ sub cwd
 sub setuid_cmd
 {
    my @topcaller=caller;
-   #print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n"
+   #print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n";
    #   if $Net::FullAuto::FA_Core::debug;
    # NOTE: the CALLER line is commmented because it breaks
    #       this routine when set. Anything printing to
@@ -7676,9 +7797,9 @@ sub setuid_cmd
       (join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $cmd=shift;
-   my $timeout=shift;
-   $timeout||='';
+   my $cmd=[];
+   $cmd = (ref $_[0] eq 'ARRAY') ? $_[0] : [ $_[0] ];
+   my $timeout=$_[1]||0;
    my $regex='';
    if ($timeout) {
       alarm($timeout+10);
@@ -7696,7 +7817,7 @@ sub setuid_cmd
    $flag||='';
    my $cmd_err='';
    $cmd_err=join ' ',@{$cmd} if ref $cmd eq 'ARRAY';
-   my $one=${$cmd}[0];my $two='';
+   my $one=${$cmd}[0]||'';my $two='';
    $two=${$cmd}[1] if 0<$#{$cmd};
    my $three='';
    $three=${$cmd}[2] if 1<$#{$cmd};
@@ -8022,6 +8143,7 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
    }
 
 }
+1;
 
 package File_Transfer;
 
@@ -9156,11 +9278,31 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         my $key="${Net::FullAuto::FA_Core::username}_X_"
                                ."${Net::FullAuto::FA_Core::username}_X_${host}";
                         while (delete $href->{"$key"}) {}
-                        my $mr="__Master_${$}__";
-                        my $cipher=Crypt::CBC->new({ 'key' => 
-                              $Net::FullAuto::FA_Core::passwd[1], 'cipher' =>
+                        my $cipher='';my $mr="__Master_${$}__";
+                        if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+                           if (8<length
+                                 $Net::FullAuto::FA_Core::dcipher->decrypt(
+                                 $passetts->[0])) {
+                              $cipher = new Crypt::CBC(unpack('a8',
+                                 $Net::FullAuto::FA_Core::dcipher->decrypt(
+                                 $passetts->[0])),
+                                 $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+                           } else {
+                               $cipher = new Crypt::CBC(
+                               $Net::FullAuto::FA_Core::dcipher->decrypt(
+                               $passetts->[0]),
+                               $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+                           }
+                        } else {
+                           $cipher = new Crypt::CBC(
+                               $Net::FullAuto::FA_Core::dcipher->decrypt(
+                               $passetts->[0]),
+                               $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
+                        }
+                        #my $cipher=Crypt::CBC->new({ 'key' => 
+                        #      $Net::FullAuto::FA_Core::passwd[1], 'cipher' =>
                               #$Net::FullAuto::FA_Core::passetts->[1], 'cipher' =>
-                              $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'} });
+                        #      $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'} });
                         my $new_encrypted=$cipher->encrypt(
                               $recurse_passwd);
                         $href->{$key}=$new_encrypted;
@@ -9354,7 +9496,8 @@ sub ftm_login
    my $ms_su_id='';my $ms_login_id='';my $smb_type='';
    my $ms_ms_domain='';my $ms_ms_share='';my $ftm_type='';
    my $desthostlabel='';my $p_uname='',my $fpx_passwd='';
-   my $ftm_passwd=$Net::FullAuto::FA_Core::passwd[2]||$Net::FullAuto::FA_Core::passwd[0];
+   #my $ftm_passwd=$Net::FullAuto::FA_Core::passwd[2]||$Net::FullAuto::FA_Core::passwd[0];
+   my $ftm_passwd=$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]);
    #my $ftm_passwd=$Net::FullAuto::FA_Core::passetts->[2]||$Net::FullAuto::FA_Core::passetts->[0];
    my $ftp_pid='';my $fpx_pid='';my $smb=0;
    my @errorstack=();
@@ -19798,7 +19941,7 @@ print "THIRTEEN003\n";
                                     $line ne "$live_command\n" &&
                                     $line ne " -e 's/^/stdout:/' 2>&1\n"
                                     || $fullerror && $line=~/^\n$/s) {
-print "DOIN FULLERROR2222==>$line<==\n"; #if $Net::FullAuto::FA_Core::debug;
+print "DOIN FULLERROR2222==>$line<==\n" if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "DOIN FULLERROR2222==>$line<==\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                                  if ($fullerror && !$errflag) {

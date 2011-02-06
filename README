@@ -11,7 +11,7 @@ Net::FullAuto - Perl Based Secure Distributed Computing Network Process Automati
 
 NOTE TO USERS
 
- This is the initial (9-7-2007) BETA RELEASE of Net::FullAuto. I have attemped
+ This is the most recent BETA RELEASE of Net::FullAuto. I have attemped
  to provide just enough documentation so that users and testers can
  "hopefully" get it up and running for VERY basic operations. Your
  help in this effort is NEEDED and will be GREATLY APPRECIATED. Please
@@ -26,7 +26,7 @@ NOTE TO USERS
  and fixing bugs and making improvements almost daily for the immediate
  future. THANKS - and GOOD LUCK with your Net::FullAuto project!
 
- Brian Kelly, September 6, 2007
+ Brian Kelly, February 7, 2011
 
 --------------------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ BETA Notice
  WARNING:  THIS IS A ***BETA*** RELEASE OF Net::FullAuto.
  Net::FullAuto is powerful network process automation
  software that has been in un-released development for
- more than seven years. For this reason, you may find
+ more than eleven years. For this reason, you may find
  it to be useful for many process automation projects.
  Because it has been worked on for so long, it may appear
  to be stable, and pass a number of non-intensive tests.
