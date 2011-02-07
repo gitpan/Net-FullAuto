@@ -27,6 +27,14 @@
 
 2011-02-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9914 released.
+
+        * Regular Expression fix [$%>#-:] to [:\$%>#-] because
+          the dollar sign was not matching.
+
+
+2011-02-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9913 released.
 
         * Regular Expression fix [$%>#-:] to [:$%>#-] because
