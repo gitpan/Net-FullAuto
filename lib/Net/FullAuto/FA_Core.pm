@@ -142,6 +142,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Crypt::CBC;
    use Crypt::DES;
    use Cwd qw(getcwd);
+   use Digest::MD5 qw(md5);
+   use Digest::SHA qw(sha256_hex);
    use English;
    use Email::Sender::Simple qw(sendmail);
    use Email::Sender::Transport::SMTP qw();
@@ -857,7 +859,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            last if $line=~/logout|221\sGoodbye/sx;
                            if (($line=~/Killed|_funkyPrompt_/s) ||
-                                 ($line=~/[$%>#-:] ?$/s) ||
+                                 ($line=~/[:\$%>#-] ?$/s) ||
                                  ($line=~/sion denied.*[)][.]\s*$/s)) {
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() SHOULD BE LAST CC=$line\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -1303,6 +1305,7 @@ sub pick
 
 sub Menu
 {
+print "FAMENUCALLER=",caller,"\n";
    can_load(modules => { "Term::Menus" => 0 });
    return &Term::Menus::Menu(@_);
 }
@@ -2132,7 +2135,8 @@ print "OUTPUT=$outp\n";
             }
          } else {
             $minstring=unpack('x8 a*',$output->[5]);
-         }
+         } 
+         my $planstring=$output->[6];
          my $cronstring=$minstring.' '.$hourstring.' '.$daystring.' '.
                $monthstring.' '.$weekdaysstring;
          print "CRONSTRING=$cronstring\n";
@@ -2146,11 +2150,56 @@ print "OUTPUT=$outp\n";
          }
          my ($stdout,$stderr)=('','');
          ($stdout,$stderr)=cmd("${crontabpath}crontab -l");
+#print "WAHT IS CRONTABSTDOUT=$stdout\n";
+         unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs') {
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs');
+         }
+         my $dbenv = BerkeleyDB::Env->new(
+            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs',
+            -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+         ) or &handle_error(
+           "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+         my $bdb = BerkeleyDB::Btree->new(
+            -Filename => "${Net::FullAuto::FA_Core::progname}_jobs.db",
+            -Flags    => DB_CREATE,
+            -Compare  => sub { $_[0] <=> $_[1] },
+            -Env      => $dbenv
+         ) or &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+         
          if ($stderr && -1<index $stderr,'no crontab') {
+            $planstring=~tr/ //s;
+            my $plnn=$planstring;
+            $plnn=~s/^(\d+).*$/$1/;
+            my $dig=sha256_hex("$cronstring /usr/local/bin/fa --login ".
+                               "$username --password --plan $plnn");
             ($stdout,$stderr)=cmd($Net::FullAuto::FA_Core::printfpath.
-               "printf \"$cronstring ".
-               "/usr/bin/date >> date2.txt\012\"".'| crontab -'); 
+               "printf \"# FullAuto Plan $planstring \]|\[ $dig\012".
+               "$cronstring /usr/local/bin/fa --login $username ".
+               "--password --plan $plnn\012\"".'| crontab -'); 
          } elsif ($stdout=~/^\s*[^#].*$/m) {
+            my $line='';
+            foreach my $line (split "\n", $stdout) {
+               if ($line=~/^\s*[#]/) {
+                  next if (-1<index $line,'# DO NOT EDIT T');
+                  next if $line=~/^# \(.* installed on /;
+                  next if (-1<index $line,'# (Cron version');
+                  print "COMMENTED LINE=$line\n";
+                  my @plancom=split ' ',$line;
+                  my $plnum='';my $chksum='';
+print "WHAT IS THIS=$plancom[$#plancom-2]\n";
+                  if ($plancom[$#plancom-1] eq ']|[') {
+                     $chksum=$plancom[$#plancom];
+                     $plnum=$plancom[3];
+                  }
+print "PLAN=$plnum and CHKSUM=$chksum\n";
+               } else {
+                  print "UNCOMMENTED LINE=$line<==\n";
+                  my $tesline=sha256_hex($line);
+                  print "TESTLINE=$tesline<==\n";
+               }
+#print "LINE=$line\n";
+            }
             print "WE GOT CRON CONTENTS=$stdout<==\n";
          }
 print "STDOUTCRONT=$stdout<==\n";
@@ -4005,6 +4054,7 @@ sub attempt_cmd_xtimes
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $cmd_handle=$_[0];
    my $cmd=$_[1];
+print "XXXXXXXXXXXXXXXXXXXXXCMDDDDD=$cmd<==\n";
    my $num_of_attempts=$_[2]||100;
    my $stdout='';my $stderr='';
    my $cfh_ignore='';my $cfh_error='';
@@ -4050,6 +4100,7 @@ sub attempt_cmd_xtimes
          if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       if (!$stdout) {
          ($cfh_ignore,$cfh_error)=&clean_filehandle($cmd_handle);
+         $cfh_error||='Not a GLOB reference' if $cou==1;
          &handle_error($cfh_error,'-1') if $cfh_error;
          select(undef,undef,undef,0.02);
          $cmd_handle->print(
@@ -4059,7 +4110,8 @@ sub attempt_cmd_xtimes
          while (my $line=$cmd_handle->get) {
             chomp($line=~tr/\0-\37\177-\377//d);
             $allins.=$line;
-print $Net::FullAuto::FA_Core::MRLOG "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<==\n"
+print "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<== AND LINE=$line<==\n";
+print $Net::FullAuto::FA_Core::MRLOG "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<== AND LINE=$line<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             if ($allins=~/!!(.*)%%/) {
@@ -4091,13 +4143,18 @@ sub master_transfer_dir
    my $output='';my $stderr='';my $work_dirs={};my $endp=0;my $testd='';
    while (1) {
       if ($^O eq 'cygwin') {
-         $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($localhost,'cmd /c chdir',
-                 $localhost->{'hostlabel'}[0]);
-         my ($drive,$path)=unpack('a1 x1 a*',$curdir);
-         ${$work_dirs}{_pre_mswin}=$curdir.'\\';
-         $path=~s/\\/\//g;
-         ${$work_dirs}{_pre}=$localhost->{_cygdrive}.'/'
-                            .lc($drive).$path.'/';
+         #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($localhost,'cmd /c chdir',
+         #        $localhost->{'hostlabel'}[0]);
+         #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($localhost,'pwd',
+         #        $localhost->{'hostlabel'}[0]);
+         ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
+         &handle_error($stderr,'-1') if $stderr;
+         my $cdr='';
+         ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+            $localhost,"cygpath -w $curdir");
+         &handle_error($stderr,'-1') if $stderr;
+         ${$work_dirs}{_pre}=$curdir.'/' if $curdir ne '/';
+         ${$work_dirs}{_pre_mswin}=$cdr.'\\';
       } else {
          ($curdir,$stderr)=$localhost->cmd('pwd');
          ${$work_dirs}{_pre}=$curdir.'/' if $curdir ne '/';
@@ -4223,14 +4280,16 @@ sub master_transfer_dir
       if (!$stderr || ($stderr=~/^.*cd \/tmp 2[>][&]1$/)) {
          my $cnt=2;
          while ($cnt--) {
-            $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes(
-                    $localhost,'cmd /c chdir',
-                    $localhost->{'hostlabel'}[0]);
-            my ($drive,$path)=unpack('a1 x1 a*',$curdir);
-            my $tdir=$localhost->{_cygdrive}.'/'
-                    .lc($drive).$path.'/';
-            $tdir=~tr/\\/\//;
-            $testd=&test_dir($localhost->{_cmd_handle},$tdir);
+            #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes(
+            #        $localhost,'cmd /c chdir',
+            #        $localhost->{'hostlabel'}[0]);
+            ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
+            &handle_error($stderr,'-1') if $stderr;
+            my $cdr='';
+            ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+               $localhost,"cygpath -w $curdir");
+            &handle_error($stderr,'-1') if $stderr;
+            $testd=&test_dir($localhost->{_cmd_handle},$curdir);
             print $Net::FullAuto::FA_Core::MRLOG
                "\nDDDDDDD &test_dir() of $tdir DDDDDDD OUTPUT ==>$testd<==",
                "\n       at Line ",__LINE__,"\n\n"
@@ -4241,7 +4300,7 @@ sub master_transfer_dir
                if !$Net::FullAuto::FA_Core::cron &&
                   $Net::FullAuto::FA_Core::debug;
             if ($testd eq 'WRITE') {
-               ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$curdir.'\\';
+               ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$cdr.'\\';
                ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=$tdir;
                return $work_dirs;
             } elsif ($testd eq 'READ' || $testd eq 'NOFILE') {
@@ -4295,15 +4354,17 @@ sub master_transfer_dir
       ($cfh_ignore,$cfh_error)=&clean_filehandle($localhost);
       &handle_error($cfh_error,'-1') if $cfh_error;
       if (!$stderr) {
-         $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes(
-            $localhost,'cmd /c chdir',
-            'cmd /c chdir',$localhost->{'hostlabel'}[0]);
-         my ($drive,$path)=unpack('a1 x1 a*',$curdir);
-         $path=~tr/\\/\//;
-         $tdir=$localhost->{_cygdrive}.'/'.lc($drive).$path.'/';
-         $testd=&test_dir($localhost->{_cmd_handle},$tdir);
+         #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes(
+         #   $localhost,'cmd /c chdir',
+         #   'cmd /c chdir',$localhost->{'hostlabel'}[0]);
+         ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
+         &handle_error($stderr,'-1') if $stderr;
+         my $cdr='';
+         ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+            $localhost,"cygpath -w $curdir");
+         $testd=&test_dir($localhost->{_cmd_handle},$curdir);
          if ($testd eq 'WRITE') {
-            ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$curdir.'\\';
+            ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$cdr.'\\';
             ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=$tdir;
             return $work_dirs;
          } else {
@@ -5584,7 +5645,7 @@ sub fa_login
       $unattended=']Unattended[';
       $fullauto=']FullAuto[';
       $cron=']Cron[';
-   } 
+   }
 
    print "\n  Starting $progname . . .\n"
          if (!$Net::FullAuto::FA_Core::cron
@@ -6391,12 +6452,29 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                if $line=~/(?<!Last )login[: ]*$/m ||
                   (-1<index $line,' sync_with_child: ');
             if ($line=~/new password: ?$/is) {
-               $newpw=$line;last;
+               $newpw=$line;
+print $Net::FullAuto::FA_Core::MRLOG "GOING LAST ONE<==\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               last;
             }
             if ($^O eq 'cygwin') {
-               last if $line=~/[$%>#-:] ?$/m &&
-                    unpack('a10',$line) ne 'Last Login'
-            } elsif ($line=~/[$|%|>|#|-|:] ?/m) { last }
+               if ($line=~/[:\$%>#-] ?$/m &&
+                    unpack('a10',$line) ne 'Last Login') {
+print $Net::FullAuto::FA_Core::MRLOG "GOING LAST TWO<==\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                  last;
+               }
+            } elsif ($line=~/[:\$%>#-] ?/m) {
+print $Net::FullAuto::FA_Core::MRLOG "<==\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               last
+            }
+print $Net::FullAuto::FA_Core::MRLOG "BOTTOM OF WHILE<==\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          }
 print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -6808,8 +6886,9 @@ $password=$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]);
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
       my $pref='';
       my $status=$bdb->db_get($plan,$pref);
+      $pref=~s/\$HASH\d*\s*=\s*//s;
       $plan=eval $pref;
-      $plan=$Net::FullAuto::FA_Core::plan->{Plan};
+      $plan=$plan->{Plan};
    }
    return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
 
@@ -7725,10 +7804,15 @@ sub work_dirs
          &handle_error($stderr,'-2','__cleanup__') if $stderr;
          ($output,$stderr)=$cmd_handle->cmd(
             "cd \"".${$work_dirs}{_tmp}."\"");
-         &handle_error($stderr,'-2','__cleanup__') if $stderr;
-         $curdir=&attempt_cmd_xtimes($cmd_handle->{_cmd_handle},
-                 'cmd /c chdir',$cmd_handle->{'hostlabel'}[0]);
-         ${$work_dirs}{_tmp_mswin}=$curdir.'\\';
+         #&handle_error($stderr,'-2','__cleanup__') if $stderr;
+         #$curdir=&attempt_cmd_xtimes($cmd_handle->{_cmd_handle},
+         #        'cmd /c chdir',$cmd_handle->{'hostlabel'}[0]);
+         ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
+         &handle_error($stderr,'-1') if $stderr;
+         my $cdr='';
+         ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+            $localhost,"cygpath -w $curdir");
+         ${$work_dirs}{_tmp_mswin}=$cdr.'\\';
          ($output,$stderr)=$cmd_handle->cmd(
             'cd '."\"$pwd\"");
          &handle_error($stderr,'-2','__cleanup__') if $stderr;
@@ -8488,9 +8572,17 @@ sub select_dir
             } elsif ($test_chr1!~/\W/) {
                if ($hostlabel eq "__Master_${$}__"
                      && $^O eq 'cygwin') {
-                  my $curdir=&attempt_cmd_xtimes($self,
-                             'cmd /c chdir',$hostlabel);
-                  $dir="$curdir\\$dir";
+                  #my $curdir=&attempt_cmd_xtimes($self,
+                  #           'cmd /c chdir',$hostlabel);
+                  my $curdir='';
+                  ($curdir,$stderr)=
+                     &Net::FullAuto::FA_Core::cmd($localhost,'pwd');
+                  &handle_error($stderr,'-1') if $stderr;
+                  my $cdr='';
+                  ($cdr,$stderr)=
+                     &Net::FullAuto::FA_Core::cmd($localhost,
+                     "cygpath -w $curdir");
+                  $dir="$cdr\\$dir";
                } else {
                   $dir="\\\\$host\\$ms_share\\$dir";
                }
@@ -9034,19 +9126,24 @@ sub ftr_cmd
             $work_dirs=&Net::FullAuto::FA_Core::work_dirs($transfer_dir,
                           $hostlabel,$ftr_cmd,$cmd_type,'',$_connect);
             my $curdir='';
-            if ($ftr_cmd->{_uname}!~/[Cc][Yy][Gg]/) {
-               my $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
-                  'pwd',$hostlabel);
-            } else {
-               my $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
-                          'cmd /c chdir',$hostlabel);
-            }
-#print "CURDIRRRRR=$curdir<==\n";
-            my ($drive,$path)=unpack('a1 x1 a*',$curdir);
-            ${$work_dirs}{_pre_mswin}=$curdir.'\\';
-            $path=~tr/\\/\//;
+            #if ($ftr_cmd->{_uname}!~/[Cc][Yy][Gg]/) {
+               #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
+               #   'pwd',$hostlabel);
+               ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($ftr_cmd,'pwd');
+               &handle_error($stderr,'-1') if $stderr;
+               my $cdr='';
+               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                  $ftr_cmd,"cygpath -w $curdir");
+               &handle_error($stderr,'-1') if $stderr;
+               ${$work_dirs}{_pre_mswin}=$cdr.'\\';
+            #} else {
+            #   $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
+            #              'cmd /c chdir',$hostlabel);
+            #   ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($ftr_cmd,'pwd');
+            #    &handle_error($stderr,'-1') if $stderr;
+            #}
             $ftr_cmd->{_cygdrive}||='/';
-            ${$work_dirs}{_pre}=$ftr_cmd->{_cygdrive}.'/'.lc($drive).$path.'/';
+            ${$work_dirs}{_pre}=$curdir;
             ($output,$stderr)=$ftr_cmd->cmd('cd '.${$work_dirs}{_tmp});
             if ($stderr) {
                @FA_Core::tran=();
@@ -9109,15 +9206,17 @@ sub ftr_cmd
          } else {
             my $curdir='';
             if ($ftr_cmd->{_uname} eq 'cygwin') {
-               $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
-                       'cmd /c chdir',$ftr_cmd->{'hostlabel'}[0]);
-               my ($drive,$path)=unpack('a1 x1 a*',$curdir);
+               ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
+               &handle_error($stderr,'-1') if $stderr;
+               #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
+               #        'cmd /c chdir',$ftr_cmd->{'hostlabel'}[0]);
+               my $cdr='';
+               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                  $localhost,"cygpath -w $curdir");
+               &handle_error($stderr,'-1') if $stderr;
                ${$work_dirs}{_pre_mswin}=
-                  ${$work_dirs}{_cwd_mswin}=$curdir.'\\';
-               $path=~s/\\/\//g;
-               ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=
-                                  $ftr_cmd->{_cygdrive}.'/'
-                                  .lc($drive).$path.'/';
+                  ${$work_dirs}{_cwd_mswin}=$cdr.'\\';
+               ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
                ${$work_dirs}{_tmp}=$ftr_cmd->{_work_dirs}->{_tmp};
                 ${$work_dirs}{_tmp_mswin}=
                    $ftr_cmd->{_work_dirs}->{_tmp_mswin};
@@ -13806,8 +13905,13 @@ sub get_drive
       my $sav_curdir='';
       if ($cmd_handle) {
          bless $cmd_handle, 'File_Transfer';
-         $sav_curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
-                     'cmd /c chdir',$hostlabel);
+         ($sav_curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($cmd_handle,'pwd');
+         &handle_error($stderr,'-1') if $stderr;
+         ($sav_curdir,$stderr)=&Net::FullAuto::FA_Core::cmd(
+            $cmd_handle,"cygpath -w $sav_curdir");
+         &handle_error($stderr,'-1') if $stderr;
+         #$sav_curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
+         #            'cmd /c chdir',$hostlabel);
          ($output,$stderr)=$cmd_handle->cwd($cmd_handle->{_cygdrive});
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
          ($drvs,$stderr)=$cmd_handle->cmd('ls');
@@ -17655,15 +17759,17 @@ print $Net::FullAuto::FA_Core::MRLOG
                        $_connect);
             my $curdir='';
             if ($uname eq 'cygwin') {
-               $curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
-                       'cmd /c chdir',$hostlabel);
-               my ($drive,$path)=unpack('a1 x1 a*',$curdir);
+               #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
+               #        'cmd /c chdir',$hostlabel);
+               ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                  $cmd_handle,'pwd');
+               &handle_error($stderr,'-1') if $stderr;
+               my $cdr='';
+               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                  $cmd_handle,"cygpath -w $curdir");
                ${$work_dirs}{_pre_mswin}=
-                  ${$work_dirs}{_cwd_mswin}=$curdir.'\\';
-               $path=~s/\\/\//g;
-               ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=
-                                  $cygdrive.'/'
-                                  .lc($drive).$path.'/';
+                  ${$work_dirs}{_cwd_mswin}=$cdr.'\\';
+               ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
             } else {
                ($curdir,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_handle,

@@ -25,6 +25,18 @@
 ################################################################
 
 
+2011-02-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9915 released.
+
+        * Looks like "Finally" fixed Cygwin reliability - use
+          built-in bash pwd rather than cmd /c chdir for
+          determining current directory during login.
+
+        * Much more work on "Scheduled Jobs" - can actually
+          populate running cron job.
+
+
 2011-02-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9914 released.

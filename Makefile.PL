@@ -20,7 +20,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9914';
+version         '0.9915';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -1159,6 +1159,8 @@ requires        'Task::Weaken'              => 0;
 requires        'ExtUtils::Depends'         => 0;
 requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
+requires        'Digest::SHA'               => 0;
+requires        'Digest::MD5'               => 0;
 requires        'Term::Menus'               => 1.68;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
