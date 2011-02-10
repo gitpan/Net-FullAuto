@@ -25,6 +25,15 @@
 ################################################################
 
 
+2011-02-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9916 released.
+
+        * More work on "Scheduled Jobs".
+
+        * Fixed bugs with pwd test.
+
+
 2011-02-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9915 released.

@@ -470,7 +470,7 @@ our @DeploySMB_Proxy=('');our @DeployRCM_Proxy=('');
 our @DeployFTM_Proxy=('');our $master_transfer_dir='';
 our %perms=();our @ApacheNode=();our $test=0;our %days=();
 our $prod=0;our $force_pause_for_exceed=0;our $tosspass=0;
-our $timeout=30;our $cltimeout='X';our $slave=0;
+our $timeout=30;our $cltimeout='X';our $slave=0;our $dcipher='';
 our %email_defaults=();our $increment=0;our %tosspass=();
 our $email_defaults='';our %semaphores=();our $batch='';
 our $unattended='';our $fullauto='';our $service='';
@@ -4054,7 +4054,6 @@ sub attempt_cmd_xtimes
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $cmd_handle=$_[0];
    my $cmd=$_[1];
-print "XXXXXXXXXXXXXXXXXXXXXCMDDDDD=$cmd<==\n";
    my $num_of_attempts=$_[2]||100;
    my $stdout='';my $stderr='';
    my $cfh_ignore='';my $cfh_error='';
@@ -4110,7 +4109,7 @@ print "XXXXXXXXXXXXXXXXXXXXXCMDDDDD=$cmd<==\n";
          while (my $line=$cmd_handle->get) {
             chomp($line=~tr/\0-\37\177-\377//d);
             $allins.=$line;
-print "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<== AND LINE=$line<==\n";
+#print "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<== AND LINE=$line<==\n";
 print $Net::FullAuto::FA_Core::MRLOG "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<== AND LINE=$line<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -4607,12 +4606,24 @@ sub getpasswd
       &handle_error($herr.($!));
    }
    my $key='';
-   if ($local_host_flag && $username eq $login_id) {
-      $key="${username}_X_${passlabel}_X_${$}_X_$invoked[0]";
-   } elsif ($cmd_type) {
-      $key="${username}_X_${login_id}_X_${passlabel}_X_${cmd_type}";
+   if ($Net::FullAuto::FA_Core::plan) {
+      my $pl=$Net::FullAuto::FA_Core::plan->{Number};
+print "WHAT IS PL=$pl<==\n";<STDIN>;
+      if ($local_host_flag && $username eq $login_id) {
+         $key="${username}_X_${passlabel}_X_${$}_X_$invoked[0]";
+      } elsif ($cmd_type) {
+         $key="${username}_X_${login_id}_X_${passlabel}_X_${cmd_type}";
+      } else {
+         $key="${username}_X_${login_id}_X_${passlabel}";
+      }
    } else {
-      $key="${username}_X_${login_id}_X_${passlabel}";
+      if ($local_host_flag && $username eq $login_id) {
+         $key="${username}_X_${passlabel}_X_${$}_X_$invoked[0]";
+      } elsif ($cmd_type) {
+         $key="${username}_X_${login_id}_X_${passlabel}_X_${cmd_type}";
+      } else {
+         $key="${username}_X_${login_id}_X_${passlabel}";
+      }
    }
    if ($Net::FullAuto::FA_Core::scrub) {
       if ($passlabel eq "__Master_${$}__") {
@@ -6040,9 +6051,10 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             -Env      => $dbenv
          ) or &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-         my $href={};my $dcipher='';
+         my $href={};
          if ($save_main_pass || $password_from ne 'user_input' ||
-               -1<index $login_Mast_error,'Not a GLOB reference') {
+               ($login_Mast_error &&
+                -1<index $login_Mast_error,'Not a GLOB reference')) {
             my $status=$bdb->db_get('localhost',$href);
             $href=~s/\$HASH\d*\s*=\s*//s;
 #print "HREF=$href\n";
@@ -6204,7 +6216,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                undef $passwd[0];
             }
          #} elsif (!$passwd[0] && !$Net::FullAuto::FA_Core::cron) {
-         } elsif ((!defined $Net::FullAuto::FA_Core::dcipher ||
+         } elsif ((!$Net::FullAuto::FA_Core::dcipher ||
                !$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]))
                && !$Net::FullAuto::FA_Core::cron) {
             my $status=$bdb->db_get('localhost',$href);
@@ -6844,7 +6856,6 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                $su_scrub=&scrub_passwd_file($hostlabel,$su_id);
                next;
             } elsif (defined $Net::FullAuto::FA_Core::dcipher) {
-$password=$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]);
                &passwd_db_update($hostlabel,$login_id,$password,$cmd_type);
             }
          }
@@ -9596,7 +9607,7 @@ sub ftm_login
    my $ms_ms_domain='';my $ms_ms_share='';my $ftm_type='';
    my $desthostlabel='';my $p_uname='',my $fpx_passwd='';
    #my $ftm_passwd=$Net::FullAuto::FA_Core::passwd[2]||$Net::FullAuto::FA_Core::passwd[0];
-   my $ftm_passwd=$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]);
+   my $ftm_passwd=$Net::FullAuto::FA_Core::dcipher->decrypt($Net::FullAuto::FA_Core::passetts->[0]);
    #my $ftm_passwd=$Net::FullAuto::FA_Core::passetts->[2]||$Net::FullAuto::FA_Core::passetts->[0];
    my $ftp_pid='';my $fpx_pid='';my $smb=0;
    my @errorstack=();
@@ -13905,10 +13916,12 @@ sub get_drive
       my $sav_curdir='';
       if ($cmd_handle) {
          bless $cmd_handle, 'File_Transfer';
-         ($sav_curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($cmd_handle,'pwd');
+         #($sav_curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($cmd_handle,'pwd');
+         ($sav_curdir,$stderr)=$cmd_handle->cmd('pwd');
          &handle_error($stderr,'-1') if $stderr;
-         ($sav_curdir,$stderr)=&Net::FullAuto::FA_Core::cmd(
-            $cmd_handle,"cygpath -w $sav_curdir");
+         #($sav_curdir,$stderr)=&Net::FullAuto::FA_Core::cmd(
+         #   $cmd_handle,"cygpath -w $sav_curdir");
+         ($sav_curdir,$stderr)=$cmd_handle->cmd("cygpath -w $sav_curdir");
          &handle_error($stderr,'-1') if $stderr;
          #$sav_curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
          #            'cmd /c chdir',$hostlabel);
@@ -16050,6 +16063,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
       if (unpack('a10',$@) eq 'The System') {
          return '','','','',$@;
       } else {
+print "IS THIS REALLY WHERE WE ARE DYINGEEEEEEEEEEEE<==\n";<STDIN>;
          my $die="The System $hostlabel Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
@@ -16756,6 +16770,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
       if (unpack('a10',$@) eq 'The System') {
          return '',$@;
       } else {
+print "IS THIS REALLY WHERE WE ARE DYINGJJJJJJJJJ<==\n";<STDIN>;
          my $die="The System $hostname Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
@@ -17761,12 +17776,16 @@ print $Net::FullAuto::FA_Core::MRLOG
             if ($uname eq 'cygwin') {
                #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
                #        'cmd /c chdir',$hostlabel);
-               ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                  $cmd_handle,'pwd');
-               &handle_error($stderr,'-1') if $stderr;
+               ($curdir,$stderr)=Rem_Command::cmd(
+                  { _cmd_handle=>$cmd_handle,
+                    _hostlabel=>[ $hostlabel,'' ]
+                  },'pwd');
+               &handle_error("$stderr at Line ".__LINE__,'-1') if $stderr;
                my $cdr='';
-               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                  $cmd_handle,"cygpath -w $curdir");
+               ($output,$stderr)=Rem_Command::cmd(
+                  { _cmd_handle=>$cmd_handle,
+                    _hostlabel=>[ $hostlabel,'' ]
+                  },"cygpath -w \"$curdir\"");
                ${$work_dirs}{_pre_mswin}=
                   ${$work_dirs}{_cwd_mswin}=$cdr.'\\';
                ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
@@ -17895,6 +17914,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETR
          if (-1<index $cmd_errmsg,'Could not resolve hostname') {
             ($die=$cmd_errmsg)=~s/: hostname/:\n\n       hostname/s;
          } else {
+print "IS THIS REALLY WHERE WE ARE DYINGMMMMMMMMMM and CMDERR=$cmd_errmsg<==\n";<STDIN>;
             $die="The System $hostname Returned\n              the "
                 ."Following Unrecoverable Error Condition\,\n"
                 ."              Rejecting the $c_t Login Attempt "

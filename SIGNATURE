@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 cacb812226b09bea1e90d098b1904a22579a26ac ChangeLog
+SHA1 54209eb3670bed755c85de4cf7765f4d47ffa2fe ChangeLog
 SHA1 a74125560a260a18a646ef0b3702e1b77a45b931 LICENSE
 SHA1 f33a524126bd793e01b2a4a92db6b833b0226a8f MANIFEST
-SHA1 db7545bbcfc500f4c2dee42bc5e3f9f18247fe05 META.yml
-SHA1 bf9d34153d0e334a8c82307b76e8e98231b6903e Makefile.PL
+SHA1 9c321cc5e878b982a8fa96eb18a6fe4147d3ff03 META.yml
+SHA1 7c4e6f94b65c7fbb8b8ed1b26102cfd2fc7879a4 Makefile.PL
 SHA1 e489dfcbb5205900fb16909d95b4edd259ca9cbb README
 SHA1 223abff27ef16a5a00732b0406653703841950b7 bin/fullauto.pl
 SHA1 20c73697e1713638140c719d8eaa19a275ed43a5 inc/Module/AutoInstall.pm
@@ -41,13 +41,13 @@ SHA1 fbcb2e8c3f1b16784655c9a38cf49ffac2e3f944 lib/Net/FullAuto/Distro/fa_conf.pm
 SHA1 9583115bebb33026a03d8ca11711b8950af512f2 lib/Net/FullAuto/Distro/fa_host.pm
 SHA1 1d35d93af5c81e855afa9053801fdf1efb0ea4a0 lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 416505b32aab252cb14f79b3c64d7e6bed8d8be2 lib/Net/FullAuto/Distro/fa_menu.pm
-SHA1 0044acd0adec20a35ff3315c2a45c067d40dc863 lib/Net/FullAuto/FA_Core.pm
+SHA1 ae4b36a3f3e1437acf7f58e87284be8ac998ca55 lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.9 (Cygwin)
 
-iEYEARECAAYFAk1R9zYACgkQdsVAdUjO9Ilb9gCgiXj09FOkkpLgTz8s3TfFmLkT
-X+0An2SyCOBb0RY97LjYcD7CwnJGfk2z
-=gYsV
+iEYEARECAAYFAk1TTukACgkQdsVAdUjO9In3IACfSq4Ex6qxvIOUrI6Pp2gAN3Qm
+BRoAnRWjB3DCBPKfurRdO4S4fTyHmGp/
+=U4bB
 -----END PGP SIGNATURE-----
