@@ -34,10 +34,11 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.9917';
+our $VERSION='0.9918';
 
 
 use 5.005;
+
 
 use strict;
 use warnings;
@@ -64,6 +65,41 @@ BEGIN {
    print "STARTING FullAuto on ". localtime() . "\n"
       unless $quiet;
 
+   our $toppath='';our $cpu='';
+   $main::planarg||='';$main::cronarg||='';
+   if ($main::planarg || $main::cronarg) {
+      if (-e '/usr/bin/top') {
+         $toppath='/usr/bin/';
+      } elsif (-e '/bin/top') {
+         $toppath='/bin/';
+      } elsif (-e '/usr/local/bin/top') {
+         $toppath='/usr/local/bin/';
+      }
+      if ($toppath) {
+         my $top_timeout=60;
+         eval {
+            $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+            alarm($top_timeout);
+            &Net::FullAuto::FA_Core::acquire_semaphore(1111,
+               "Top CPU check Timed Out at Line: ".__LINE__);
+            open(OH,"${toppath}top -b -n2 -d.1|") ||
+               die "Cannot run ${toppath}top -b -n2 -d.1`: $!\n";
+            while (my $line=<OH>) {
+               chomp $line;
+               $cpu=$line if -1<index $line,"idle";
+            }
+            close OH;
+            &Net::FullAuto::FA_Core::release_semaphore(1111);
+            alarm(0);
+         };
+         if ($@ eq "alarm\n") {
+            print "\n\n";
+            &handle_error(
+               "Time for Top CPU check has Expired.",
+               '__cleanup__');
+         }
+      }
+   } 
 }
 
 require Exporter;

@@ -88,20 +88,20 @@ our $curcen=unpack('a2',$curyear);
 our @invoked=($^T, $tm, $mdy, $hms, $hr, $mn, $sc, $mdyyyy);
 
 BEGIN {
-   if ($^O eq 'cygwin') {
-      require Win32::Semaphore;
-   } else {
-      if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
-         print "\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
-               "\n                      is required to use FullAuto".
-               "\n                      on Windows - goto www.cygwin.com.".
-               "\n\n       \(Be sure to install OpenSSH and the sshd ".
-               "service\).\n\n";
-         exit;
-      }
-      require IPC::Semaphore;
-      require IPC::SysV;import IPC::SysV qw(IPC_CREAT SETVAL);
+
+   if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+      print "\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
+            "\n                      is required to use FullAuto".
+            "\n                      on Windows - goto www.cygwin.com.".
+            "\n\n       \(Be sure to install OpenSSH and the sshd ".
+            "service\).\n\n";
+      exit;
    }
+
+   use if ($^O eq 'cygwin'), 'Win32::Semaphore';
+   use IPC::Semaphore;
+   use IPC::SysV qw(IPC_CREAT SEM_UNDO S_IRWXU);
+
 }
 
 use warnings;
@@ -147,6 +147,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use English;
    use Email::Sender::Simple qw(sendmail);
    use Email::Sender::Transport::SMTP qw();
+   use Errno qw(EAGAIN EINTR EWOULDBLOCK);
    use File::stat;
    use File::Path;
    use MIME::Entity;
@@ -478,7 +479,6 @@ our %base_shortcut_info=();our @dhostlabels=();our %monthconv=();
 our %hourconv=();our @weekdays=();our %weekdaysconv=();
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
-our $tieperms=0666;
 our $specialperms='none';
 {
    my $ex=$0;
@@ -682,21 +682,24 @@ sub cleanup {
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#my $logreset=1;
-#if ($Net::FullAuto::FA_Core::log) { $logreset=0 }
-#else { $Net::FullAuto::FA_Core::log=1 }
 
-   if ($^O eq 'cygwin') {
-      if (keys %semaphores) {
-         foreach my $ipc_key (keys %semaphores) {
-            $semaphores{$ipc_key}->release(1);
-            delete $semaphores{$ipc_key};
+   if (keys %semaphores) {
+      foreach my $ipc_key (keys %semaphores) {
+         next if $ipc_key=~/^\s*$/;
+         if (-1<index $semaphores{$ipc_key},'IPC::') {
+            my $val=$semaphores{$ipc_key}->getval(0)||0;
+            if (1<$val) {
+               $semaphores{$ipc_key}->op(0,-1,&SEM_UNDO);
+            } else {
+               $semaphores{$ipc_key}->remove;
+            }
+         } else {
+            $semaphores{$ipc_key}->wait(0);
          }
       }
-   } else {
-      no strict 'subs';
-      semctl(34, 0, SETVAL, -1);
-   } my $tm='';my $ob='';my %cleansync=();
+   }
+
+   my $tm='';my $ob='';my %cleansync=();
    my $new_cmd='';my $cmd='';my $clean_master='';
    my @cmd=();my %did_tran=();
    my $kill_arg=($^O eq 'cygwin')?'f':9;
@@ -1186,6 +1189,7 @@ $SIG{ INT } = sub{
                        if $Net::FullAuto::FA_Core::log &&
                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
+                    &release_semaphore(6543);
                     $cleanup=1;&cleanup('','INT') };
 our $alarm_sounded=0;
 $SIG{ ALRM } = sub{ open(AL,">>ALRM.txt");
@@ -2297,68 +2301,122 @@ sub acquire_semaphore
    my @topcaller=caller;
    print "acquire_semaphore() CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
-   print $Net::FullAuto::FA_Core::MRLOG "take_semaphore() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#$Net::FullAuto::FA_Core::log=0 if $logreset;
+   print $Net::FullAuto::FA_Core::MRLOG "acquire_semaphore() CALLER=",
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $sem='';
    my $IPC_KEY=(defined $_[0] && $_[0])?$_[0]:'1234';
    my $process_description=$_[1]||'';
-   my $semaphore_timeout=$_[2]||180;
-   my $opstring='';
-   my $opstring1='';
-   my $opstring2='';
-   my $semnum=0;
-   my $semop=0;
-   my $semflag=0;
-   if ($^O eq 'cygwin') {
+   my $semaphorecount=$_[2];
+   my $semaphore_count;
+   $semaphore_count=(defined $semaphorecount && 0<$semaphorecount) ? 
+                    $semaphorecount : 1;
+   &handle_error(("IPC Semaphore FATAL ERROR:\n\n"
+      ."    semaphore count argument must greater than zero\n\n"
+      ."    Called by " . join ' ', @topcaller),'__cleanup__')
+      if $semaphore_count<1;
+   my $semaphore_timeout=$_[3]||180;
+   if (0) {
+   #if ($^O eq 'cygwin') {
       # try to open a semaphore
       my $sem=Win32::Semaphore->open($IPC_KEY);
       if (defined $sem && $sem) {
          # wait for semaphore to be zero
-         if ($process_description
-               && ((!$Net::FullAuto::FA_Core::cron
-               || $Net::FullAuto::FA_Core::debug)
-               && !$Net::FullAuto::FA_Core::quiet)) {
-            print "\n\n  Status:  Waiting for lock release. Another FullAuto",
+         my $previous='';
+         if ($semaphore_count<2) {
+            if ($process_description
+                  && ((!$Net::FullAuto::FA_Core::cron
+                  || $Net::FullAuto::FA_Core::debug)
+                  && !$Net::FullAuto::FA_Core::quiet)) {
+               print
+                  "\n\n  Status:  Waiting for lock release. Another FullAuto",
                   "\n           process has a lock on ",$process_description,
                   "\n           . . .\n\n";
-         }
-         eval {
-            $SIG{ALRM} = sub { die "alarm\n" }; # \n required
-            alarm($timeout-1);
-            my $stim=$semaphore_timeout * 1000;
-            $sem->wait($stim);
-            sleep 2;
-            alarm(0);
-         };
-         if ($@) {
-            &handle_error(("Win32 Semaphore Timed Out:\n\n"
-               ."    Called by " . join ' ', @topcaller),'__cleanup__');
+            }
+            eval {
+               $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+               alarm($timeout-1);
+               my $stim=$semaphore_timeout * 1000;
+               $sem->wait($stim);
+               sleep 2;
+               alarm(0);
+            };
+            if ($@) {
+               &handle_error(("Win32 Semaphore Timed Out:\n\n"
+                  ."    Called by " . join ' ', @topcaller),'__cleanup__');
+            }
+         } elsif (!$sem->release(1,$previous)) {
+            &handle_error(("FATAL ERROR: Maximum Number of FullAuto Processes"
+                  ." Exists:\n\n"
+                  ."          Maximum Number => $semaphore_count\n\n"
+                  ."    Called by " . join ' ', @topcaller),'__cleanup__');
          }
       }
 
       # create a semaphore
+      --$semaphore_count if 1<$semaphore_count;
       $Net::FullAuto::FA_Core::semaphores{$IPC_KEY}=
-         Win32::Semaphore->new(0,10,$IPC_KEY);
-
-   } elsif (0) {
+         Win32::Semaphore->new(0,$semaphore_count,$IPC_KEY)
+         || &handle_error(("Could not create Win32 Semaphore: $!\n\n"
+                 ."    Called by " . join ' ', @topcaller),'__cleanup__');
+   } else {
       # create a semaphore
-      $sem = semget($IPC_KEY, 10, $Net::FullAuto::FA_Core::tieperms | IPC_CREAT ) || die "$!";
-
-      # 'take' semaphore
-      # wait for semaphore to be zero
-      $opstring1 = pack("sss", $semnum, $semop, $semflag);
-
-      # Increment the semaphore count
-      $semop = -1;
-      $opstring2 = pack("sss", $semnum, $semop,  $semflag);
-      $opstring = $opstring1 . $opstring2;
-
-      semop($sem,$opstring) || die "$!";
-
+      $sem = IPC::Semaphore->new($IPC_KEY,$semaphore_count,&S_IRWXU);
+      if (defined $sem && $sem) {
+         if ($semaphore_count<2) {
+            if ($process_description
+                  && ((!$Net::FullAuto::FA_Core::cron
+                  || $Net::FullAuto::FA_Core::debug)
+                  && !$Net::FullAuto::FA_Core::quiet)) {
+                print
+                  "\n\n  Status:  Waiting for lock release. Another FullAuto",
+                  "\n           process has a lock on ",$process_description,
+                  "\n           . . .\n\n";
+            }
+            eval {
+               $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+               alarm($timeout-1);
+               # Decrement the semaphore count by 1
+               my $success=
+                  $sem->op(0,-1,&SEM_UNDO);
+                  # blocks if semaphore is zero
+               my $result = int $!; # capture the value of errno
+               $success||=0;$result||=0;
+               if (!$success && $result == &EINTR) {
+                  die $result;
+               }
+               sleep 2;
+               alarm(0);
+            };
+            if ($@) {
+               &handle_error(("IPC Semaphore Timed Out:\n\n"
+                  ."    Called by " . join ' ', @topcaller),'__cleanup__');
+            }
+         } else {
+            my $value=$sem->getval(0); 
+            if ($semaphore_count<=$value) {
+               # semaphore was zero, no slots available
+               &handle_error(
+                  ("FATAL ERROR: Maximum Number of FullAuto Processes"
+                  ." Exists:\n\n"
+                  ."          Maximum Number => $semaphore_count: $!\n\n"
+                  ."    Called by " . join ' ', @topcaller),'__cleanup__');
+            } else {
+               $sem->op(0,1,&SEM_UNDO);
+               $Net::FullAuto::FA_Core::semaphores{$IPC_KEY}=$sem;
+            }
+         }
+      } else {
+         # create a semaphore
+         $sem=IPC::Semaphore->new(
+            $IPC_KEY,$semaphore_count,&S_IRWXU|&IPC_CREAT)
+            || &handle_error(("Could not create IPC Semaphore\n\n"
+            ."    Called by " . join ' ', @topcaller),'__cleanup__');
+         $sem->op(0,1,&SEM_UNDO) if 1<$semaphore_count;
+         $Net::FullAuto::FA_Core::semaphores{$IPC_KEY}=$sem;
+      }
    }
-#$Net::FullAuto::FA_Core::log=0 if $logreset;
- return $sem
+   return $sem
 
 }
 
@@ -2397,35 +2455,38 @@ sub test_semaphore
 sub release_semaphore
 {
 
-#my $logreset=1;
-#if ($Net::FullAuto::FA_Core::log) { $logreset=0 }
-#else { $Net::FullAuto::FA_Core::log=1 }
    my @topcaller=caller;
    print "release_semaphore() CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
-   print $Net::FullAuto::FA_Core::MRLOG "give_semaphore() CALLER=",
+   print $Net::FullAuto::FA_Core::MRLOG "release_semaphore() CALLER=",
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#$Net::FullAuto::FA_Core::log=0 if $logreset;
-   my $semnum=$_[0]||0;
-   my $sem=$_[1];
-   my $semflag=$_[2]||0;
-   my $semop=0;
-   if ($^O eq 'cygwin' && exists $Net::FullAuto::FA_Core::semaphores{$semnum}) {
+   my $IPC_KEY=$_[0]||0;
+   my $semaphore_timeout=$_[1]||180;
+   if (exists $Net::FullAuto::FA_Core::semaphores{$IPC_KEY}) {
+      if (0) {
+      #if ($^O eq 'cygwin') {
 
-      # Decrement the semaphore count
+         # Increment the semaphore count by 1
+         # Destroy the semaphore
 
-      $Net::FullAuto::FA_Core::semaphores{$semnum}->release(1);
-      delete $Net::FullAuto::FA_Core::semaphores{$semnum};
+         my $previous='';
+         $Net::FullAuto::FA_Core::semaphores{$IPC_KEY}->release(1,$previous);
+         delete $Net::FullAuto::FA_Core::semaphores{$IPC_KEY};
 
-   } elsif (0) {
+         # once past this point, any process waiting can proceed
 
-      # Decrement the semaphore count
-      $semop = -1;
-      my $opstring = pack("sss", $semnum, $semop, $semflag);
+      } else {
 
-      semop($sem,$opstring) || die "$!";
+         # Increment the semaphore count by 1
 
+         $Net::FullAuto::FA_Core::semaphores{$IPC_KEY}->op(0,1,&SEM_UNDO);
+         $Net::FullAuto::FA_Core::semaphores{$IPC_KEY}->remove;
+         delete $Net::FullAuto::FA_Core::semaphores{$IPC_KEY};
+
+         # once past this point, any process waiting can proceed
+
+      }
    }
 }
 
@@ -2567,13 +2628,15 @@ sub get_master_info
           &handle_error(
           "Couldn't Resolve Local Hostname $Local_HostName : ");
       my $gip=sprintf "%vd", $addr;
+print "WHAT IS GIP=$gip<==\n";
       $same_host_as_Master{$gip}='-';
       $Local_IP_Address->{$gip}='-';
       $Local_FullHostName=gethostbyaddr($addr,AF_INET) ||
          handle_error(
          "Couldn't Re-Resolve Local Hostname $Local_HostName : ");
    } else {
-      my $route=cmd('cmd /c route print',3);
+      #my $route=cmd('cmd /c route print',3);
+      my $route=cmd('route print',3);
       my $getip=0;
       foreach my $line (split /^/, $route) {
          if (!$getip) {
@@ -2583,6 +2646,7 @@ sub get_master_info
          } else {
             my $gip=(split ' ', $line)[3];
             next if !$gip;
+            next if -1==index $gip,'.';
             $Local_IP_Address->{$gip}='-'; 
             $same_host_as_Master{$gip}='-';
             next if $gip=~/\d+\.0\.0\.1/;
@@ -2618,7 +2682,8 @@ sub check_Hosts
       } else { next }
       if ($chk_hostname || $chk_ip) {
          my $hash="\'Label\'=>\'__Master_${$}__\'\,";
-         $same_host_as_Master{"${$host}{'Label'}"}='-';
+# --CONTINUE-- print "WHAT IS THISHOST=${$host}{'Label'}\n";
+         $same_host_as_Master{${$host}{'Label'}}='-';
          foreach my $key (keys %{$host}) {
             if ($key eq 'Label' || $key eq 'SMB_Proxy'
                   || $key eq 'RCM_Proxy'
@@ -3519,6 +3584,7 @@ print $Net::FullAuto::FA_Core::MRLOG "KEY FROM HOST HASH=$key and USE=$use\n"
       if (!$use || (!$defined_use && $ip && !$hostname)) {
          if ($key eq 'IP') {
             $ip=$Hosts{$hostlabel}{$key};
+# --CONTINUE-- print "WAHT IS IP FOR SAME=$ip\n";
             if (exists $same_host_as_Master{$ip} || $ping) {
                if (exists $same_host_as_Master{$ip}
                      || &ping($ip,'__return__')) {
@@ -3930,6 +3996,8 @@ my $onemore=0;
 #my $logreset=1;
 #if ($Net::FullAuto::FA_Core::log) { $logreset=0 }
 #else { $Net::FullAuto::FA_Core::log=1 }
+   &acquire_semaphore(7755,
+      "clean_filehandle() at Line: ".__LINE__,1);
    my @topcaller=caller;
    print "\nINFO: main::clean_filehandle() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
@@ -3952,8 +4020,10 @@ my $onemore=0;
          if (($@ && -1==index $filehandle,'GLOB') ||
                !defined fileno $filehandle) {
             if (wantarray) {
+               &release_semaphore(7755);
                return '','Invalid filehandle';
             } else {
+               &release_semaphore(7755);
                &Net::FullAuto::FA_Core::handle_error($@.
                   "\n       from &main::clean_filehandle(): Line ".__LINE__.
                   "\n       Reminder: Return output to list (\$stdout,\$stderr)".
@@ -3964,6 +4034,7 @@ my $onemore=0;
       } else {
          if (wantarray) {
             if ($cftimeout) {
+               &release_semaphore(7755);
                return '',"Command did not complete before timeout".
                          "\n       => $timeout seconds. This is common if".
                          " the\n       command takes more than $timeout".
@@ -3976,9 +4047,11 @@ my $onemore=0;
                          "\n       that appears before the timeout of".
                          "\n       $timeout seconds expires.";
             } else {
+               &release_semaphore(7755);
                return '','Invalid filehandle';
             }
          } else {
+            &release_semaphore(7755);
             &Net::FullAuto::FA_Core::handle_error(
                "$filehandle is NOT a valid filehandle".
                "\n       from &main::clean_filehandle(): Line ".__LINE__.
@@ -3999,8 +4072,12 @@ my $onemore=0;
       if ($loop==100) {
          my $die="100 attempts without indication that filehandle is clean";
          if (wantarray) {
+            &release_semaphore(7755);
             return '',$die;
-         } else { &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__') }
+         } else {
+            &release_semaphore(7755);
+            &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
+         }
       }
       my $wait=$sec.'.'.$ten.$hun;
       if ($wait!=3.00) {
@@ -4018,20 +4095,29 @@ my $onemore=0;
          my $all_lines='';my $loop2=0;
          while (my $line=$filehandle->get(Timeout=>30)) {
 #print "CLEAN_LINE=$line and ${$Net::FullAuto::FA_Core::uhray}[0]_-<==\n";
+   print $Net::FullAuto::FA_Core::MRLOG "\nclean_filehandle() (((((((CLEAN_LINE))))))):",
+      "\n       CLEAN_LINE=$line AND LOOKINGFOR=${$Net::FullAuto::FA_Core::uhray}[0]_-<==\n\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             chomp($line=~tr/\0-\11\13-\37\177-\377//d);
             $all_lines.=$line;
             if ($all_lines=~/${$Net::FullAuto::FA_Core::uhray}[0]_-.+$/s) {
                last;
             }
-            if ($all_lines=~/(Connection.*closed|filehandle.*isn)/s) {
+            if ($all_lines=~/(Conn.*reset|Conn.*closed|filehandle.*isn)/s) {
                $closederror=$1;
                last;
             }
             if ($loop2==100) {
-               my $die="100 attempts without indication that filehandle is clean";
+               my $die="100 attempts without indication ".
+                       "that filehandle is clean";
                if (wantarray) {
+                  &release_semaphore(7755);
                   return '',$die;
-               } else { &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__') }
+               } else {
+                  &release_semaphore(7755);
+                  &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__')
+               }
             }
             $wait=$sec.'.'.$ten.$hun;
             if ($wait!=3.00) {
@@ -4050,8 +4136,10 @@ my $onemore=0;
       if ($@) {
          if (!$onemore) {
             if (wantarray) {
+               &release_semaphore(7755);
                return '',$@;
             } else {
+               &release_semaphore(7755);
                &Net::FullAuto::FA_Core::handle_error($@.
                   "\n       from &main::clean_filehandle(): Line ".__LINE__.
                   "\n       Reminder: Return output to list (\$stdout,\$stderr)".
@@ -4063,15 +4151,17 @@ my $onemore=0;
          }
       } elsif ($closederror) {
          if (wantarray) {
+            &release_semaphore(7755);
             return '',$closederror;
          } else {
+            &release_semaphore(7755);
             &Net::FullAuto::FA_Core::handle_error($closederror.
                "\n       from &main::clean_filehandle(): Line ".__LINE__.
                "\n       Reminder: Return output to list (\$stdout,\$stderr)".
                "\n       if you don't want &clean_filehandle() to die",
                '__cleanup__');
          }
-      } else { return '','' }
+      } else { &release_semaphore(7755);return '','' }
    }
 } ## END of &clean_filehandle
 
@@ -4183,9 +4273,17 @@ sub master_transfer_dir
          ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
          &handle_error($stderr,'-1') if $stderr;
          my $cdr='';
-         ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-            $localhost,"cygpath -w $curdir");
-         &handle_error($stderr,'-1') if $stderr;
+         if (-1<index $curdir,$localhost->{_cygdrive}) {
+            my $l_cd=(length $localhost->{_cygdrive})+1;
+            my $cdr=unpack("x$l_cd a*",$curdir);
+            substr($cdr,1,0)=':';
+            $cdr=ucfirst($cdr);
+            $cdr=~tr/\//\\\\/;
+         } else {
+            ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+               $localhost,"cygpath -w $curdir");
+            &handle_error($stderr,'-1') if $stderr;
+         }
          ${$work_dirs}{_pre}=$curdir.'/' if $curdir ne '/';
          ${$work_dirs}{_pre_mswin}=$cdr.'\\';
       } else {
@@ -4319,9 +4417,17 @@ sub master_transfer_dir
             ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
             &handle_error($stderr,'-1') if $stderr;
             my $cdr='';
-            ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-               $localhost,"cygpath -w $curdir");
-            &handle_error($stderr,'-1') if $stderr;
+            if (-1<index $curdir,$localhost->{_cygdrive}) {
+               my $l_cd=(length $localhost->{_cygdrive})+1;
+               my $cdr=unpack("x$l_cd a*",$curdir);
+               substr($cdr,1,0)=':';
+               $cdr=ucfirst($cdr);
+               $cdr=~tr/\//\\\\/;
+            } else {
+               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                  $localhost,"cygpath -w $curdir");
+               &handle_error($stderr,'-1') if $stderr;
+            }
             $testd=&test_dir($localhost->{_cmd_handle},$curdir);
             print $Net::FullAuto::FA_Core::MRLOG
                "\nDDDDDDD &test_dir() of $tdir DDDDDDD OUTPUT ==>$testd<==",
@@ -4393,8 +4499,17 @@ sub master_transfer_dir
          ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
          &handle_error($stderr,'-1') if $stderr;
          my $cdr='';
-         ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-            $localhost,"cygpath -w $curdir");
+         if (-1<index $curdir,$localhost->{_cygdrive}) {
+            my $l_cd=(length $localhost->{_cygdrive})+1;
+            my $cdr=unpack("x$l_cd a*",$curdir);
+            substr($cdr,1,0)=':';
+            $cdr=ucfirst($cdr);
+            $cdr=~tr/\//\\\\/;
+         } else {
+            ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+               $localhost,"cygpath -w $curdir");
+            &handle_error($stderr,'-1') if $stderr;
+         }
          $testd=&test_dir($localhost->{_cmd_handle},$curdir);
          if ($testd eq 'WRITE') {
             ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$cdr.'\\';
@@ -4695,12 +4810,28 @@ sub getpasswd
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      $bdb = BerkeleyDB::Btree->new(
-         -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE,
-         -Env      => $dbenv
-      ) or &handle_error(
-         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb='';
+      while (1) {
+         $bdb = BerkeleyDB::Btree->new(
+            -Filename =>
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+            -Flags    => DB_CREATE,
+            -Env      => $dbenv
+         );
+         unless ($BerkeleyDB::Error=~/^Successful/) {
+            my ($output,$error)=('','');
+            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+         } else {
+            last
+         }
+      }
+      &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",
+         '__cleanup__',$track)
+         unless $BerkeleyDB::Error=~/^Successful/;
       $status=$bdb->db_get($passlabel,$href);
       $href=~s/\$HASH\d*\s*=\s*//s;
       $href=eval $href;
@@ -4718,7 +4849,8 @@ sub getpasswd
          ($stdout,$stderr)=
             &Net::FullAuto::FA_Core::cmd(
             "${pspath}ps -e",'__escape__');
-         &Net::FullAuto::FA_Core::handle_error($stderr,'__cleanup__') if $stderr;
+         &Net::FullAuto::FA_Core::handle_error($stderr,'__cleanup__')
+            if $stderr;
          my $encrypted_passwd=${$href}{$key};
          foreach my $ky (keys %{$href}) {
             if ($ky=~/_X_(\d+)_X_\d+$/) {
@@ -4736,6 +4868,7 @@ sub getpasswd
             $pass=$cipher->decrypt($encrypted_passwd);
             chop $pass if $pass eq substr($pass,0,(rindex $pass,'.')).'X';
          };
+# --CONTINUE-- print "WHAT IS PASS=$pass<====\n";
          return $pass if $pass && $pass!~tr/\0-\37\177-\377//;
          if (!$pass && $oldpasswd) {
             my $cipher = new Crypt::CBC($oldpasswd,
@@ -4746,7 +4879,8 @@ sub getpasswd
          foreach my $ky (keys %{$href}) {
             if ($ky=~/_X_(\d+)_X_\d+$/) {
                unless (&Net::FullAuto::FA_Core::testpid($1)) {
-                  delete ${$href}{$ky} unless &Net::FullAuto::FA_Core::testpid($1);
+                  delete ${$href}{$ky}
+                     unless &Net::FullAuto::FA_Core::testpid($1);
                }
             }
          }
@@ -4760,7 +4894,7 @@ sub getpasswd
          $dbenv->close();
          undef $dbenv;
       }
-      &scrub_passwd_file($passlabel,$login_id) unless
+      &scrub_passwd_file($passlabel,$login_id) if
          $errmsg=~/Permission denied|Password:/s;
          # SCRUB PROBLEM;
    } elsif (!$force && (exists $Net::FullAuto::FA_Core::tosspass{$key})) {
@@ -4804,7 +4938,9 @@ sub getpasswd
             return '',$die;
          }
       }
+      my $loop_count=0;
       while (1) {
+         $loop_count++;
          print $blanklines;
          print "\n  ERROR MESSAGE-> $errmsg" if $errmsg;
          my $print1='';
@@ -4890,11 +5026,12 @@ sub getpasswd
             }
          }
          my $passwd_timeout=350;
+         my $te_time=time;
          eval {
             $SIG{ALRM} = sub { die "alarm\n" }; # \n required
             alarm($passwd_timeout);
             &acquire_semaphore(9854,
-               "Password Input Prompt at Line: ".__LINE__);
+               "Password Input Prompt at Line: ".__LINE__,1);
             print $print1;
             print "\n  PasswordX1: ";
             ReadMode 2;
@@ -4924,6 +5061,28 @@ sub getpasswd
             }
             &handle_error(
                "Time Allowed for Password Input has Expired.",
+               '__cleanup__');
+         }
+         my $te_time2=time; 
+         if (10<$loop_count ||
+               (($te_time==$te_time2 || $te_time==$te_time2-1) &&
+               !$save_passwd)) {
+            print "\n";
+            &handle_error(
+               "\n       FATAL ERROR: Password Input Prompt appeared".
+               "\n              in what appears to be an unattended".
+               "\n              process/job - no password was entered".
+               "\n              and one is ALWAYS required with".
+               "\n              FullAuto. The Prompt does not appear".
+               "\n              to have paused at all - which is".
+               "\n              proper and expected when FullAuto".
+               "\n              is invoked from cron, but no password".
+               "\n              was previously saved".
+               "\n       Remedy: Run FullAuto manually with the".
+               "\n              --password option (with no actual".
+               "\n              password following the option) and".
+               "\n              choose an appropriate expiration time".
+               "\n              with the resulting menus.",
                '__cleanup__');
          }
          ReadMode 0;
@@ -4957,12 +5116,28 @@ sub getpasswd
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      $bdb = BerkeleyDB::Btree->new(
-         -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE,
-         -Env      => $dbenv
-      ) or &handle_error(
-         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb='';
+      while (1) {
+         $bdb = BerkeleyDB::Btree->new(
+            -Filename =>
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+            -Flags    => DB_CREATE,
+            -Env      => $dbenv
+         );
+         unless ($BerkeleyDB::Error=~/^Successful/) {
+            my ($output,$error)=('','');
+            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+         } else {
+            last
+         }
+      }
+      &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",
+         '__cleanup__',$track)
+         unless $BerkeleyDB::Error=~/^Successful/;
       $status=$bdb->db_get($passlabel,$href);
       $href=~s/\$HASH\d*\s*=\s*//s;
       $href=eval $href;
@@ -5871,7 +6046,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
             $SIG{ALRM} = sub { die "alarm\n" }; # \n required
             alarm($usrname_timeout);
             &acquire_semaphore(1234,
-               "Username Input Prompt at Line: ".__LINE__);
+               "Username Input Prompt at Line: ".__LINE__,1);
             print "\n  $hostname Login <$uid> : ";
             $usrname=<STDIN>;
             &release_semaphore(1234);
@@ -5899,7 +6074,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          my $pas=<STDIN>;
          $pas=~/^(.*)$/;
          $passwd[0]=$1;
-         $sem=acquire_semaphore(1234);
+         $sem=acquire_semaphore(1234,,1);
          ReadMode 0;
          chomp($passwd[0]);
          print "\n\n";
@@ -5914,7 +6089,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          $pas=<STDIN>;
          $pas=~/^(.*)$/;
          $passwd[3]=$1;
-         $sem=acquire_semaphore(1234);
+         $sem=acquire_semaphore(1234,,1);
          ReadMode 0;
          chomp($passwd[3]);
          print "\n\n";
@@ -5938,7 +6113,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          ReadMode 2;
          &release_semaphore(1234);
          $passwd[5]=<STDIN>;
-         $sem=acquire_semaphore(1234);
+         $sem=acquire_semaphore(1234,,1);
          ReadMode 0;
          chomp($passwd[5]);
          print "\n\n";
@@ -5951,7 +6126,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          ReadMode 2;
          &release_semaphore(1234);
          $passwd[7]=<STDIN>;
-         $sem=acquire_semaphore(1234);
+         $sem=acquire_semaphore(1234,,1);
          ReadMode 0;
          chomp($passwd[7]);
          print "\n\n";
@@ -5986,12 +6161,28 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      my $bdb = BerkeleyDB::Btree->new(
-         -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE,
-         -Env      => $dbenv
-      ) or &handle_error(
-         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb='';
+      while (1) {
+         $bdb = BerkeleyDB::Btree->new(
+            -Filename =>
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+            -Flags    => DB_CREATE,
+            -Env      => $dbenv
+         );
+         unless ($BerkeleyDB::Error=~/^Successful/) {
+            my ($output,$error)=('','');
+            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+         } else {
+            last
+         }
+      }
+      &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",
+         '__cleanup__',$track)
+         unless $BerkeleyDB::Error=~/^Successful/;
       # print the contents of the file
       my ($k,$v) = ("","") ;
       my $cursor = $bdb->db_cursor() ;
@@ -6024,7 +6215,9 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       &cleanup();
    }
 
+   my $loop_count=0;
    while (1) {
+      $loop_count++;
       eval { # eval is for error trapping. Any errors are
              # handled by the "if ($@)" block at the bottom
              # of this routine.
@@ -6058,9 +6251,25 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                print $MRLOG "\n\n#### NEW PROCESS - ",
                   scalar localtime(time)," #####\n\n";
             }
+
+            &acquire_semaphore(9876,
+               "FullAuto Process Limit at Line: ".__LINE__,2);
+
          }
 
          if ($plan || $plan_ignore_error) {
+            if ($Net::FullAuto::cpu) {
+               my $idle=(split ',', $Net::FullAuto::cpu)[3];
+               $idle=~s/^\s*//;
+               $idle=~s/%.*$//;
+               my $cpyou=100-$idle;
+               if ($idle<20) {
+                  my $die="FATAL ERROR - CPU Usage is too high\n"
+                         ."              to run FullAuto safely.\n"
+                         ."   CPU are Starttime ==> ${cpyou}%\n";
+                  &handle_error($die);
+               }
+            }
             $plan||=$plan_ignore_error;
             my $dbenv = BerkeleyDB::Env->new(
                -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -6069,13 +6278,27 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
             ) or &handle_error(
                "cannot open environment for DB: $BerkeleyDB::Error\n",'',
                $track);
-            my $bdb = BerkeleyDB::Btree->new(
-               -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
-               -Flags    => DB_CREATE,
-               -Compare  => sub { $_[0] <=> $_[1] },
-               -Env      => $dbenv
-            ) or &handle_error(
-               "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+            my $bdb='';
+            while (1) {
+               $bdb = BerkeleyDB::Btree->new(
+                  -Filename => ${Net::FullAuto::FA_Core::progname}.
+                               "_plans.db",
+                  -Flags    => DB_CREATE,
+                  -Compare  => sub { $_[0] <=> $_[1] },
+                  -Env      => $dbenv
+               );
+               unless ($BerkeleyDB::Error=~/^Successful/) {
+                  my ($output,$error)=('','');
+                  ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                     "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+# BERKERR
+                  last;
+               } else { last }
+            }
+            &handle_error(
+               "cannot open Btree for DB: $BerkeleyDB::Error\n",
+               '__cleanup__',$track) unless $BerkeleyDB::Error=~/^Successful/;
             my $pref='';
             my $status=$bdb->db_get($plan,$pref);
             $pref=~s/\$HASH\d*\s*=\s*//s;
@@ -6150,7 +6373,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                      alarm($usrname_timeout);
                      &acquire_semaphore(1234,
-                        "Username Input Prompt at Line: ".__LINE__);
+                        "Username Input Prompt at Line: ".__LINE__,1);
                      print "\n  $hostname Login <$uid> : ";
                      $usrname=<STDIN>;
                      &release_semaphore(1234);
@@ -6189,13 +6412,28 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",
             '',$track);
-         my $bdb = BerkeleyDB::Btree->new(
-            -Filename =>
-               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE,
-            -Env      => $dbenv
-         ) or &handle_error(
-            "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+         my $bdb='';
+         while (1) {
+            $bdb = BerkeleyDB::Btree->new(
+               -Filename =>
+                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+               -Flags    => DB_CREATE,
+               -Env      => $dbenv
+            );
+            unless ($BerkeleyDB::Error=~/^Successful/) {
+               my ($output,$error)=('','');
+               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                  "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+            } else {
+               last
+            }
+         }
+         &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n",
+            '__cleanup__',$track)
+            unless $BerkeleyDB::Error=~/^Successful/;
          my $href={};
          if ($save_main_pass || $password_from ne 'user_input' ||
                ($login_Mast_error &&
@@ -6258,9 +6496,6 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      my $put_href=
                         Data::Dump::Streamer::Dump($href)->Out();
                      $status=$bdb->db_put('localhost',$put_href);
-                     undef $bdb;
-                     $dbenv->close();
-                     undef $dbenv;
                   }
                   $save_main_pass=0;
                } elsif ($password_from ne 'user_input') {
@@ -6285,11 +6520,12 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         scalar localtime($ignore_expiration)."\n";
                   my $passwd_timeout=350;
                   my $pas='';
+                  my $te_time=time;
                   eval {
                      $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                      alarm($passwd_timeout);
                      &acquire_semaphore(9854,
-                        "Password Input Prompt at Line: ".__LINE__);
+                        "Password Input Prompt at Line: ".__LINE__,1);
                      print "\n  PasswordX2: ";
                      ReadMode 2;
                      $pas=<STDIN>;
@@ -6297,9 +6533,37 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      alarm(0);
                   };
                   if ($@ eq "alarm\n") {
+                     undef $bdb;
+                     $dbenv->close();
+                     undef $dbenv;
                      print "\n\n";
                      &handle_error(
                         "Time Allowed for Password Input has Expired.",
+                        '__cleanup__');
+                  }
+                  my $te_time2=time;
+                  if (10<$loop_count
+                        || (($te_time==$te_time2 || $te_time==$te_time2-1) &&
+                        !$pas)) {
+                     undef $bdb;
+                     $dbenv->close();
+                     undef $dbenv;
+                     print "\n";
+                     &handle_error(
+                        "\n       FATAL ERROR: Password Input Prompt appeared".
+                        "\n              in what appears to be an unattended".
+                        "\n              process/job - no password was entered".
+                        "\n              and one is ALWAYS required with".
+                        "\n              FullAuto. The Prompt does not appear".
+                        "\n              to have paused at all - which is".
+                        "\n              proper and expected when FullAuto".
+                        "\n              is invoked from cron, but no password".
+                        "\n              was previously saved".
+                        "\n       Remedy: Run FullAuto manually with the".
+                        "\n              --password option (with no actual".
+                        "\n              password following the option) and".
+                        "\n              choose an appropriate expiration time".
+                        "\n              with the resulting menus.",
                         '__cleanup__');
                   }
                   $pas=~/^(.*)$/;
@@ -6349,7 +6613,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                   alarm($passwd_timeout);
                   &acquire_semaphore(9854,
-                     "Password Input Prompt at Line: ".__LINE__);
+                     "Password Input Prompt at Line: ".__LINE__,1);
                   print "\n  Password: ";
                   ReadMode 2;
                   $pas=<STDIN>;
@@ -6358,13 +6622,20 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                };
                my $te_time2=time;
                if ($@ eq "alarm\n") {
+                  undef $bdb;
+                  $dbenv->close();
+                  undef $dbenv;
                   print "\n\n";
                   &handle_error(
                      "Time Allowed for Password Input has Expired.",
                      '__cleanup__');
                }
-               if (($te_time==$te_time2 || $te_time==$te_time2-1) &&
-                     !$pas) {
+               if (10<$loop_count ||
+                     (($te_time==$te_time2 || $te_time==$te_time2-1) &&
+                     !$pas)) {
+                  undef $bdb;
+                  $dbenv->close();
+                  undef $dbenv;
                   print "\n";
                   &handle_error(
                      "\n       FATAL ERROR: Password Input Prompt appeared".
@@ -6410,22 +6681,51 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                && !$Net::FullAuto::FA_Core::cron) {
             my $passwd_timeout=350;
             my $pas='';
+            my $te_time=time;
             eval {
                $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                alarm($passwd_timeout);
                &acquire_semaphore(9854,
-                  "Password Input Prompt at Line: ".__LINE__);
+                  "Password Input Prompt at Line: ".__LINE__,1);
                print "\n  Password: ";
                ReadMode 2;
                $pas=<STDIN>;
                &release_semaphore(9854);
                alarm(0);
             };
+            my $te_time2=time;
             if ($@ eq "alarm\n") {
+               undef $bdb;
+               $dbenv->close();
+               undef $dbenv;
                print "\n\n";
                &handle_error(
                   "Input Time Limit for Password Prompt:\n\n".
                   "         Password: Expired");
+            }
+            if (10<$loop_count ||
+                  (($te_time==$te_time2 || $te_time==$te_time2-1) &&
+                  !$pas)) {
+               undef $bdb;
+               $dbenv->close();
+               undef $dbenv;
+               print "\n";
+               &handle_error(
+                  "\n       FATAL ERROR: Password Input Prompt appeared".
+                  "\n              in what appears to be an unattended".
+                  "\n              process/job - no password was entered".
+                  "\n              and one is ALWAYS required with".
+                  "\n              FullAuto. The Prompt does not appear".
+                  "\n              to have paused at all - which is".
+                  "\n              proper and expected when FullAuto".
+                  "\n              is invoked from cron, but no password".
+                  "\n              was previously saved".
+                  "\n       Remedy: Run FullAuto manually with the".
+                  "\n              --password option (with no actual".
+                  "\n              password following the option) and".
+                  "\n              choose an appropriate expiration time".
+                  "\n              with the resulting menus.",
+                  '__cleanup__');
             }
 #print "LOGIN_MAST_ERROR=$login_Mast_error<== AND NO BDB\n";
             $pas=~/^(.*)$/;
@@ -6519,9 +6819,6 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             }
             my $put_href=Data::Dump::Streamer::Dump($href)->Out();
             $status=$bdb->db_put('localhost',$put_href);
-            undef $bdb;
-            $dbenv->close();
-            undef $dbenv;
             print "\n\n";
          } else {
             my $rstr=new String::Random;
@@ -6541,6 +6838,10 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             $passetts->[9]=$dcipher=$ecipher;
             undef $passwd[0];
          }
+         undef $bdb;
+         $dbenv->close();
+         undef $dbenv;
+
          $login_id=$username;
          $passwd[2]='';
          $passetts->[2]='';
@@ -6550,6 +6851,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          $localhost={};my $local_host='';
          $localhost=bless $localhost, 'Rem_Command';
          bless $localhost, substr($custom_code_module_file,0,-3);
+
+         &acquire_semaphore(6543,
+            "Local Host Login at Line: ".__LINE__,1);
 
          foreach my $connect_method (@RCM_Link) {
             $lc_cnt++;
@@ -6562,8 +6866,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                }
                ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
                   ["${telnetpath}telnet",'localhost'])
-                  or &Net::FullAuto::FA_Core::handle_error(
-                  "couldn't launch telnet subprocess");
+                  or (&release_semaphore(6543) &&
+                      &Net::FullAuto::FA_Core::handle_error(
+                      "couldn't launch telnet subprocess"));
 #print "CMD_PID=$cmd_pid<======\n";
                $localhost->{_cmd_pid}=$cmd_pid;
                $localhost->{_cmd_type}=$cmd_type;
@@ -6587,22 +6892,27 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   if (7<length $line && unpack('a8',$line) eq 'Insecure') {
                      $line=~s/^Insecure/INSECURE/s;
                      if (wantarray) {
+                        &release_semaphore(6543);
                         return '',$line;
-                     } else { die $line }
+                     } else { &release_semaphore(6543);die $line }
                   }
                   last if $line=~
                      /(?<!Last )login[: ]*$|username[: ]*$/i;
                }
 
                $local_host->print($login_id);
-               &handle_error($local_host->errmsg,'-1') if $local_host->errmsg;
+               if ($local_host->errmsg) {
+                  &release_semaphore(6543);
+                  &handle_error($local_host->errmsg,'-1')
+               }
                ## Wait for password prompt.
                my $ignore='';
                ($ignore,$stderr)=
-                  &File_Transfer::wait_for_ftr_passwd_prompt(
+                  &File_Transfer::wait_for_passwd_prompt(
                      $localhost,$timeout);
                if ($stderr) {
                   if ($lc_cnt==$#RCM_Link) {
+                     &release_semaphore(6543);
                      die $stderr;
                   } else { next }
                } last 
@@ -6621,16 +6931,21 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                while (1) {
                   if ($sshport) {
                      ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                        ["${sshpath}ssh","-p$sshport","$login_id\@localhost",
-                         '',$Net::FullAuto::FA_Core::slave])
-                         or &Net::FullAuto::FA_Core::handle_error(
-                        "couldn't launch ssh subprocess");
+                        #["${sshpath}ssh","-caes128-ctr","-p$sshport",
+                        ["${sshpath}ssh","-p$sshport",
+                         "$login_id\@localhost",'',
+                         $Net::FullAuto::FA_Core::slave])
+                         or (&release_semaphore(6543) &&
+                             &Net::FullAuto::FA_Core::handle_error(
+                             "couldn't launch ssh subprocess"));
                   } else {
                      ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                        #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
                         ["${sshpath}ssh","$login_id\@localhost",
                          '',$Net::FullAuto::FA_Core::slave])
-                         or &Net::FullAuto::FA_Core::handle_error(
-                         "couldn't launch ssh subprocess");
+                         or (&release_semaphore(6543) &&
+                             &Net::FullAuto::FA_Core::handle_error(
+                             "couldn't launch ssh subprocess"));
                   }
                   $localhost->{_cmd_pid}=$cmd_pid;
                   print $Net::FullAuto::FA_Core::MRLOG
@@ -6651,13 +6966,14 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   ## Wait for password prompt.
                   my $ignore='';
                   ($ignore,$stderr)=
-                     &File_Transfer::wait_for_ftr_passwd_prompt(
+                     &File_Transfer::wait_for_passwd_prompt(
                         { _cmd_handle=>$local_host,
                           _hostlabel=>[ "__Master_${$}__",'' ],
                           _cmd_type=>'ssh',
                           _connect=>$_connect },$timeout);
                   if ($stderr) {
                      if ($lc_cnt==$#RCM_Link) {
+                        &release_semaphore(6543);
                         die $stderr;
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
                         my $kill_arg=($^O eq 'cygwin')?'f':9;
@@ -6665,6 +6981,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                            if &testpid($cmd_pid);
                         $Net::FullAuto::FA_Core::slave='_slave_';next
                      } elsif (3<$try_count++) {
+                        &release_semaphore(6543);
                         &Net::FullAuto::FA_Core::handle_error($stderr)
                      } else { sleep 1;next }
                   } last
@@ -6713,22 +7030,81 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                   undef $pass_test;
                   $local_host->print("\032");
                   $local_host->close;
-                  $passerror=1;&release_semaphore(1234);
+                  $passerror=1;&release_semaphore(6543);
                   return;
                } else {
                   undef $pass_test;
                }
             }
             if ($line=~/Permission denied|Password:/s) {
+               my $dbenv = BerkeleyDB::Env->new(
+                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
+                  -Flags =>
+                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+               );
+               unless ($BerkeleyDB::Error=~/^Successful/) {
+                  &release_semaphore(6543);
+                  &handle_error(
+                     "cannot open environment for DB: $BerkeleyDB::Error\n",
+                     '__cleanup__',$track);
+               }
+               my $bdb='';
+               while (1) {
+                  $bdb = BerkeleyDB::Btree->new(
+                     -Filename =>
+                     "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                     -Flags    => DB_CREATE,
+                     -Env      => $dbenv
+                  );
+                  unless ($BerkeleyDB::Error=~/^Successful/) {
+                     my ($output,$error)=('','');
+                     ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                     "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+                  } else {
+                     last
+                  }
+               }
+               unless ($BerkeleyDB::Error=~/^Successful/) {
+                  &release_semaphore(6543);
+                  &handle_error(
+                     "cannot open Btree for DB: $BerkeleyDB::Error\n",
+                     '__cleanup__',$track);
+               }
+               my $href={};
+               my $status=$bdb->db_get('localhost',$href);
+               $href=~s/\$HASH\d*\s*=\s*//s;
+               $href=eval $href;
+               if (exists ${$href}{"gatekeep_$username"}) {
+                  my $tdcipher = new Crypt::CBC(
+                     ${$href}{"gatekeep_$username"},
+                     $Net::FullAuto::FA_Core::Hosts{
+                     "__Master_${$}__"}{'Cipher'});
+                  if ($dcipher->decrypt($passetts->[0]) eq
+                        $tdcipher->decrypt($passetts->[0])) {
+                     delete ${$href}{"gatekeep_$username"};
+                     my $put_href=Data::Dump::Streamer::Dump($href)->Out();
+                     $status=$bdb->db_put('localhost',$put_href);
+                  }
+               }
+               undef $bdb;
+               $dbenv->close();
+               undef $dbenv;
 ## ADD - TELL USER ABOUT MISSING CRON CREDS ON CMD LINE
-               die "Permission denied";
+               &release_semaphore(6543);
+               die $line;
+               #die "Permission denied";
             }
             if ($line=~/Write failed: Connection reset by peer/s) {
+               &release_semaphore(6543);
                die "Write failed: Connection reset by peer";
             }
-            &handle_error($output,'__cleanup__')
-               if $line=~/(?<!Last )login[: ]*$/m ||
-                  (-1<index $line,' sync_with_child: ');
+            if ($line=~/(?<!Last )login[: ]*$/m ||
+                  (-1<index $line,' sync_with_child: ')) {
+               &release_semaphore(6543);
+               &handle_error($output,'__cleanup__');
+            }
             if ($line=~/new password: ?$/is) {
                $newpw=$line;
 print $Net::FullAuto::FA_Core::MRLOG "GOING LAST ONE<==\n"
@@ -6758,7 +7134,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
-         #&release_semaphore(1234);
+         &release_semaphore(6543);
 
          &change_pw($localhost) if $newpw;
 
@@ -6785,12 +7161,13 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
             my $_sh_pid='';
             ($_sh_pid,$stderr)=Rem_Command::cmd(
                $localhost,'echo $$');
+# --CONTINUE-- print "LOCAL_sh_pid=$_sh_pid<==\n";
 print $Net::FullAuto::FA_Core::MRLOG "LOCAL_sh_pid=$_sh_pid<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             $_sh_pid||=0;
             $_sh_pid=~/^(.*)$/;
-            $_sh_pid=$1;
+            $_sh_pid=$1||'';
             chomp($_sh_pid=~tr/\0-\11\13-\37\177-\377//d);
             $localhost->{_sh_pid}=$_sh_pid;
 print $Net::FullAuto::FA_Core::MRLOG "ERROR LOCALLLLLLLLLLLLLLLLLLLL_sh_pid=$localhost->{_sh_pid}<==\n"
@@ -6875,9 +7252,11 @@ print $Net::FullAuto::FA_Core::MRLOG
          }
 
          $kind='prod';
-         $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+         $kind='test' if $Net::FullAuto::FA_Core::test &&
+                         !$Net::FullAuto::FA_Core::prod;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+               'Passwds');
          }
          $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -6885,13 +7264,27 @@ print $Net::FullAuto::FA_Core::MRLOG
                DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-         $bdb = BerkeleyDB::Btree->new(
-            -Filename => ${Net::FullAuto::FA_Core::progname}.
-                         "_${kind}_passwds.db",
-            -Flags    => DB_CREATE,
-            -Env      => $dbenv
-         ) or &handle_error(
-            "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+         while (1) {
+            $bdb = BerkeleyDB::Btree->new(
+               -Filename =>
+                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+               -Flags    => DB_CREATE,
+               -Env      => $dbenv
+            );
+            unless ($BerkeleyDB::Error=~/^Successful/) {
+               my ($output,$error)=('','');
+               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                  "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+            } else {
+               last
+            }
+         }
+         &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n",
+            '__cleanup__',$track)
+            unless $BerkeleyDB::Error=~/^Successful/;
 print $Net::FullAuto::FA_Core::MRLOG
    "FA_SUCURE7=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -6904,6 +7297,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          my $host__label='';
          if ($hostlabel eq "__Master_${$}__") {
             foreach my $hostlab (keys %same_host_as_Master) {
+# --CONTINUE-- print "WHAT ARE HOSTLAB that are SAME AS MASTER=$hostlab<==\n";
                next if $hostlab eq "__Master_${$}__";
                $host__label=$hostlab;
                $local_host_flag=1;
@@ -6927,6 +7321,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          my $lref={};
          my $status=$bdb->db_get($host__label,$lref);
          $lref=~s/\$HASH\d*\s*=\s*//s;
+print $Net::FullAuto::FA_Core::MRLOG "LREF=$lref<==\n if ref $lref eq 'HASH";
          $lref=eval $lref;
          foreach my $ky (keys %{$lref}) {
             if ($ky eq $key) {
@@ -6952,12 +7347,13 @@ print $Net::FullAuto::FA_Core::MRLOG
             }
             my $new_encrypted=$cipher->encrypt(
                   $dcipher->decrypt($passetts->[0]));
-print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
+print $Net::FullAuto::FA_Core::MRLOG "\nFA_LOGIN__NEWKEY=$key<== and HOST__LABEL=$host__label\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             $lref->{$key}=$new_encrypted;
             my $put_lref=Data::Dump::Streamer::Dump($lref)->Out();
             my $status=$bdb->db_put($host__label,$put_lref);
+print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n";
          } else {
             #$tosspass{$key}=$passwd[0];
             $tosspass{$key}=$dcipher->decrypt($passetts->[0]);
@@ -7004,10 +7400,13 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
          if ($^O eq 'cygwin') {
             my $wloop=0;
             while (1) {
+               &Net::FullAuto::FA_Core::acquire_semaphore(8712,
+                  "mount -p at Line: ".__LINE__,1);
                ($localhost->{_cygdrive},$stderr)=
                   Rem_Command::cmd(
                   $localhost,
                   "${Net::FullAuto::FA_Core::mountpath}mount -p");
+               &Net::FullAuto::FA_Core::release_semaphore(8712);
                $localhost->{_cygdrive}=~s/^.*(\/\S+).*$/$1/s;
                last if $localhost->{_cygdrive} && unpack('a1',
                   $localhost->{_cygdrive}) eq '/';
@@ -7051,6 +7450,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
          if ((-1<index $@,'Not a GLOB reference') ||
                (-1<index $@,
                'Write failed: Connection reset by peer')) {
+#print "DO WE GET HERE\n";<STDIN>;
             print $Net::FullAuto::FA_Core::MRLOG
                "\nERROR: main::fa_login() CONNECTION ERROR:\n       ",
                "$@\n       and SH_PID=$localhost->{_sh_pid}",
@@ -7058,24 +7458,36 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             unless ($localhost->{_sh_pid}) {
-               my $ps_out=`${Net::FullAuto::FA_Core::pspath}ps -l`;
+               my $ps_out=`${Net::FullAuto::FA_Core::pspath}ps -el`;
                print $Net::FullAuto::FA_Core::MRLOG
                   "\nHERE IS THE PS CMD OUTPUT:\n       ",
                   "$ps_out\n"
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               foreach my $line (reverse split "\n", $ps_out) {
+                  if (substr($line,-4) eq 'bash') {
+                     my $pid=$line;
+                     ($pid=$line)=~s/^(\d+) .*$/$1/;
+                     ($stdout,$stderr)=
+                        &Net::FullAuto::FA_Core::kill(
+                        $pid,$kill_arg);
+                     last;
+                  }
+               }
+            } else {
+               ($stdout,$stderr)=
+                  &Net::FullAuto::FA_Core::kill(
+                     $localhost->{_sh_pid},$kill_arg)
+                  if exists $localhost->{_sh_pid} &&
+                  &Net::FullAuto::FA_Core::testpid(
+                     $localhost->{_sh_pid});
             }
-            ($stdout,$stderr)=
-               &Net::FullAuto::FA_Core::kill(
-                  $localhost->{_sh_pid},$kill_arg)
-               if exists $localhost->{_sh_pid} &&
-               &Net::FullAuto::FA_Core::testpid(
-                  $localhost->{_sh_pid});
             ($stdout,$stderr)=
                &Net::FullAuto::FA_Core::kill(
                   $localhost->{_cmd_pid},$kill_arg)
                if &Net::FullAuto::FA_Core::testpid(
                   $localhost->{_cmd_pid});
+#print "AWESOME\n";<STDIN>;
             #$login_Mast_error='';
             #$login_Mast_error=$@ if -1<index $@,
             #   'Write failed: Connection reset by peer';
@@ -7110,7 +7522,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                      ." ...\n\n";
                }
             }
-#print "LOGINMASTERERROR=$login_Mast_error\n";<STDIN>;
+print "LOGINMASTERERROR=$login_Mast_error\n";sleep 5;
             if ($login_Mast_error=~/invalid log|ogin incor|sion den/) {
                if (($^O eq 'cygwin')
                      && 2<=$retrys) {
@@ -7143,6 +7555,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_LOGIN__NEWKEY=$key<==\n"
                $su_scrub=&scrub_passwd_file($hostlabel,$su_id);
                next;
             } elsif (defined $Net::FullAuto::FA_Core::dcipher) {
+print "DOING PASSWD UPDATE\n";
                &passwd_db_update($hostlabel,$login_id,$password,$cmd_type);
             }
          }
@@ -7485,12 +7898,27 @@ sub passwd_db_update
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-   my $bdb = BerkeleyDB::Btree->new(
-      -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-      -Flags    => DB_CREATE,
-      -Env      => $dbenv
-   ) or &handle_error(
-      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb='';
+   while (1) {
+      $bdb = BerkeleyDB::Btree->new(
+         -Filename =>
+            "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+         -Flags    => DB_CREATE,
+         -Env      => $dbenv
+      );
+      unless ($BerkeleyDB::Error=~/^Successful/) {
+         my ($output,$error)=('','');
+         ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+            "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+      } else {
+         last
+      }
+   }
+   &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
+      unless $BerkeleyDB::Error=~/^Successful/;
 print $Net::FullAuto::FA_Core::MRLOG
          "FA_SUCURE8=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n"
          if $Net::FullAuto::FA_Core::log &&
@@ -7578,12 +8006,27 @@ sub su_scrub
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-   my $bdb = BerkeleyDB::Btree->new(
-      -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-      -Flags    => DB_CREATE,
-      -Env      => $dbenv
-   ) or &handle_error(
-      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb='';
+   while (1) {
+      $bdb = BerkeleyDB::Btree->new(
+         -Filename =>
+            "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+         -Flags    => DB_CREATE,
+         -Env      => $dbenv
+      );
+      unless ($BerkeleyDB::Error=~/^Successful/) {
+         my ($output,$error)=('','');
+         ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+            "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+      } else {
+         last
+      }
+   }
+   &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
+      unless $BerkeleyDB::Error=~/^Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
    my $local_host_flag=0;
    if ($hostlabel eq "__Master_${$}__") {
@@ -7707,13 +8150,28 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
                DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-         my $bdb = BerkeleyDB::Btree->new(
-            -Filename => ${Net::FullAuto::FA_Core::progname}.
-                         "_${kind}_passwds.db",
-            -Flags    => DB_CREATE,
-            -Env      => $dbenv
-         ) or &handle_error(
-            "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+         my $bdb='';
+         while (1) {
+            $bdb = BerkeleyDB::Btree->new(
+               -Filename =>
+                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+               -Flags    => DB_CREATE,
+               -Env      => $dbenv
+            );
+            unless ($BerkeleyDB::Error=~/^Successful/) {
+               my ($output,$error)=('','');
+               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                  "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+            } else {
+               last
+            }
+         }
+         &handle_error(
+            "cannot open Btree for DB: $BerkeleyDB::Error\n",
+            '__cleanup__',$track)
+            unless $BerkeleyDB::Error=~/^Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          my $href='';
          my $status=$bdb->db_get($hostlabel,$href);
@@ -8118,8 +8576,17 @@ sub work_dirs
          ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
          &handle_error($stderr,'-1') if $stderr;
          my $cdr='';
-         ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-            $localhost,"cygpath -w $curdir");
+         if (-1<index $curdir,$localhost->{_cygdrive}) {
+            my $l_cd=(length $localhost->{_cygdrive})+1;
+            my $cdr=unpack("x$l_cd a*",$curdir);
+            substr($cdr,1,0)=':';
+            $cdr=ucfirst($cdr);
+            $cdr=~tr/\//\\\\/;
+         } else {
+            ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+               $localhost,"cygpath -w $curdir");
+            &handle_error($stderr,'-1') if $stderr;
+         }
          ${$work_dirs}{_tmp_mswin}=$cdr.'\\';
          ($output,$stderr)=$cmd_handle->cmd(
             'cd '."\"$pwd\"");
@@ -8392,7 +8859,8 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
       while (1) {
          ($cmd_handle,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
             [$cmd,'','','',$Net::FullAuto::FA_Core::slave])
-            or &Net::FullAuto::FA_Core::handle_error("couldn't launch cmd subprocess");
+            or &Net::FullAuto::FA_Core::handle_error(
+            "couldn't launch cmd subprocess");
          $cmd_handle=Net::Telnet->new(Fhopen => $cmd_handle,
             Timeout => $cmtimeout);
          $cmd_handle->telnetmode(0);
@@ -8508,12 +8976,32 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      my $bdb = BerkeleyDB::Btree->new(
-         -Filename => "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE,
-         -Env      => $dbenv
-      ) or &handle_error(
-         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      my $bdb='';
+      while (1) {
+         $bdb = BerkeleyDB::Btree->new(
+            -Filename =>
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+            -Flags    => DB_CREATE,
+            -Env      => $dbenv
+         );
+         unless ($BerkeleyDB::Error=~/^Successful/) {
+            my ($output,$error)=('','');
+            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+print $Net::FullAuto::FA_Core::MRLOG "db_recover OUTPUT=$output\n";
+print $Net::FullAuto::FA_Core::MRLOG "db_recover ERROR=$error\n";
+            &handle_error(
+               "cannot open Btree for DB: $BerkeleyDB::Error\n",
+               '__cleanup__',$track) if $error;
+# BERKERR
+         } else {
+           last
+         }
+      }
+      &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
+         unless $BerkeleyDB::Error=~/^Successful/;
       my $href='';
       my $status=$bdb->db_get($passlabel,$href);
       $href=~s/\$HASH\d*\s*=\s*//s;
@@ -8889,9 +9377,17 @@ sub select_dir
                      &Net::FullAuto::FA_Core::cmd($localhost,'pwd');
                   &handle_error($stderr,'-1') if $stderr;
                   my $cdr='';
-                  ($cdr,$stderr)=
-                     &Net::FullAuto::FA_Core::cmd($localhost,
-                     "cygpath -w $curdir");
+                  if (-1<index $curdir,$localhost->{_cygdrive}) {
+                     my $l_cd=(length $localhost->{_cygdrive})+1;
+                     my $cdr=unpack("x$l_cd a*",$curdir);
+                     substr($cdr,1,0)=':';
+                     $cdr=ucfirst($cdr);
+                     $cdr=~tr/\//\\\\/;
+                  } else {
+                     ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                     $localhost,"cygpath -w $curdir");
+                     &handle_error($stderr,'-1') if $stderr;
+                  }
                   $dir="$cdr\\$dir";
                } else {
                   $dir="\\\\$host\\$ms_share\\$dir";
@@ -9311,7 +9807,7 @@ sub get
                }
             } else { $file=$file_arg }
          } else { $file=$file_arg }
-         if (&Net::FullAuto::FA_Core::acquire_semaphore($file_arg)) {
+         if (&Net::FullAuto::FA_Core::acquire_semaphore($file_arg,,1)) {
             return 'SEMAPHORE','' if wantarray;
             return 'SEMAPHORE';
          }
@@ -9349,7 +9845,7 @@ sub put
    foreach my $file (@args) {
       if ($self->{_ftp_handle} ne "__Master_${$}__") {
 #print "FILEARGGGINT=",int $file,"\n";<STDIN>;
-         #return 'SEMAPHORE' if &Net::FullAuto::FA_Core::acquire_semaphore('',$file);
+         #return 'SEMAPHORE' if &Net::FullAuto::FA_Core::acquire_semaphore('',$file,,1);
          ($output,$stderr)=&Rem_Command::ftpcmd($self,"put $file");
          &Net::FullAuto::FA_Core::release_semaphore($file);
          if ($stderr) {
@@ -9521,9 +10017,17 @@ sub ftr_cmd
                #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
                #        'cmd /c chdir',$ftr_cmd->{'hostlabel'}[0]);
                my $cdr='';
-               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                  $localhost,"cygpath -w $curdir");
-               &handle_error($stderr,'-1') if $stderr;
+               if (-1<index $curdir,$localhost->{_cygdrive}) {
+                  my $l_cd=(length $localhost->{_cygdrive})+1;
+                  my $cdr=unpack("x$l_cd a*",$curdir);
+                  substr($cdr,1,0)=':';
+                  $cdr=ucfirst($cdr);
+                  $cdr=~tr/\//\\\\/;
+               } else {
+                  ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                     $localhost,"cygpath -w $curdir");
+                  &handle_error($stderr,'-1') if $stderr;
+               }
                ${$work_dirs}{_pre_mswin}=
                   ${$work_dirs}{_cwd_mswin}=$cdr.'\\';
                ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
@@ -9658,28 +10162,51 @@ print "FTR_RETURN3\n";
 
                      if ($su_scrub) {
                         my $kind='prod';
-                        $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
-                        my $dbpath=$Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}
-                                   {'FA_Secure'}
-                                  ."${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
+                        my $mr="__Master_${$}__";
+                        $kind='test' if $Net::FullAuto::FA_Core::test
+                                     && !$Net::FullAuto::FA_Core::prod;
+                        my $dbpath=$Net::FullAuto::FA_Core::Hosts{$mr}
+                                   {'FA_Secure'}.
+                                   ${Net::FullAuto::FA_Core::progname}.
+                                   "_${kind}_passwds.db";
 print "DBPATHHHH=$dbpath<==\n";sleep 2;
-                        unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-                           File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+                        unless (-d $Hosts{$mr}{'FA_Secure'}.'Passwds') {
+                           File::Path::make_path($Hosts{$mr}{'FA_Secure'}.
+                              'Passwds');
                         }
                         my $dbenv = BerkeleyDB::Env->new(
-                              -Home  => $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-                              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+                              -Home  => 
+                              $Net::FullAuto::FA_Core::Hosts{$mr}{'FA_Secure'}.
+                              'Passwds',
+                              -Flags =>
+                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
                         ) or &handle_error(
                            "cannot open environment for DB: ".
                            "$BerkeleyDB::Error\n",'',$track);
-                        my $pn=$Net::FullAuto::FA_Core::progname;
-                        my $bdb = BerkeleyDB::Btree->new(
-                           -Filename => "${pn}_${kind}_passwds.db",
-                           -Flags    => DB_CREATE,
-                           -Env      => $dbenv
-                        ) or &handle_error(
+                        my $bdb='';
+                        while (1) {
+                            my $pn=$Net::FullAuto::FA_Core::progname;
+                            $bdb = BerkeleyDB::Btree->new(
+                                 -Filename => "${pn}_${kind}_passwds.db",
+                                 -Flags    => DB_CREATE,
+                                 -Env      => $dbenv
+                            );
+                            my $mr="__Master_${$}__";
+                            unless ($BerkeleyDB::Error=~/^Successful/) {
+                               my ($output,$error)=('','');
+                               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                                  "/usr/local/BerkeleyDB.5.1/bin/db_recover".
+                                  " -v -h ".
+                                  $Hosts{$mr}{'FA_Secure'}.'Passwds');
+                           # BERKERR
+                           } else {
+                              last
+                           }
+                        }
+                        &handle_error(
                            "cannot open Btree for DB: ".
-                           "$BerkeleyDB::Error\n",'',$track);
+                           "$BerkeleyDB::Error\n",'__cleanup__',$track)
+                           unless $BerkeleyDB::Error=~/^Successful/;
                         my $href='';
                         my $status=$bdb->db_get($host,$href);
                         $href=~s/\$HASH\d*\s*=\s*//s;
@@ -9687,7 +10214,8 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         my $key="${Net::FullAuto::FA_Core::username}_X_"
                                ."${Net::FullAuto::FA_Core::username}_X_${host}";
                         while (delete $href->{"$key"}) {}
-                        my $cipher='';my $mr="__Master_${$}__";
+                        my $cipher='';
+#my $mr="__Master_${$}__";
                         if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
                            if (8<length
                                  $Net::FullAuto::FA_Core::dcipher->decrypt(
@@ -10013,7 +10541,7 @@ print "HOW ABOUT AN SMB UNAME???===$uname<===\n";<STDIN>;
                $host=($use eq 'ip') ? $ip : $hostname;
 print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST2222=$host\n"
       if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               &Net::FullAuto::FA_Core::acquire_semaphore(1234);
+               &Net::FullAuto::FA_Core::acquire_semaphore(1234,,1);
                if ($su_id) {
                   $fpx_passwd=&Net::FullAuto::FA_Core::getpasswd(
                      $hostlabel,$su_id,$ms_share,
@@ -10248,11 +10776,13 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST3333=$host\n"
                         $allines.=$line;
                         print $Net::FullAuto::FA_Core::MRLOG
                            "\nFFFFFFF (1) ftm_login() FFFFFFF ",
-                           "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+                           "FTM RAW OUTPUT: ==>$line<== at Line ",
+                           __LINE__,"\n\n"
                            if $Net::FullAuto::FA_Core::log &&
                            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         print "\nFFFFFFF (1) ftm_login() FFFFFFF ",
-                          "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+                          "FTM RAW OUTPUT: ==>$line<== at Line ",
+                           __LINE__,"\n\n"
                            if !$Net::FullAuto::FA_Core::cron &&
                               $Net::FullAuto::FA_Core::debug;
                         if (-1<index $allines,'_funkyPrompt_') {
@@ -10488,7 +11018,7 @@ print "WHAT IS THE FTP_EVAL_ERROR1111=$@\n";
                   }
                   ## Wait for password prompt.
                   my $ignore='';
-                  ($ignore,$stderr)=&wait_for_ftr_passwd_prompt(
+                  ($ignore,$stderr)=&wait_for_passwd_prompt(
                      { _cmd_handle=>$ftp_handle,
                        _hostlabel=>[ $hostlabel,'' ],
                        _cmd_type=>$cmd_type },$timeout);
@@ -10704,11 +11234,13 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                         $allines.=$line;
                         print $Net::FullAuto::FA_Core::MRLOG
                            "\nFFFFFFF (2) ftm_login() FFFFFFF ",
-                           "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+                           "FTP RAW OUTPUT: ==>$line<== at Line ",
+                           __LINE__,"\n\n"
                            if $Net::FullAuto::FA_Core::log &&
                            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         print "\nFFFFFFF (2) ftm_login() FFFFFFF ",
-                          "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+                          "FTP RAW OUTPUT: ==>$line<== at Line ",
+                           __LINE__,"\n\n"
                            if !$Net::FullAuto::FA_Core::cron &&
                               $Net::FullAuto::FA_Core::debug;
                         if (-1<index $allines,'_funkyPrompt_') {
@@ -11134,7 +11666,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                }
                ## Wait for password prompt.
                my $ignore='';
-               ($ignore,$stderr)=&wait_for_ftr_passwd_prompt(
+               ($ignore,$stderr)=&wait_for_passwd_prompt(
                   { _cmd_handle=>$ftp_handle,
                     _hostlabel=>[ $hostlabel,'' ],
                     _cmd_type=>$cmd_type },$timeout);
@@ -11193,7 +11725,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                   && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ## Wait for password prompt.
                my $ignore='';
-               ($ignore,$stderr)=&wait_for_ftr_passwd_prompt(
+               ($ignore,$stderr)=&wait_for_passwd_prompt(
                   { _cmd_handle=>$ftp_handle,
                     _hostlabel=>[ $hostlabel,'' ],
                     _cmd_type=>$cmd_type },$timeout);
@@ -11302,7 +11834,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                  ## Wait for password prompt.
                                  my $ignore='';
                                  ($ignore,$stderr)=
-                                    &wait_for_ftr_passwd_prompt(
+                                    &wait_for_passwd_prompt(
                                        { _cmd_handle=>$ftp_handle,
                                          _hostlabel=>[ $hostlabel,'' ],
                                          _cmd_type=>$cmd_type },$timeout);
@@ -11398,7 +11930,7 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                      ## Wait for password prompt.
                      my $ignore='';
                      ($ignore,$stderr)=
-                        &wait_for_ftr_passwd_prompt(
+                        &wait_for_passwd_prompt(
                            { _cmd_handle=>$ftp_handle,
                              _hostlabel=>[ $hostlabel,'' ],
                              _cmd_type=>$cmd_type },$timeout);
@@ -11706,18 +12238,18 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
 
 } ## END of &ftm_login
 
-sub wait_for_ftr_passwd_prompt
+sub wait_for_passwd_prompt
 {
 
    ## Wait for password prompt.
    my @topcaller=caller;
-   print "\nINFO: File_Transfer::wait_for_ftr_passwd_prompt() ",
+   print "\nINFO: File_Transfer::wait_for_passwd_prompt() ",
       "(((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if !$Net::FullAuto::FA_Core::cron &&
       $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG
-      "\nINFO: File_Transfer::wait_for_ftr_passwd_prompt() ",
+      "\nINFO: File_Transfer::wait_for_passwd_prompt() ",
       "(((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_Core::log &&
@@ -11736,12 +12268,12 @@ sub wait_for_ftr_passwd_prompt
             $SIG{ALRM} = sub { die "read timed-out:do_slave\n" }; # \n required
             alarm $timeout+1;
             print $Net::FullAuto::FA_Core::MRLOG
-               "\nPPPPPPP wait_for_ftr_passwd_prompt() PPPPPPP ",
-               "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+               "\nPPPPPPP wait_for_passwd_prompt() PPPPPPP ",
+               "CMD RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
                if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            print "\nPPPPPPP wait_for_ftr_passwd_prompt() PPPPPPP ",
-               "RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
+            print "\nPPPPPPP wait_for_passwd_prompt() PPPPPPP ",
+               "CMD RAW OUTPUT: ==>$line<== at Line ",__LINE__,"\n\n"
                if !$Net::FullAuto::FA_Core::cron &&
                $Net::FullAuto::FA_Core::debug;
             $lin.=$line;
@@ -11777,6 +12309,9 @@ sub wait_for_ftr_passwd_prompt
                } $filehandle->{_cmd_handle}->print;
                next;
             } elsif (-1<index $lin,'Address already in use') {
+               alarm 0;
+               die 'Connection closed';
+            } elsif (-1<index $lin,'Write failed: Connection reset by peer') {
                alarm 0;
                die 'Connection closed';
             } elsif (7<length $line && unpack('a8',$line) eq 'Insecure') {
@@ -11841,7 +12376,7 @@ sub wait_for_ftr_passwd_prompt
                   }
                }
             } elsif ($lin=~/password[: ]+$/si) {
-print $Net::FullAuto::FA_Core::MRLOG "wait_for_ftr_passwd_prompt() GETGOTPASS!!=$lin<==\n"
+print $Net::FullAuto::FA_Core::MRLOG "wait_for_passwd_prompt() GETGOTPASS!!=$lin<==\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                $gotpass=1;alarm 0;last PW;
             } elsif ((-1<index $lin,'530 ')
@@ -11915,7 +12450,7 @@ print $Net::FullAuto::FA_Core::MRLOG "wait_for_ftr_passwd_prompt() GETGOTPASS!!=
    } else {
       return $eval_stdout;
    }
-} ## END of &wait_for_ftr_passwd_prompt
+} ## END of &wait_for_passwd_prompt
 
 sub connect_share
 {
@@ -15042,7 +15577,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftm_connect::cmd() HAD TO DO FTP LOGIN_RET
 
             ## Wait for password prompt.
             my $ignore='';
-            ($ignore,$stderr)=&wait_for_ftr_passwd_prompt($ftpFH);
+            ($ignore,$stderr)=&wait_for_passwd_prompt($ftpFH);
             if ($stderr) {
                if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                   return '',$stderr;
@@ -15098,7 +15633,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftm_connect::cmd() HAD TO DO SFTP LOGIN_RE
 
             ## Wait for password prompt.
             my $ignore='';
-            ($ignore,$stderr)=&wait_for_ftr_passwd_prompt($ftpFH);
+            ($ignore,$stderr)=&wait_for_passwd_prompt($ftpFH);
             if ($stderr) {
                if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                   return '',$stderr;
@@ -15235,7 +15770,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                               ## Wait for password prompt.
                               my $ignore='';
                               ($ignore,$stderr)=
-                                 &wait_for_ftr_passwd_prompt($ftpFH);
+                                 &wait_for_passwd_prompt($ftpFH);
                               if ($stderr) {
                                  if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                                     return '',$stderr;
@@ -16364,7 +16899,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
       if (unpack('a10',$@) eq 'The System') {
          return '','','','',$@;
       } else {
-print "IS THIS REALLY WHERE WE ARE DYINGEEEEEEEEEEEE<==\n";<STDIN>;
+#print "IS THIS REALLY WHERE WE ARE DYINGEEEEEEEEEEEE<==\n";<STDIN>;
          my $die="The System $hostlabel Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
@@ -17071,7 +17606,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
       if (unpack('a10',$@) eq 'The System') {
          return '',$@;
       } else {
-print "IS THIS REALLY WHERE WE ARE DYINGJJJJJJJJJ<==\n";<STDIN>;
+#print "IS THIS REALLY WHERE WE ARE DYINGJJJJJJJJJ<==\n";<STDIN>;
          my $die="The System $hostname Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
@@ -17305,7 +17840,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
    } else {
       $login_passwd=&Net::FullAuto::FA_Core::getpasswd($hostlabel,$login_id,'','');
    }
-   #&Net::FullAuto::FA_Core::acquire_semaphore(1234);
+   #&Net::FullAuto::FA_Core::acquire_semaphore(1234,,1);
    $host=($use eq 'ip')?$ip:$hostname;
    $host='localhost' if exists $same_host_as_Master{$host};
    if ($host eq 'localhost' &&
@@ -17485,7 +18020,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         &Net::FullAuto::FA_Core::handle_error($cmd_handle->errmsg);
                      } $cmd_type='telnet';
                      ($ignore,$stderr)=
-                        &File_Transfer::wait_for_ftr_passwd_prompt(
+                        &File_Transfer::wait_for_passwd_prompt(
                            { _cmd_handle=>$cmd_handle,
                              _hostlabel=>[ $hostlabel,'' ],
                              _cmd_type=>$cmd_type,
@@ -17553,7 +18088,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                      } $cmd_type='ssh';
                      ## Wait for password prompt.
                      ($ignore,$stderr)=
-                        &File_Transfer::wait_for_ftr_passwd_prompt(
+                        &File_Transfer::wait_for_passwd_prompt(
                            { _cmd_handle=>$cmd_handle,
                              _hostlabel=>[ $hostlabel,'' ],
                              _cmd_type=>$cmd_type,
@@ -17798,8 +18333,31 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                   } else { die $ev_err }
                } else { last }
             }
+            $cmd_handle->prompt('/_funkyPrompt_$/');
+            $cmd_handle->print(
+               "export PS1=_funkyPrompt_;unset PROMPT_COMMAND");
+            my $cfh_ignore='';my $cfh_error='';
+            ($cfh_ignore,$cfh_error)=
+               &Net::FullAuto::FA_Core::clean_filehandle(
+               $cmd_handle);
+            &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+               if $cfh_error;
             # Find out what the shell is.
-            $cmd_handle->print('set | ${greppath}grep SHELL=');
+            #$cmd_handle->print('set | ${greppath}grep SHELL=');
+            ($shell,$stderr)=Rem_Command::cmd(
+               { _cmd_handle=>$cmd_handle,
+                 _hostlabel=>[ $hostlabel,'' ] },
+               'set | ${greppath}grep SHELL=');
+            $shell=~s/SHELL=//;
+            $shell=~s/^['"]//;
+            $shell=~s/['"]$//;
+# --CONTINUE-- print "WHAT IS THE SHELL=$shell<==\n";
+            ($cfh_ignore,$cfh_error)=
+               &Net::FullAuto::FA_Core::clean_filehandle(
+               $cmd_handle);
+            &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+               if $cfh_error;
+if (0) {
             $ct=0;
             while (1) {
                eval {
@@ -17841,13 +18399,13 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                   $cmd_handle->print;
                } else { last }
             }
-            my $cfh_ignore='';my $cfh_error='';
             ($cfh_ignore,$cfh_error)=
                &Net::FullAuto::FA_Core::clean_filehandle(
                $cmd_handle);
             &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
                if $cfh_error;
-            if ($shell=~/\/?bash[']*$/ || $shell=~/\/?ksh[']*$/ || $shell=~/\/?sh[']*$/) {
+            if ($shell=~/\/?bash[']*$/ || $shell=~/\/?ksh[']*$/
+                  || $shell=~/\/?sh[']*$/) {
                my $fp=$funkyprompt;
                $fp=~s/\\\\/\\\\\\\\/g;
                $cmd_handle->print("PS1=`${Net::FullAuto::FA_Core::printfpath}".
@@ -17880,9 +18438,49 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                   last if -1<index $out,'_funkyPrompt_';
                }
             } $cmd_handle->prompt('/_funkyPrompt_$/');
-           
-            $uname=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
-                    'uname',$hostlabel);
+            ($cfh_ignore,$cfh_error)=
+               &Net::FullAuto::FA_Core::clean_filehandle(
+               $cmd_handle);
+            &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+               if $cfh_error;
+            #&Net::FullAuto::FA_Core::acquire_semaphore(7392,
+            #   "Uname Command at Line: ".__LINE__,1);
+}
+# --CONTINUE-- print "GOING FOR UNAME\n";
+            ($uname,$stderr)=Rem_Command::cmd(
+               { _cmd_handle=>$cmd_handle,
+                 _hostlabel=>[ $hostlabel,'' ] },'uname');
+            #&Net::FullAuto::FA_Core::release_semaphore(7392);
+# --CONTINUE-- print "UNAMEBEFOREERR=$uname and STDERR=$stderr<==\n";
+            #&Net::FullAuto::FA_Core::handle_error(
+            #   'Not a GLOB reference',-1);# if !$uname || $stderr;
+            die 'no-uname' if !$uname || $stderr;
+print $Net::FullAuto::FA_Core::MRLOG "IMPORTANT UNAME=$uname<== and STDERR=$stderr<==\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+# --CONTINUE-- print "UNAME=$uname and STDERR=$stderr\n";
+            #$cmd_handle->print;
+            #if (!$uname) {
+            #   $cmd_handle->print(
+            #      #$Net::FullAuto::FA_Core::printfpath.
+            #      'printf \\\\041\\\\041;uname;'.
+            #      #$Net::FullAuto::FA_Core::printfpath.
+            #      'printf \\\\045\\\\045');
+            #   my $allins='';my $ct=0;
+            #   while (my $line=$cmd_handle->get) {
+            #      chomp($line=~tr/\0-\37\177-\377//d);
+            #      $allins.=$line;
+            #      if ($allins=~/!!(.*)%%/) {
+            #         $uname=$1;
+            #         last;
+            #      } else {
+            #         $cmd_handle->print;
+            #      } last if $ct++==10;
+            #   }
+            #}
+
+            #$uname=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($cmd_handle,
+            #        'uname',$hostlabel);
 
             print $Net::FullAuto::FA_Core::MRLOG
                "\nRem_Command::cmd_login() UNAME: ==>$uname<==",
@@ -17978,10 +18576,13 @@ print $Net::FullAuto::FA_Core::MRLOG
                      if $cfh_error;
                }
             } else {
+               &Net::FullAuto::FA_Core::acquire_semaphore(8712,
+                  "mount -p at Line: ".__LINE__,1);
                ($cygdrive,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_handle,
                     _hostlabel=>[ $hostlabel,'' ] },
                   "${Net::FullAuto::FA_Core::mountpath}mount -p");
+               &Net::FullAuto::FA_Core::release_semaphore(8712);
                $cygdrive=~s/^.*(\/\S+).*$/$1/s;
             }
          }
@@ -18104,6 +18705,7 @@ print $Net::FullAuto::FA_Core::MRLOG "CURDIRDETERMINED!!!!!!=$curdir<==\n"
       };
       if ($@) {
          $cmd_errmsg=$@;
+print "WHAT IS THE CMD_ERR=$@\n";<STDIN>;
          print $Net::FullAuto::FA_Core::MRLOG
             "\ncmd_login() Login ERROR! - The Username or Password is INCORRECT\n",
             "       $cmd_errmsg -> Login Name Used: $use_su_login\n",
@@ -18115,7 +18717,8 @@ print $Net::FullAuto::FA_Core::MRLOG "CURDIRDETERMINED!!!!!!=$curdir<==\n"
             "       at Line ",__LINE__,"\n\n"
             if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
          if ((-1<index $cmd_errmsg,'timed-out') ||
-               (-1<index $cmd_errmsg,'filehandle isn')) {
+               (-1<index $cmd_errmsg,'filehandle isn') ||
+               (-1<index $cmd_errmsg,'no-uname')) {
 print "WHAT IS THE ERROR=$cmd_errmsg<===\n";
 print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETRYS=$retrys\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -18215,7 +18818,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETR
          if (-1<index $cmd_errmsg,'Could not resolve hostname') {
             ($die=$cmd_errmsg)=~s/: hostname/:\n\n       hostname/s;
          } else {
-print "IS THIS REALLY WHERE WE ARE DYINGMMMMMMMMMM and CMDERR=$cmd_errmsg<==\n";<STDIN>;
+#print "IS THIS REALLY WHERE WE ARE DYINGMMMMMMMMMM and CMDERR=$cmd_errmsg<==\n";<STDIN>;
             $die="The System $hostname Returned\n              the "
                 ."Following Unrecoverable Error Condition\,\n"
                 ."              Rejecting the $c_t Login Attempt "
@@ -18810,7 +19413,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                ## Wait for password prompt.
                my $ignore='';
                ($ignore,$stderr)=
-                  &File_Transfer::wait_for_ftr_passwd_prompt(
+                  &File_Transfer::wait_for_passwd_prompt(
                      { _cmd_handle=>$handle->{_ftp_handle},
                        _hostlabel=>[ $hostlabel,'' ],
                        _cmd_type=>$ftm_type,
@@ -18864,7 +19467,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                ## Wait for password prompt.
                my $ignore='';
                ($ignore,$stderr)=
-                  &File_Transfer::wait_for_ftr_passwd_prompt(
+                  &File_Transfer::wait_for_passwd_prompt(
                      { _cmd_handle=>$handle->{_ftp_handle},
                        _hostlabel=>[ $hostlabel,'' ],
                        _cmd_type=>$ftm_type,
@@ -19232,7 +19835,7 @@ sub cmd
                   return 0,"Semaphore Blocking Command";
                } else { return 'Semaphore Blocking Command' }
             } else {
-               &Net::FullAuto::FA_Core::acquire_semaphore($_[5]);
+               &Net::FullAuto::FA_Core::acquire_semaphore($_[5],,1);
                $sem=$_[5];
             }
          }
@@ -19838,10 +20441,11 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                   $output=~s/[ ]*\015//g;
                   $output=~tr/\0-\11\13-\37\177-\377//d;
                   print $Net::FullAuto::FA_Core::MRLOG
-                     "\nRAW OUTPUT: ==>$output<== at Line ",__LINE__,"\n\n"
+                     "\nCMD RAW OUTPUT: ==>$output<== at Line ",__LINE__,"\n\n"
                      if $Net::FullAuto::FA_Core::log &&
                      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  print "\nRAW OUTPUT: ==>$output<== at Line ",__LINE__,"\n\n"
+                  print "\nCMD RAW OUTPUT: ==>$output<== at Line ",
+                     __LINE__,"\n\n"
                      if !$Net::FullAuto::FA_Core::cron &&
                      $Net::FullAuto::FA_Core::debug;
                   $first=1 if $first==0;
@@ -20077,35 +20681,72 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT STRIPPED_COMMAND_FLAG AND GROWOUTPUT=$
                      unless ($growoutput) {
                         if ($output=~/^\s?$cmd_prompt/) {
                            print $Net::FullAuto::FA_Core::MRLOG
-                              "\nGOT $cmd_prompt AND EMPTY \$growoutput and OUTPUT ==>$output<==\n",
-                              "       at Line ",__LINE__," -> LAST FETCH\n\n"
+                              "\nGOT $cmd_prompt AND EMPTY \$growoutput ",
+                              "and OUTPUT ==>$output<==\n",
+                              "       at Line ",__LINE__,
+                              " -> DETERMINE FETCH\n\n"
                               if $Net::FullAuto::FA_Core::log &&
                               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            my $tou=$output;
                            $tou=~s/^\s?$cmd_prompt\s*//;
-                           if (($tou eq '(') || ($tou eq '(e') || ($tou eq '(ec')
-                                 || ($tou=~/^[(]ech.*$/)) {
+                           my $ltu=length $tou;
+                           if ($tou eq '(') {
                               print $Net::FullAuto::FA_Core::MRLOG
-                                "\nGOT $tou AND EMPTY \$growoutput and OUTPUT ==>$output<==\n",
+                                 "\nGOT $tou AND EMPTY \$growoutput ",
+                                 "and OUTPUT ==>$output<==\n",
                                  "       at Line ",__LINE__," -> NEXT FETCH\n\n"
                                  if $Net::FullAuto::FA_Core::log && 
                                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                              $command_stripped_from_output=0;
                               next FETCH;
-                           } elsif (($tou eq '(') || ($tou eq '(p') || ($tou eq '(pw')
-                                || ($tou=~/^[(]pwd.*$/)) {
+                           } elsif ($ltu==2 && ($tou eq '(p' || $tou eq '(e'
+                                || $tou eq '(u')) {
                               print $Net::FullAuto::FA_Core::MRLOG
-                                "\nGOT $tou AND EMPTY \$growoutput and OUTPUT ==>$output<==\n",
+                                 "\nGOT $tou AND EMPTY \$growoutput ",
+                                 "and OUTPUT ==>$output<==\n",
                                  "       at Line ",__LINE__," -> NEXT FETCH\n\n"
                                  if $Net::FullAuto::FA_Core::log &&
                                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                              $command_stripped_from_output=0;
+                              next FETCH;
+                           } elsif ($ltu==3 && ($tou eq '(un' || $tou eq '(pw'
+                                || $tou eq '(ec')) {
+                              print $Net::FullAuto::FA_Core::MRLOG
+                                 "\nGOT $tou AND EMPTY \$growoutput ",
+                                 "and OUTPUT ==>$output<==\n",
+                                 "       at Line ",__LINE__," -> NEXT FETCH\n\n"
+                                 if $Net::FullAuto::FA_Core::log &&
+                                 -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                              $command_stripped_from_output=0;
+                              next FETCH;
+                           } elsif (3<$ltu &&
+                                 $tou=~/^[(](?:una|pwd|ech|set).*$/) {
+                              print $Net::FullAuto::FA_Core::MRLOG
+                                 "\nGOT $tou AND EMPTY \$growoutput ",
+                                 "and OUTPUT ==>$output<==\n",
+                                 "       at Line ",__LINE__," -> NEXT FETCH\n\n"
+                                 if $Net::FullAuto::FA_Core::log &&
+                                 -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                              $growoutput=$tou;
+                              $command_stripped_from_output=0;
                               next FETCH;
                            } last FETCH;
                         } elsif ($output=~/^\s?$/) {
                            next FETCH;
+                        } elsif ($output=~/^(stdout: .*)$cmd_prompt$/) {
+                           $growoutput=$1."\n".$cmd_prompt;
+                           $lastline=$cmd_prompt;
+                           $output='';
                         }
-                     } elsif (($output=~/^stdout: (?!\/')/) && ($growoutput=~/ 2\>&1\s?$/)) {
+                     } elsif (($output=~/^stdout: (?!\/')/) &&
+                               ($growoutput=~/ 2\>&1\s?$/)) {
                            $growoutput=$output;
                            next FETCH if $output!~/$cmd_prompt$/s;
+                     } elsif ($growoutput && $output eq $cmd_prompt) {
+                        chomp $growoutput;
+                        $growoutput.="\n".$cmd_prompt;
+                        $lastline=$cmd_prompt;
+                        $output='';
                      }
                   } elsif ($output eq 'Connection closed') {
                      if ($wantarray) {
@@ -20173,7 +20814,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GROWOUTPUT2=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            if ($growoutput=~/stdout: PS1=/m) {
                               ($lastline=$growoutput)=~s/^.*\n(.*)$/$1/s;
-                           } elsif ($growoutput=~s/\n*$cmd_prompt\n*//s) {
+                           } elsif ($growoutput=~s/^\n*$cmd_prompt\n*//s) {
                               my $test_stripped_output=$growoutput;
                               my $stripped_live_command=$live_command;
                               $stripped_live_command=~s/\s*//gs;
@@ -20197,6 +20838,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GROWOUTPUT2=$growoutput\n"
                                        eq $growoutput)) {
                                  $growoutput='';next FETCH;
                               }
+                              next FETCH if $growoutput &&
+                                 $growoutput!~/$cmd_prompt$/;
 print "CLEANEDGROWOUT=$growoutput\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "CLEANEDGROWOUT=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -20441,6 +21084,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GRO_GONNA_LOOP==>$growoutput<==\n"
                      $starttime=time();$select_timeout=$cmtimeout;
                      $restart_attempt=1;
                   }
+                  $command_stripped_from_output=1;
 print $Net::FullAuto::FA_Core::MRLOG "PAST THE ALARM4\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -21335,7 +21979,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          ${$self->{_line_queried}}{$line}='-';
          return 'User Declines to EVER Transfer File','';
       } else {
-         &Net::FullAuto::FA_Core::acquire_semaphore($ipc_key);
+         &Net::FullAuto::FA_Core::acquire_semaphore($ipc_key,,1);
          ${$self->{_line_queried}}{$line}='-';
          if ($Net::FullAuto::FA_Core::log) {
             print $Net::FullAuto::FA_Core::MRLOG "FA_DB::query() QUERYLINE=",
@@ -21354,7 +21998,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          $result='File Less then 10 Minutes Old';
       } else {
          ${$self->{_line_queried}}{$line}='-';
-         &Net::FullAuto::FA_Core::acquire_semaphore($ipc_key);
+         &Net::FullAuto::FA_Core::acquire_semaphore($ipc_key,,1);
          if ($Net::FullAuto::FA_Core::log) {
             print $Net::FullAuto::FA_Core::MRLOG "FA_DB::query() QUERYLINE=",
                "$line\n" if $Net::FullAuto::FA_Core::log &&

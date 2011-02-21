@@ -36,6 +36,7 @@ BEGIN {
 
    my $edit=0;my $earg='';my $cnt=0;
    my $VERSION=0;my $version=0;
+   our $planarg=0;our $cronarg=0;
    foreach my $arg (@ARGV) {
       if ($arg=~/^--ed*i*t*$/) {
          $edit=1;
@@ -53,6 +54,10 @@ BEGIN {
       } elsif ($arg=~/^-[a-df-uw-zA-Z]*v/ ||
                $arg=~/^--VE*R*S*I*O*N*$/) {
          $version=1;
+      } elsif ($arg=~/^--plan$/) {
+         $planarg=1;
+      } elsif ($arg=~/^--cron$/) {
+         $cronarg=1;
       }
       $cnt++;
    }
@@ -72,6 +77,7 @@ BEGIN {
 
    our $fa_custom_code='fa_code.pm';
    our $fa_menu_config='fa_menu.pm';
+
 }
 
 use Net::FullAuto;

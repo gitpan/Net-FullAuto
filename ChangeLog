@@ -25,6 +25,20 @@
 ################################################################
 
 
+2011-02-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9918 released.
+
+        * Completed work on both IPC and Win32 Semaphore
+          code.
+
+        * Implemented 'top' CPU usage test to prevent FullAuto
+          launching in unattended mode when CPU usage is
+          high.
+
+        * More output parsing tweaks and bug fixes.
+
+
 2011-02-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9917 released.
