@@ -25,6 +25,15 @@
 ################################################################
 
 
+2011-02-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9919 released.
+
+        * Wrapped DB operations with semaphore protection.
+
+        * More output parsing tweaks and bug fixes.
+
+
 2011-02-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9918 released.

@@ -2628,7 +2628,7 @@ sub get_master_info
           &handle_error(
           "Couldn't Resolve Local Hostname $Local_HostName : ");
       my $gip=sprintf "%vd", $addr;
-print "WHAT IS GIP=$gip<==\n";
+# --CONTINUE-- print "WHAT IS GIP=$gip<==\n";
       $same_host_as_Master{$gip}='-';
       $Local_IP_Address->{$gip}='-';
       $Local_FullHostName=gethostbyaddr($addr,AF_INET) ||
@@ -4810,6 +4810,8 @@ sub getpasswd
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      &acquire_semaphore(9361,
+         "BDB DB Access: ".__LINE__);
       my $bdb='';
       while (1) {
          $bdb = BerkeleyDB::Btree->new(
@@ -4863,6 +4865,7 @@ sub getpasswd
          undef $bdb; 
          $dbenv->close();
          undef $dbenv;
+         &release_semaphore(9361);
          $pass='';
          eval {
             $pass=$cipher->decrypt($encrypted_passwd);
@@ -4889,10 +4892,12 @@ sub getpasswd
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
+         &release_semaphore(9361);
       } else {
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
+         &release_semaphore(9361);
       }
       &scrub_passwd_file($passlabel,$login_id) if
          $errmsg=~/Permission denied|Password:/s;
@@ -5116,6 +5121,8 @@ sub getpasswd
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      &acquire_semaphore(9361,
+         "BDB DB Access: ".__LINE__);
       my $bdb='';
       while (1) {
          $bdb = BerkeleyDB::Btree->new(
@@ -5172,6 +5179,7 @@ sub getpasswd
       undef $bdb;
       $dbenv->close();
       undef $dbenv;
+      &acquire_semaphore(9361);
    } else {
       $Net::FullAuto::FA_Core::tosspass{$key}=$save_passwd;
    }
@@ -6161,6 +6169,8 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      &acquire_semaphore(9361,
+         "BDB DB Access: ".__LINE__);
       my $bdb='';
       while (1) {
          $bdb = BerkeleyDB::Btree->new(
@@ -6212,6 +6222,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       undef $bdb ;
       $dbenv->close();
       undef $dbenv;
+      &release_semaphore(9361);
       &cleanup();
    }
 
@@ -6256,7 +6267,6 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                "FullAuto Process Limit at Line: ".__LINE__,2);
 
          }
-
          if ($plan || $plan_ignore_error) {
             if ($Net::FullAuto::cpu) {
                my $idle=(split ',', $Net::FullAuto::cpu)[3];
@@ -6317,7 +6327,6 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
             $dbenv->close();
             undef $dbenv;
          }
-
          if ($localhost && -1<index $login_Mast_error,'invalid log'
                && -1<index $login_Mast_error,'ogin incor'
                && -1<index $login_Mast_error,'sion den') {
@@ -6412,6 +6421,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",
             '',$track);
+         &acquire_semaphore(9361,
+            "BDB DB Access: ".__LINE__);
          my $bdb='';
          while (1) {
             $bdb = BerkeleyDB::Btree->new(
@@ -6420,7 +6431,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                -Flags    => DB_CREATE,
                -Env      => $dbenv
             );
-            unless ($BerkeleyDB::Error=~/^Successful/) {
+            if ($BerkeleyDB::Error!~/^Successful/) {
                my ($output,$error)=('','');
                ($output,$error)=&Net::FullAuto::FA_Core::cmd(
                   "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
@@ -6841,6 +6852,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
+         &release_semaphore(9361);
 
          $login_id=$username;
          $passwd[2]='';
@@ -7048,6 +7060,8 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                      "cannot open environment for DB: $BerkeleyDB::Error\n",
                      '__cleanup__',$track);
                }
+               &acquire_semaphore(9361,
+                  "BDB DB Access: ".__LINE__);
                my $bdb='';
                while (1) {
                   $bdb = BerkeleyDB::Btree->new(
@@ -7092,6 +7106,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                $dbenv->close();
                undef $dbenv;
 ## ADD - TELL USER ABOUT MISSING CRON CREDS ON CMD LINE
+               &release_semaphore(9361);
                &release_semaphore(6543);
                die $line;
                #die "Permission denied";
@@ -7321,7 +7336,9 @@ print $Net::FullAuto::FA_Core::MRLOG
          my $lref={};
          my $status=$bdb->db_get($host__label,$lref);
          $lref=~s/\$HASH\d*\s*=\s*//s;
-print $Net::FullAuto::FA_Core::MRLOG "LREF=$lref<==\n if ref $lref eq 'HASH";
+print $Net::FullAuto::FA_Core::MRLOG "LREF=$lref<==\n if ref $lref eq 'HASH"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          $lref=eval $lref;
          foreach my $ky (keys %{$lref}) {
             if ($ky eq $key) {
@@ -7353,7 +7370,9 @@ print $Net::FullAuto::FA_Core::MRLOG "\nFA_LOGIN__NEWKEY=$key<== and HOST__LABEL
             $lref->{$key}=$new_encrypted;
             my $put_lref=Data::Dump::Streamer::Dump($lref)->Out();
             my $status=$bdb->db_put($host__label,$put_lref);
-print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n";
+print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          } else {
             #$tosspass{$key}=$passwd[0];
             $tosspass{$key}=$dcipher->decrypt($passetts->[0]);
@@ -7898,6 +7917,8 @@ sub passwd_db_update
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   &acquire_semaphore(9361,
+      "BDB DB Access: ".__LINE__);
    my $bdb='';
    while (1) {
       $bdb = BerkeleyDB::Btree->new(
@@ -7990,6 +8011,7 @@ print $Net::FullAuto::FA_Core::MRLOG
    undef $bdb;
    $dbenv->close();
    undef $dbenv;
+   &release_semaphore(9361);
 
 }
 
@@ -8006,6 +8028,8 @@ sub su_scrub
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   &acquire_semaphore(9361,
+      "BDB DB Access: ".__LINE__);
    my $bdb='';
    while (1) {
       $bdb = BerkeleyDB::Btree->new(
@@ -8091,6 +8115,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA
    undef $bdb;
    $dbenv->close();
    undef $dbenv;
+   &release_semaphore(9361);
 
 }
 
@@ -8150,6 +8175,8 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
                DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+         &acquire_semaphore(9361,
+            "BDB DB Access: ".__LINE__);
          my $bdb='';
          while (1) {
             $bdb = BerkeleyDB::Btree->new(
@@ -8183,6 +8210,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
+         &release_semaphore(9361);
    print $Net::FullAuto::FA_Core::MRLOG "DYING HERE WITH LOCK PROB" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          return '',"$die       $!";
       }
@@ -8976,6 +9004,10 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
+         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      &acquire_semaphore(9361,
+         "BDB DB Access: ".__LINE__);
       my $bdb='';
       while (1) {
          $bdb = BerkeleyDB::Btree->new(
@@ -8984,6 +9016,10 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
             -Flags    => DB_CREATE,
             -Env      => $dbenv
          );
+print $Net::FullAuto::FA_Core::MRLOG "GOT BDB CREATED<==\n"
+         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print $Net::FullAuto::FA_Core::MRLOG "BDB ERROR IS ANY=>$BerkeleyDB::Error<==\n"
+         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          unless ($BerkeleyDB::Error=~/^Successful/) {
             my ($output,$error)=('','');
             ($output,$error)=&Net::FullAuto::FA_Core::cmd(
@@ -8996,6 +9032,8 @@ print $Net::FullAuto::FA_Core::MRLOG "db_recover ERROR=$error\n";
                '__cleanup__',$track) if $error;
 # BERKERR
          } else {
+print $Net::FullAuto::FA_Core::MRLOG "I\'M SUPPOSED TO BE LEAVING LOOP<==\n"
+         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
            last
          }
       }
@@ -9021,6 +9059,7 @@ print $Net::FullAuto::FA_Core::MRLOG "db_recover ERROR=$error\n";
       undef $bdb;
       $dbenv->close();
       undef $dbenv;
+      &release_semaphore(9361);
       return $successflag;
    }
 
@@ -10183,6 +10222,8 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         ) or &handle_error(
                            "cannot open environment for DB: ".
                            "$BerkeleyDB::Error\n",'',$track);
+                        &acquire_semaphore(9361,
+                           "BDB DB Access: ".__LINE__);
                         my $bdb='';
                         while (1) {
                             my $pn=$Net::FullAuto::FA_Core::progname;
@@ -10248,6 +10289,7 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         undef $bdb;
                         $dbenv->close();
                         undef $dbenv;
+                        &release_semaphore(9361);
                      }
                      $ftr_cmd->{_cmd_handle}->cmd(
                         "export PS1='_funkyPrompt_';unset PROMPT_COMMAND");
@@ -20736,17 +20778,18 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT STRIPPED_COMMAND_FLAG AND GROWOUTPUT=$
                         } elsif ($output=~/^(stdout: .*)$cmd_prompt$/) {
                            $growoutput=$1."\n".$cmd_prompt;
                            $lastline=$cmd_prompt;
-                           $output='';
+                           $output='';$fulloutput='';
                         }
                      } elsif (($output=~/^stdout: (?!\/')/) &&
                                ($growoutput=~/ 2\>&1\s?$/)) {
                            $growoutput=$output;
                            next FETCH if $output!~/$cmd_prompt$/s;
+                           $output='';$fulloutput='';
                      } elsif ($growoutput && $output eq $cmd_prompt) {
                         chomp $growoutput;
                         $growoutput.="\n".$cmd_prompt;
                         $lastline=$cmd_prompt;
-                        $output='';
+                        $output='';$fulloutput='';
                      }
                   } elsif ($output eq 'Connection closed') {
                      if ($wantarray) {
