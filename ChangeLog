@@ -27,6 +27,13 @@
 
 2011-02-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9920 released.
+
+        * Minor changes to fix errors found when run in Linux.
+
+
+2011-02-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9919 released.
 
         * Wrapped DB operations with semaphore protection.

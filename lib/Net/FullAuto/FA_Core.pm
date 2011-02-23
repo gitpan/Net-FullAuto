@@ -1144,9 +1144,9 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
                   "       WAS SUCCESSFULLY CREATED!\n";
          }
       }
+      undef $bdb;
       $dbenv->close();
       undef $dbenv;
-      undef $bdb;
    }
    if ((!$Net::FullAuto::FA_Core::cron || $Net::FullAuto::FA_Core::debug)
          && !$Net::FullAuto::FA_Core::quiet) {
@@ -1987,9 +1987,9 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
                      'Creator'=>$Net::FullAuto::FA_Core::username,
                      'Host'   =>$Net::FullAuto::FA_Core::local_hostname,
                      'Plan'   =>[] };
+         undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         undef $bdb;
          return $plann;
       } elsif ($output eq 'Work with Existing Plans') {
          my $plans=getplans($bdb);
@@ -2006,9 +2006,9 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
                   Banner=> '   Select a Plan to work with:'
             );
             my $outp=Menu(\%existing);
+            undef $bdb;
             $dbenv->close();
             undef $dbenv;
-            undef $bdb;
             undef $Net::FullAuto::FA_Core::makeplan;
             &cleanup();
          } else {
@@ -3423,9 +3423,9 @@ sub handle_error
             } 
          }
          undef $cursor;
+         undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         undef $bdb;
          if ($^O eq 'cygwin') {
             if (keys %Net::FullAuto::FA_Core::semaphores) {
                foreach my $ipc_key (keys %Net::FullAuto::FA_Core::semaphores) {
@@ -3449,9 +3449,9 @@ sub handle_error
             }
          }
          undef $cursor;
+         undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         undef $bdb;
          if ($^O eq 'cygwin') {
             if (keys %Net::FullAuto::FA_Core::semaphores) {
                foreach my $ipc_key (keys %Net::FullAuto::FA_Core::semaphores) {
@@ -3467,9 +3467,9 @@ sub handle_error
          ${$tref}{"${hostlabel}_$command"}=$error;
          my $put_tref=Data::Dump::Streamer::Dump($tref)->Out();
          $status=$bdb->db_put($invoked[2],$put_tref);
+         undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         undef $bdb;
          $return=1;
       }
       # loop the contents of the file
@@ -3481,9 +3481,9 @@ sub handle_error
          }
       }
       undef $cursor;
+      undef $bdb;
       $dbenv->close();
       undef $dbenv;
-      undef $bdb;
    } my $errtxt='';
    if (10<length $error && unpack('a11',$error) ne 'FATAL ERROR') {
       $error=~s/\s*$//s;$error=~s/^\s*//s;
@@ -8603,19 +8603,22 @@ sub work_dirs
          #        'cmd /c chdir',$cmd_handle->{'hostlabel'}[0]);
          ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
          &handle_error($stderr,'-1') if $stderr;
-         my $cdr='';
-         if (-1<index $curdir,$localhost->{_cygdrive}) {
-            my $l_cd=(length $localhost->{_cygdrive})+1;
-            my $cdr=unpack("x$l_cd a*",$curdir);
-            substr($cdr,1,0)=':';
-            $cdr=ucfirst($cdr);
-            $cdr=~tr/\//\\\\/;
-         } else {
-            ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-               $localhost,"cygpath -w $curdir");
-            &handle_error($stderr,'-1') if $stderr;
+         if ($^O eq 'cygwin') {
+            my $cdr='';
+            if (exists $localhost->{_cygdrive} &&
+                  -1<index $curdir,$localhost->{_cygdrive}) {
+               my $l_cd=(length $localhost->{_cygdrive})+1;
+               my $cdr=unpack("x$l_cd a*",$curdir);
+               substr($cdr,1,0)=':';
+               $cdr=ucfirst($cdr);
+               $cdr=~tr/\//\\\\/;
+            } else {
+               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                  $localhost,"cygpath -w $curdir");
+               &handle_error($stderr,'-1') if $stderr;
+            }
+            ${$work_dirs}{_tmp_mswin}=$cdr.'\\';
          }
-         ${$work_dirs}{_tmp_mswin}=$cdr.'\\';
          ($output,$stderr)=$cmd_handle->cmd(
             'cd '."\"$pwd\"");
          &handle_error($stderr,'-2','__cleanup__') if $stderr;
@@ -10055,24 +10058,27 @@ sub ftr_cmd
                &handle_error($stderr,'-1') if $stderr;
                #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
                #        'cmd /c chdir',$ftr_cmd->{'hostlabel'}[0]);
-               my $cdr='';
-               if (-1<index $curdir,$localhost->{_cygdrive}) {
-                  my $l_cd=(length $localhost->{_cygdrive})+1;
-                  my $cdr=unpack("x$l_cd a*",$curdir);
-                  substr($cdr,1,0)=':';
-                  $cdr=ucfirst($cdr);
-                  $cdr=~tr/\//\\\\/;
-               } else {
-                  ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                     $localhost,"cygpath -w $curdir");
-                  &handle_error($stderr,'-1') if $stderr;
+               if ($^O eq 'cygwin') {
+                  my $cdr='';
+                  if (exists $localhost->{_cygdrive} &&
+                        -1<index $curdir,$localhost->{_cygdrive}) {
+                     my $l_cd=(length $localhost->{_cygdrive})+1;
+                     my $cdr=unpack("x$l_cd a*",$curdir);
+                     substr($cdr,1,0)=':';
+                     $cdr=ucfirst($cdr);
+                     $cdr=~tr/\//\\\\/;
+                  } else {
+                     ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                        $localhost,"cygpath -w $curdir");
+                     &handle_error($stderr,'-1') if $stderr;
+                  }
+                  ${$work_dirs}{_pre_mswin}=
+                     ${$work_dirs}{_cwd_mswin}=$cdr.'\\';
+                  ${$work_dirs}{_tmp_mswin}=
+                     $ftr_cmd->{_work_dirs}->{_tmp_mswin};
                }
-               ${$work_dirs}{_pre_mswin}=
-                  ${$work_dirs}{_cwd_mswin}=$cdr.'\\';
                ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
                ${$work_dirs}{_tmp}=$ftr_cmd->{_work_dirs}->{_tmp};
-                ${$work_dirs}{_tmp_mswin}=
-                   $ftr_cmd->{_work_dirs}->{_tmp_mswin};
             } else {
                my $cnt=3;
                while ($cnt--) {
@@ -18489,9 +18495,19 @@ if (0) {
             #   "Uname Command at Line: ".__LINE__,1);
 }
 # --CONTINUE-- print "GOING FOR UNAME\n";
-            ($uname,$stderr)=Rem_Command::cmd(
-               { _cmd_handle=>$cmd_handle,
-                 _hostlabel=>[ $hostlabel,'' ] },'uname');
+            my $ctt=2;
+            while ($ctt--) {
+               ($uname,$stderr)=Rem_Command::cmd(
+                  { _cmd_handle=>$cmd_handle,
+                    _hostlabel=>[ $hostlabel,'' ] },'uname');
+               if (!$uname && !$stderr) {
+                              ($cfh_ignore,$cfh_error)=
+                  &Net::FullAuto::FA_Core::clean_filehandle(
+                     $cmd_handle);
+                  &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+                     if $cfh_error;
+               } last if $uname;
+            }
             #&Net::FullAuto::FA_Core::release_semaphore(7392);
 # --CONTINUE-- print "UNAMEBEFOREERR=$uname and STDERR=$stderr<==\n";
             #&Net::FullAuto::FA_Core::handle_error(
