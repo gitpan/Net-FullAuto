@@ -7111,9 +7111,9 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                die $line;
                #die "Permission denied";
             }
-            if ($line=~/Write failed: Connection reset by peer/s) {
+            if ($line=~/Connection reset by peer/s) {
                &release_semaphore(6543);
-               die "Write failed: Connection reset by peer";
+               die $line;
             }
             if ($line=~/(?<!Last )login[: ]*$/m ||
                   (-1<index $line,' sync_with_child: ')) {
@@ -7467,8 +7467,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
          $localhost->{_cmd_pid}||='';
          my $kill_arg=($^O eq 'cygwin')?'f':9;
          if ((-1<index $@,'Not a GLOB reference') ||
-               (-1<index $@,
-               'Write failed: Connection reset by peer')) {
+               (-1<index $@,'Connection reset by peer')) {
 #print "DO WE GET HERE\n";<STDIN>;
             print $Net::FullAuto::FA_Core::MRLOG
                "\nERROR: main::fa_login() CONNECTION ERROR:\n       ",
@@ -12359,7 +12358,7 @@ sub wait_for_passwd_prompt
             } elsif (-1<index $lin,'Address already in use') {
                alarm 0;
                die 'Connection closed';
-            } elsif (-1<index $lin,'Write failed: Connection reset by peer') {
+            } elsif (-1<index $lin,'Connection reset by peer') {
                alarm 0;
                die 'Connection closed';
             } elsif (7<length $line && unpack('a8',$line) eq 'Insecure') {
@@ -18625,7 +18624,8 @@ print $Net::FullAuto::FA_Core::MRLOG
                   &Net::FullAuto::FA_Core::handle_error($su_err) if $su_err;
                   # Make sure prompt won't match anything in send data.
                   $cmd_handle->prompt("/$prompt\$/");
-                  $cmd_handle->print("export PS1=\'$prompt\';unset PROMPT_COMMAND");
+                  $cmd_handle->print("export PS1=\'$prompt\';".
+                                     "unset PROMPT_COMMAND");
                   my $cfh_ignore='';my $cfh_error='';
                   ($cfh_ignore,$cfh_error)=
                      &Net::FullAuto::FA_Core::clean_filehandle(
@@ -18765,15 +18765,18 @@ print $Net::FullAuto::FA_Core::MRLOG "CURDIRDETERMINED!!!!!!=$curdir<==\n"
          $cmd_errmsg=$@;
 print "WHAT IS THE CMD_ERR=$@\n";<STDIN>;
          print $Net::FullAuto::FA_Core::MRLOG
-            "\ncmd_login() Login ERROR! - The Username or Password is INCORRECT\n",
+            "\ncmd_login() Login ERROR!".
+            " - The Username or Password is INCORRECT\n",
             "       $cmd_errmsg -> Login Name Used: $use_su_login\n",
             "       at Line ",__LINE__,"\n\n"
             if $Net::FullAuto::FA_Core::log &&
             -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         print "\ncmd_login() Login ERROR! - The Username or Password is INCORRECT\n",
+         print "\ncmd_login() Login ERROR!".
+            " - The Username or Password is INCORRECT\n",
             "       $cmd_errmsg -> Login Name Used: $use_su_login\n",
             "       at Line ",__LINE__,"\n\n"
-            if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
+            if !$Net::FullAuto::FA_Core::cron &&
+               $Net::FullAuto::FA_Core::debug;
          if ((-1<index $cmd_errmsg,'timed-out') ||
                (-1<index $cmd_errmsg,'filehandle isn') ||
                (-1<index $cmd_errmsg,'no-uname')) {
