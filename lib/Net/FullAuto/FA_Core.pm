@@ -4278,7 +4278,7 @@ sub master_transfer_dir
             my $cdr=unpack("x$l_cd a*",$curdir);
             substr($cdr,1,0)=':';
             $cdr=ucfirst($cdr);
-            $cdr=~tr/\//\\\\/;
+            $cdr=~s/\//\\\\/g;
          } else {
             ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
                $localhost,"cygpath -w $curdir");
@@ -4422,7 +4422,7 @@ sub master_transfer_dir
                my $cdr=unpack("x$l_cd a*",$curdir);
                substr($cdr,1,0)=':';
                $cdr=ucfirst($cdr);
-               $cdr=~tr/\//\\\\/;
+               $cdr=~s/\//\\\\/g;
             } else {
                ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
                   $localhost,"cygpath -w $curdir");
@@ -4504,7 +4504,7 @@ sub master_transfer_dir
             my $cdr=unpack("x$l_cd a*",$curdir);
             substr($cdr,1,0)=':';
             $cdr=ucfirst($cdr);
-            $cdr=~tr/\//\\\\/;
+            $cdr=~s/\//\\\\/g;
          } else {
             ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
                $localhost,"cygpath -w $curdir");
@@ -5179,7 +5179,7 @@ sub getpasswd
       undef $bdb;
       $dbenv->close();
       undef $dbenv;
-      &acquire_semaphore(9361);
+      &release_semaphore(9361);
    } else {
       $Net::FullAuto::FA_Core::tosspass{$key}=$save_passwd;
    }
@@ -7111,7 +7111,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                die $line;
                #die "Permission denied";
             }
-            if ($line=~/Connection reset by peer/s) {
+            if ($line=~/Connection reset by peer|node or service name/s) {
                &release_semaphore(6543);
                die $line;
             }
@@ -8610,7 +8610,7 @@ sub work_dirs
                my $cdr=unpack("x$l_cd a*",$curdir);
                substr($cdr,1,0)=':';
                $cdr=ucfirst($cdr);
-               $cdr=~tr/\//\\\\/;
+               $cdr=~s/\//\\\\/g;
             } else {
                ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
                   $localhost,"cygpath -w $curdir");
@@ -9423,7 +9423,7 @@ sub select_dir
                      my $cdr=unpack("x$l_cd a*",$curdir);
                      substr($cdr,1,0)=':';
                      $cdr=ucfirst($cdr);
-                     $cdr=~tr/\//\\\\/;
+                     $cdr=~s/\//\\\\/g;
                   } else {
                      ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
                      $localhost,"cygpath -w $curdir");
@@ -10065,7 +10065,7 @@ sub ftr_cmd
                      my $cdr=unpack("x$l_cd a*",$curdir);
                      substr($cdr,1,0)=':';
                      $cdr=ucfirst($cdr);
-                     $cdr=~tr/\//\\\\/;
+                     $cdr=~s/\//\\\\/g;
                   } else {
                      ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
                         $localhost,"cygpath -w $curdir");

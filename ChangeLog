@@ -25,6 +25,17 @@
 ################################################################
 
 
+2011-02-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9922 released.
+
+        * More minor fixes to bugs discovered while
+          testing in OpenSolaris.
+
+        * Changed Makefile.PL to eliminate searching of
+          hidden directories when looking for BerkeleyDB.
+
+
 2011-02-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9921 released.

@@ -20,7 +20,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9921';
+version         '0.9922';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -742,6 +742,7 @@ if ($get_BerkeleyDB) {
       print "\nSearching for latest verison of BerkeleyDB.\n".
             "This may take up to five minutes ...\n\n";
       foreach my $dir ('/usr/','/opt/',(getpwuid $>)[7].'/') {
+         next if unpack('a1',$dir) eq '.';
          next unless -d $dir;
          opendir(DIR, $dir) or die $!;
          while (my $file = readdir(DIR) ) {

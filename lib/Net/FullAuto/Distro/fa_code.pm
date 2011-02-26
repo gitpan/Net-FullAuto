@@ -101,7 +101,10 @@ sub hello_world {
     #print "\nFIRST PARAMETER=$_[0]\n";
     #print "SECOND PARAMETER=$_[1]\n";
     my $hostname=$localhost->cmd('hostname');
+    my $stdout='';
+    my $stderr='';
     my $computer_zero='';
+    my $computer_one='';
     ($computer_zero,$stderr)=connect_host('Zero'); # Connect to
                                         # Remote Host via ssh
     if ($stderr) {
