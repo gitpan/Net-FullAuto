@@ -425,6 +425,8 @@ BEGIN {
       $pingpath='/usr/local/bin/';
    } elsif (-e '/etc/ping') {
       $pingpath='/etc/';
+   } elsif (-e '/usr/sbin/ping') {
+      $pingpath='/usr/sbin/';
    }
 
    our $termwidth=''; our $termheight='';
@@ -2716,7 +2718,7 @@ sub check_Hosts
          $hostn="\'HostName'=>\'$Local_HostName\'\,";
       }
       if (keys %{$Local_IP_Address}) {
-         $ip="'IP'=>\'(keys %{$Local_IP_Address})[0]\',";
+         $ip="'IP'=>\'".(keys %{$Local_IP_Address})[0]."\',";
       }
       my $label="\'Label\'=>\'__Master_${$}__\',";
       my $uname="'Uname'=>'".(uname)[0]."',";
@@ -3580,14 +3582,12 @@ sub lookup_hostinfo_from_label
    foreach my $key (keys %{$Hosts{$hostlabel}}) {
 print $Net::FullAuto::FA_Core::MRLOG "KEY FROM HOST HASH=$key and USE=$use\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-
       if (!$use || (!$defined_use && $ip && !$hostname)) {
          if ($key eq 'IP') {
             $ip=$Hosts{$hostlabel}{$key};
-# --CONTINUE-- print "WAHT IS IP FOR SAME=$ip\n";
             if (exists $same_host_as_Master{$ip} || $ping) {
                if (exists $same_host_as_Master{$ip}
-                     || &ping($ip,'__return__')) {
+                     || !(&ping($ip,'__return__'))[1]) {
                   $use='ip';
                } else { print "DAMN\n";$ip_flag=1 }
             }
@@ -5994,7 +5994,7 @@ sub fa_login
             File::Path::make_path("$FA_Core_path/db/");
          }
          $Hosts{"__Master_${$}__"}{'FA_Secure'}=
-            "FA_Core_path/db/";
+            "$FA_Core_path/db/";
       } elsif (-d "/var" && -w _) {
          unless (-d "/var/db/Berkeley/FullAuto/") {
             File::Path::make_path("/var/db/Berkeley/FullAuto/");
@@ -8441,53 +8441,59 @@ sub ping
    my @topcaller=caller;
    print "ping() CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
-   #print $Net::FullAuto::FA_Core::MRLOG "ping() CALLER=",
-   #   (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    print $Net::FullAuto::FA_Core::MRLOG "ping() CALLER=",
-      (join ' ',@topcaller),"\n" if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $cmd='';my $stdout='';my $stderr='';
-   if ($^O eq 'cygwin') {
-      $cmd=[ "${Net::FullAuto::FA_Core::pingpath}ping -n 1 $_[0] 2>&1" ];
-   } else {
-      my $bashpath=$Net::FullAuto::FA_Core::bashpath;
-      if (exists $Hosts{"__Master_${$}__"}{'bash'}) {
-         $bashpath=$Hosts{"__Master_${$}__"}{'bash'};
-         $bashpath.='/' if $bashpath!~/\/$/;
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   my $cmd='';my $stdout='';my $stderr='';my $didping=10;
+   if ($specialperms eq 'setuid') {
+      if ($^O eq 'cygwin') {
+         $cmd=[ "${Net::FullAuto::FA_Core::pingpath}ping",'-n','1',$_[0],"2>&1" ];
+      } else {
+         my $bashpath=$Net::FullAuto::FA_Core::bashpath;
+         if (exists $Hosts{"__Master_${$}__"}{'bash'}) {
+            $bashpath=$Hosts{"__Master_${$}__"}{'bash'};
+            $bashpath.='/' if $bashpath!~/\/$/;
+         }
+         my $pth=$Hosts{"__Master_${$}__"}{'FA_Core'}."ping$$.sh";
+         open(TP,">$pth") || die "CANNOT OPEN $pth $!";
+         print TP "${Net::FullAuto::FA_Core::pingpath}ping -c1 $_[0]"; 
+         CORE::close(TP);
+         $cmd=[ "${bashpath}bash",$pth,"2>&1" ];
       }
-      $cmd=[ "${bashpath}bash",'-c',
-             "\"${Net::FullAuto::FA_Core::pingpath}ping -c1 $_[0]\" 2>&1" ];
-   } my $didping=10;
+   } else {
+      if ($^O eq 'cygwin') {
+         $cmd=[ "${Net::FullAuto::FA_Core::pingpath}ping -n 1 $_[0]" ];
+      } else {
+         $cmd=[ "${Net::FullAuto::FA_Core::pingpath}ping -c1 $_[0]" ];
+      }
+   }
    eval {
-      if (ref $localhost eq 'HASH') {
-         ($stdout,$stderr)=$localhost->cmd(
-            ${Net::FullAuto::FA_Core::pingpath}.
-            "ping $count \"$_[0]\"",5);
+      unless ($specialperms eq 'setuid') {
+         ($stdout,$stderr)=$localhost->cmd($cmd->[0],5);
       } else {
          $didping=7;
-#print $Net::FullAuto::FA_Core::MRLOG "ENTERING cmd() for PING and CMD=@{$cmd}\n"
-#   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-print $Net::FullAuto::FA_Core::MRLOG "ENTERING cmd() for PING and CMD=@{$cmd}\n"
-   if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         ($stderr,$stdout)=&setuid_cmd($cmd,5);
-print $Net::FullAuto::FA_Core::MRLOG "LEAVING cmd() for PING\n" if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   #if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
    };
-   if ($@) {
+   my $ev_err=$@||'';
+   if ($specialperms eq 'setuid' && $^O ne 'cygwin') {
+      unlink $Hosts{"__Master_${$}__"}{'FA_Core'}."ping$$.sh";
+   } 
+   if ($ev_err) {
       if (wantarray) {
          return 0,
             ${Net::FullAuto::FA_Core::pingpath}.
-            "ping timed-out: $@";
+            "ping timed-out: $ev_err";
       } else {
          &Net::FullAuto::FA_Core::handle_error(
             ${Net::FullAuto::FA_Core::pingpath}.
-            "ping timed-out: $@","-$didping");
+            "ping timed-out: $ev_err","-$didping");
       }
    }
    $stdout=~s/^\s*//s;
    foreach my $line (split /^/, $stdout) {
       chomp($line=~tr/\0-\11\13-\37\177-\377//d);
-      if (-1<index $line,' from ') {
+      if (-1<index $line,' from ' || -1<index $line,'is alive') {
          if (wantarray) {
             return $stdout,'';
          } else {
@@ -8499,10 +8505,14 @@ print $Net::FullAuto::FA_Core::MRLOG "LEAVING cmd() for PING\n" if -1<index $Net
          || (-1<index $line,'Bad IP')
          || (-1<index $line,'100% packet loss');
    }
-   $stderr=~s/^/       /mg;
+   $stderr=~s/^(.*)$/       $1/mg if $stderr;
    if (wantarray) {
       return 0,$stderr;
    } elsif (defined $_[1] && $_[1] eq '__return__') {
+      print $Net::FullAuto::FA_Core::MRLOG
+         "\nPING ERROR for CMD=",(join " ",@{$cmd})," AND STDERR=$stderr\n\n"
+         if $Net::FullAuto::FA_Core::log &&
+         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       return 0;
    } else {
       $didping+=30;
@@ -8712,6 +8722,14 @@ sub setuid_cmd
    $three=${$cmd}[2] if 1<$#{$cmd};
    my $four='';
    $four=${$cmd}[3] if 2<$#{$cmd};
+   my $five='';
+   $five=${$cmd}[4] if 3<$#{$cmd};
+   my $six='';
+   $six=${$cmd}[5] if 4<$#{$cmd};
+   my $seven='';
+   $seven=${$cmd}[6] if 5<$#{$cmd};
+   my $eight='';
+   $eight=${$cmd}[7] if 6<$#{$cmd};
    if (!$one && ref $cmd ne 'ARRAY') {
       $one=$cmd;$cmd_err=$cmd;
    }
@@ -8734,13 +8752,23 @@ sub setuid_cmd
       $GID  = $orig_gid;
       # Make sure privs are really gone
       ($EUID, $EGID) = @temp;
-      #die "Can't drop privileges"
-      #    unless $UID == $EUID  && $GID eq $EGID;
       if (!$flag || lc($flag) ne '__use_parent_env__') {
          $ENV{PATH} = '';
          $ENV{ENV}  = '';
       }
-      if ($four) {
+      if ($eight) {
+         exec $one, $two, $three, $four, $five, $six, $seven, $eight ||
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+      } elsif ($seven) {
+         exec $one, $two, $three, $four, $five, $six, $seven ||
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+      } elsif ($six) {
+         exec $one, $two, $three, $four, $five, $six ||
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+      } elsif ($five) {
+         exec $one, $two, $three, $four, $five ||
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+      } elsif ($four) {
          exec $one, $two, $three, $four ||
             &handle_error("Couldn't exec: $cmd_err".($!),'-1');
       } elsif ($three) {
@@ -8767,7 +8795,7 @@ sub setuid_cmd
       foreach my $line (split /^/,$output) {
          if ($line=~s/^[\t ]*stdout: //) {
             push @outlines, $line;
-         } else { push @errlines, $line if $line!~/$one/s }
+         } else { push @errlines, $line }
       } $stdout=join '', @outlines;$stderr=join '',@errlines;
    } else { $stdout=$output }
    chomp $stdout;chomp $stderr;
@@ -8846,6 +8874,9 @@ sub cmd
 #else { $Net::FullAuto::FA_Core::log=1 }
 print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
    (join ' ',@_),"\n" if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         my $cfh_ignore='';my $cfh_error='';
+         ($cfh_ignore,$cfh_error)=&clean_filehandle($self->{_cmd_handle});
+         &handle_error($cfh_error,'-1') if $cfh_error;
          ($stdout,$stderr)=Rem_Command::cmd(@_);
          if (wantarray) {
             return $stdout,$stderr;
@@ -12430,7 +12461,8 @@ print $Net::FullAuto::FA_Core::MRLOG "wait_for_passwd_prompt() GETGOTPASS!!=$lin
                   || (-1<index $lin,'421 ')
                   || (-1<index $lin,'Connection refused')
                   || (-1<index $lin,'Connection closed')
-                  || (-1<index $lin,'ssh: Could not')) {
+                  || (-1<index $lin,'ssh: Could not')
+                  || (-1<index $lin,'name not known')) {
                chomp($lin=~tr/\0-\11\13-\31\33-\37\177-\377//d);
                $lin=~/(^530[ ].*$)|(^421[ ].*$)
                       |(^Connection[ ]refused.*$)
@@ -12442,6 +12474,9 @@ print $Net::FullAuto::FA_Core::MRLOG "wait_for_passwd_prompt() GETGOTPASS!!=$lin
                if (-1<index $lin,'Connection refused') {
                   alarm 0;
                   die 'Connection refused';
+               } elsif (-1<index $lin,'name not known') {
+                  alarm 0;
+                  die $lin;
                } elsif (-1<index $lin,'Connection closed') {
                   alarm 0;
                   die 'Connection closed';
@@ -12468,7 +12503,8 @@ print $Net::FullAuto::FA_Core::MRLOG "wait_for_passwd_prompt() GETGOTPASS!!=$lin
          if ($@=~/Permission denied/) {
 #print "do_slave ONE and ERROR=$error\n";
             return ('','read timed-out:do_slave')
-         } elsif ($@!~/Connection closed/) {
+         } elsif ($@!~/Connection closed/ &&
+               (-1==index $@, 'name not known')) {
             my $err=$@;
             eval {
                $filehandle->{_cmd_handle}->print;

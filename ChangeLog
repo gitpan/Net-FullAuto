@@ -25,6 +25,18 @@
 ################################################################
 
 
+2011-02-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9923 released.
+
+        * More minor fixes to bugs discovered while
+          testing in OpenSolaris.
+
+        * Fixed Ping functionality.
+
+        * Worked on setuid operations.
+
+
 2011-02-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9922 released.
