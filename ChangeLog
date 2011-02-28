@@ -27,6 +27,18 @@
 
 2011-02-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9924 released.
+
+        * More minor fixes to bugs discovered while
+          testing in OpenSolaris.
+
+        * Implemented $host->close() for ssh connections.
+
+        * Tested with threading - it WORKS.
+
+
+2011-02-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9923 released.
 
         * More minor fixes to bugs discovered while

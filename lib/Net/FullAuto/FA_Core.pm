@@ -863,7 +863,12 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            last if $line=~/logout|221\sGoodbye/sx;
-                           if (($line=~/Killed|_funkyPrompt_/s) ||
+                           if ($line=~/_funkyPrompt_$/s) {
+                              my $cfh_ignore='';my $cfh_error='';
+                              ($cfh_ignore,$cfh_error)=
+                                 &clean_filehandle($cmd_fh);
+                              $cmd_fh->print("exit");
+                           } elsif (($line=~/Killed|_funkyPrompt_/s) ||
                                  ($line=~/[:\$%>#-] ?$/s) ||
                                  ($line=~/sion denied.*[)][.]\s*$/s)) {
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() SHOULD BE LAST CC=$line\n"
@@ -1040,10 +1045,10 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT EVEN FARTHER HERE\n"
                         if $@ && $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      eval {
-                        $localhost->{_shell_pid}||='';
+                        $localhost->{_sh_pid}||='';
                         print $Net::FullAuto::FA_Core::MRLOG
                            "and \$\$=$$ and ".
-                           "$localhost->{_shell_pid}\n"
+                           "$localhost->{_sh_pid}\n"
                            if $Net::FullAuto::FA_Core::log &&
                            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      };
@@ -1103,6 +1108,10 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
       }
    }
    ($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
+
+#($stdout,$stderr)=$localhost->cmd('hostname');
+#print "LOCALHOSTSTDOUT=$stdout<== and LOCALHOSTSTDERR=$stderr<==\n";
+
    ($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg);
    %{$localhost}=();undef $localhost;
    %Processes=();
@@ -3589,7 +3598,7 @@ print $Net::FullAuto::FA_Core::MRLOG "KEY FROM HOST HASH=$key and USE=$use\n"
                if (exists $same_host_as_Master{$ip}
                      || !(&ping($ip,'__return__'))[1]) {
                   $use='ip';
-               } else { print "DAMN\n";$ip_flag=1 }
+               } else { $ip_flag=1 }
             }
          } elsif (lc($key) eq 'hostname') {
             $hostname=$Hosts{$hostlabel}{$key};
@@ -6886,6 +6895,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                $localhost->{_cmd_type}=$cmd_type;
                $localhost->{_connect}=$_connect;
                $localhost->{_uname}=$^O;
+               $localhost->{_hostlabel}=[ "__Master_${$}__",'' ];
                $local_host=Net::Telnet->new(Fhopen => $localhost,
                   Timeout => $fatimeout);
                $local_host->telnetmode(0);
@@ -6967,6 +6977,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $localhost->{_cmd_type}=$cmd_type;
                   $localhost->{_connect}=$_connect;
                   $localhost->{_uname}=$^O;
+                  $localhost->{_hostlabel}=[ "__Master_${$}__",'' ];
                   $local_host=Net::Telnet->new(Fhopen => $local_host,
                      Timeout => $fatimeout);
                   $local_host->telnetmode(0);
@@ -8456,7 +8467,7 @@ sub ping
          }
          my $pth=$Hosts{"__Master_${$}__"}{'FA_Core'}."ping$$.sh";
          open(TP,">$pth") || die "CANNOT OPEN $pth $!";
-         print TP "${Net::FullAuto::FA_Core::pingpath}ping -c1 $_[0]"; 
+         print TP "${Net::FullAuto::FA_Core::pingpath}ping -c1 $_[0] 2>&1"; 
          CORE::close(TP);
          $cmd=[ "${bashpath}bash",$pth,"2>&1" ];
       }
@@ -8489,6 +8500,10 @@ sub ping
             ${Net::FullAuto::FA_Core::pingpath}.
             "ping timed-out: $ev_err","-$didping");
       }
+   }
+   if (-1<index $stderr,'is alive') {
+      $stdout=$stderr;
+      $stderr='';
    }
    $stdout=~s/^\s*//s;
    foreach my $line (split /^/, $stdout) {
@@ -17780,8 +17795,76 @@ sub handle_error
    print "Rem_Command::handle_error() CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "Rem_Command::handle_error() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    return &Net::FullAuto::FA_Core::handle_error(@_);
+}
+
+sub close
+{
+   my @topcaller=caller;
+   print "Rem_Command::close() CALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG "Rem_Command::close() CALLER=",
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   my $self=$_[0];
+   my $kill_arg=($^O eq 'cygwin')?'f':9;
+   if (defined fileno $self->{_cmd_handle}) {
+      my $gone=1;my $was_a_local=0;
+      eval {  # eval is for error trapping. Any errors are
+              # handled by the "if ($@)" block at the bottom
+              # of this routine.
+         CM: while (defined fileno $self->{_cmd_handle}) {
+            $self->{_cmd_handle}->print($Net::FullAuto::FA_Core::printfpath.
+                           "printf $funkyprompt");
+            while (my $line=$self->{_cmd_handle}->get) {
+print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               last if $line=~/logout|221\sGoodbye/sx;
+               if ($line=~/_funkyPrompt_$/s) {
+                  my $cfh_ignore='';my $cfh_error='';
+                  ($cfh_ignore,$cfh_error)=
+                     &Net::FullAuto::FA_Core::clean_filehandle(
+                        $self->{_cmd_handle});
+                  $self->{_cmd_handle}->print("exit");
+               } elsif (($line=~/Killed|_funkyPrompt_/s) ||
+                     ($line=~/[:\$%>#-] ?$/s) ||
+                     ($line=~/sion denied.*[)][.]\s*$/s)) {
+print $Net::FullAuto::FA_Core::MRLOG "cleanup() SHOULD BE LAST CM=$line\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                  $gone=0;last CM;
+               } elsif (-1<index $line,
+                     'Connection to localhost closed') {
+                  $was_a_local=1;
+                  last CM;
+               } elsif ($line=~/Connection.*closed/s) {
+                  last CM;
+               }
+               if ($line=~/^\s*$|^\s*exit\s*$/s) {
+                  last CM if $count++==20;
+               } else { $count=0 }
+               if (-1<index $line,'password:'
+                  || -1<index $line,'Permission denied') {
+                  $self->{_cmd_handle}->print("\004");
+               }
+            }
+         }
+      };
+      if ($@) {
+         if ((-1<index $@,'read error: Connection aborted')
+               || (-1<index $@,'read timed-out')
+               || (-1<index $@,'filehandle isn')
+               || (-1<index $@,'input or output error')) {
+            $@='';
+         } else { $self->{_cmd_handle}->close();die "$@       $!" }
+      }
+   } $self->{_cmd_handle}->close();
+   delete $self->{_cmd_handle};
+   return 0;
+
 }
 
 sub get
