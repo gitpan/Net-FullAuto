@@ -20,7 +20,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9924';
+version         '0.9925';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -262,14 +262,29 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          Label  => 'Menu_win_to_cyg',
          Item_1 => {
 
-            Text => "Install Cygwin Linux Emulation Layer for Windows",
+            Text => "Install or Update Cygwin Linux ".
+                    "Emulation Layer for Windows\n                and ".
+                    "Install FullAuto:\n\n                (Requires ".
+                    "a number of Development utilities including the".
+                    "\n                gcc compiler).\n\n",
 
          },
          Item_2 => {
- 
-            Text    => "DO *NOT* Install Cygwin (FullAuto Install will END)",
+
+            Text => "Install or Update a *MINIMAL* Cygwin Linux ".
+                    "Emulation Layer\n                for Windows and ".
+                    "DO *NOT* Install FullAuto:\n\n                (This ".
+                    "will install and configure Base Cygwin OpenSSH only".
+                    "\n                so that remote FullAuto processes ".
+                    "can connect and interact\n                ".
+                    "with the host, but not actually be installed there).\n\n",
+
+         },
+         Item_3 => {
+
+            Text    => "DO *NOT* Install Cygwin (FullAuto Install will END).",
             Default => "*",
- 
+
          },
          Banner => "   Would you like to install Cygwin?",
 
@@ -280,98 +295,100 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       $selection=Term::Menus::Menu(\%Menu_win_to_cyg);
    }
    exit if $selection eq ']quit[';
-   if ($selection!~/NOT/) {
-      my @editors=('vim     (ViIMproved - enhanced vi editor)',
-                   "emacs   (The extensible, customizable,\n           ".
-                   "              self-documenting real-time\n         ".
-                   "                display editor)",
-                   'mc      (Midnight Commander visual shell)',
-                   "joe     (Fast and simple editor that\n             ".
-                   '            emulates 5 other editors)', 
-                  );
-      my $tp='';
-      unless ($tp=&fa_find_editor('TextPad.exe')) {
-         if (-e "C:\\Program Files\\TextPad 5\\TextPad.exe") {
-            $tp='default';
-         }
-      }
-      if ($tp) {
-         push @editors, 'TextPad (The Text Editor for Windows)';
-      }
-
-      my $banner="   In order is use the integrated edit features\n".
-                 "   you will need to choose an editor.";
-      my %Menu_select_editor=();
-      if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
-         $banner="   In order is use the integrated edit features\n".
-                 "   you will need to choose an editor. MS Wordpad\n".
-                 "   is set as the default - and is recommended if\n".
-                 "   you are not familiar with the other listed\n".
-                 "   editors.";
-         %Menu_select_editor=(
-
-               Label  => 'Menu_select_editor',
-               Item_1 => {
-
-                  Text => "Wordpad (Microsoft Wordpad -\n               ".
-                          "          Available on all Windows Systems)",
-                  Default => "*",
-
-               },
-               Item_2 => {
-
-                  Text    => "]C[",
-                  Convey  => \@editors,
-
-               },
-               Banner => $banner,
-
-         );
-      } else {
-         %Menu_select_editor=(
-
-               Label  => 'Menu_select_editor',
-               Item_1 => {
-
-                  Text    => "]C[",
-                  Convey  => \@editors,
-
-               },
-               Banner => $banner,
-
-         );
-      }
-      
-      if ($install_cygwin_without_asking) {
-         if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
-            $selection='wordpad';
-            $editor="\"/cygdrive/c/Program Files/Windows NT/".
-                    "Accessories/wordpad.exe\"";
-         }
-      } elsif (0<$#editors) {
-         $selection=Term::Menus::Menu(\%Menu_select_editor);
-         if ($selection=~/TextPad/) {
-            if ($tp eq 'default') {
-               $editor="\"/cygdrive".
-                  "/c/Program Files/TextPad 5/TextPad.exe\"";
-            } else {
-               $tp=~s/\\/\//g;
-               $tp=~s/^([A-Za-z]):(.*)/$1$2/;
-               $editor="\"/cygdrive/$tp\"";
+   if ($selection!~/NOT/s) {
+      if ($selection!~/MINIMAL/s) {
+         my @editors=('vim     (ViIMproved - enhanced vi editor)',
+                      "emacs   (The extensible, customizable,\n           ".
+                      "              self-documenting real-time\n         ".
+                      "                display editor)",
+                      'mc      (Midnight Commander visual shell)',
+                      "joe     (Fast and simple editor that\n             ".
+                      '            emulates 5 other editors)', 
+                     );
+         my $tp='';
+         unless ($tp=&fa_find_editor('TextPad.exe')) {
+            if (-e "C:\\Program Files\\TextPad 5\\TextPad.exe") {
+               $tp='default';
             }
-         } elsif ($selection=~/vim/) {
-            $editor='"/bin/vim-nox.exe"';
-         } elsif ($selection=~/emacs/) {
-            $editor='"/bin/emacs-nox.exe"';
-         } elsif ($selection=~/joe/) {
-            $editor='"/bin/joe.exe"';
-         } elsif ($selection=~/mc/) {
-            $editor='"/bin/mc.exe"';
          }
-      } elsif (0==$#editors) {
-         $selection=$editors[0];
+         if ($tp) {
+            push @editors, 'TextPad (The Text Editor for Windows)';
+         }
+
+         my $banner="   In order is use the integrated edit features\n".
+                    "   you will need to choose an editor.";
+         my %Menu_select_editor=();
+         if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
+            $banner="   In order is use the integrated edit features\n".
+                    "   you will need to choose an editor. MS Wordpad\n".
+                    "   is set as the default - and is recommended if\n".
+                    "   you are not familiar with the other listed\n".
+                    "   editors.";
+            %Menu_select_editor=(
+
+                  Label  => 'Menu_select_editor',
+                  Item_1 => {
+   
+                     Text => "Wordpad (Microsoft Wordpad -\n               ".
+                             "          Available on all Windows Systems)",
+                     Default => "*",
+
+                  },
+                  Item_2 => {
+
+                     Text    => "]C[",
+                     Convey  => \@editors,
+
+                  },
+                  Banner => $banner,
+
+            );
+         } else {
+            %Menu_select_editor=(
+
+                  Label  => 'Menu_select_editor',
+                  Item_1 => {
+
+                     Text    => "]C[",
+                     Convey  => \@editors,
+
+                  },
+                  Banner => $banner,
+
+            );
+         }
+      
+         if ($install_cygwin_without_asking) {
+            if (-e "C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe") {
+               $selection='wordpad';
+               $editor="\"/cygdrive/c/Program Files/Windows NT/".
+                       "Accessories/wordpad.exe\"";
+            }
+         } elsif (0<$#editors) {
+            $selection=Term::Menus::Menu(\%Menu_select_editor);
+            if ($selection=~/TextPad/) {
+               if ($tp eq 'default') {
+                  $editor="\"/cygdrive".
+                     "/c/Program Files/TextPad 5/TextPad.exe\"";
+               } else {
+                  $tp=~s/\\/\//g;
+                  $tp=~s/^([A-Za-z]):(.*)/$1$2/;
+                  $editor="\"/cygdrive/$tp\"";
+               }
+            } elsif ($selection=~/vim/) {
+               $editor='"/bin/vim-nox.exe"';
+            } elsif ($selection=~/emacs/) {
+               $editor='"/bin/emacs-nox.exe"';
+            } elsif ($selection=~/joe/) {
+               $editor='"/bin/joe.exe"';
+            } elsif ($selection=~/mc/) {
+               $editor='"/bin/mc.exe"';
+            }
+         } elsif (0==$#editors) {
+            $selection=$editors[0];
+         }
+         exit if $selection eq ']quit[';
       }
-      exit if $selection eq ']quit[';
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
          FA::LWP::UserAgent->config;
@@ -439,23 +456,29 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          close(CP) || die $!;
          chmod 0755, 'setup.exe';
          my $setup_cmd='';
-         if ($selection!~/[Ww]ordpad/s) {
+         if ($selection!~/[Ww]ordpad|MINIMAL/s) {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
                       .'make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron'
+                      .'libdb4.5-devel,ncurses,cron,procps,'
                       .$selection.' -X -A -q '
                       .'-s http://cygwin.mirrors.pair.com"';
-         } else {
+         } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
                       .'make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron'
+                      .'libdb4.5-devel,ncurses,cron,procps'
                       .' -X -A -q -s http://cygwin.mirrors.pair.com"';
-         }
-         if ($selection=~/[Ww]ordpad/) {
-            $editor='"'.'/cygdrive'.
-               '/c/Program Files/Windows NT/Accessories/wordpad.exe'.'"';
          } else {
-            $editor="/bin/${selection}.exe";
+            $setup_cmd='cmd /c ".\\setup.exe -P '
+                      .'openssh -X -A -q -s '
+                      .'http://cygwin.mirrors.pair.com"';
+         }
+         if ($selection!~/MINIMAL/s) {
+            if ($selection=~/[Ww]ordpad/) {
+               $editor='"'.'/cygdrive'.
+                  '/c/Program Files/Windows NT/Accessories/wordpad.exe'.'"';
+            } else {
+               $editor="/bin/${selection}.exe";
+            }
          }
          my $pwd=`cmd /c chdir`;
          chmod($pwd);
@@ -465,10 +488,47 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          system($setup_cmd);
          if ($^O eq 'cygwin') {
             system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                   '"/usr/bin/cpan -i Net::FullAuto"');
+                   '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
+            system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                   '"/usr/bin/ssh-user-config -y"');
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                   '"/usr/bin/cygserver-config -y"');
+            #system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+            #       '"/usr/bin/cron-config"');
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                   '"net start sshd"');
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                   '"net start cygserver"');
+            #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+            #       '"net start cron"');
          } else {
             system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"/usr/bin/cpan -i Net::FullAuto"');
+                   '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                   '"/usr/bin/ssh-user-config -y"');
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                   '"/usr/bin/cygserver-config -y"');
+            #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+            #       '"/usr/bin/cron-config"');
+            system('cmd /c C:\\cygwin\\bin\\dash -lc '.
+                   '"/bin/rebaseall -v"');
+            system('cmd /c C:\\cygwin\\bin\\dash -lc '.
+                   '"/bin/perlrebase"');
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                   '"net start sshd"');
+            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                   '"net start cygserver"');
+            #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+            #       '"net start cron"');
+         }
+         if ($selection!~/MINIMAL/) {
+            if ($^O eq 'cygwin') {
+               system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/cpan -i Net::FullAuto"');
+            } else {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/cpan -i Net::FullAuto"');
+            }
          }
          exit;
       }

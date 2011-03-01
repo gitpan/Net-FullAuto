@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 e640c176eff69f070af0c704f67eaaa4407128c8 ChangeLog
+SHA1 e89c62393c1ea3c0f1b6dd7c23d6d69c4e53ad2d ChangeLog
 SHA1 a74125560a260a18a646ef0b3702e1b77a45b931 LICENSE
 SHA1 f33a524126bd793e01b2a4a92db6b833b0226a8f MANIFEST
-SHA1 e3278b727eaca26bcfdd4ae8f5b7c40bc8f5ca07 META.yml
-SHA1 82212b40efc82922688a190134d7bd2b1da8d5ef Makefile.PL
+SHA1 6fafdab4aa5ee622d2ccb93beaf6b278ded16850 META.yml
+SHA1 239edc04627e6e4261c4f2d47c4cbc99d5ca2a63 Makefile.PL
 SHA1 e489dfcbb5205900fb16909d95b4edd259ca9cbb README
 SHA1 371459f4c38d6be12317b0f38de4fed769850b4f bin/fullauto.pl
 SHA1 20c73697e1713638140c719d8eaa19a275ed43a5 inc/Module/AutoInstall.pm
@@ -33,7 +33,7 @@ SHA1 026cc0551a0ad399d195e395b46bdf842e115192 inc/Module/Install/Metadata.pm
 SHA1 d3a4c720c6ec7f8fce7df37002fbc9177fb77050 inc/Module/Install/Scripts.pm
 SHA1 5457015ea5a50e93465bf2dafa29feebd547f85b inc/Module/Install/Win32.pm
 SHA1 051e7fa8063908befa3440508d0584a2497b97db inc/Module/Install/WriteAll.pm
-SHA1 7f915b3b7192996cac6b3f4fc088c4d516fba3f6 lib/Net/FullAuto.pm
+SHA1 bf154feff66aa6cdeef35d8c6c18c569fb737abd lib/Net/FullAuto.pm
 SHA1 5ff6ce13b0ff87967726e71d0ef53ba0b3884ba7 lib/Net/FullAuto/Custom/BackUp/README
 SHA1 1c547d9c70bbd223abf6d28018ca47076501063a lib/Net/FullAuto/Custom/README
 SHA1 11e4d0e0d798d8c4ced869035e5802c1f2edc975 lib/Net/FullAuto/Distro/fa_code.pm
@@ -47,7 +47,7 @@ SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.9 (Cygwin)
 
-iEYEARECAAYFAk1q6PAACgkQdsVAdUjO9Ik2cACeMaMJM+6uloyBm5g1IfDDWV+w
-DtoAn297dYjUYM44QzlnUvfbO49W/ukN
-=xq5M
+iEYEARECAAYFAk1sUiEACgkQdsVAdUjO9ImZDgCfT67cP07cl7dhr4J6S54wNrrf
+uyQAn1uCI5ux9jzQ0IU5tjDSLCaEJ3iz
+=U0JQ
 -----END PGP SIGNATURE-----
