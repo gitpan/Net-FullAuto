@@ -25,6 +25,14 @@
 ################################################################
 
 
+2011-03-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9926 released.
+
+        * Fixed FULL CALENDAR date issue regarding current
+          month and current time.
+
+
 2011-02-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9925 released.

@@ -1348,7 +1348,7 @@ sub get_tomorrow
 
 sub get_now_am_pm
 {
-   my $t=unpack('a5',(split / /, scalar localtime(time))[3]);
+   my $t=unpack('a5',(split / +/, scalar localtime(time))[3]);
    my $i=unpack('a2',$t);
    if ($i<12) {
       substr($t,0,1)='' if $i<10;
@@ -1547,12 +1547,13 @@ my $cal_months=sub { package cal_months;
                      }
                      my @new=map { $_.' '.']P[' } @munths;
                      return @new };
+my $currmonth=$curmonth;
 foreach my $year ($curyear..$endyear) {
    my $cnt=0;
    if ($year ne $curyear) {
-      $curmonth=1;
+      $currmonth=1;
    }
-   foreach my $mth ($curmonth..12) {
+   foreach my $mth ($currmonth..12) {
       $lastday=POSIX::mktime(0,0,0,0,$mth-1+1,$year-1900,0,0,-1);
       my $d=localtime($lastday);
       my @d=split ' ',$d;
