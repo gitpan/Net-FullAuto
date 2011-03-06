@@ -25,6 +25,14 @@
 ################################################################
 
 
+2011-03-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9927 released.
+
+        * Made adjustments to Cygwin based installation
+          code in Makefile.PL.
+
+
 2011-03-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9926 released.

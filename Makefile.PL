@@ -20,7 +20,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9926';
+version         '0.9927';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -182,9 +182,15 @@ BEGIN {
    ($stdout,$stderr)=&fa_install_module('ExtUtils::Depends','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::Depends') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Digest::MD5','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Digest::MD5') if $stderr;
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('IO::Pty','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'IO::Pty') if $stderr;
    eval { require Data::Dump::Streamer };
    if ($@) {
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get','',1);
@@ -960,8 +966,53 @@ if ($get_BerkeleyDB) {
                      $res->message,
                   ));
                }
-               print(qq{ + saved content to $file \n})
+               print(qq{ + saved content to $filename \n})
                if $CPAN::DEBUG;
+               my $md5fh='';my $md5filename='';
+               if ($CPAN::META->has_usable("File::Temp")) {
+                  $md5fh = File::Temp->new(
+                        dir      => cwd(),
+                        template => "${file}_XXXXXX",
+                        suffix => ".tar.gz.md5",
+                        unlink => 0,
+                       );
+                  $md5filename = $md5fh->filename;
+               } else {
+                  $md5fh = FileHandle->new;
+                  $md5filename = "${file}_$$.tar.gz.md5";
+               }
+               $req = HTTP::Request->new(GET => $source.'.md5');
+               $req->header('Accept-Encoding' => 'gzip, compress');
+               $Ua->show_progress('true value');
+               $res = $Ua->request($req);
+               if ($res->is_success) {
+                  print " + request successful.\n"
+                     if $CPAN::DEBUG;
+                  print $md5fh $res->content;
+                  close $md5fh;
+               } elsif ($res->is_error(500)) {
+                  print(sprintf(
+                     "LWP failed with code[%s], message[%s]\n".
+                     "Please check your connection to the Internet!\n",
+                     $res->code,
+                     $res->message,
+                  ));
+               }
+               print(qq{ + saved md5 content to $md5filename \n})
+               if $CPAN::DEBUG;
+               open(MH,$md5filename) || die $!;
+               my $mhf=<MH>;
+               close(MH);
+               my $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
+               open(FILE, $filename) or die "Can't open '$file': $!";
+               binmode(FILE);
+               if ($checksum eq Digest::MD5->new->addfile(*FILE)->hexdigest) {
+                  print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
+                  if $CPAN::DEBUG;
+               } else {
+                  die "FATAL ERROR! : CHECKSUM Test for $filename *FAILED*\n";
+               }
+               close(FILE);
                `$CPAN::Config->{gzip} -d $filename`;
                unless ($CPAN::Config->{gzip}) {
                   if (-e '/usr/bin/gzip') {
