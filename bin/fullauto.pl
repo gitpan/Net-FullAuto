@@ -34,7 +34,7 @@ use warnings;
 
 BEGIN {
 
-   my $edit=0;my $earg='';my $cnt=0;
+   my $edit=0;my $earg='';my $cnt=-1;
    my $VERSION=0;my $version=0;
    our $planarg=0;our $cronarg=0;
    foreach my $arg (@ARGV) {

@@ -20,7 +20,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9927';
+version         '0.9928';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -188,9 +188,11 @@ BEGIN {
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('IO::Pty','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'IO::Pty') if $stderr;
+   if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {
+      ($stdout,$stderr)=&fa_install_module('IO::Pty','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'IO::Pty') if $stderr;
+   }
    eval { require Data::Dump::Streamer };
    if ($@) {
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get','',1);
@@ -493,37 +495,74 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $cygpath=~s/\\/\//g;
          system($setup_cmd);
          if ($^O eq 'cygwin') {
-            system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                   '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
-            system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                   '"/usr/bin/ssh-user-config -y"');
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"/usr/bin/cygserver-config -y"');
+            my $srvcmd='cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                       '/usr/bin/cygrunsrv -L';
+            my $cygsrvs=`$srvcmd`;
+            if (-1==index $cygsrvs,'sshd') {
+               system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
+               system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/ssh-user-config -n"');
+            }
+            if (-1==index $cygsrvs,'cygserver') {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/cygserver-config -y"');
+            }
             #system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
             #       '"/usr/bin/cron-config"');
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"net start sshd"');
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"net start cygserver"');
+            if (-1==index $cygsrvs,'sshd') {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"net start sshd"');
+            }
+            if (-1==index $cygsrvs,'cygserver') {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"net start cygserver"');
+            }
             #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
             #       '"net start cron"');
          } else {
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"/usr/bin/ssh-user-config -y"');
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"/usr/bin/cygserver-config -y"');
+            my $srvcmd='cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                       '/usr/bin/cygrunsrv -L';
+            my $cygsrvs=`$srvcmd`;
+            if (-1==index $cygsrvs,'sshd') {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/ssh-user-config -n"');
+            }
+            if (-1==index $cygsrvs,'cygserver') {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/cygserver-config -y"');
+            }
             #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
             #       '"/usr/bin/cron-config"');
-            system('cmd /c C:\\cygwin\\bin\\dash -lc '.
-                   '"/bin/rebaseall -v"');
-            system('cmd /c C:\\cygwin\\bin\\dash -lc '.
-                   '"/bin/perlrebase"');
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"net start sshd"');
-            system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                   '"net start cygserver"');
+            if (0<length $cygsrvs) {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                    '"net stop sshd"');
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                    '"net stop cygserver"');
+               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
+                      '"/bin/rebaseall -v"');
+               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
+                      '"/bin/perlrebase"');
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                    '"net start sshd"');
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                    '"net start cygserver"');
+            } else {
+               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
+                      '"/bin/rebaseall -v"');
+               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
+                      '"/bin/perlrebase"');
+            }
+            if (-1==index $cygsrvs,'sshd') {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"net start sshd"');
+            }
+            if (-1==index $cygsrvs,'cygserver') {
+               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"net start cygserver"');
+            }
             #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
             #       '"net start cron"');
          }
@@ -1000,16 +1039,21 @@ if ($get_BerkeleyDB) {
                }
                print(qq{ + saved md5 content to $md5filename \n})
                if $CPAN::DEBUG;
-               open(MH,$md5filename) || die $!;
+               open(MH,"<$md5filename") || die $!;
                my $mhf=<MH>;
                close(MH);
-               my $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
+               my $checksum=$mhf;
+               $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
                open(FILE, $filename) or die "Can't open '$file': $!";
                binmode(FILE);
-               if ($checksum eq Digest::MD5->new->addfile(*FILE)->hexdigest) {
+               my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
+               if ($checksum eq $digestmd5) {
                   print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
                   if $CPAN::DEBUG;
                } else {
+                  print "CHECKSUM test for $filename *FAILED*\n";
+                  print "\nPress ANY key to terminate FullAuto installation ...\n";
+                  <STDIN>;
                   die "FATAL ERROR! : CHECKSUM Test for $filename *FAILED*\n";
                }
                close(FILE);

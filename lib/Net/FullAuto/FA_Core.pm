@@ -130,7 +130,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $quiet $batch $unattended
                   $passwd_file_loc $fullauto
                   %email_addresses @plans
-                  %email_defaults $service);
+                  %email_defaults $service
+                  persist_get persist_put);
 
 {
    no warnings;
@@ -1322,7 +1323,7 @@ sub pick
 
 sub Menu
 {
-print "FAMENUCALLER=",caller,"\n";
+#print "FAMENUCALLER=",caller,"\n";
    can_load(modules => { "Term::Menus" => 0 });
    return &Term::Menus::Menu(@_);
 }
@@ -2239,6 +2240,69 @@ print "STDERRCRONT=$stderr<==\n";
    }
 
 }
+
+sub persist_get {
+
+   my $track='';
+   my $persist_this=$_[0];
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist');
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+   ) or &handle_error(
+     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${Net::FullAuto::FA_Core::progname}_persist.db",
+      -Flags    => DB_CREATE,
+      -Compare  => sub { $_[0] <=> $_[1] },
+      -Env      => $dbenv
+   ) or &handle_error(
+     "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   print "CALLER=",caller,"\n";
+   my $key=join '&', caller;
+   $key.=$Net::FullAuto::FA_Core::local_hostname.$username;
+   my $value='';
+   my $status=$bdb->db_get($key,$value);
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+   return ($value,$status);
+
+}
+
+sub persist_put {
+
+   my $value=$_[0];
+   my $track='';
+   my $persist_this=$_[0];
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist');
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+   ) or &handle_error(
+     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${Net::FullAuto::FA_Core::progname}_persist.db",
+      -Flags    => DB_CREATE,
+      -Compare  => sub { $_[0] <=> $_[1] },
+      -Env      => $dbenv
+   ) or &handle_error(
+     "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   print "CALLER=",caller,"\n";
+   my $key=join '&', caller;
+   $key.=$Net::FullAuto::FA_Core::local_hostname.$username;
+   my $status=$bdb->db_put($key,$value);
+print "STATUS=$status\n";
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+
+}
+
 
 sub openplandb {
 print "openplandb CALLER=",caller,"\n";

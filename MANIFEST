@@ -27,5 +27,6 @@ MANIFEST
 SIGNATURE
 META.yml
 README
+UNINSTALL_CYGWIN
 t/test.t
 t/0-signature.t
