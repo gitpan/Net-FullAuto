@@ -1,14 +1,107 @@
 # Load the Module::Install bundled in ./inc/
+
 BEGIN {
    use CPAN;
+   use Cwd qw/cwd/;
+   use lib '.';
+   use lib './inc';
    my $mycpantest=0;
    my $cpantest=0;
    $mycpantest=1 if -e $cpandir."/CPAN/MyConfig.pm";
    $cpantest=1 unless $mycpantest;
    use if ($mycpantest), "CPAN::MyConfig";
    use if ($cpantest), "CPAN::Config";
+   $main::curdir=&cwd;
+
+   sub fa_err_exit {
+       die "$_[0]\n\n*** Please manually install $_[1]".
+           " from cpan.org first...\n"
+   }
+
+   sub fa_install_mod {
+
+      my $p=$_[0];
+      my $task=$_[1];
+      my $butil=$_[2]||'';
+      my $dir='';
+      my $cpan_error='';
+      eval "require $p";
+      if ($@) {
+         print "==> $p required."
+         and print "*** Installing $p via CPAN\n"
+         and
+         eval {
+            require CPAN;
+            CPAN::Shell->notest('get',$p);
+         };
+         if ($@) {
+            $cpan_error="$@ $!";
+            print "CPAN Error: $cpan_error => will attempt CPANPLUS\n";
+         }
+         eval "require $p" or
+         do {
+            print"==> $p required."
+            and print "*** Installing $p via CPANPLUS\n"
+            and
+            do {
+               eval {
+                  require CPANPLUS::Backend;
+                  my $cb  = CPANPLUS::Backend->new;
+                  my $mod = $cb->parse_module(module=>$p);
+                  my $where = $cb->_fetch(module=>$mod,verbose=>1);
+                  $dir - $cb->_extract(module=>$mod,verbose=>1);
+               };
+               die "CPANPLUS Error: $@ $! and CPAN Error: $cpanerror" if $@;
+               eval "require $p" or
+                  die "CPANPLUS Error: $@ $! and CPAN Error: $cpanerror";
+            }; 
+         };
+         if ($task eq 'install') {
+            $dir||=&fa_find_latest($p);
+            print "*** Running $butil.PL\n";
+            system("cd \"$dir\";$^X $butil.PL");
+            if ($butil eq 'Makefile') {
+               print "*** Running make install\n";
+               system("cd \"$dir\";make install");
+            } else {
+               print "*** Running Build install\n";
+               system("cd \"$dir\";./Build install");
+            }
+         }
+         chdir $main::curdir;
+      } else { print "*** $p Loaded Successfully\n" }
+   }
+
+   sub fa_install_module {
+       my $stdout='';my $stderr='';
+       eval { require IO::CaptureOutput };
+       if ($@) {
+          eval { &fa_install_mod(@_) };
+          if ($@) {
+             return '',$@;
+          } else {
+             return '','';
+          }
+       } else {
+          eval {
+             require IO::CaptureOutput;
+             IO::CaptureOutput::capture {
+                &fa_install_mod(@_)
+             } \$stdout, \$stderr;
+          };
+          return $stdout,$stderr;
+       }
+   }
+
 };
-use Cwd qw/cwd/;
+foreach my $p (@INC) {
+   my $ph=$p;
+   if ((substr($ph,-3) eq 'inc') && (1<index $ph,'par-')) {
+      my $pa=substr($ph,0,-4);
+      unshift @INC, $pa;
+      last;
+   }
+}
 use lib '.';
 use inc::Module::Install;
 use Config;
@@ -20,7 +113,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9928';
+version         '0.9929';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'gpl';
 perl_version    '5.006';
@@ -84,86 +177,17 @@ BEGIN {
       &{$m->[$choice][1]};
    }
 
-   sub fa_install_module {
-       my $stdout='';my $stderr='';
-       eval { require IO::CaptureOutput };
-       if ($@ || (!defined $_[4] || !$_[4])) {
-          eval { &fa_install_mod(@_) };
-          if ($@) {
-             return '',$@;
-          } else {
-             return '','';
-          }
-       } else {
-          eval {
-             require IO::CaptureOutput;
-             IO::CaptureOutput::capture {
-                &fa_install_mod(@_)
-             } \$stdout, \$stderr;
-          };
-          return $stdout,$stderr;
-       }
-   }
-
-   sub fa_install_mod {
-
-      my $p=$_[0];
-      my $task=$_[1];
-      my $butil=$_[2]||'';
-      my $skiptest=$_[3]||'';
-      my $getflag=0;
-      eval "require $p";
-      if ($@) {
-         $getflag=1;
-         do {
-            eval "use $p;1" or
-            do {
-               print"==> $p required."
-               and print "*** Installing $p\n"
-               and
-               do {
-                  eval {
-                     require CPANPLUS;
-                     my $u=CPANPLUS::Shell->new();
-                     $u->shell;
-                     $u->dispatch_on_input(input=>'o conf notest 1');
-                     $u->dispatch_on_input(input=>'o conf force 1');
-                     $u->dispatch_on_input(input=>"fetch $p")
-                  };
-                  eval "use $p;1"
-                  or eval{
-                        require CPAN;
-                        CPAN::Shell->notest('get',$p)
-                     };
-               }
-            }
-         };
-         die $@ if $@;
-         if (($task eq 'install') && $getflag) {
-            my $dir=&fa_find_latest($p);
-            print "*** Running $butil.PL\n";
-            system("cd \"$dir\";$^X $butil.PL");
-            if ($butil eq 'Makefile') {
-               print "*** Running make install\n";
-               system("cd \"$dir\";make install");
-            } else {
-               print "*** Running Build install\n";
-               system("cd \"$dir\";./Build install");
-            }
-         }
-         chdir $main::curdir;
-      } else { print "*** $p Loaded Successfully\n" }
-   }
-
-   sub fa_err_exit {
-       die "$_[0]\n\n*** Please manually install $_[1]".
-           " from cpan.org first...\n"
-   }
-
    my $stdout='';my $stderr='';
    ($stdout,$stderr)=&fa_install_module('IO::CaptureOutput','install','Build');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'IO::CaptureOutput') if $stderr;
+   if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {
+      ($stdout,$stderr)=&fa_install_module('IO::Pty','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'IO::Pty') if $stderr;
+      my $argv0=$ARGV[0]||'';
+      exit if $argv0 eq 'install_IO_Pty_from_CPAN';
+   }
    ($stdout,$stderr)=&fa_install_module('HTML::Tagset','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'HTML::Tagset') if $stderr;
@@ -173,7 +197,7 @@ BEGIN {
    ($stdout,$stderr)=&fa_install_module('URI','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'URI') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile',1);
+   ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'LWP') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Task::Weaken','install','Makefile');
@@ -188,14 +212,9 @@ BEGIN {
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
-   if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {
-      ($stdout,$stderr)=&fa_install_module('IO::Pty','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'IO::Pty') if $stderr;
-   }
    eval { require Data::Dump::Streamer };
    if ($@) {
-      ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get','',1);
+      ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Data::Dump::Streamer') if $stderr;
       my $dir=&fa_find_latest('Data::Dump::Streamer');
@@ -230,6 +249,7 @@ BEGIN {
 };
 
 require Term::Menus;
+require Term::ReadKey;
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
@@ -270,11 +290,13 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          Label  => 'Menu_win_to_cyg',
          Item_1 => {
 
-            Text => "Install or Update Cygwin Linux ".
+            Text => "INSTALL or Update Cygwin Linux ".
                     "Emulation Layer for Windows\n                and ".
-                    "Install FullAuto:\n\n                (Requires ".
+                    "INSTALL FullAuto:\n\n                (Requires ".
                     "a number of Development utilities including the".
-                    "\n                gcc compiler).\n\n",
+                    "\n                gcc compiler).\n".
+                    "                -------------------------------".
+                    "---------------------------\n",
 
          },
          Item_2 => {
@@ -285,7 +307,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                     "will install and configure Base Cygwin OpenSSH only".
                     "\n                so that remote FullAuto processes ".
                     "can connect and interact\n                ".
-                    "with the host, but not actually be installed there).\n\n",
+                    "with this host, but not actually be installed on it).\n\n",
 
          },
          Item_3 => {
@@ -463,6 +485,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          }
          close(CP) || die $!;
          chmod 0755, 'setup.exe';
+         
          my $setup_cmd='';
          if ($selection!~/[Ww]ordpad|MINIMAL/s) {
             $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
@@ -488,93 +511,335 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $editor="/bin/${selection}.exe";
             }
          }
+         
+         my $wver=&windows_ver;
+	 my $account_type='separate';
+         my @sshd_password=();
+         my $sshd_account='cyg_server';
+         my $test_user=`net user $sshd_account 2>&1`;
+#print "TEST_USER=$test_user<==\n";<STDIN>;         
+         my $privl='';
+	 if ($wver!~/95|98|ME/) {
+	    if ($wver=~/XP|2000|NT/) {
+	       my $banner="   For $wver, you have a choice of using\n"
+	                 ."   either the LocalSystem account for the\n"
+	                 ."   REQUIRED sshd (Secure Shell Daemon/Service\n"
+	                 ."   supplied by OpenSSH) or a separate user\n"
+	                 ."   account. The LocalSystem account is less\n"
+	                 ."   maintenance and you won't need to manage or\n"
+	                 ."   remember a separate account and password -\n"
+	                 ."   BUT IT IS LESS SECURE. Using a separate user\n"
+	                 ."   account is *HIGHLY* recommended!:";
+	       my %Menu_select_account_type=(
+	 
+	           Label  => 'Menu_select_account_type',
+	           Item_1 => {
+	  
+	              Text => "Use separate user account for sshd service",
+	              Default => "*",
+	 
+	           },
+	           Item_2 => {
+	 
+	              Text => "Use LocalSystem account for sshd service",
+	 
+	           },
+	           Banner => $banner,
+	 
+	       );
+	       $account_type=Term::Menus::Menu(\%Menu_select_account_type);
+               $privl=' --privileged' if -1<index $account_type,'separate';
+	    }
+            if (-1<index $account_type,'separate' && (-1==index $test_user,'not be found')) {
+               my $banner="   OpenSsh's sshd service running via Cygwin is *REQUIRED* for\n".
+                          "   FullAuto to run on MS Windows. Two separate user accounts\n".
+                          "   are needed - one for the service itself, and one for \"privilege\n".
+                          "   separation\". The id 'sshd' will be created for the privilege\n".
+                          "   separation purpose. For more info,\n".
+                          "   read /usr/share/doc/openssh/README.privsep.\n\n".
+                          "   Unless you indicate otherwise, the account 'cyg_server' will be\n".
+                          "   utilized by the sshd service and will be automatically created\n".
+                          "   if needed.\n\n   Please make a selection:";
+               my %Menu_select_account=(
+
+                     Label  => 'Menu_select_account',
+                     Item_1 => {
+
+                        Text => "Use the account 'cyg_server' for the sshd service",
+                        Default => "*",
+
+                     },
+                     Item_2 => {
+
+                        Text    => "Use a different account ( You will be prompted. )",
+
+                     },
+                     Banner => $banner,
+
+               );
+               $selection=Term::Menus::Menu(\%Menu_select_account);
+               if (-1<index $selection,'different') {
+                  print "\n       Please type the name of the $wver\n",
+                        "        user account that will be used by the sshd\n",
+                        "        service: ";
+                  $sshd_account=<STDIN>;
+                  print "\n";
+               } elsif (-1<index $selection,'quit') {
+                  exit;
+               }
+               print "\n\n\n   Now is the time to CAREFULLY select a password for the\n",
+                     "   $sshd_account account, and take steps to insure it's security\n",
+                     "   and recoverability (i.e. - store a copy in a SAFE place where\n",
+                     "   you can find it if necessary.)\n\n\n",
+	             "   Please TYPE your new Password\n   for ".
+                     "account \'$sshd_account\': ";
+               Term::ReadKey::ReadMode 2;
+               my $pas=<STDIN>;
+               $pas=~/^(.*)$/;
+               $sshd_password[0]=$1;
+               Term::ReadKey::ReadMode 0;
+               chomp($sshd_password[0]);
+               print "\n\n   Please verify your new Password: ";
+               Term::ReadKey::ReadMode 2;
+               $pas=<STDIN>;
+               $pas=~/^(.*)$/;
+               $sshd_password[1]=$1;
+               Term::ReadKey::ReadMode 0;
+               chomp($sshd_password[1]);
+               if ($sshd_password[0] ne $sshd_password[1]) {
+                  @sshd_password=();
+                  my $cc=2;
+                  while ($cc--) {
+                     print "\n\n";
+                     print "   Your Password entries do NOT match!\n\n",
+                           "   Please carefully type your\n",
+                           "   new Password: ";
+                     Term::ReadKey::ReadMode 2;
+                     $pas=<STDIN>;
+                     $pas=~/^(.*)$/;
+                     $sshd_password[0]=$1;
+                     Term::ReadKey::ReadMode 0;
+                     chomp($sshd_password[0]);
+                     print "\n\n       Please verify your new Password: ";
+                     Term::ReadKey::ReadMode 2;
+                     $pas=<STDIN>;
+                     $pas=~/^(.*)$/;
+                     $sshd_password[1]=$1;
+                     Term::ReadKey::ReadMode 0;
+                     chomp($sshd_password[1]);
+                     last if $sshd_password[0] eq $sshd_password[1];
+                  }
+               }
+               if ($sshd_password[0] ne $sshd_password[1]) {
+                  print "\n\n";
+                  print "Fatal Error: Unable to verify Password entries!\n\n";
+                  print "Press any key to exit FullAuto Setup.\n";
+                  <STDIN>;exit;
+               }
+	    }
+         }
+         
          my $pwd=`cmd /c chdir`;
          chmod($pwd);
          my $cygpath=$pwd;
          $cygpath=~s/^(.):/\/cygdrive\/$1/;
          $cygpath=~s/\\/\//g;
          system($setup_cmd);
+
          if ($^O eq 'cygwin') {
-            my $srvcmd='cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                       '/usr/bin/cygrunsrv -L';
-            my $cygsrvs=`$srvcmd`;
+            my $srvcmd='export CYGWIN=nodosfilewarning & '.
+                       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                       '"/usr/bin/cygrunsrv -L"';
+            my $cygsrvs=`$srvcmd 2>&1`;
             if (-1==index $cygsrvs,'sshd') {
-               system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                      '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
-               system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/ssh-host-config -y '.
+                      '-u \"'.$sshd_account.'\" -w \"'.
+                      $sshd_password[0].'\" '.
+                      '-c \"tty ntsec\"'.$privl.'"');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
                       '"/usr/bin/ssh-user-config -n"');
             }
             if (-1==index $cygsrvs,'cygserver') {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
                       '"/usr/bin/cygserver-config -y"');
             }
-            #system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+            #system('export CYGWIN=nodosfilewarning & '.
+            #       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
             #       '"/usr/bin/cron-config"');
             if (-1==index $cygsrvs,'sshd') {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                      '"net start sshd"');
+               #my $netstart='export CYGWIN=nodosfilewarning & '.
+               my $netstart='cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"net start sshd 2>&1"';
+               my $netout=`$netstart`;
+#print "WHAT IS THE OUTPUT1=$netout\n";<STDIN>;
+               #system('export CYGWIN=nodosfilewarning & '.
+               #       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+               #       '"net start sshd"');
             }
             if (-1==index $cygsrvs,'cygserver') {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
                       '"net start cygserver"');
             }
-            #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+            #system('export CYGWIN=nodosfilewarning & '.
+            #       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
             #       '"net start cron"');
          } else {
-            my $srvcmd='cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                       '/usr/bin/cygrunsrv -L';
-            my $cygsrvs=`$srvcmd`;
+            my $srvcmd='SET CYGWIN=nodosfilewarning & '.
+                       'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                       '"/usr/bin/cygrunsrv -L"';
+            my $cygsrvs=`$srvcmd 2>&1`;
             if (-1==index $cygsrvs,'sshd') {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                      '"/usr/bin/ssh-host-config -y -c \"tty ntsec\""');
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/ssh-host-config -y '.
+                      '-u \"'.$sshd_account.'\" -w \"'
+                      .$sshd_password[0].'\" '.
+                      '-c \"tty ntsec\"'.$privl.'"');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
                       '"/usr/bin/ssh-user-config -n"');
             }
             if (-1==index $cygsrvs,'cygserver') {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
                       '"/usr/bin/cygserver-config -y"');
             }
-            #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+            #system('SET CYGWIN=nodosfilewarning & '.
+            #       'cmd /c C:\\cygwin\\bin\\bash -lc '.
             #       '"/usr/bin/cron-config"');
             if (0<length $cygsrvs) {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\bash -lc '.
                     '"net stop sshd"');
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\bash -lc '.
                     '"net stop cygserver"');
-               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
-                      '"/bin/rebaseall -v"');
-               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
-                      '"/bin/perlrebase"');
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                    '"net start sshd"');
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\dash -lc '.
+                    '"/bin/rebaseall -v"');
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\dash -lc '.
+                    '"/bin/perlrebase"');
+               my $netstart='SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"net start sshd 2>&1"';
+               my $netout=`$netstart`;
+               if (-1<index $netout,'System error') {
+                  my $netdel='SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"net user sshd /DELETE 2>&1"';
+                  my $ndout=`$netdel`;
+                  my $cygdel='SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"net user cyg_server /DELETE 2>&1"';
+                  my $cgout=`$cygdel`;
+                  my $netrm='SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"/usr/bin/cygrunsrv -R sshd 2>&1"';
+                  my $rmout=`$netrm`;
+                  system('SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                         '"/usr/bin/ssh-host-config -y '.
+                         '-u \"'.$sshd_account.'\" -w \"'.
+                         $sshd_password[0].'\" '.
+                         '-c \"tty ntsec\"'.$privl.'"');
+                  system('SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                         '"/usr/bin/ssh-user-config -n"');
+                  my $net_start='SET CYGWIN=nodosfilewarning & '.
+                       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                       '"net start sshd 2>&1"';
+                  my $netot=`$net_start`;
+#print "WHAT IS NETOUT???=$netot\n";<STDIN>;
+               }
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\bash -lc '.
                     '"net start cygserver"');
             } else {
-               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
-                      '"/bin/rebaseall -v"');
-               system('cmd /c C:\\cygwin\\bin\\dash -lc '.
-                      '"/bin/perlrebase"');
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\dash -lc '.
+                    '"/bin/rebaseall -v"');
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\dash -lc '.
+                    '"/bin/perlrebase"');
             }
             if (-1==index $cygsrvs,'sshd') {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                      '"net start sshd"');
+               my $nettstart='SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"net start sshd 2>&1"';
+               my $netut=`$nettstart`;
+#print "WHAT IS NETSTARTOUT=$netut and CYGSRVS=$cygsrvs\n";<STDIN>;
+               if (-1<index $netut,'System error') {
+                  my $netdel='SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"net user sshd /DELETE 2>&1"';
+                  my $ndout=`$netdel`;
+                  my $netrm='SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                    '"/usr/bin/cygrunsrv -R sshd 2>&1"';
+                  my $rmout=`$netrm`;
+                  system('SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                         '"/usr/bin/ssh-host-config -y '.
+                         '-u \"'.$sshd_account.'\" -w \"'.
+                         $sshd_password[0].'\" '.
+                         '-c \"tty ntsec\"'.$privl.'"');
+                  system('SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                         '"/usr/bin/ssh-user-config -n"');
+                  my $net_start='SET CYGWIN=nodosfilewarning & '.
+                       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                       '"net start sshd 2>&1"';
+                  my $netot=`$net_start`;
+#print "WHAT IS NETOUT???=$netot\n";<STDIN>;
+               }
+#print "WHAT IS THE OUTPUT3=$netut\n";<STDIN>;
             }
             if (-1==index $cygsrvs,'cygserver') {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                      '"net start cygserver"');
+               system('SET CYGWIN=nodosfilewarning & '.
+                    'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                    '"net start cygserver"');
             }
-            #system('cmd /c C:\\cygwin\\bin\\bash -lc '.
+            #system('SET CYGWIN=nodosfilewarning & '.
+            #       'cmd /c C:\\cygwin\\bin\\bash -lc '.
             #       '"net start cron"');
          }
          if ($selection!~/MINIMAL/) {
+            my $incpath=$INC[0];
+            $incpath=~s/\\/\//g;
             if ($^O eq 'cygwin') {
-               system('cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                      '"/usr/bin/cpan -i Net::FullAuto"');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require IO::Pty;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\',\'IO::Pty\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"export PERL_MM_USE_DEFAULT=1;'.
+                      '/usr/bin/cpan -i Net::FullAuto"');
             } else {
-               system('cmd /c C:\\cygwin\\bin\\bash -lc '.
-                      '"/usr/bin/cpan -i Net::FullAuto"');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require IO::Pty;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\',\'IO::Pty\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"export PERL_MM_USE_DEFAULT=1;'.
+                      '/usr/bin/cpan -i Net::FullAuto"');
             }
          }
+         print "\n\n   FullAuto Installation has completed",
+               "\n\n   Thank you!",
+               "\n\n   Please report any bugs and send any",
+               "\n   questions, thoughts or feedback to:",
+               "\n\n      Brian.Kelly\@fullautosoftware.net.",
+               "\n\n   Press ANY key to exit.\n\n";<STDIN>;
          exit;
       }
    } elsif ($process_id) {
@@ -602,125 +867,127 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    my @editors=();
    my $banner="   In order is use the integrated edit features\n".
               "   you will need to choose an editor.";
-   if ($^O eq 'cygwin') {
-      my $tp='';
-      my $mount=`/bin/mount -p`;
-      $mount=~s/^.*(\/\S+).*$/$1/s;
-      unless ($tp=&fa_find_editor('TextPad.exe')) {
-         if (-e $mount."/c/Program Files/TextPad 5/TextPad.exe") {
-            $tp='default';
+   unless ($editor) {
+      if ($^O eq 'cygwin') {
+         my $tp='';
+         my $mount=`/bin/mount -p`;
+         $mount=~s/^.*(\/\S+).*$/$1/s;
+         unless ($tp=&fa_find_editor('TextPad.exe')) {
+            if (-e $mount."/c/Program Files/TextPad 5/TextPad.exe") {
+               $tp='default';
+            }
          }
-      }
-      if ($tp) {
-         push @editors, 'TextPad (The Text Editor for Windows)';
-      }
-      my $wordpad=0;
-      if (-e $mount.
-             "/c/Program Files/Windows NT/Accessories/wordpad.exe") {
-         $banner="   In order is use the integrated edit features\n".
-                 "   you will need to choose an editor. MS Wordpad\n".
-                 "   is set as the default - and is recommended if\n".
-                 "   you are not familiar with the other listed\n".
-                 "   editors.";
-         $wordpad=1;
-      }
-      if (-e '/bin/vim-nox.exe') {
-         push @editors,'vim';
-      }
-      if (-e '/bin/emacs-nox.exe') {
-         push @editors, 'emacs';
-      }
-      if (-e '/bin/joe.exe') {
-         push @editors, 'joe';
-      }
-      if (-e '/bin/mc.exe') {
-         push @editors, 'mc';
-      }
-      my %Menu_select_editor=();
-      if ($wordpad) {
-         %Menu_select_editor=(
+         if ($tp) {
+            push @editors, 'TextPad (The Text Editor for Windows)';
+         }
+         my $wordpad=0;
+         if (-e $mount.
+                "/c/Program Files/Windows NT/Accessories/wordpad.exe") {
+            $banner="   In order is use the integrated edit features\n".
+                    "   you will need to choose an editor. MS Wordpad\n".
+                    "   is set as the default - and is recommended if\n".
+                    "   you are not familiar with the other listed\n".
+                    "   editors.";
+            $wordpad=1;
+         }
+         if (-e '/bin/vim-nox.exe') {
+            push @editors,'vim';
+         }
+         if (-e '/bin/emacs-nox.exe') {
+            push @editors, 'emacs';
+         }
+         if (-e '/bin/joe.exe') {
+            push @editors, 'joe';
+         }
+         if (-e '/bin/mc.exe') {
+            push @editors, 'mc';
+         }
+         my %Menu_select_editor=();
+         if ($wordpad) {
+            %Menu_select_editor=(
 
-               Label  => 'Menu_select_editor',
-               Item_1 => {
+                  Label  => 'Menu_select_editor',
+                  Item_1 => {
 
-                  Text => "Wordpad (Microsoft Wordpad -\n               ".
-                          "          Available on all Windows Systems)",
-                  Default => "*",
+                     Text => "Wordpad (Microsoft Wordpad -\n               ".
+                             "          Available on all Windows Systems)",
+                     Default => "*",
 
-               },
-               Item_2 => {
+                  },
+                  Item_2 => {
 
-                  Text    => "]C[",
-                  Convey  => \@editors,
+                     Text    => "]C[",
+                     Convey  => \@editors,
 
-               },
-               Banner => $banner,
+                  },
+                  Banner => $banner,
 
-         );
-         $selection=Term::Menus::Menu(\%Menu_select_editor);
-      } else {
-         %Menu_select_editor=(
-
-               Label  => 'Menu_select_editor',
-               Item_1 => {
-
-                  Text    => "]C[",
-                  Convey  => \@editors,
-
-               },
-               Banner => $banner,
-
-         );
-         $selection=Term::Menus::Menu(\%Menu_select_editor);
-      }
-      if ($selection=~/TextPad/) {
-         if ($tp eq 'default') {
-            $editor="\"$mount".
-               "/c/Program Files/TextPad 5/TextPad.exe\"";
+            );
+            $selection=Term::Menus::Menu(\%Menu_select_editor);
          } else {
-            $tp=~s/\\/\//g;
-            $tp=~s/^([A-Za-z]):(.*)/$1$2/;
-            $editor="\"$mount/$tp\"";
+            %Menu_select_editor=(
+
+                  Label  => 'Menu_select_editor',
+                  Item_1 => {
+
+                     Text    => "]C[",
+                     Convey  => \@editors,
+
+                  },
+                  Banner => $banner,
+
+            );
+            $selection=Term::Menus::Menu(\%Menu_select_editor);
          }
-      } elsif ($selection=~/vim/) {
-         $editor='"/bin/vim-nox.exe"';
-      } elsif ($selection=~/emacs/) {
-         $editor='"/bin/emacs-nox.exe"';
-      } elsif ($selection=~/joe/) {
-         $editor='"/bin/joe.exe"';
-      } elsif ($selection=~/mc/) {
-         $editor='"/bin/mc.exe"';
-      }
-   } else {
-      if (-e '/usr/bin/vi') {
-         push @editors, 'vi';   
-      }
-      if (-e '/usr/bin/emacs') {
-         push @editors, 'emacs';
-      }
-      if (1<$#editors) {
-         my %Menu_select_editor=(
-
-            Label  => 'Menu_select_editor',
-            Item_1 => {
-
-               Text    => "]C[",
-               Convey  => \@editors,
-
-            },
-            Banner => $banner,
-
-         );
-         $selection=Term::Menus::Menu(\%Menu_select_editor);
-         if ($selection=~/vi/) {
-            $editor='"/usr/bin/vi"';
+         if ($selection=~/TextPad/) {
+            if ($tp eq 'default') {
+               $editor="\"$mount".
+                  "/c/Program Files/TextPad 5/TextPad.exe\"";
+            } else {
+               $tp=~s/\\/\//g;
+               $tp=~s/^([A-Za-z]):(.*)/$1$2/;
+               $editor="\"$mount/$tp\"";
+            }
+         } elsif ($selection=~/vim/) {
+            $editor='"/bin/vim-nox.exe"';
          } elsif ($selection=~/emacs/) {
-            $editor='"/usr/bin/emacs"';
+            $editor='"/bin/emacs-nox.exe"';
+         } elsif ($selection=~/joe/) {
+            $editor='"/bin/joe.exe"';
+         } elsif ($selection=~/mc/) {
+            $editor='"/bin/mc.exe"';
          }
-      } elsif (1==$#editors) {
-         $editor=$editors[0];
       } else {
-         $editor='\'\'';
+         if (-e '/usr/bin/vi') {
+            push @editors, 'vi';   
+         }
+         if (-e '/usr/bin/emacs') {
+            push @editors, 'emacs';
+         }
+         if (1<$#editors) {
+            my %Menu_select_editor=(
+
+               Label  => 'Menu_select_editor',
+               Item_1 => {
+
+                  Text    => "]C[",
+                  Convey  => \@editors,
+
+               },
+               Banner => $banner,
+
+            );
+            $selection=Term::Menus::Menu(\%Menu_select_editor);
+            if ($selection=~/vi/) {
+               $editor='"/usr/bin/vi"';
+            } elsif ($selection=~/emacs/) {
+               $editor='"/usr/bin/emacs"';
+            }
+         } elsif (1==$#editors) {
+            $editor=$editors[0];
+         } else {
+            $editor='\'\'';
+         }
       }
    }
 } else {
@@ -1052,6 +1319,7 @@ if ($get_BerkeleyDB) {
                   if $CPAN::DEBUG;
                } else {
                   print "CHECKSUM test for $filename *FAILED*\n";
+                  print "CALCULATED=$checksum and DOWNLOADED=$digestmd5\n";
                   print "\nPress ANY key to terminate FullAuto installation ...\n";
                   <STDIN>;
                   die "FATAL ERROR! : CHECKSUM Test for $filename *FAILED*\n";
@@ -1191,7 +1459,7 @@ if ($get_BerkeleyDB) {
                      "CPAN::Shell->force('install',$p)")
             }
             eval {
-               require CPANPLUS;
+               require CPANPLUS::Shell;
                my $u=CPANPLUS::Shell->new();
                $u->shell;
                $u->dispatch_on_input(input=>'o conf force 1');
@@ -1238,16 +1506,43 @@ if ($@) {
    die $die;
 }
 
-sub windows_xp {
+sub windows_ver {
+   # Thanks - http://ss64.org/viewtopic.php?id=879
+   # and    - http://en.wikipedia.org/wiki/Ver_(command)
    my $output=`cmd /c ver`;
-   if ($output=~/Windows XP/s) {
-      return 1;
+   if (-1<index $output,'4.0.950') {
+      return 'Windows 95';
+   } elsif (-1<index $output,'4.0.950') {
+      return 'Windows 98';
+   } elsif (-1<index $output,'4.10.2222') {
+      return 'Windows 98 SE';
+   } elsif (-1<index $output,'4.90.3000') {
+      return 'Windows ME';
+   } elsif (-1<index $output,'NT') {
+      return 'Windows NT';
+   } elsif (-1<index $output,'5.0.2195') {
+      return 'Windows 2000';
+   } elsif (-1<index $output,'5.1.2600') {
+      return 'Windows XP';
+   } elsif (-1<index $output,'5.2.3790') {
+      return 'Windows Server 2003';
+   } elsif (-1<index $output,'5.2.4500') {
+      return 'Windows Home Server'; # aka Windows XP 64-Bit Edition
+   } elsif (-1<index $output,'6.0.6001') {
+      return 'Windows Vista';
+   } elsif (-1<index $output,'6.0.6002') {
+      return 'Windows Server 2008';
+   } elsif (-1<index $output,'6.1.7600') {
+      return 'Windows Server 2008 R2'
+   } elsif (-1<index $output,'6.1.7601') {
+      return 'Windows 7 SP1';
    } else {
-      return 0;
+      $output=~s/\s*\[.*$//s;
+      return $output;
    }
 }
 
-if ($^O eq 'cygwin' && &windows_xp) {
+if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
    my $regc='regtool -v check "/HKLM/Software/Microsoft/'.
             'Windows/CurrentVersion/Explorer/AlwaysUnloadDLL" 2>&1';
    my $outp=`$regc`;
@@ -1339,7 +1634,7 @@ requires        'Data::Password::Check'     => 0;
 requires        'String::Random'            => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
-auto_install;
+auto_install();
 
 my $c_file='';
 my $date=strftime('%D',localtime);
@@ -1451,18 +1746,18 @@ if ($^O eq 'cygwin') {
    open(FH,">bin/fullauto.exe");
    print FH "\n";
    close FH;
-   install_script 'bin/fullauto.exe';
+   install_script('bin/fullauto.exe');
    unlink "bin/fullauto.exe";
 } else {
    open(FH,">bin/fullauto");
    print FH "\n";
    close FH;
-   install_script 'bin/fullauto';
+   install_script('bin/fullauto');
    unlink "bin/fullauto";
 }
-install_script 'bin/fullauto.pl';
+install_script('bin/fullauto.pl');
 
-WriteAll;
+WriteAll();
 
 sub fa_find_editor {
    my $editor=$_[0];
