@@ -25,7 +25,7 @@ BEGIN {
       my $butil=$_[2]||'';
       my $dir='';
       my $cpan_error='';
-      eval "require $p";
+      eval "require $p;1";
       if ($@) {
          print "==> $p required."
          and print "*** Installing $p via CPAN\n"
@@ -38,7 +38,7 @@ BEGIN {
             $cpan_error="$@ $!";
             print "CPAN Error: $cpan_error => will attempt CPANPLUS\n";
          }
-         eval "require $p" or
+         eval "require $p;1" or
          do {
             print"==> $p required."
             and print "*** Installing $p via CPANPLUS\n"
@@ -102,10 +102,10 @@ foreach my $p (@INC) {
       last;
    }
 }
+
 use lib '.';
 use inc::Module::Install;
 use Config;
-use DirHandle;
 use File::stat;
 CPAN::HandleConfig->load;
 use POSIX qw/strftime/;
@@ -113,9 +113,9 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9929';
+version         '0.9930';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
-license         'gpl';
+license         'GPL-3.0';
 perl_version    '5.006';
 
 BEGIN {
@@ -162,7 +162,7 @@ BEGIN {
          undef $d;
       } return $new; 
    }
-
+   
    sub menu {
       my $m = shift;
       my $choice;
@@ -250,6 +250,8 @@ BEGIN {
 
 require Term::Menus;
 require Term::ReadKey;
+my $last_known_good_location=
+      "http://download.oracle.com/berkeley-db/db-5.1.25.tar.gz";
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
@@ -424,7 +426,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          FA::LWP::UserAgent->config;
          print "Fetching with LWP:\n  $url\n";
          my $Ua;
-         eval { $Ua = FA::LWP::UserAgent->new; };
+         eval { $Ua = FA::LWP::UserAgent->new(
+                timeout=>300,show_progress=>1) };
          if ($@) {
             $CPAN::Frontend->mywarn(
                "ERROR: FA::LWP::UserAgent->new dies with $@\n");
@@ -436,7 +439,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $Ua->no_proxy($var)
                if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
          }
-         $Ua->show_progress('true value');
          my $req = HTTP::Request->new(GET => $url);
          $req->header('Accept' => 'text/html');
          my $res = $Ua->request($req);
@@ -820,6 +822,99 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       'CPAN::Shell-^^^>notest(\'install\',\'IO::Pty\')}\""');
                system('export CYGWIN=nodosfilewarning & '.
                       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require HTML::Tagset;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'HTML::Tagset\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require HTML::Parser;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'HTML::Parser\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require URI;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'URI\')}\""');
+               #system('export CYGWIN=nodosfilewarning & '.
+               #       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+               #       '"/usr/bin/perl -e \"eval { require LWP;1 }'.
+               #       ' or do {require CPAN and '.
+               #       'CPAN::Shell-^^^>notest(\'install\','.
+               #       '\'LWP\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval {require ExtUtils::Depends;1}'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'ExtUtils::Depends\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Task::Weaken;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Task::Weaken\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Digest::MD5;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Digest::MD5\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require B::Utils;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'B::Utils\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Data::Dump::Streamer;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Data::Dump::Streamer\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Win32::API;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Win32::API\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Win32::DriveInfo;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Win32::DriveInfo\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require JSON;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'JSON\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Term::ReadKey;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Term::ReadKey\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Term::RawInput;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Term::RawInput\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Term::Menus;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Term::Menus\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       '/usr/bin/cpan -i Net::FullAuto"');
             } else {
@@ -828,6 +923,127 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '"/usr/bin/perl -e \"eval { require IO::Pty;1 }'.
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\',\'IO::Pty\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require HTML::Tagset;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'HTML::Tagset\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require HTML::Parser;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'HTML::Parser\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require URI;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'URI\')}\""');
+               #system('SET CYGWIN=nodosfilewarning & '.
+               #       'cmd /c C:\\cygwin\\bin\\bash -lc '.
+               #       '"/usr/bin/perl -e \"eval { require LWP;1 }'.
+               #       ' or do {require CPAN and '.
+               #       'CPAN::Shell-^^^>notest(\'install\','.
+               #       '\'LWP\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval {require ExtUtils::Depends;1}'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'ExtUtils::Depends\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Task::Weaken;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Task::Weaken\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Digest::MD5;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Digest::MD5\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require B::Utils;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'B::Utils\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Data::Dump::Streamer;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'get\','.
+                      '\'Data::Dump::Streamer\')}\""');
+               my $streamdir='SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e '.
+                      '\"require CPAN::Config and '.
+                      'print \$CPAN::Config-^^^>{build_dir}\""';
+               my $stmout=`$streamdir`;
+               $streamdir='SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/cygpath -m \"'.$stmout.'\""';
+               $stmout=`$streamdir`;
+               #$streamdir='SET CYGWIN=nodosfilewarning & '.
+               #       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+               #       '"/usr/bin/perl -e '.
+               #       '\"opendir(DIR,'.$stmout.') || die \$!;'.
+               #       'my\$ti=0;my\$n=\'\';my\$f=\'\';'.
+               #       'while(my\$e=readdir(DIR)){'.
+               #       'next if \$e eq \'.\';'.
+               #       'next if \$e eq \'..\';'.
+               #       'next if \$e!~/^Data-Dump-Streamer/;'.
+               #       'next if substr(\$e,-3) eq \'yml\';'.
+               #       '\$f='.$stmout.'.\'/\'.\$e;'.
+               #       'my \$a=stat \$f;'.
+               #       'my \$d=time()-\$a-^^^>mtime;'.
+               #       'if(\$t==0&&\$e=~/^Data-Dump-Streamer/){'.
+               #       '\$t=\$d;\$n=\$e;}}\$n=\$f if !\$n&&\$f;'.
+               #       'print \$n;\""';
+               #my $sdir=`$streamdir`; 
+#print "WHAT IS STMOUT=$sdir\n";sleep 20;
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Win32::API;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Win32::API\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Win32::DriveInfo;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Win32::DriveInfo\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require JSON;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'JSON\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { require Term::ReadKey;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Term::ReadKey\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Term::RawInput;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Term::RawInput\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Term::Menus;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Term::Menus\')}\""');
                system('SET CYGWIN=nodosfilewarning & '.
                       'cmd /c C:\\cygwin\\bin\\bash -lc '.
                       '"export PERL_MM_USE_DEFAULT=1;'.
@@ -1174,7 +1390,8 @@ if ($get_BerkeleyDB) {
             FA::LWP::UserAgent->config;
             print "Fetching with LWP:\n  $url\n";
             my $Ua;
-            eval { $Ua = FA::LWP::UserAgent->new; };
+            eval { $Ua = FA::LWP::UserAgent->new(
+                   timeout=>300,show_progress=>1) };
             if ($@) {
                $CPAN::Frontend->mywarn(
                   "ERROR: FA::LWP::UserAgent->new dies with $@\n");
@@ -1186,7 +1403,6 @@ if ($get_BerkeleyDB) {
                $Ua->no_proxy($var)
                   if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
             }
-
             my $req = HTTP::Request->new(GET => $url);
             $req->header('Accept' => 'text/html');
             my $res = $Ua->request($req);
@@ -1255,76 +1471,140 @@ if ($get_BerkeleyDB) {
                   $fh = FileHandle->new;
                   $filename = "${file}_$$.tar.gz";
                }
-               $req = HTTP::Request->new(GET => $source);
-               $req->header('Accept-Encoding' => 'gzip, compress');
-               $Ua->show_progress('true value');
-               $res = $Ua->request($req);
-               if ($res->is_success) {
-                  print " + request successful.\n"
-                     if $CPAN::DEBUG;
-                  print $fh $res->content;
-                  close $fh;
-               } elsif ($res->is_error(500)) {
-                  print(sprintf(
-                     "LWP failed with code[%s], message[%s]\n".
-                     "Please check your connection to the Internet!\n",
-                     $res->code,
-                     $res->message,
-                  ));
-               }
-               print(qq{ + saved content to $filename \n})
-               if $CPAN::DEBUG;
-               my $md5fh='';my $md5filename='';
-               if ($CPAN::META->has_usable("File::Temp")) {
-                  $md5fh = File::Temp->new(
-                        dir      => cwd(),
-                        template => "${file}_XXXXXX",
-                        suffix => ".tar.gz.md5",
-                        unlink => 0,
-                       );
-                  $md5filename = $md5fh->filename;
-               } else {
-                  $md5fh = FileHandle->new;
-                  $md5filename = "${file}_$$.tar.gz.md5";
-               }
-               $req = HTTP::Request->new(GET => $source.'.md5');
-               $req->header('Accept-Encoding' => 'gzip, compress');
-               $Ua->show_progress('true value');
-               $res = $Ua->request($req);
-               if ($res->is_success) {
-                  print " + request successful.\n"
-                     if $CPAN::DEBUG;
-                  print $md5fh $res->content;
-                  close $md5fh;
-               } elsif ($res->is_error(500)) {
-                  print(sprintf(
-                     "LWP failed with code[%s], message[%s]\n".
-                     "Please check your connection to the Internet!\n",
-                     $res->code,
-                     $res->message,
-                  ));
-               }
-               print(qq{ + saved md5 content to $md5filename \n})
-               if $CPAN::DEBUG;
-               open(MH,"<$md5filename") || die $!;
-               my $mhf=<MH>;
-               close(MH);
-               my $checksum=$mhf;
-               $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
-               open(FILE, $filename) or die "Can't open '$file': $!";
-               binmode(FILE);
-               my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
-               if ($checksum eq $digestmd5) {
-                  print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
+               my $end_flag=0;
+               my %errors = ('500'=>'Bad hostname supplied',
+                             '404'=>'URL not found',
+                             '403'=>'URL forbidden',
+                             '401'=>'Authorization failed',
+                             '400'=>'Bad request found',
+                             '302'=>'Redirected URL'
+               );
+               while (1) {
+                  $req = HTTP::Request->new(GET => $source);
+                  $req->header('Accept-Encoding' => 'gzip, compress');
+                  $res = $Ua->request($req);
+                  my $success=1;
+                  if ($res->is_success) {
+                     print " + request successful.\n"
+                        if $CPAN::DEBUG;
+                     print $fh $res->content;
+                     close $fh;
+                  } else {
+                     my $status_line=$res->status_line;
+                     ($status_line) = ($status_line =~ /(\d+)/);
+                     if (defined($errors{$status_line})) {
+                        validate_error($errors{$status_line});
+                        print(
+                           "LWP failed with code $status_line, ",
+                           "message $errors{$status_line}\n".
+                           "Please check your connection to the Internet!\n",
+                           $status_line,
+                           $res->message,
+                        );
+                        if (!$end_flag && ($status_line eq '404')) {
+                           $source=$last_known_good_location;
+                           $end_flag=1;
+                           $source=~
+                              s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+                           $file=$2;
+                           $file=substr($file,(index $file,'/')+1,-7);
+                           $ver=$file;
+                           $ver=~s/_.*$//;
+                           $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+                           next;
+                        }
+                     } else {
+                        print(
+                           "LWP failed with an Unknown Error\n".
+                           "Please check your connection to the Internet!\n",
+                        );
+                     }
+                     $success = 0;
+                     close $fh;
+                     last;
+                  }
+                  print(qq{ + saved content to $filename \n})
                   if $CPAN::DEBUG;
-               } else {
-                  print "CHECKSUM test for $filename *FAILED*\n";
-                  print "CALCULATED=$checksum and DOWNLOADED=$digestmd5\n";
-                  print "\nPress ANY key to terminate FullAuto installation ...\n";
-                  <STDIN>;
-                  die "FATAL ERROR! : CHECKSUM Test for $filename *FAILED*\n";
+                  my $md5fh='';my $md5filename='';
+                  if ($CPAN::META->has_usable("File::Temp")) {
+                     $md5fh = File::Temp->new(
+                           dir      => cwd(),
+                           template => "${file}_XXXXXX",
+                           suffix => ".tar.gz.md5",
+                           unlink => 0,
+                     );
+                     $md5filename = $md5fh->filename;
+                  } else {
+                     $md5fh = FileHandle->new;
+                     $md5filename = "${file}_$$.tar.gz.md5";
+                  }
+                  $req = HTTP::Request->new(GET => $source.'.md5');
+                  $req->header('Accept-Encoding' => 'gzip, compress');
+                  $res = $Ua->request($req);
+                  if ($res->is_success) {
+                     print " + request successful.\n"
+                        if $CPAN::DEBUG;
+                     print $md5fh $res->content;
+                     close $md5fh;
+                  } else {
+                     my $status_line=$res->status_line;
+                     ($status_line) = ($status_line =~ /(\d+)/);
+                     if (defined($errors{$status_line})) {
+                        validate_error($errors{$status_line});
+                        print(
+                           "LWP failed with code $status_line, ",
+                           "message $errors{$status_line}\n".
+                           "Please check your connection to the Internet!\n",
+                           $status_line,
+                           $res->message,
+                        );
+                        if (!$end_flag && ($status_line eq '404')) {
+                           $source=$last_known_good_location;
+                           $end_flag=1;
+                           $source=~
+                              s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+                           $file=$2;
+                           $file=substr($file,(index $file,'/')+1,-7);
+                           $ver=$file;
+                           $ver=~s/_.*$//;
+                           $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+                           next;
+                        }
+                     } else {
+                        print(
+                           "LWP failed with an Unknown Error\n".
+                           "Please check your connection to the Internet!\n",
+                        );
+                     }
+                     $success = 0;
+                     close $fh;
+                     last;
+                  }
+                  print(qq{ + saved md5 content to $md5filename \n})
+                  if $CPAN::DEBUG;
+                  open(MH,"<$md5filename") || die $!;
+                  my $mhf=<MH>;
+                  close(MH);
+                  my $checksum=$mhf;
+                  $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
+                  open(FILE, $filename) or die "Can't open '$file': $!";
+                  binmode(FILE);
+                  my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
+                  if ($checksum eq $digestmd5) {
+                     print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
+                     if $CPAN::DEBUG;
+                  } else {
+                     print "CHECKSUM test for $filename *FAILED*\n";
+                     print "CALCULATED=$digestmd5 and DOWNLOADED=$checksum\n";
+                     print "\nPress ANY key to terminate FullAuto ",
+                           "installation ...\n";
+                     <STDIN>;
+                     die "FATAL ERROR! : ".
+                         "CHECKSUM Test for $filename *FAILED*\n";
+                  }
+                  close(FILE);
+                  last;
                }
-               close(FILE);
                `$CPAN::Config->{gzip} -d $filename`;
                unless ($CPAN::Config->{gzip}) {
                   if (-e '/usr/bin/gzip') {
@@ -1596,7 +1876,8 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
          #exit;
       } elsif ($a=~/^[Yy]$/s) {
          $regc='cmd /c "REG ADD HKLM\\Software\\Microsoft\\Windows\\'.
-               'CurrentVersion\\Explorer\\AlwaysUnloadDLL /ve /t REG_SZ /d 1" 2>&1';
+               'CurrentVersion\\Explorer\\AlwaysUnloadDLL '.
+               '/ve /t REG_SZ /d 1" 2>&1';
          $outp=`$regc`;
          print $outp."\n";
       }
@@ -2134,7 +2415,7 @@ our @ISA = qw(LWP::UserAgent); # inherits from LWP::UserAgent
 use vars qw(@ISA $USER $PASSWD $SETUPDONE);
 # we delay requiring LWP::UserAgent and setting up inheritance until we need it
 
-$FA::LWP::UserAgent::VERSION = $FA::LWP::UserAgent::VERSION = "1.94";
+$FA::LWP::UserAgent::VERSION = "1.94";
 
 sub config {
     return if $SETUPDONE;
