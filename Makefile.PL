@@ -113,7 +113,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9931';
+version         '0.9932';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'GPL-3.0';
 perl_version    '5.006';
@@ -916,8 +916,28 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                system('export CYGWIN=nodosfilewarning & '.
                       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
                       '"export PERL_MM_USE_DEFAULT=1;'.
-                      '/usr/bin/cpan -i Net::FullAuto"');
+                      '/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
             } else {
+               my $build_dir='SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e '.
+                      '\"require CPAN::Config and '.
+                      'print \$CPAN::Config-^^^>{build_dir}\" 2>&1"';
+               my $bd=`$build_dir`;
+               if ($bd=~/^\s*$|Can\'t locate/s) {
+                  my $rmdir='SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                      '"/usr/bin/perl -e '.
+                      '\"foreach my \$f (@INC) { my \$e=\$f;'.
+                      'if (-e \$e.\'/CPAN/Config.pm\') {'.
+                      'rm -f \$e.\'/CPAN/Config.pm\';'.
+                      'rm -f \$e.\'/CPAN/Config.pm~\';'.
+                      'last}print \'done\'}\" 2>&1"';
+                  my $rmd=`$rmdir`;
+                  system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"/usr/bin/echo y | /usr/bin/cpan"');
+               }
                system('SET CYGWIN=nodosfilewarning & '.
                       'cmd /c C:\\cygwin\\bin\\bash -lc '.
                       '"/usr/bin/perl -e \"eval { require IO::Pty;1 }'.
@@ -978,7 +998,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do { print \'NODDS\' }\""';
                my $ddst=`$ddstest`;
                chomp($ddst);
-print "DDSTEST=$ddst\n";
+#print "DDSTEST=$ddst\n";
                if ($ddst eq 'NODDS') {
                   system('SET CYGWIN=nodosfilewarning & '.
                          'cmd /c C:\\cygwin\\bin\\bash -lc '.
@@ -1017,9 +1037,13 @@ print "DDSTEST=$ddst\n";
                          '\$t=\$d;\$n=\$f;}}\$n=\$f if !\$n and \$f;'.
                          'print \$f\""';
                   my $sdir=`$streamdir`; 
-print "WHAT IS SDIR=$sdir\n";sleep 20;
-                  system("cd \"$sdir\";/usr/bin/perl Build.PL NODDS;");
-                  system("cd \"$sdir\";./Build install;");
+#print "WHAT IS SDIR=$sdir\n";sleep 20;
+                  system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"cd \"'.$sdir.'\";/usr/bin/perl Build.PL NODDS;"');
+                  system('SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                      '"cd \"'.$sdir.'\";./Build install;"');
                }
                system('SET CYGWIN=nodosfilewarning & '.
                       'cmd /c C:\\cygwin\\bin\\bash -lc '.
