@@ -113,7 +113,7 @@ use POSIX qw/strftime/;
 # Define metadata
 name            'Net-FullAuto';
 sign;
-version         '0.9930';
+version         '0.9931';
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'GPL-3.0';
 perl_version    '5.006';
@@ -971,41 +971,56 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'B::Utils\')}\""');
-               system('SET CYGWIN=nodosfilewarning & '.
-                      'cmd /c C:\\cygwin\\bin\\bash -lc '.
+               my $ddstest='SET CYGWIN=nodosfilewarning & '.
+                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
                       '"/usr/bin/perl -e \"eval { '.
-                      'require Data::Dump::Streamer;1 }'.
-                      ' or do {require CPAN and '.
-                      'CPAN::Shell-^^^>notest(\'get\','.
-                      '\'Data::Dump::Streamer\')}\""');
-               my $streamdir='SET CYGWIN=nodosfilewarning & '.
-                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                      '"/usr/bin/perl -e '.
-                      '\"require CPAN::Config and '.
-                      'print \$CPAN::Config-^^^>{build_dir}\""';
-               my $stmout=`$streamdir`;
-               $streamdir='SET CYGWIN=nodosfilewarning & '.
-                      'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-                      '"/usr/bin/cygpath -m \"'.$stmout.'\""';
-               $stmout=`$streamdir`;
-               #$streamdir='SET CYGWIN=nodosfilewarning & '.
-               #       'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
-               #       '"/usr/bin/perl -e '.
-               #       '\"opendir(DIR,'.$stmout.') || die \$!;'.
-               #       'my\$ti=0;my\$n=\'\';my\$f=\'\';'.
-               #       'while(my\$e=readdir(DIR)){'.
-               #       'next if \$e eq \'.\';'.
-               #       'next if \$e eq \'..\';'.
-               #       'next if \$e!~/^Data-Dump-Streamer/;'.
-               #       'next if substr(\$e,-3) eq \'yml\';'.
-               #       '\$f='.$stmout.'.\'/\'.\$e;'.
-               #       'my \$a=stat \$f;'.
-               #       'my \$d=time()-\$a-^^^>mtime;'.
-               #       'if(\$t==0&&\$e=~/^Data-Dump-Streamer/){'.
-               #       '\$t=\$d;\$n=\$e;}}\$n=\$f if !\$n&&\$f;'.
-               #       'print \$n;\""';
-               #my $sdir=`$streamdir`; 
-#print "WHAT IS STMOUT=$sdir\n";sleep 20;
+                      'require Data::Dump::Streamer;print \'DDS\' }'.
+                      ' or do { print \'NODDS\' }\""';
+               my $ddst=`$ddstest`;
+               chomp($ddst);
+print "DDSTEST=$ddst\n";
+               if ($ddst eq 'NODDS') {
+                  system('SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\cygwin\\bin\\bash -lc '.
+                         '"/usr/bin/perl -e \"eval { '.
+                         'require Data::Dump::Streamer;1 }'.
+                         ' or do {require CPAN and '.
+                         'CPAN::Shell-^^^>notest(\'get\','.
+                         '\'Data::Dump::Streamer\')}\""');
+                  my $streamdir='SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                         '"/usr/bin/perl -e '.
+                         '\"require CPAN::Config and '.
+                         'print \$CPAN::Config-^^^>{build_dir}\""';
+                  my $stmout=`$streamdir`;
+                  chomp($stmout);
+                  $streamdir='SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                         '"/usr/bin/cygpath -m \"'.$stmout.'\""';
+                  $stmout=`$streamdir`;
+                  chomp($stmout);
+                  $streamdir='SET CYGWIN=nodosfilewarning & '.
+                         'cmd /c C:\\\\cygwin\\\\bin\\\\bash -lc '.
+                         '"/usr/bin/perl -e '.
+                         '\"opendir(DIR,\''.$stmout.'\') or die \$!;'.
+                         'my\$t=0;my\$n=\'\';my\$f=\'\';my \$e;'.
+                         'while(\$e=readdir(DIR)){'.
+                         'next if \$e eq \'.\';'.
+                         'next if \$e eq \'..\';'.
+                         'next if \$e!~/^Data-Dump-Streamer/;'.
+                         'next if substr(\$e,-3) eq \'yml\';'.
+                         '\$f=\''.$stmout.'\'.\'/\'.\$e;'.
+                         'my \$a=(stat(\$f))[9];'.
+                         'my \$d=time() - \$a;'.
+                         'if(\$t==0 and \$e=~/^Data-Dump-Streamer/){'.
+                         '\$t=\$d;\$n=\$f;}if(\$d^^^<\$t){'.
+                         '\$t=\$d;\$n=\$f;}}\$n=\$f if !\$n and \$f;'.
+                         'print \$f\""';
+                  my $sdir=`$streamdir`; 
+print "WHAT IS SDIR=$sdir\n";sleep 20;
+                  system("cd \"$sdir\";/usr/bin/perl Build.PL NODDS;");
+                  system("cd \"$sdir\";./Build install;");
+               }
                system('SET CYGWIN=nodosfilewarning & '.
                       'cmd /c C:\\cygwin\\bin\\bash -lc '.
                       '"/usr/bin/perl -e \"eval { require Win32::API;1 }'.
