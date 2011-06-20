@@ -1,126 +1,49 @@
-# Load the Module::Install bundled in ./inc/
+###########################################################
+#
+#  Makefile.PL for Net::FullAuto
+#
+###########################################################
 
 BEGIN {
+
    use CPAN;
    use Cwd qw/cwd/;
    use lib '.';
    use lib './inc';
-   my $mycpantest=0;
+   my $mycpantest=0; 
+   $main::curdir=&cwd;
+   $main::PARdir=$main::curdir;
+   $main::unshift_incdir=0;
+
+   my $incflag=0;
+   if (($^O eq 'MSWin32' || $^O eq 'MSWin64') && -e "./inc") {
+      $incflag=1;
+   }
+
+   foreach my $dir (@INC) {
+      my $incdir=$dir;
+      $mycpantest=1 if -e $incdir."/CPAN/MyConfig.pm";
+      if ((substr($incdir,-3) eq 'inc') &&
+            (1<index $incdir,'par-')) {
+         $main::PARdir=substr($incdir,0,-4);
+         $main::unshift_incdir=1;
+      }
+   }
+   if ($incflag && ($main::PARdir ne $main::curdir)) {
+      open(PD,">$main::PARdir/inc_exists.txt")
+         or die "Cannot open $main::PARdir/inc_exists.txt: $!\n";
+      print PD cwd()."/inc\n";
+      close(PD); 
+   }
    my $cpantest=0;
-   $mycpantest=1 if -e $cpandir."/CPAN/MyConfig.pm";
    $cpantest=1 unless $mycpantest;
    use if ($mycpantest), "CPAN::MyConfig";
    use if ($cpantest), "CPAN::Config";
-   $main::curdir=&cwd;
-
+   
    sub fa_err_exit {
-       die "$_[0]\n\n*** Please manually install $_[1]".
-           " from cpan.org first...\n"
+      die "$_[0]\n\n*** Please manually install $_[1]".
+          " from cpan.org first...\n"
    }
-
-   sub fa_install_mod {
-
-      my $p=$_[0];
-      my $task=$_[1];
-      my $butil=$_[2]||'';
-      my $dir='';
-      my $cpan_error='';
-      eval "require $p;1";
-      if ($@) {
-         print "==> $p required."
-         and print "*** Installing $p via CPAN\n"
-         and
-         eval {
-            require CPAN;
-            CPAN::Shell->notest('get',$p);
-         };
-         if ($@) {
-            $cpan_error="$@ $!";
-            print "CPAN Error: $cpan_error => will attempt CPANPLUS\n";
-         }
-         eval "require $p;1" or
-         do {
-            print"==> $p required."
-            and print "*** Installing $p via CPANPLUS\n"
-            and
-            do {
-               eval {
-                  require CPANPLUS::Backend;
-                  my $cb  = CPANPLUS::Backend->new;
-                  my $mod = $cb->parse_module(module=>$p);
-                  my $where = $cb->_fetch(module=>$mod,verbose=>1);
-                  $dir - $cb->_extract(module=>$mod,verbose=>1);
-               };
-               die "CPANPLUS Error: $@ $! and CPAN Error: $cpanerror" if $@;
-               eval "require $p" or
-                  die "CPANPLUS Error: $@ $! and CPAN Error: $cpanerror";
-            }; 
-         };
-         if ($task eq 'install') {
-            $dir||=&fa_find_latest($p);
-            print "*** Running $butil.PL\n";
-            system("cd \"$dir\";$^X $butil.PL");
-            if ($butil eq 'Makefile') {
-               print "*** Running make install\n";
-               system("cd \"$dir\";make install");
-            } else {
-               print "*** Running Build install\n";
-               system("cd \"$dir\";./Build install");
-            }
-         }
-         chdir $main::curdir;
-      } else { print "*** $p Loaded Successfully\n" }
-   }
-
-   sub fa_install_module {
-       my $stdout='';my $stderr='';
-       eval { require IO::CaptureOutput };
-       if ($@) {
-          eval { &fa_install_mod(@_) };
-          if ($@) {
-             return '',$@;
-          } else {
-             return '','';
-          }
-       } else {
-          eval {
-             require IO::CaptureOutput;
-             IO::CaptureOutput::capture {
-                &fa_install_mod(@_)
-             } \$stdout, \$stderr;
-          };
-          return $stdout,$stderr;
-       }
-   }
-
-};
-foreach my $p (@INC) {
-   my $ph=$p;
-   if ((substr($ph,-3) eq 'inc') && (1<index $ph,'par-')) {
-      my $pa=substr($ph,0,-4);
-      unshift @INC, $pa;
-      last;
-   }
-}
-
-use lib '.';
-use inc::Module::Install;
-use Config;
-use File::stat;
-CPAN::HandleConfig->load;
-use POSIX qw/strftime/;
-
-# Define metadata
-name            'Net-FullAuto';
-sign;
-version         '0.9932';
-author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
-license         'GPL-3.0';
-perl_version    '5.006';
-
-BEGIN {
-
-   $main::curdir=&cwd;
 
    sub fa_find_latest {
       my $temp=0;
@@ -161,6 +84,81 @@ BEGIN {
          print "***** Module Directory ",$new,"\n";
          undef $d;
       } return $new; 
+   }
+   
+   sub fa_install_mod {
+   
+      my $p=$_[0];
+      my $task=$_[1];
+      my $butil=$_[2]||'';
+      my $dir='';
+      my $cpan_error='';
+      eval "require $p;1";
+      if ($@) {
+         print "==> $p required."
+         and print "*** Installing $p via CPAN\n"
+         and
+         eval {
+            require CPAN;
+            CPAN::Shell->notest('get',$p);
+         };
+         if ($@) {
+            $cpan_error="$@ $!";
+            print "CPAN Error: $cpan_error => will attempt CPANPLUS\n";
+         }
+         eval "require $p;1" or
+         do {
+            print"==> $p required."
+            and print "*** Installing $p via CPANPLUS\n"
+            and
+            do {
+               eval {
+                  require CPANPLUS::Backend;
+                  my $cb  = CPANPLUS::Backend->new;
+                  my $mod = $cb->parse_module(module=>$p);
+                  my $where = $cb->_fetch(module=>$mod,verbose=>1);
+                  $dir - $cb->_extract(module=>$mod,verbose=>1);
+               };
+               die "CPANPLUS Error: $@ $! and CPAN Error: $cpan_error" if $@;
+               eval "require $p" or
+                  die "CPANPLUS Error: $@ $! and CPAN Error: $cpan_error";
+            }; 
+         };
+         if ($task eq 'install') {
+            $dir||=&fa_find_latest($p);
+            print "*** Running $butil.PL\n";
+            system("cd \"$dir\";$^X $butil.PL");
+            if ($butil eq 'Makefile') {
+               print "*** Running make install\n";
+               system("cd \"$dir\";make install");
+            } else {
+               print "*** Running Build install\n";
+               system("cd \"$dir\";./Build install");
+            }
+         }
+         chdir $main::curdir;
+      } else { print "*** $p Loaded Successfully\n" }
+   }
+   
+   sub fa_install_module {
+       my $stdout='';my $stderr='';
+       eval { require IO::CaptureOutput };
+       if ($@) {
+          eval { &fa_install_mod(@_) };
+          if ($@) {
+             return '',$@;
+          } else {
+             return '','';
+          }
+       } else {
+          eval {
+             require IO::CaptureOutput;
+             IO::CaptureOutput::capture {
+                &fa_install_mod(@_)
+             } \$stdout, \$stderr;
+          };
+          return $stdout,$stderr;
+       }
    }
    
    sub menu {
@@ -247,6 +245,24 @@ BEGIN {
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
 };
+
+# Load the Module::Install bundled in ./inc/
+use inc::Module::Install;
+
+# Define metadata
+version         '0.9933';
+name            'Net-FullAuto';
+sign;
+author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
+license         'GPL-3.0';
+perl_version    '5.006';
+
+unshift @INC, $main::PARdir if $main::unshift_incdir;
+
+use Config;
+use File::stat;
+CPAN::HandleConfig->load;
+use POSIX qw/strftime/;
 
 require Term::Menus;
 require Term::ReadKey;
@@ -1089,6 +1105,25 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '/usr/bin/cpan -i Net::FullAuto"');
             }
          }
+         my $rmdir_out=rmdir $main::curdir.'/inc/.author'; 
+         print "ERROR: $!\n" unless $rmdir_out;
+         my $un_out=unlink $main::curdir.'/inc/Module/Install/Base.pm';
+         print "ERROR: $!\n" unless $un_out;
+         $un_out=unlink $main::curdir.'/inc/Module/Install/Metadata.pm';
+         print "ERROR: $!\n" unless $un_out;
+         $un_out=unlink $main::curdir.'/inc/Module/Install.pm';
+         print "ERROR: $!\n" unless $un_out;
+         $rmdir_out=rmdir $main::curdir.'/inc/Module/Install';
+         print "ERROR: $!\n" unless $rmdir_out;
+         $rmdir_out=rmdir $main::curdir.'/inc/Module';
+         print "ERROR: $!\n" unless $rmdir_out;
+         unless (-e $main::PARdir.'/inc_exists.txt') {
+            $rmdir_out=rmdir $main::curdir.'/inc';
+            print "ERROR: $!\n" unless $rmdir_out;
+         } else {
+            $rmdir_out=rmdir $main::PARdir.'/inc_exists.txt';
+            print "ERROR: $!\n" unless $rmdir_out; 
+         }   
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
                "\n\n   Please report any bugs and send any",
