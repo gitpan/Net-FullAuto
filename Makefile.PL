@@ -14,10 +14,69 @@ BEGIN {
    $main::curdir=&cwd;
    $main::PARdir=$main::curdir;
    $main::unshift_incdir=0;
+   $main::root_dir=$main::curdir;
 
-   my $incflag=0;
-   if (($^O eq 'MSWin32' || $^O eq 'MSWin64') && -e "./inc") {
-      $incflag=1;
+   my $incflag=0;my @drive_options=();
+   if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+      $incflag=1 if -e './inc';
+      use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Win32::DriveInfo";
+      my $drv='';
+      foreach my $d (Win32::DriveInfo::DrivesInUse()) {
+         my $dt=Win32::DriveInfo::DriveType($d);
+         next if $dt == 5 || $dt == 4 || !$dt;
+         my $FileSystemName=(Win32::DriveInfo::VolumeInfo($d))[3];
+         next if $FileSystemName ne 'NTFS';
+         my $file_size = (Win32::DriveInfo::DriveSpace("$d:"))[6];
+         my $one_gb=1024*1024*1024;
+         if ($one_gb<$file_size) {
+            $drv=$d;
+            if ($dt == 3) {
+               push @drive_options, [ "Drive $d NTFS Fixed Disk ".
+                                       &size_fmt($file_size)." Free Space",
+                                       sub{ return $d } ];
+            } elsif ($dt == 2) {
+               push @drive_options, [ "Drive $d NTFS Removeable Disk ".
+                                       &size_fmt($file_size)." Free Space",
+                                       sub{ return $d } ];
+            } else {
+               push @drive_options, [ "Drive $d NTFS Volume ".
+                                       &size_fmt($file_size)." Free Space",
+                                       sub{ return $d } ];
+            }
+         }
+      }
+      if (-1<$#drive_options) {
+         if (0==$#drive_options) {
+            $main::root_dir="$drv:\\cygwin";
+         } else{
+            my $banner="\n\n   Please select the Drive/Volume where you would".
+                       " like\n   Cygwin and FullAuto Installed. (If you ".
+                       "don't see the\n   Drive/Volume you desire, it is".
+                       " probably because the\n".
+                       "   Drive/Volume lacks sufficient disk space. At ".
+                       "least\n   One Gigabyte of free space is".
+                       " needed for a Windows\n   based".
+                       " Cygwin/FullAuto Installation.)\n\n";
+            my $menu1 = [ $banner ];
+            foreach my $do (@drive_options) {
+               push @{$menu1}, $do;
+            }
+            my $selection=&menu($menu1);
+            chomp($selection);
+            $main::root_dir="$selection:\\cygwin";
+         }
+      } else {
+         print "\n\n   Fatal Error!: Insufficient Disk Space.\n".
+               "                 At least One Gigabyte (1.0 GB) of\n".
+               "                 Free Disk Space is needed to install\n".
+               "                 Cygwin and FullAuto on this Windows\n".
+               "                 host.".
+               "\n\n   Please report any bugs and send any",
+               "\n   questions, thoughts or feedback to:",
+               "\n\n      Brian.Kelly\@fullautosoftware.net.",
+               "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+         exit;
+      }
    }
 
    foreach my $dir (@INC) {
@@ -175,6 +234,24 @@ BEGIN {
       &{$m->[$choice][1]};
    }
 
+   sub size_fmt {
+      my $size = shift(@_);
+
+      if ($size < 1024) {
+         return $size . " bytes";
+      }
+      if ($size < (1024*1024)) {
+         return sprintf("%.2f KB",$size / 1024);
+      }
+      if ($size < (1024*1024*1024)) {
+         return sprintf("%.2f MB",$size / (1024*1024));
+      }
+      if ($size < (1024*1024*1024*1024)) {
+         return sprintf("%.2f GB",$size / (1024*1024*1024));
+      }
+      return sprintf("%.2f TB",$size / (1024*1024*1024*1024));
+   }
+
    my $stdout='';my $stderr='';
    ($stdout,$stderr)=&fa_install_module('IO::CaptureOutput','install','Build');
    print $stdout if $stdout;
@@ -250,7 +327,7 @@ BEGIN {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9934';
+version         '0.9935';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -515,17 +592,19 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps,'
-                      .$selection.' -X -A -q '
+                      .$selection.' -X -A -q '."-r $main::rootdir "
                       .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="cd \"$main::PARDir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps'
-                      .' -X -A -q -s http://cygwin.mirrors.pair.com';
+                      .' -X -A -q '."-r $main::rootdir "
+                      .'-s http://cygwin.mirrors.pair.com';
          } else {
             $setup_cmd="cd \"$main::PARdir\" & "
-                      .'setup.exe -P openssh -X -A -q -s '
+                      .'setup.exe -P openssh -X -A -q '
+                      ."-r $main::rootdir ".'-s '
                       .'http://cygwin.mirrors.pair.com';
          }
          if ($selection!~/MINIMAL/s) {
@@ -1113,23 +1192,24 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
          }
          my $rmdir_out=rmdir $main::curdir.'/inc/.author'; 
-         print "ERROR: $!\n" unless $rmdir_out;
+         print "ERROR $main::curdir/inc/.author: $!\n" unless $rmdir_out;
          my $un_out=unlink $main::curdir.'/inc/Module/Install/Base.pm';
-         print "ERROR: $!\n" unless $un_out;
+         print "ERROR $main::curdir/inc/Module/Install/Base.pm: $!\n"
+            unless $un_out;
          $un_out=unlink $main::curdir.'/inc/Module/Install/Metadata.pm';
-         print "ERROR: $!\n" unless $un_out;
+         print "ERROR $main::curdir/inc/Module/Install.pm: $!\n" unless $un_out;
          $un_out=unlink $main::curdir.'/inc/Module/Install.pm';
-         print "ERROR: $!\n" unless $un_out;
+         print "ERROR $main::curdir/inc/Module/Install.pm: $!\n" unless $un_out;
          $rmdir_out=rmdir $main::curdir.'/inc/Module/Install';
-         print "ERROR: $!\n" unless $rmdir_out;
+         print "ERROR /inc/Module/Install: $!\n" unless $rmdir_out;
          $rmdir_out=rmdir $main::curdir.'/inc/Module';
-         print "ERROR: $!\n" unless $rmdir_out;
+         print "ERROR $main::curdir/inc/Module: $!\n" unless $rmdir_out;
          unless (-e $main::PARdir.'/inc_exists.txt') {
             $rmdir_out=rmdir $main::curdir.'/inc';
-            print "ERROR: $!\n" unless $rmdir_out;
+            print "ERROR $main::curdir/inc: $!\n" unless $rmdir_out;
          } else {
-            $rmdir_out=rmdir $main::PARdir.'/inc_exists.txt';
-            print "ERROR: $!\n" unless $rmdir_out;
+            $un_out=unlink $main::PARdir.'/inc_exists.txt';
+            print "ERROR $main::PARdir/inc_exists.txt: $!\n" unless $un_out;
          }
          opendir(CD,$main::curdir)
             or die "Cannot open ".$main::curdir.": $!\n";
