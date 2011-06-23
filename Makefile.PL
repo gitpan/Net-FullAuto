@@ -33,7 +33,7 @@ BEGIN {
       open(PD,">$main::PARdir/inc_exists.txt")
          or die "Cannot open $main::PARdir/inc_exists.txt: $!\n";
       print PD cwd()."/inc\n";
-      close(PD); 
+      close(PD);
    }
    my $cpantest=0;
    $cpantest=1 unless $mycpantest;
@@ -250,7 +250,7 @@ BEGIN {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9933';
+version         '0.9934';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -414,7 +414,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
          } elsif (0<$#editors) {
             $selection=Term::Menus::Menu(\%Menu_select_editor);
-            if ($selection=~/TextPad/) {
+            if ($selection=~/(TextPad)/) {
+               $selection=$1;
                if ($tp eq 'default') {
                   $editor="\"/cygdrive".
                      "/c/Program Files/TextPad 5/TextPad.exe\"";
@@ -423,13 +424,17 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   $tp=~s/^([A-Za-z]):(.*)/$1$2/;
                   $editor="\"/cygdrive/$tp\"";
                }
-            } elsif ($selection=~/vim/) {
+            } elsif ($selection=~/(vim)/) {
+               $selection=$1;
                $editor='"/bin/vim-nox.exe"';
-            } elsif ($selection=~/emacs/) {
+            } elsif ($selection=~/(emacs)/) {
+               $selection=$1;
                $editor='"/bin/emacs-nox.exe"';
-            } elsif ($selection=~/joe/) {
+            } elsif ($selection=~/(joe)/) {
+               $selection=$1;
                $editor='"/bin/joe.exe"';
-            } elsif ($selection=~/mc/) {
+            } elsif ($selection=~/(mc)/) {
+               $selection=$1;
                $editor='"/bin/mc.exe"';
             }
          } elsif (0==$#editors) {
@@ -461,7 +466,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          if ($res->is_success) {
             print " + request successful.\n"
                if $CPAN::DEBUG;
-            open(CP,">setup.exe") || die $!;
+            open(CP,">$main::PARdir\\setup.exe") || die $!;
             binmode(CP);
             print CP $res->content;
          } elsif ($res->status_line=~/403/) {
@@ -472,7 +477,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             if ($res->is_success) {
                print " + request successful.\n"
                   if $CPAN::DEBUG;
-               open(CP,">setup.exe") || die $!;
+               open(CP,">$main::PARdir\\setup.exe") || die $!;
                binmode(CP);
                print CP $res->content;
             } elsif ($res->status_line=~/403/) {
@@ -483,7 +488,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                if ($res->is_success) {
                   print " + request successful.\n"
                      if $CPAN::DEBUG;
-                  open(CP,">setup.tar.gz") || die $!;
+                  open(CP,">$main::PARdir\\setup.tar.gz") || die $!;
                   binmode(CP);
                   print CP $res->content;
                } else {
@@ -502,24 +507,26 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             die $res->status_line;
          }
          close(CP) || die $!;
-         chmod 0755, 'setup.exe';
+         chmod 0755, "$main::PARdir\\setup.exe";
          
          my $setup_cmd='';
          if ($selection!~/[Ww]ordpad|MINIMAL/s) {
-            $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
-                      .'make,openssh,perl,perl-libwin32,db4.5,'
+            $setup_cmd="cd \"$main::PARdir\" & "
+                      .'setup.exe -P gcc4-core,'
+                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps,'
                       .$selection.' -X -A -q '
-                      .'-s http://cygwin.mirrors.pair.com"';
+                      .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
-            $setup_cmd='cmd /c ".\\setup.exe -P gcc4-core,gcc4-g++,'
-                      .'make,openssh,perl,perl-libwin32,db4.5,'
+            $setup_cmd="cd \"$main::PARDir\" & "
+                      .'setup.exe -P gcc4-core,'
+                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps'
-                      .' -X -A -q -s http://cygwin.mirrors.pair.com"';
+                      .' -X -A -q -s http://cygwin.mirrors.pair.com';
          } else {
-            $setup_cmd='cmd /c ".\\setup.exe -P '
-                      .'openssh -X -A -q -s '
-                      .'http://cygwin.mirrors.pair.com"';
+            $setup_cmd="cd \"$main::PARdir\" & "
+                      .'setup.exe -P openssh -X -A -q -s '
+                      .'http://cygwin.mirrors.pair.com';
          }
          if ($selection!~/MINIMAL/s) {
             if ($selection=~/[Ww]ordpad/) {
@@ -1122,8 +1129,21 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             print "ERROR: $!\n" unless $rmdir_out;
          } else {
             $rmdir_out=rmdir $main::PARdir.'/inc_exists.txt';
-            print "ERROR: $!\n" unless $rmdir_out; 
-         }   
+            print "ERROR: $!\n" unless $rmdir_out;
+         }
+         opendir(CD,$main::curdir)
+            or die "Cannot open ".$main::curdir.": $!\n";
+         while (my $file = readdir(CD) ) {
+            chomp($file);
+            if (-1<index $file,'http%3a%2f%2f') {
+               $un_out=unlink $main::curdir."/$file/setup.ini";
+               print "ERROR: $!\n" unless $un_out;
+               $rmdir_out=rmdir $main::curdir."/$file";
+               print "ERROR: $!\n" unless $rmdir_out;
+               last;
+            }
+         }
+         close(CD);
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
                "\n\n   Please report any bugs and send any",
@@ -1238,13 +1258,13 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                $tp=~s/^([A-Za-z]):(.*)/$1$2/;
                $editor="\"$mount/$tp\"";
             }
-         } elsif ($selection=~/vim/) {
+         } elsif ($selection=~s/(vim)/$1/) {
             $editor='"/bin/vim-nox.exe"';
-         } elsif ($selection=~/emacs/) {
+         } elsif ($selection=~s/(emacs)/$1/) {
             $editor='"/bin/emacs-nox.exe"';
-         } elsif ($selection=~/joe/) {
+         } elsif ($selection=~s/(joe)/$1/) {
             $editor='"/bin/joe.exe"';
-         } elsif ($selection=~/mc/) {
+         } elsif ($selection=~s/(mc)/$1/) {
             $editor='"/bin/mc.exe"';
          }
       } else {
@@ -1268,9 +1288,9 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
 
             );
             $selection=Term::Menus::Menu(\%Menu_select_editor);
-            if ($selection=~/vi/) {
+            if ($selection=~s/(vi)/$1/) {
                $editor='"/usr/bin/vi"';
-            } elsif ($selection=~/emacs/) {
+            } elsif ($selection=~s/(emacs)/$1/) {
                $editor='"/usr/bin/emacs"';
             }
          } elsif (1==$#editors) {
