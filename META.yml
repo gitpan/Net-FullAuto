@@ -3,7 +3,7 @@ abstract: 'Perl Based Secure Distributed Computing Network Process'
 author:
   - 'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>'
 configure_requires:
-license: gpl
+license: gpl-3.0
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
@@ -15,7 +15,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.9935
+    version: 0.9936
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -40,7 +40,7 @@ recommends:
   Crypt::Rijndael: 0
 requires:
   Module::Load::Conditional: 0
-  Term::Menus: 1.49
+  Term::Menus: 1.69
   Tie::Cache: 0
   Sort::Versions: 0
   Crypt::CBC: 0
@@ -64,5 +64,5 @@ requires:
   Data::Password::Check: 0
   BerkeleyDB: 0
 resources:
-  license: http://opensource.org/licenses/gpl-license.php
-version: 0.9935
+  license: http://opensource.org/licenses/gpl-3.0.html
+version: 0.9936
