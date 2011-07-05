@@ -482,6 +482,9 @@ END
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
    eval { require Data::Dump::Streamer };
    if ($@) {
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
@@ -600,7 +603,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9936';
+version         '0.9937';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1058,6 +1061,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '-u \"'.$sshd_account.'\" -w \"'.
                       $sshd_password[0].'\" '.
                       '-c \"tty ntsec\"'.$privl.'"');
+               print "   FullAuto Install continues . . . \n\n";
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/ssh-user-config -n"');
@@ -1098,6 +1102,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '-u \"'.$sshd_account.'\" -w \"'
                       .$sshd_password[0].'\" '.
                       '-c \"tty ntsec\"'.$privl.'"');
+               print "   FullAuto Install continues . . . \n\n";
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/ssh-user-config -n"');
@@ -1146,6 +1151,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '-u \"'.$sshd_account.'\" -w \"'.
                          $sshd_password[0].'\" '.
                          '-c \"tty ntsec\"'.$privl.'"');
+                  print "   FullAuto Install continues . . . \n\n";
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
                          '"/usr/bin/ssh-user-config -n"');
@@ -1187,6 +1193,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '-u \"'.$sshd_account.'\" -w \"'.
                          $sshd_password[0].'\" '.
                          '-c \"tty ntsec\"'.$privl.'"');
+                  print "   FullAuto Install continues . . . \n\n";
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
                          '"/usr/bin/ssh-user-config -n"');
@@ -2383,7 +2390,8 @@ print "RIGHTS for $sshd_account ======>\n$rights\n<=======\n";
                "\n   $sshd_account without notice. Check with your",
                "\n   Microsoft Infrastructure Admins if you suspect this",
                "\n   may be a possibility with your setup. You will need",
-               "\n   to get an exception added to their configuration.\n";
+               "\n   to get an exception added to their configuration.\n\n";
+         sleep 10; 
          my $remove_out=`net user /delete cyg_server 2>&1`;
 #print "WHAT IS REMOVE_OUT=$remove_out\n";sleep 10;
          if (-1<index $remove_out,"command completed successfully") {

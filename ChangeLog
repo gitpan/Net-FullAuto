@@ -45,6 +45,14 @@
 ################################################################
 
 
+2011-07-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9937 released.
+
+        * Added Algorithm::Diff as a dependency to Makefile.PL.
+          (This is a prerequisite for Data::Dump::Streamer).
+
+
 2011-07-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9936 released.
