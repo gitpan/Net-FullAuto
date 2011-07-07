@@ -45,6 +45,13 @@
 ################################################################
 
 
+2011-07-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9938 released.
+
+        * Fixed some more logic in Makefile.PL.
+
+
 2011-07-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9937 released.

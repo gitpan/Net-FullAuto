@@ -359,25 +359,22 @@ END
          if ($@) {
             $cpan_error="$@ $!";
             print "CPAN Error: $cpan_error => will attempt CPANPLUS\n";
-         }
-         eval "require $p;1" or
-         do {
-            print"==> $p required."
-            and print "*** Installing $p via CPANPLUS\n"
-            and
             do {
-               eval {
-                  require CPANPLUS::Backend;
-                  my $cb  = CPANPLUS::Backend->new;
-                  my $mod = $cb->parse_module(module=>$p);
-                  my $where = $cb->_fetch(module=>$mod,verbose=>1);
-                  $dir - $cb->_extract(module=>$mod,verbose=>1);
-               };
-               die "CPANPLUS Error: $@ $! and CPAN Error: $cpan_error" if $@;
-               eval "require $p" or
-                  die "CPANPLUS Error: $@ $! and CPAN Error: $cpan_error";
-            }; 
-         };
+               print"==> $p required."
+               and print "*** Installing $p via CPANPLUS\n"
+               and
+               do {
+                  eval {
+                     require CPANPLUS::Backend;
+                     my $cb  = CPANPLUS::Backend->new;
+                     my $mod = $cb->parse_module(module=>$p);
+                     my $where = $cb->_fetch(module=>$mod,verbose=>1);
+                     $dir - $cb->_extract(module=>$mod,verbose=>1);
+                  };
+                  die "CPANPLUS Error: $@ $! and CPAN Error: $cpan_error" if $@;
+               }; 
+            };
+         }
          if ($task eq 'install') {
             $dir||=&fa_find_latest($p);
             print "*** Running $butil.PL\n";
@@ -603,7 +600,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9937';
+version         '0.9938';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
