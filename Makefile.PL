@@ -320,11 +320,11 @@ END
       if (defined $d) {
          while (defined($_ = $d->read)) {
             next if ($_ eq ".") || ($_ eq "..");
+            next unless -d $_;
             next if $_!~/^$look/;
-            next if $_=~/yml$/;
             $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
-            my $attrs = stat $file;
-            my $diff = time()-$attrs->mtime;
+            my @attrs = stat $file;
+            my $diff = time()-$attrs[9];
             if ($temp == 0 && $_=~/^$look/) {
               $temp=$diff;
               $new=$file;
@@ -600,7 +600,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9938';
+version         '0.9939';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
