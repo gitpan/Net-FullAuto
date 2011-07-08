@@ -494,6 +494,9 @@ END
    ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Term::RawInput','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Term::RawInput') if $stderr;
    if ($^O eq 'cygwin') {
       ($stdout,$stderr)=&fa_install_module('Win32::API',
          'install','Makefile');
@@ -600,7 +603,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9939';
+version         '0.9940';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
