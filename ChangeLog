@@ -47,6 +47,13 @@
 
 2011-07-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9941 released.
+
+        * More changes to Makefile.PL.
+
+
+2011-07-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9940 released.
 
         * Now forcing Term::RawInput to install early in

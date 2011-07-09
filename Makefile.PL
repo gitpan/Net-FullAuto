@@ -200,7 +200,7 @@ END
          Item_4 => {
 
             Text => "I DO NOT AGREE to the license provisions\n".
-                    "                   (FullAuto Install will EXIT)",
+                    "                   ( FullAuto Install will EXIT )",
          },
          Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
             "      Net::FullAuto INSTALLATION PROGRAM\n\n".
@@ -307,9 +307,10 @@ END
       }
       $look=~s/::/-/g;
       $look='libwww' if $look eq 'LWP';
+      $look='MIME-tools' if $look eq 'MIME-Entity';
       $look='TermReadKey' if $look eq 'Term-ReadKey';
       print "***** Looking for Most Recent \"$look Dir\" \n";
-      my $d = new DirHandle $CPAN::Config->{build_dir};
+      my $d = $CPAN::Config->{build_dir};
       if (!(defined $d) || !(-d $d)) {
          $d=(getpwuid $>)[7].'/.cpan/build';
          unless (-d $d) {
@@ -317,27 +318,28 @@ END
          }
       }
       my $new='';my $file='';
-      if (defined $d) {
-         while (defined($_ = $d->read)) {
-            next if ($_ eq ".") || ($_ eq "..");
-            next unless -d $_;
-            next if $_!~/^$look/;
-            $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
-            my @attrs = stat $file;
-            my $diff = time()-$attrs[9];
-            if ($temp == 0 && $_=~/^$look/) {
-              $temp=$diff;
-              $new=$file;
-            }
-            if ($diff<$temp) {
-               $temp=$diff;
-               $new=$_;
-            }
+      opendir(DH,$d) or
+         die "ERROR - Can't read Directory $d: $!\n";
+      while ($_ = readdir(DH)) {
+         next if ($_ eq ".") || ($_ eq "..");
+         next unless -d $d.'/'.$_;
+         next if $_!~/^$look/;
+         $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
+         my @attrs = stat $file;
+         my $diff = time()-$attrs[9];
+         if ($temp == 0 && $_=~/^$look/) {
+           $temp=$diff;
+           $new=$file;
          }
-         $new=$file if !$new && $file;
-         print "***** Module Directory ",$new,"\n";
-         undef $d;
-      } return $new; 
+         if ($diff<$temp) {
+            $temp=$diff;
+            $new=$_;
+         }
+      }
+      close(DH);
+      $new=$file if !$new && $file;
+      print "***** Module Directory ",$new,"\n";
+      return $d.'/'.$new; 
    }
    
    sub fa_install_mod {
@@ -464,13 +466,41 @@ END
    ($stdout,$stderr)=&fa_install_module('URI','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'URI') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('HTTP::Message','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'HTTP::Message') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('File::Listing','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'File::Listing') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('HTTP::Cookies','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'HTTP::Cookies') if $stderr;
+   if ($^O ne 'MSWin32' && $^O ne 'MSWin64' && $^O ne 'cygwin') {
+      ($stdout,$stderr)=&fa_install_module('HTTP::Daemon','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'HTTP::Daemon') if $stderr;
+      ($stdout,$stderr)=&fa_install_module(
+         'WWW::RobotRules','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'WWW::RobotRules') if $stderr;
+      ($stdout,$stderr)=&fa_install_module('MIME::Entity','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'MIME::Entity') if $stderr;
+   }
+   ($stdout,$stderr)=&fa_install_module('HTTP::Negotiate','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'HTTP::Negotiate') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Net::HTTP','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Net::HTTP') if $stderr;
    ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'LWP') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Task::Weaken','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Task::Weaken') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('ExtUtils::Depends','install','Makefile');
+   ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::Depends','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::Depends') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Digest::MD5','install','Makefile');
@@ -487,7 +517,7 @@ END
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Data::Dump::Streamer') if $stderr;
-      my $dir=&fa_find_latest('Data::Dump::Streamer');
+      my $dir=&fa_find_latest('Data-Dump-Streamer');
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
@@ -603,7 +633,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9940';
+version         '0.9941';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1061,10 +1091,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '-u \"'.$sshd_account.'\" -w \"'.
                       $sshd_password[0].'\" '.
                       '-c \"tty ntsec\"'.$privl.'"');
-               print "   FullAuto Install continues . . . \n\n";
+               print "\n   FullAuto Install continues . . . \n\n";
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/ssh-user-config -n"');
+               print "\n   FullAuto Install continues . . . \n\n";
             }
             if (-1==index $cygsrvs,'cygserver') {
                system('export CYGWIN=nodosfilewarning & '.
@@ -1102,10 +1133,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '-u \"'.$sshd_account.'\" -w \"'
                       .$sshd_password[0].'\" '.
                       '-c \"tty ntsec\"'.$privl.'"');
-               print "   FullAuto Install continues . . . \n\n";
+               print "\n   FullAuto Install continues . . . \n\n";
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/ssh-user-config -n"');
+               print "\n   FullAuto Install continues . . . \n\n";
             }
             if (-1==index $cygsrvs,'cygserver') {
                system('SET CYGWIN=nodosfilewarning & '.
@@ -1151,10 +1183,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '-u \"'.$sshd_account.'\" -w \"'.
                          $sshd_password[0].'\" '.
                          '-c \"tty ntsec\"'.$privl.'"');
-                  print "   FullAuto Install continues . . . \n\n";
+                  print "\n   FullAuto Install continues . . . \n\n";
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
                          '"/usr/bin/ssh-user-config -n"');
+                  print "\n   FullAuto Install continues . . . \n\n";
                   my $net_start='SET CYGWIN=nodosfilewarning & '.
                        "cmd /c $clo\\\\bin\\\\bash -lc ".
                        '"net start sshd 2>&1"';
@@ -1193,10 +1226,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '-u \"'.$sshd_account.'\" -w \"'.
                          $sshd_password[0].'\" '.
                          '-c \"tty ntsec\"'.$privl.'"');
-                  print "   FullAuto Install continues . . . \n\n";
+                  print "\n   FullAuto Install continues . . . \n\n";
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
                          '"/usr/bin/ssh-user-config -n"');
+                  print "\n   FullAuto Install continues . . . \n\n";
                   my $net_start='SET CYGWIN=nodosfilewarning & '.
                        "cmd /c $clo\\\\bin\\\\bash -lc ".
                        '"net start sshd 2>&1"';
@@ -2125,6 +2159,14 @@ if ($get_BerkeleyDB) {
                      $CPAN::Config->{gzip}='/usr/bin/gzip';
                   } elsif (-e '/usr/local/bin/gzip') {
                      $CPAN::Config->{gzip}='/usr/local/bin/gzip';
+                  } else {
+                     print "\n\n   Fatal Error!: The 'gzip' utility is".
+                        " missing.\n".
+                        "\n\n   Please report any bugs and send any",
+                        "\n   questions, thoughts or feedback to:",
+                        "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                        "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                        exit;
                   }
                }
                unless ($CPAN::Config->{tar}) {
@@ -2132,6 +2174,14 @@ if ($get_BerkeleyDB) {
                      $CPAN::Config->{tar}='/usr/bin/tar';
                   } elsif (-e '/usr/local/bin/tar') {
                      $CPAN::Config->{tar}='/usr/local/bin/tar';
+                  } else {
+                     print "\n\n   Fatal Error!: The 'tar' utility is".
+                        " missing.\n".
+                        "\n\n   Please report any bugs and send any",
+                        "\n   questions, thoughts or feedback to:",
+                        "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                        "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                        exit;
                   }
                }
                $filename=~s/\.gz$//;
