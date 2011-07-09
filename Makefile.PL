@@ -309,6 +309,7 @@ END
       $look='libwww' if $look eq 'LWP';
       $look='MIME-tools' if $look eq 'MIME-Entity';
       $look='TermReadKey' if $look eq 'Term-ReadKey';
+      $look='IO-Tty' if $look eq 'IO-Pty';
       print "***** Looking for Most Recent \"$look Dir\" \n";
       my $d = $CPAN::Config->{build_dir};
       if (!(defined $d) || !(-d $d)) {
@@ -339,7 +340,7 @@ END
       close(DH);
       $new=$file if !$new && $file;
       print "***** Module Directory ",$new,"\n";
-      return $d.'/'.$new; 
+      return $new; 
    }
    
    sub fa_install_mod {
@@ -480,6 +481,10 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'HTTP::Daemon') if $stderr;
       ($stdout,$stderr)=&fa_install_module(
+         'Encode::Locale','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Encode::Locale') if $stderr;
+      ($stdout,$stderr)=&fa_install_module(
          'WWW::RobotRules','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'WWW::RobotRules') if $stderr;
@@ -487,6 +492,12 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'MIME::Entity') if $stderr;
    }
+   ($stdout,$stderr)=&fa_install_module('LWP::MediaTypes','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'LWP::MediaTypes') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('HTTP::Date','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'HTTP::Date') if $stderr;
    ($stdout,$stderr)=&fa_install_module('HTTP::Negotiate','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'HTTP::Negotiate') if $stderr;
@@ -633,7 +644,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9941';
+version         '0.9942';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1023,18 +1034,18 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                      "   you can find it if necessary.)\n\n\n",
 	             "   Please TYPE your new Password\n   for ".
                      "account \'$sshd_account\': ";
-               Term::ReadKey::ReadMode 2;
+               Term::ReadKey::ReadMode(2);
                my $pas=<STDIN>;
                $pas=~/^(.*)$/;
                $sshd_password[0]=$1;
-               Term::ReadKey::ReadMode 0;
+               Term::ReadKey::ReadMode(0);
                chomp($sshd_password[0]);
                print "\n\n   Please verify your new Password: ";
-               Term::ReadKey::ReadMode 2;
+               Term::ReadKey::ReadMode(2);
                $pas=<STDIN>;
                $pas=~/^(.*)$/;
                $sshd_password[1]=$1;
-               Term::ReadKey::ReadMode 0;
+               Term::ReadKey::ReadMode(0);
                chomp($sshd_password[1]);
                if ($sshd_password[0] ne $sshd_password[1]) {
                   @sshd_password=();
@@ -1044,18 +1055,18 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                      print "   Your Password entries do NOT match!\n\n",
                            "   Please carefully type your\n",
                            "   new Password: ";
-                     Term::ReadKey::ReadMode 2;
+                     Term::ReadKey::ReadMode(2);
                      $pas=<STDIN>;
                      $pas=~/^(.*)$/;
                      $sshd_password[0]=$1;
-                     Term::ReadKey::ReadMode 0;
+                     Term::ReadKey::ReadMode(0);
                      chomp($sshd_password[0]);
                      print "\n\n   Please verify your new Password: ";
-                     Term::ReadKey::ReadMode 2;
+                     Term::ReadKey::ReadMode(2);
                      $pas=<STDIN>;
                      $pas=~/^(.*)$/;
                      $sshd_password[1]=$1;
-                     Term::ReadKey::ReadMode 0;
+                     Term::ReadKey::ReadMode(0);
                      chomp($sshd_password[1]);
                      last if $sshd_password[0] eq $sshd_password[1];
                   }
