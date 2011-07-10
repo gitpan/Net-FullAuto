@@ -488,6 +488,9 @@ END
          'WWW::RobotRules','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'WWW::RobotRules') if $stderr;
+      ($stdout,$stderr)=&fa_install_module('MailTools','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'MailTools') if $stderr;
       ($stdout,$stderr)=&fa_install_module('MIME::Entity','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'MIME::Entity') if $stderr;
@@ -644,7 +647,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9942';
+version         '0.9943';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
