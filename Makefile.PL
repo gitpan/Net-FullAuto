@@ -310,6 +310,7 @@ END
       $look='MIME-tools' if $look eq 'MIME-Entity';
       $look='TermReadKey' if $look eq 'Term-ReadKey';
       $look='IO-Tty' if $look eq 'IO-Pty';
+      $look='MailTools' if $look eq 'Mail-Internet';
       print "***** Looking for Most Recent \"$look Dir\" \n";
       my $d = $CPAN::Config->{build_dir};
       if (!(defined $d) || !(-d $d)) {
@@ -648,7 +649,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9944';
+version         '0.9945';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
