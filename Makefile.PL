@@ -488,9 +488,10 @@ END
          'WWW::RobotRules','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'WWW::RobotRules') if $stderr;
-      ($stdout,$stderr)=&fa_install_module('MailTools','install','Makefile');
+      ($stdout,$stderr)=&fa_install_module(
+         'Mail::Internet','install','Makefile');
       print $stdout if $stdout;
-      &fa_err_exit($stderr,'MailTools') if $stderr;
+      &fa_err_exit($stderr,'Mail::Internet') if $stderr;
       ($stdout,$stderr)=&fa_install_module('MIME::Entity','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'MIME::Entity') if $stderr;
@@ -647,7 +648,7 @@ use inc::Module::Install;
 #};
 
 # Define metadata
-version         '0.9943';
+version         '0.9944';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -877,7 +878,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          if ($res->is_success) {
             print " + request successful.\n"
                if $CPAN::DEBUG;
-            open(CP,">$main::PARdir\\setup.exe") || die $!;
+            open(CP,">setup.exe") || die $!;
             binmode(CP);
             print CP $res->content;
          } elsif ($res->status_line=~/403/) {
@@ -888,7 +889,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             if ($res->is_success) {
                print " + request successful.\n"
                   if $CPAN::DEBUG;
-               open(CP,">$main::PARdir\\setup.exe") || die $!;
+               open(CP,">setup.exe") || die $!;
                binmode(CP);
                print CP $res->content;
             } elsif ($res->status_line=~/403/) {
@@ -918,29 +919,47 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             die $res->status_line;
          }
          close(CP) || die $!;
-         chmod 0755, "$main::PARdir\\setup.exe";
+         chmod 0755, "setup.exe";
          
          my $setup_cmd='';
+         my $setup_cmd='';
          if ($selection!~/[Ww]ordpad|MINIMAL/s) {
-            $setup_cmd="cd \"$main::PARdir\" & "
-                      .'setup.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
+            $setup_cmd='cmd /c "setup.exe -P gcc4-core,gcc4-g++,'
+                      .'make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps,'
-                      .$selection.' -X -A -q '."-r $main::rootdir "
-                      .'-s http://cygwin.mirrors.pair.com';
+                      .$selection.' -l '.$main::root_dir.' -X -A -q '
+                      .'-s http://cygwin.mirrors.pair.com"';
          } elsif ($selection!~/MINIMAL/s) {
-            $setup_cmd="cd \"$main::PARDir\" & "
-                      .'setup.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
+            $setup_cmd='cmd /c "setup.exe -P gcc4-core,gcc4-g++,'
+                      .'make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps'
-                      .' -X -A -q '."-r $main::rootdir "
-                      .'-s http://cygwin.mirrors.pair.com';
+                      .' -X -A -q -l '.$main::root_dir
+                      .' -s http://cygwin.mirrors.pair.com"';
          } else {
-            $setup_cmd="cd \"$main::PARdir\" & "
-                      .'setup.exe -P openssh -X -A -q '
-                      ."-r $main::rootdir ".'-s '
-                      .'http://cygwin.mirrors.pair.com';
+            $setup_cmd='cmd /c "setup.exe -P '
+                      .'openssh -X -A -q l '.$main::root_dir
+                      .' -s http://cygwin.mirrors.pair.com"';
          }
+         #if ($selection!~/[Ww]ordpad|MINIMAL/s) {
+         #   $setup_cmd="cd \"$main::PARdir\" & "
+         #             .'setup.exe -P gcc4-core,'
+         #             .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
+         #             .'libdb4.5-devel,ncurses,cron,procps,'
+         #             .$selection.' -X -A -q '."-r $main::rootdir "
+         #             .'-s http://cygwin.mirrors.pair.com';
+         #} elsif ($selection!~/MINIMAL/s) {
+         #   $setup_cmd="cd \"$main::PARDir\" & "
+         #             .'setup.exe -P gcc4-core,'
+         #             .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
+         #             .'libdb4.5-devel,ncurses,cron,procps'
+         #             .' -X -A -q '."-r $main::rootdir "
+         #             .'-s http://cygwin.mirrors.pair.com';
+         #} else {
+         #   $setup_cmd="cd \"$main::PARdir\" & "
+         #             .'setup.exe -P openssh -X -A -q '
+         #             ."-r $main::rootdir ".'-s '
+         #             .'http://cygwin.mirrors.pair.com';
+         #}
          if ($selection!~/MINIMAL/s) {
             if ($selection=~/[Ww]ordpad/) {
                my $sysdr=`cmd /c echo %SystemDrive%`;
