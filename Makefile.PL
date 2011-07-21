@@ -50,10 +50,7 @@ my $fa_banner=<<END;
 
 
 END
-   print $fa_banner;
-   sleep 2;
 
-   use CPAN;
    use Cwd qw/cwd/;
    use lib '.';
    use lib './inc';
@@ -69,6 +66,13 @@ END
          $main::unshift_incdir=1;
       }
    }
+   unless (-e "$main::PARdir/editor.txt") {
+      print $fa_banner;
+      sleep 2;
+   }
+   use CPAN;
+   use File::Path;
+
    $main::unshift_incdir=0;
    $main::root_dir=$main::curdir;
 
@@ -268,6 +272,7 @@ END
             );
             my $selection=Menu(\%menu_drives);
             chomp($selection);
+            $selection=~s/^\s*Drive\s+([A-Z])\s+NTFS.*$/$1/s;
             $main::root_dir="$selection:\\cygwin";
          }
       } else {
@@ -588,68 +593,14 @@ sub clean_mswin {
       $un_out=unlink $main::PARdir.'/inc_exists.txt';
       print "ERROR $main::PARdir/inc_exists.txt: $!\n" unless $un_out;
    }
-   opendir(CD,$main::curdir)
-      or die "Cannot open ".$main::curdir.": $!\n";
-   while (my $file = readdir(CD) ) {
-      chomp($file);
-      if (-1<index $file,'http%3a%2f%2f') {
-         $un_out=unlink $main::curdir."/$file/setup.ini";
-         print "ERROR: $!\n" unless $un_out;
-         if (-e $main::curdir."/$file/release/_update-info-dir") {
-            opendir(OD,"$main::curdir/$file/release/_update-info-dir")
-                  or die $!;
-            while (my $fil = readdir(OD) ) {
-               chomp($fil);
-               $un_out=unlink $main::curdir.
-                          "/$file/release/_update-info-dir/$fil";
-               my $cnt=0;
-               while (-e $main::curdir.
-                     "/$file/release/_update-info-dir/$fil") {
-                   sleep 1;
-                   last if ++$cnt==100;
-               }
-               print "ERROR: $!\n" unless $un_out;
-            }
-            close(OD);
-            $rmdir_out=rmdir $main::curdir.
-                  "/$file/release/_update-info-dir";
-            print "ERROR $main::curdir/$file/release/_update-info-dir:",
-                  " $!\n" unless $rmdir_out;
-            $rmdir_out=rmdir $main::curdir."/$file/release";
-            print "ERROR $main::curdir/$file/release:",
-                  " $!\n" unless $rmdir_out;
-         }
-         $rmdir_out=rmdir $main::curdir."/$file";
-         print "ERROR: $!\n" unless $rmdir_out;
-         last;
-      }
-   }
-   close(CD);
 
 }
 
 # Load the Module::Install bundled in ./inc/
 use inc::Module::Install;
 
-# Handle INT SIGNAL interruption
-#local $SIG{INT} = sub{
-#   if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
-#      clean_mswin();
-#   }
-#   print "\n\n   FullAuto Installation has been",
-#         "\n\n   Interrupted!",
-#         "\n\n   Please report any bugs and send any",
-#         "\n   questions, thoughts or feedback to:",
-#         "\n\n      Brian.Kelly\@fullautosoftware.net.",
-#         "\n\n   Press ANY key to exit.\n\n";
-#   <STDIN>;
-#   print "exiting . . .\n";
-#   exit(1);
-#
-#};
-
 # Define metadata
-version         '0.9945';
+version         '0.9946';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -879,7 +830,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          if ($res->is_success) {
             print " + request successful.\n"
                if $CPAN::DEBUG;
-            open(CP,">setup.exe") || die $!;
+            mkpath($main::root_dir,1) unless -d $main::root_dir;
+            open(CP,">$main::root_dir\\setup.exe") || die $!;
             binmode(CP);
             print CP $res->content;
          } elsif ($res->status_line=~/403/) {
@@ -890,7 +842,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             if ($res->is_success) {
                print " + request successful.\n"
                   if $CPAN::DEBUG;
-               open(CP,">setup.exe") || die $!;
+               mkpath($main::root_dir,1) unless -d $main::root_dir;
+               open(CP,">$main::root_dir\\setup.exe") || die $!;
                binmode(CP);
                print CP $res->content;
             } elsif ($res->status_line=~/403/) {
@@ -920,47 +873,29 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             die $res->status_line;
          }
          close(CP) || die $!;
-         chmod 0755, "setup.exe";
+         chmod 0755, "$main::root_dir\\setup.exe";
          
          my $setup_cmd='';
-         my $setup_cmd='';
          if ($selection!~/[Ww]ordpad|MINIMAL/s) {
-            $setup_cmd='cmd /c "setup.exe -P gcc4-core,gcc4-g++,'
-                      .'make,openssh,perl,perl-libwin32,db4.5,'
+            $setup_cmd="cd \"$main::root_dir\" & "
+                      .'setup.exe -P gcc4-core,'
+                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps,'
-                      .$selection.' -l '.$main::root_dir.' -X -A -q '
-                      .'-s http://cygwin.mirrors.pair.com"';
+                      .$selection.' -X -A -q '."-r $main::root_dir "
+                      .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
-            $setup_cmd='cmd /c "setup.exe -P gcc4-core,gcc4-g++,'
-                      .'make,openssh,perl,perl-libwin32,db4.5,'
+            $setup_cmd="cd \"$main::root_dir\" & "
+                      .'setup.exe -P gcc4-core,'
+                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps'
-                      .' -X -A -q -l '.$main::root_dir
-                      .' -s http://cygwin.mirrors.pair.com"';
+                      .' -X -A -q '."-r $main::root_dir "
+                      .'-s http://cygwin.mirrors.pair.com';
          } else {
-            $setup_cmd='cmd /c "setup.exe -P '
-                      .'openssh -X -A -q l '.$main::root_dir
-                      .' -s http://cygwin.mirrors.pair.com"';
+            $setup_cmd="cd \"$main::root_dir\" & "
+                      .'setup.exe -P openssh -X -A -q '
+                      ."-r $main::root_dir ".'-s '
+                      .'http://cygwin.mirrors.pair.com';
          }
-         #if ($selection!~/[Ww]ordpad|MINIMAL/s) {
-         #   $setup_cmd="cd \"$main::PARdir\" & "
-         #             .'setup.exe -P gcc4-core,'
-         #             .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-         #             .'libdb4.5-devel,ncurses,cron,procps,'
-         #             .$selection.' -X -A -q '."-r $main::rootdir "
-         #             .'-s http://cygwin.mirrors.pair.com';
-         #} elsif ($selection!~/MINIMAL/s) {
-         #   $setup_cmd="cd \"$main::PARDir\" & "
-         #             .'setup.exe -P gcc4-core,'
-         #             .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-         #             .'libdb4.5-devel,ncurses,cron,procps'
-         #             .' -X -A -q '."-r $main::rootdir "
-         #             .'-s http://cygwin.mirrors.pair.com';
-         #} else {
-         #   $setup_cmd="cd \"$main::PARdir\" & "
-         #             .'setup.exe -P openssh -X -A -q '
-         #             ."-r $main::rootdir ".'-s '
-         #             .'http://cygwin.mirrors.pair.com';
-         #}
          if ($selection!~/MINIMAL/s) {
             if ($selection=~/[Ww]ordpad/) {
                my $sysdr=`cmd /c echo %SystemDrive%`;
@@ -973,43 +908,49 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $editor="/bin/${selection}.exe";
             }
          }
+         if ($editor) {
+            open(ED,">$main::PARdir/editor.txt")
+               or die "Cannot open $main::PARdir/editor.txt: $!\n";
+            print ED $editor."\n";
+            close(ED);
+         }
          
          my $wver=&windows_ver;
-	 my $account_type='separate';
+         my $account_type='separate';
          my @sshd_password=();
          my $sshd_account='cyg_server';
          my $privl='';
-	 if ($wver!~/95|98|ME/) {
-	    if ($wver=~/XP|2000|NT/) {
-	       my $banner="   For $wver, you have a choice of using\n"
-	                 ."   either the LocalSystem account for the\n"
-	                 ."   REQUIRED sshd (Secure Shell Daemon/Service\n"
-	                 ."   supplied by OpenSSH) or a separate user\n"
-	                 ."   account. The LocalSystem account is less\n"
-	                 ."   maintenance and you won't need to manage or\n"
-	                 ."   remember a separate account and password -\n"
-	                 ."   BUT IT IS LESS SECURE. Using a separate user\n"
-	                 ."   account is *HIGHLY* recommended!:";
-	       my %Menu_select_account_type=(
-	 
-	           Label  => 'Menu_select_account_type',
-	           Item_1 => {
-	  
-	              Text => "Use separate user account for sshd service",
-	              Default => "*",
-	 
-	           },
-	           Item_2 => {
-	 
-	              Text => "Use LocalSystem account for sshd service",
-	 
-	           },
-	           Banner => $banner,
-	 
-	       );
-	       $account_type=Term::Menus::Menu(\%Menu_select_account_type);
+         if ($wver!~/95|98|ME/) {
+            if ($wver=~/XP|2000|NT/) {
+               my $banner="   For $wver, you have a choice of using\n"
+                         ."   either the LocalSystem account for the\n"
+                         ."   REQUIRED sshd (Secure Shell Daemon/Service\n"
+                         ."   supplied by OpenSSH) or a separate user\n"
+                         ."   account. The LocalSystem account is less\n"
+                         ."   maintenance and you won't need to manage or\n"
+                         ."   remember a separate account and password -\n"
+                         ."   BUT IT IS LESS SECURE. Using a separate user\n"
+                         ."   account is *HIGHLY* recommended!:";
+               my %Menu_select_account_type=(
+         
+                   Label  => 'Menu_select_account_type',
+                   Item_1 => {
+          
+                      Text => "Use separate user account for sshd service",
+                      Default => "*",
+         
+                   },
+                   Item_2 => {
+ 
+                     Text => "Use LocalSystem account for sshd service",
+         
+                   },
+                   Banner => $banner,
+         
+               );
+               $account_type=Term::Menus::Menu(\%Menu_select_account_type);
                $privl=' --privileged' if -1<index $account_type,'separate';
-	    }
+            }
             if ((-1<index $account_type,'separate') &&
                      (&test_windows_user($sshd_account))) {
                my $banner="   OpenSsh's sshd service running via Cygwin is ".
@@ -1051,11 +992,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                } elsif (-1<index $selection,'quit') {
                   exit;
                }
-               print "\n\n\n   Now is the time to CAREFULLY select a password for the\n",
-                     "   $sshd_account account, and take steps to insure it's security\n",
-                     "   and recoverability (i.e. - store a copy in a SAFE place where\n",
-                     "   you can find it if necessary.)\n\n\n",
-	             "   Please TYPE your new Password\n   for ".
+               print "\n\n\n   Now is the time to CAREFULLY select a ",
+                     "password for the\n   $sshd_account account, and",
+                     " take steps to insure it's security\n   and ",
+                     "recoverability (i.e. - store a copy in a SAFE ",
+                     "place where\n   you can find it if necessary.)\n\n\n",
+                     "   Please TYPE your new Password\n   for ",
                      "account \'$sshd_account\': ";
                Term::ReadKey::ReadMode(2);
                my $pas=<STDIN>;
@@ -1100,7 +1042,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   print "Press any key to exit FullAuto Setup.\n";
                   <STDIN>;exit;
                }
-	    }
+            }
          }
          
          my $pwd=`cmd /c chdir`;
@@ -1655,105 +1597,117 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
               "   you will need to choose an editor.";
    unless ($editor) {
       if ($^O eq 'cygwin') {
-         my $tp='';
-         my $mount=`/bin/mount -p`;
-         $mount=~s/^.*(\/\S+).*$/$1/s;
-         unless ($tp=&fa_find_editor('TextPad.exe')) {
-            my $sysdr=`cmd /c echo %SystemDrive%`;
-            $sysdr=~s/^\s*(.*)\s*$/$1/s;
-            my $let=substr($sysdr,0,1);
-            my $lt=lc($let);
-            if (-e $mount."/$lt/Program Files/TextPad 5/TextPad.exe") {
-               $tp='default';
-            }
-         }
-         if ($tp) {
-            push @editors, 'TextPad (The Text Editor for Windows)';
-         }
-         my $wordpad=0;
-         my $sysdr=`cmd /c echo %SystemDrive%`;
-         $sysdr=~s/^\s*(.*)\s*$/$1/s;
-         my $let=substr($sysdr,0,1);
-         my $lt=lc($let);
-         if (-e $mount.
-                "/$lt/Program Files/Windows NT/Accessories/wordpad.exe") {
-            $banner="   In order is use the integrated edit features\n".
-                    "   you will need to choose an editor. MS Wordpad\n".
-                    "   is set as the default - and is recommended if\n".
-                    "   you are not familiar with the other listed\n".
-                    "   editors.";
-            $wordpad=1;
-         }
-         if (-e '/bin/vim-nox.exe') {
-            push @editors,'vim';
-         }
-         if (-e '/bin/emacs-nox.exe') {
-            push @editors, 'emacs';
-         }
-         if (-e '/bin/joe.exe') {
-            push @editors, 'joe';
-         }
-         if (-e '/bin/mc.exe') {
-            push @editors, 'mc';
-         }
-         my %Menu_select_editor=();
-         if ($wordpad) {
-            %Menu_select_editor=(
-
-                  Label  => 'Menu_select_editor',
-                  Item_1 => {
-
-                     Text => "Wordpad (Microsoft Wordpad -\n               ".
-                             "          Available on all Windows Systems)",
-                     Default => "*",
-
-                  },
-                  Item_2 => {
-
-                     Text    => "]C[",
-                     Convey  => \@editors,
-
-                  },
-                  Banner => $banner,
-
-            );
-            $selection=Term::Menus::Menu(\%Menu_select_editor);
+         if (-e "$main::PARdir/editor.txt") {
+            open(ED,"<$main::PARdir/editor.txt")
+               or die "Cannot open $main::PARdir/editor.txt: $!\n";
+            my @editor=<ED>;
+            close(ED);
+            $editor=~join '', @editor;
+            $editor=~s/^\s*//s;
+            $editor=~s/\s*$//s;
+            my $un_out=unlink "$main::PARdir/editor.txt";
+            print "ERROR $main::PARdir/editor.txt: $!\n" unless $un_out; 
          } else {
-            %Menu_select_editor=(
-
-                  Label  => 'Menu_select_editor',
-                  Item_1 => {
-
-                     Text    => "]C[",
-                     Convey  => \@editors,
-
-                  },
-                  Banner => $banner,
-
-            );
-            $selection=Term::Menus::Menu(\%Menu_select_editor);
-         }
-         if ($selection=~/TextPad/) {
-            if ($tp eq 'default') {
+            my $tp='';
+            my $mount=`/bin/mount -p`;
+            $mount=~s/^.*(\/\S+).*$/$1/s;
+            unless ($tp=&fa_find_editor('TextPad.exe')) {
                my $sysdr=`cmd /c echo %SystemDrive%`;
                $sysdr=~s/^\s*(.*)\s*$/$1/s;
                my $let=substr($sysdr,0,1);
                my $lt=lc($let);
-               $editor="\"$mount".
-                  "/$lt/Program Files/TextPad 5/TextPad.exe\"";
-            } else {
-               $tp=~s/\\/\//g;
-               $tp=~s/^([A-Za-z]):(.*)/$1$2/;
-               $editor="\"$mount/$tp\"";
+               if (-e $mount."/$lt/Program Files/TextPad 5/TextPad.exe") {
+                  $tp='default';
+               }
             }
-         } elsif ($selection=~s/(vim)/$1/) {
-            $editor='"/bin/vim-nox.exe"';
-         } elsif ($selection=~s/(emacs)/$1/) {
-            $editor='"/bin/emacs-nox.exe"';
-         } elsif ($selection=~s/(joe)/$1/) {
-            $editor='"/bin/joe.exe"';
-         } elsif ($selection=~s/(mc)/$1/) {
-            $editor='"/bin/mc.exe"';
+            if ($tp) {
+               push @editors, 'TextPad (The Text Editor for Windows)';
+            }
+            my $wordpad=0;
+            my $sysdr=`cmd /c echo %SystemDrive%`;
+            $sysdr=~s/^\s*(.*)\s*$/$1/s;
+            my $let=substr($sysdr,0,1);
+            my $lt=lc($let);
+            if (-e $mount.
+                   "/$lt/Program Files/Windows NT/Accessories/wordpad.exe") {
+               $banner="   In order is use the integrated edit features\n".
+                       "   you will need to choose an editor. MS Wordpad\n".
+                       "   is set as the default - and is recommended if\n".
+                       "   you are not familiar with the other listed\n".
+                       "   editors.";
+               $wordpad=1;
+            }
+            if (-e '/bin/vim-nox.exe') {
+               push @editors,'vim';
+            }
+            if (-e '/bin/emacs-nox.exe') {
+               push @editors, 'emacs';
+            }
+            if (-e '/bin/joe.exe') {
+               push @editors, 'joe';
+            }
+            if (-e '/bin/mc.exe') {
+               push @editors, 'mc';
+            }
+            my %Menu_select_editor=();
+            if ($wordpad) {
+               %Menu_select_editor=(
+
+                     Label  => 'Menu_select_editor',
+                     Item_1 => {
+
+                        Text => "Wordpad (Microsoft Wordpad -\n               ".
+                                "          Available on all Windows Systems)",
+                        Default => "*",
+
+                     },
+                     Item_2 => {
+
+                        Text    => "]C[",
+                        Convey  => \@editors,
+
+                     },
+                     Banner => $banner,
+
+               );
+               $selection=Term::Menus::Menu(\%Menu_select_editor);
+            } else {
+               %Menu_select_editor=(
+
+                     Label  => 'Menu_select_editor',
+                     Item_1 => {
+
+                        Text    => "]C[",
+                        Convey  => \@editors,
+
+                     },
+                     Banner => $banner,
+
+               );
+               $selection=Term::Menus::Menu(\%Menu_select_editor);
+            }
+            if ($selection=~/TextPad/) {
+               if ($tp eq 'default') {
+                  my $sysdr=`cmd /c echo %SystemDrive%`;
+                  $sysdr=~s/^\s*(.*)\s*$/$1/s;
+                  my $let=substr($sysdr,0,1);
+                  my $lt=lc($let);
+                  $editor="\"$mount".
+                     "/$lt/Program Files/TextPad 5/TextPad.exe\"";
+               } else {
+                  $tp=~s/\\/\//g;
+                  $tp=~s/^([A-Za-z]):(.*)/$1$2/;
+                  $editor="\"$mount/$tp\"";
+               }
+            } elsif ($selection=~s/(vim)/$1/) {
+               $editor='"/bin/vim-nox.exe"';
+            } elsif ($selection=~s/(emacs)/$1/) {
+               $editor='"/bin/emacs-nox.exe"';
+            } elsif ($selection=~s/(joe)/$1/) {
+               $editor='"/bin/joe.exe"';
+            } elsif ($selection=~s/(mc)/$1/) {
+               $editor='"/bin/mc.exe"';
+            }
          }
       } else {
          if (-e '/usr/bin/vi') {
@@ -2449,7 +2403,7 @@ sub test_windows_user {
    if (-1<index $test_user,'not be found') {
       my $return=&remove_sshd($sshd_account); 
 print "RETURNING ${return}ZERO\n";
-      return $return;
+      return 1;
    }
    # Is Cygwin installed?
    my $cygwin_location=get_cygwin_location();
