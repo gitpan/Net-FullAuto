@@ -78,6 +78,30 @@ END
 
    my $incflag=0;my @drive_options=();
    if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+      if (-1==index $0,'Setup-FullAuto-v') {
+         my $die="\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
+            "\n                      is required to use FullAuto".
+            "\n                      on Windows - goto www.cygwin.com.".
+            "\n\n           Be sure to install the following programs in ".
+            "\n           addition to the base package:".
+            "\n\n           openssh [as provided by Cygwin]".
+            "\n           inetutils \(if telnet and/or ftp services are desired\)".
+            "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
+            "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
+            "\n           ncurses, cron, and procps [as provided by Cygwin]".
+            "\n           gcc4-core and gcc4-g++ [as provided by Cygwin]".
+            "\n           Oracle Berkeley DB [as provided by Cygwin or Oracle]".
+            "\n\n           **IMPORTANT** - the FullAuto install, either manual".
+            "\n           or via CPAN, must be run *inside* a Cygwin bash shell".
+            "\n           when installing FullAuto on Microsoft Windows.".
+            "\n\n";
+         unless ($ENV{'AUTOMATED_TESTING'}) {
+            die $die;
+         } else {
+            print $die;
+            exit;
+         }
+      }
       $incflag=1 if -e './inc';
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Win32::DriveInfo";
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Term::Menus";
@@ -358,6 +382,13 @@ END
       my $cpan_error='';
       eval "require $p;1";
       if ($@) {
+         if ($ENV{'AUTOMATED_TESTING'}) {
+            print "Automated Testing Detected: FullAuto needs $p\n",
+                  "   to continue, but $p was not detected on this\n",
+                  "   host.\n\n";
+                  "FullAuto Install will EXIT.";
+            exit;
+         }
          print "==> $p required."
          and print "*** Installing $p via CPAN\n"
          and
@@ -600,7 +631,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9947';
+version         '0.9948';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1578,12 +1609,13 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
            "\n                      on Windows - goto www.cygwin.com.".
            "\n\n           Be sure to install the following programs in ".
            "\n           addition to the base package:".
-           "\n\n           OpenSSH [as provided by Cygwin]".
+           "\n\n           openssh [as provided by Cygwin]".
            "\n           inetutils \(if telnet and/or ftp services are desired\)".
            "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
-           "\n           libwin32 [as provided by Cygwin] (*NOT* CPAN)".
-           "\n           gcc [as provided by Cygwin]".
-           "\n           Oracle Berkeley DB [as provided by Cygwin]".
+           "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
+           "\n           ncurses, cron, and procps [as provided by Cygwin]".
+           "\n           gcc4-core and gcc4-g++ [as provided by Cygwin]".
+           "\n           Oracle Berkeley DB [as provided by Cygwin or Oracle]".
            "\n\n           **IMPORTANT** - the FullAuto install, either manual".
            "\n           or via CPAN, must be run *inside* a Cygwin bash shell".
            "\n           when installing FullAuto on Microsoft Windows.".

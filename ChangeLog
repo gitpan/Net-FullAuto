@@ -45,7 +45,19 @@
 ################################################################
 
 
-2011-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2011-07-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9948 released.
+
+        * Fixed Ticket ID #69659 - added message explaining
+          Cygwin requirement for MS Windows and exiting.
+
+        * Fixed Ticket ID #69661 - added exit for CPAN smoke
+          testers to stop FullAuto install if modules installed
+          by Makefile.PL are needed.
+
+
+2011-07-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9947 released.
 
