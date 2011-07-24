@@ -170,6 +170,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Email::Sender::Transport::SMTP qw();
    use Errno qw(EAGAIN EINTR EWOULDBLOCK);
    use File::stat;
+   use File::Copy;
    use File::Path;
    use MIME::Entity;
    use Module::Load::Conditional qw[can_load];
@@ -466,7 +467,7 @@ BEGIN {
 # Globally Scoped Variables, but Intentionally NOT Initialized.
 # Getopt::Long needs it this way for some args to work properly. 
 our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,
-     $passwrd,$usrname,$VERSION,%GLOBAL,@GLOBAL);
+     $menu,$passwrd,$usrname,$VERSION,%GLOBAL,@GLOBAL);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -1202,7 +1203,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
       if (!$Net::FullAuto::FA_Core::cron
           || $Net::FullAuto::FA_Core::debug)
           && !$Net::FullAuto::FA_Core::quiet;
-   if (!$Net::FullAuto::FA_Core::log && exists $Hosts{"__Master_${$}__"}{'LogFile'}
+   if (!$Net::FullAuto::FA_Core::log
+         && exists $Hosts{"__Master_${$}__"}{'LogFile'}
          && $Hosts{"__Master_${$}__"}{'LogFile'}) {
       unlink $Hosts{"__Master_${$}__"}{'LogFile'};
    }
@@ -2197,7 +2199,8 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          ($stdout,$stderr)=cmd("${crontabpath}crontab -l");
 #print "WAHT IS CRONTABSTDOUT=$stdout\n";
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs');
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+               'Jobs');
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs',
@@ -5919,6 +5922,8 @@ sub fa_login
                 'unattended:s'          => \$cron,
                 'batch:s'               => \$cron,
                 'fullauto:s'            => \$cron,
+                'menu:s'                => \$menu,
+                'm:s'                   => \$menu,
                 'random'                => \$random,
                 'timeout=i'             => \$cltimeout,
                 'prod'                  => \$prod,
@@ -6360,6 +6365,134 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
             &acquire_semaphore(9876,
                "FullAuto Process Limit at Line: ".__LINE__,2);
 
+         }
+         if (defined $menu) {
+            if ($Net::FullAuto::cpu) {
+               my $idle=(split ',', $Net::FullAuto::cpu)[3];
+               $idle=~s/^\s*//;
+               $idle=~s/%.*$//;
+               my $cpyou=100-$idle;
+               if ($idle<20) {
+                  my $die="FATAL ERROR - CPU Usage is too high\n"
+                         ."              to run FullAuto safely.\n"
+                         ."   CPU are Starttime ==> ${cpyou}%\n";
+                  &handle_error($die);
+               }
+            }
+            my $dbenv = BerkeleyDB::Env->new(
+               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus',
+               -Flags =>
+                  DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+            ) or &handle_error(
+               "cannot open environment for DB: $BerkeleyDB::Error\n",'',
+               $track);
+            my $bdb='';
+            while (1) {
+               $bdb = BerkeleyDB::Btree->new(
+                  -Filename => ${Net::FullAuto::FA_Core::progname}.
+                               "_menus.db",
+                  -Flags    => DB_CREATE,
+                  -Env      => $dbenv
+               );
+               unless ($BerkeleyDB::Error=~/^Successful/) {
+                  my ($output,$error)=('','');
+                  ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                     "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus');
+# BERKERR
+                  last;
+               } else { last }
+            }
+            &handle_error(
+               "cannot open Btree for DB: $BerkeleyDB::Error\n",
+               '__cleanup__',$track) unless $BerkeleyDB::Error=~/^Successful/;
+            my $default_menu='';
+            my $status=$bdb->db_get($username,$default_menu);
+            chomp($default_menu);
+            my @menu_items=();
+            if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                  'Custom/fa_menu.pm') {
+               push @menu_items, 'Custom/fa_menu.pm';
+            }
+            if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                  'Distro/fa_menu_demo.pm') {
+               push @menu_items, 'Distro/fa_menu_demo.pm';
+            }
+            if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                  'Distro/fa_menu.pm') {
+               push @menu_items, 'Distro/fa_menu.pm';
+            }
+            if (-d $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                  "Custom/$username/Menus") {
+               my $path=$Hosts{"__Master_${$}__"}{'FA_Core'}.
+                        "Custom/$username/Menus";
+               opendir(my $dh, $path) ||
+                  &handle_error("can't opendir $path: $!");
+               my @userm=();
+               while (my $file=readdir($dh)) {
+                  chomp($file);
+                  push @userm, "Custom/$username/Menus/$file"
+                     if $file!~/^[.]|README$/   
+               }
+               close($dh);
+               unshift @menu_items, @userm;
+            }
+            undef $bdb;
+            $dbenv->close();
+            undef $dbenv;
+            my $def_menu=$default_menu;
+            substr($def_menu,0,13)='';
+            my %show_default_menu=(
+
+                Label  => 'show_default_menu',
+                Item_1 => {
+
+                   Text    => ']C[',
+                   Convey  => \@menu_items,
+                   Default => $def_menu,
+
+                },
+                Banner => "   Current FullAuto Default Menu for $username:\n\n".
+                          "      $def_menu\n\n",
+            );
+            my $selection=Menu(\%show_default_menu);
+            if ($selection ne $def_menu && $selection ne ']quit[') {
+               my $dbenv = BerkeleyDB::Env->new(
+                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus',
+                  -Flags =>
+                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+               ) or &handle_error(
+                  "cannot open environment for DB: $BerkeleyDB::Error\n",'',
+                  $track);
+               my $bdb='';
+               while (1) {
+                  $bdb = BerkeleyDB::Btree->new(
+                     -Filename => ${Net::FullAuto::FA_Core::progname}.
+                                  "_menus.db",
+                     -Flags    => DB_CREATE,
+                     -Env      => $dbenv
+                  );
+                  unless ($BerkeleyDB::Error=~/^Successful/) {
+                     my ($output,$error)=('','');
+                     ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                        "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                        $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus');
+# BERKERR
+                     last;
+                  } else { last }
+               }
+               &handle_error(
+                  "cannot open Btree for DB: $BerkeleyDB::Error\n",
+                  '__cleanup__',$track) unless $BerkeleyDB::Error=~/^Successful/;
+               my $default_menu='';
+               my $status=$bdb->db_put($username,
+                     'Net/FullAuto/'.$selection);
+               undef $bdb;
+               $dbenv->close();
+               undef $dbenv;
+            }
+            &release_semaphore(9361);
+            &cleanup();
          }
          if ($plan || $plan_ignore_error) {
             if ($Net::FullAuto::cpu) {
@@ -7715,7 +7848,66 @@ print "DOING PASSWD UPDATE\n";
       $plan=eval $pref;
       $plan=$plan->{Plan};
    }
-   return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
+   my $menu_config_module_file='';my $die='';
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                  'Menus',{error => \my $err});
+      if (@$err) {
+         for my $diag (@$err) {
+            my ($file, $message) = %$diag;
+            if ($file eq '') {
+               $die="general error: $message";
+            } else {
+               $die="problem unlinking $file: $message";
+            }
+         }
+      }
+   }
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Core'}.
+        'Custom/'.$username.'/Menus') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Core'}.
+                  'Custom/'.$username.'/Menus',{error => \my $err});
+      if (@$err) {
+         for my $diag (@$err) {
+            my ($file, $message) = %$diag;
+            if ($file eq '') {
+               $die="general error: $message";
+            } else {
+               $die="problem unlinking $file: $message";
+            }
+         }
+      }
+      copy($Hosts{"__Master_${$}__"}{'FA_Core'}.'Custom/'.
+           'fa_menu.pm',$Hosts{"__Master_${$}__"}{'FA_Core'}.
+           'Custom/'.$username.'/Menus') || do{ $die="copy failed: $!" };
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+   ) or &handle_error(
+     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${Net::FullAuto::FA_Core::progname}_menus.db",
+      -Flags    => DB_CREATE,
+      -Env      => $dbenv
+   ) or &handle_error(
+     "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   my $dmenu='';
+   my $status=$bdb->db_get($username,$dmenu);
+   my $pdir=$Hosts{"__Master_${$}__"}{'FA_Core'};
+   substr($pdir,-13)='';
+   if (!(-f $pdir.$dmenu) || (-1<index $status,
+         'DB_NOTFOUND: No matching key/data pair found')) {
+      $status=$bdb->db_del($username);
+      $dmenu='Net/FullAuto/Distro/fa_menu.pm';
+      $status=$bdb->db_put($username,$dmenu);
+   }
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+   $menu_config_module_file=$dmenu;
+   return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout,
+          $menu_config_module_file,$die;
 
 } ## END of &fa_login
 
@@ -12145,7 +12337,7 @@ print $Net::FullAuto::FA_Core::MRLOG "333 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg
                   }
                } elsif (!$authyes && (-1<index $lin,'The authen') &&
                      $lin=~/\?\s*$/s) {
-print "AUTHENHERE!1111\n";
+print "AUTHENHERE!1111\n";<STDIN>;
                   my $question=$lin;
                   $question=~s/^.*(The authen.*)$/$1/s;
                   $question=~s/\' can\'t/\'\ncan\'t/s;
@@ -12562,7 +12754,8 @@ print $Net::FullAuto::FA_Core::MRLOG "wait_for_passwd_prompt() GETGOTPASS!!=$lin
                   || (-1<index $lin,'Connection refused')
                   || (-1<index $lin,'Connection closed')
                   || (-1<index $lin,'ssh: Could not')
-                  || (-1<index $lin,'name not known')) {
+                  || (-1<index $lin,'name not known')
+                  || (-1<index $lin,'Could not create')) {
                chomp($lin=~tr/\0-\11\13-\31\33-\37\177-\377//d);
                $lin=~/(^530[ ].*$)|(^421[ ].*$)
                       |(^Connection[ ]refused.*$)
@@ -12580,6 +12773,17 @@ print $Net::FullAuto::FA_Core::MRLOG "wait_for_passwd_prompt() GETGOTPASS!!=$lin
                } elsif (-1<index $lin,'Connection closed') {
                   alarm 0;
                   die 'Connection closed';
+               } elsif (-1<index $lin,'Could not create') {
+                  alarm 0;
+                  if ($^O eq 'cygwin') {
+                     my $die="$lin\n       ".
+                             "Hint: Make sure there are no quote characters\n".
+                             "             used in the /etc/passwd file.\n"; 
+                     $eval_stdout='';$eval_stderr=$die;
+                     die $eval_stderr;
+                  }
+                  $eval_stdout='';$eval_stderr=$lin;
+                  die $eval_stderr;
                } else {
                   $eval_stdout='';$eval_stderr=$lin;
                   alarm 0;

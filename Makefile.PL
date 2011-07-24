@@ -600,7 +600,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9946';
+version         '0.9947';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2425,11 +2425,12 @@ print "RIGHTS for $sshd_account ======>\n$rights\n<=======\n";
                "\n\n   Some corporate environments enforce strict group",
                "\n   rights from the Domain Controller, and these",
                "\n   privileges may be surreptiously removed from the",
-               "\n   $sshd_account without notice. Check with your",
+               "\n   $sshd_account account without notice. Check with your",
                "\n   Microsoft Infrastructure Admins if you suspect this",
                "\n   may be a possibility with your setup. You will need",
                "\n   to get an exception added to their configuration.\n\n";
-         sleep 10; 
+         #sleep 10; 
+         print "   Press ANY key to continue . . . ",<STDIN>;
          my $remove_out=`net user /delete cyg_server 2>&1`;
 #print "WHAT IS REMOVE_OUT=$remove_out\n";sleep 10;
          if (-1<index $remove_out,"command completed successfully") {

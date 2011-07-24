@@ -47,6 +47,19 @@
 
 2011-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9947 released.
+
+        * Implemented new menu and db feature to choose
+          and save a default fa_menu.pm file for use
+          when FullAuto starts for the user. There is now
+          a Custom/$username/Menus directory to house
+          many menu files. Default menu file name is
+          stored in the db. fa --menu will display this
+          functionality.
+
+
+2011-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9946 released.
 
         * More changes to Makefile.PL.
