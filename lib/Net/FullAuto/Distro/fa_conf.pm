@@ -48,9 +48,6 @@ package fa_conf;
 
 use strict;
 use warnings;
-require Exporter;
-our @ISA     = qw(Exporter);
-our @EXPORT  = qw(@editor);
 
 #################################################################
 ##  Do NOT alter code ABOVE this block.
@@ -60,6 +57,8 @@ our @EXPORT  = qw(@editor);
 ##  -------------------------------------------------------------
 
 # our $editor = '';
+# our $berkeleydb = '';
+# our $berkeleydb_perl_module_lib = '';
 
 #################################################################
 ##  Do NOT alter code BELOW this block.

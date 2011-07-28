@@ -631,7 +631,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9948';
+version         '0.9949';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -682,7 +682,7 @@ foreach my $arg (@ARGV) {
 
 $PREFIX='' if $PREFIX='/usr';
 
-my $editor='';my $selection='';
+my $editor='';my $selection='';my $berkeleydb='';
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 
    my %Menu_win_to_cyg=(
@@ -1930,7 +1930,7 @@ if ($get_BerkeleyDB) {
             $verhash{$fileparts[1]}=$fileparts[0]; 
          }
       }
-      my $header_to_use='';my $dblib='';my $ver='';
+      my $header_to_use='';my $ver='';
       foreach my $vr (reverse sort keys %verhash) {
          $header_to_use=$verhash{$vr};
          $vr=~s/^(^\d+[.]\d+).*$/$1/;
@@ -1938,18 +1938,18 @@ if ($get_BerkeleyDB) {
          $ver=$vr;
          my $find_cmd="${findpath}find /usr -name \"libdb-".$ver.".a\"";
          my @lib=`$find_cmd`;
-         chomp($lib[0]);$dblib=$lib[0];last;
+         chomp($lib[0]);$berkeleydb=$lib[0];last;
       }
       my $major_minor_ver=substr($ver,0,(rindex $ver,'.'));
-      if ($ENV{AUTOMATED_TESTING} || ($dblib && $major_minor_ver>=5.1)) {
-         $dblib=~s/^(.*)\/.*$/$1/;
+      if ($ENV{AUTOMATED_TESTING} || ($berkeleydb && $major_minor_ver>=5.1)) {
+         $berkeleydb=~s/^(.*)\/.*$/$1/;
          $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
-         $ENV{'BERKELEYDB_LIB'}=$dblib;
+         $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
          $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
          $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
-         $ENV{'DB_FILE_LIB'}=$dblib;
+         $ENV{'DB_FILE_LIB'}=$berkeleydb;
          $ENV{'DB_FILE_NAME'}="-ldb-$ver";
-         $ENV{'LD_LIBRARY_PATH'}=$dblib;
+         $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
       } else {
          my $url=
             'http://www.oracle.com/technetwork/'.
@@ -2255,13 +2255,13 @@ if ($get_BerkeleyDB) {
                   my $prefx=$savlines[$#savlines];
                   $prefx=~s/^Installing documentation: //;
                   $prefx=~s/docs \.\.\.\s*$//;
-                  $dblib=$prefx.'lib';
+                  $berkeleydb=$prefx.'lib';
                   $header_to_use=$prefx."include";
                   $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
-                  $ENV{'BERKELEYDB_LIB'}=$dblib;
+                  $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
                   $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
                   $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
-                  $ENV{'DB_FILE_LIB'}=$dblib;
+                  $ENV{'DB_FILE_LIB'}=$berkeleydb;
                   $ENV{'DB_FILE_NAME'}="-ldb-$ver";
                }
             } else {
@@ -2622,7 +2622,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 1.69;
+requires        'Term::Menus'               => 1.87;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
@@ -3130,6 +3130,10 @@ sub MY::pm_to_blib {
                  '\\1'."editor = $editor;/g\' ".
                  "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
                  "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
+      #$inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)berkeleydb[ ]*[=].*/".
+      #           '\\1'."berkeleydb = $berkeleydb;/g\' ".
+      #           "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
+      #           "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
    } else {
       $inherited .= "\n";
    }

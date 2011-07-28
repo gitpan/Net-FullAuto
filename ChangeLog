@@ -47,6 +47,14 @@
 
 2011-07-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9949 released.
+
+        * Added robust code to install and FA_Core.pm to
+          locate BerkeleyDB db_recover utility.
+
+
+2011-07-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9948 released.
 
         * Fixed Ticket ID #69659 - added message explaining

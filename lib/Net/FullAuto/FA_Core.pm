@@ -151,13 +151,14 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $passwd_file_loc $fullauto
                   %email_addresses @plans
                   %email_defaults $service
-                  persist_get persist_put);
+                  persist_get persist_put
+                  $berkeleydb);
 
 {
    no warnings;
+   use BerkeleyDB;
    use Sys::Hostname;
    our $local_hostname=&Sys::Hostname::hostname;
-   use BerkeleyDB;
    use Data::Dump::Streamer;
    use Time::Local;
    use Crypt::CBC;
@@ -325,6 +326,15 @@ BEGIN {
       $greppath='/usr/local/bin/';
    }
 
+   our $findpath='';
+   if (-e '/usr/bin/find') {
+      $findpath='/usr/bin/';
+   } elsif (-e '/bin/find') {
+      $findpath='/bin/';
+   } elsif (-e '/usr/local/bin/find') {
+      $findpath='/usr/local/bin/';
+   }
+
    our $lspath='';
    if (-e '/usr/bin/ls') {
       $lspath='/usr/bin/';
@@ -425,6 +435,15 @@ BEGIN {
       $killpath='/usr/local/bin/';
    }
 
+   our $stringspath='';
+   if (-e '/usr/bin/strings') {
+      $stringspath='/usr/bin/';
+   } elsif (-e '/bin/strings') {
+      $stringspath='/bin/';
+   } elsif (-e '/usr/local/bin/strings') {
+      $stringspath='/usr/local/bin/';
+   }
+
    our $tarpath='';
    if (-e '/usr/bin/tar') {
       $tarpath='/usr/bin/';
@@ -432,6 +451,15 @@ BEGIN {
       $tarpath='/bin/';
    } elsif (-e '/usr/local/bin/tar') {
       $tarpath='/usr/local/bin/';
+   }
+
+   our $xargspath='';
+   if (-e '/usr/bin/xargs') {
+      $xargspath='/usr/bin/';
+   } elsif (-e '/bin/xargs') {
+      $xargspath='/bin/';
+   } elsif (-e '/usr/local/bin/xargs') {
+      $xargspath='/usr/local/bin/';
    }
 
    our $pingpath='';
@@ -479,13 +507,13 @@ our $parent_menu='';our @menu_args=();our $savetran=0;
 our $MRLOG='';our @pid_ts=();our %drives=();our @month=();
 our $username='';our @passwd=('','');our $fa_code='';
 our $localhost={};our %localhost=();our $uhray='';
-our @RCM_Link=();our @FTM_Link=();our $cleanup=0;
+our @RCM_Link=();our @FTM_Link=();our $cleanup=0;our %Maps=();
 our $starting_memory=0;our $custom_code_module_file='';
 our %email_addresses=();our $debug=0;our %tiedb=();
 our @ascii_que=();our $passetts=['','','','','','','','','',''];
 our %Connections=();our $tranback=0;our @ascii=();
 our %base_excluded_dirs=();our %base_excluded_files=(); 
-our %hours=();our %month=();our %Hosts=();our %Maps=();
+our %hours=();our %month=();our %Hosts=();our $berkeleydb='';
 our %same_host_as_Master=("__Master_${$}__"=>'-','localhost'=>'-');
 our @same_host_as_Master=();our $dest_first_hash='';
 our %file_rename=();our %rename_file=();our $quiet='';
@@ -709,6 +737,7 @@ sub cleanup {
 
    if (keys %semaphores) {
       foreach my $ipc_key (keys %semaphores) {
+         $ipc_key||='';
          next if $ipc_key=~/^\s*$/;
          if (-1<index $semaphores{$ipc_key},'IPC::') {
             my $val=$semaphores{$ipc_key}->getval(0)||0;
@@ -1280,7 +1309,7 @@ sub VERSION
 
    can_load(modules => { "Term::Menus" => 0 });
    can_load(modules => { "Net::FullAuto" => 0 });
-   use ExtUtils::Installed;
+   require ExtUtils::Installed;
    my $cwd='';
    if ($^O eq 'cygwin') {
       $cwd='pwd';
@@ -1418,6 +1447,202 @@ sub ls_timestamp
    }
    return $size, timelocal(0,$mt,$hr,$dy,$mn-1,$fileyr);
 
+}
+
+sub find_berkeleydb_recover {
+
+   my $berkeleydb_perl_module_lib='';
+   if ((defined $fa_conf::berkeleydb_perl_module_lib) &&
+         ($fa_conf::berkeleydb_perl_module_lib) &&
+         (-f $fa_conf::berkeleydb_perl_module_lib)) {
+      $berkeleydb_perl_module_lib=$fa_conf::berkeleydb_perl_module_lib;
+   } else {
+print "OK GOOD\n";<STDIN>;
+      require ExtUtils::Installed;
+      my ($inst) = ExtUtils::Installed->new();
+      my @db_path = grep { /\.dll|\.so/ } $inst->files("BerkeleyDB");
+      if (-e $db_path[0] && (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                  "Custom/$Net::FullAuto::FA_Core::fa_conf")) {
+         $berkeleydb_perl_module_lib=$db_path[0];
+         my $fconf=$Hosts{"__Master_${$}__"}{'FA_Core'}.'Custom/'.
+                   $Net::FullAuto::FA_Core::fa_conf;
+         open(CH,"+<$fconf") or &handle_error("Cannot open $fconf");
+         flock CH, 2;
+         my @data=<CH>;
+         my $bd=0;my @new=();
+         foreach my $ln (@data) {
+            my $l=$ln;
+            if (($bd==0) && ($l=~/^\s*berkeleydb/)) {
+               push @new, "berkeleydb_perl_module_lib = ".
+                          $db_path[0].";\n";
+               $bd=1;
+            } else {
+               push @new, $l;
+            }
+         }
+         unless ($bd) {
+            @new=();
+            foreach my $ln (@data) {
+               my $l=$ln;
+               if (($bd==0) && $l=~/^\s*our (?!ISA|VERSION|EXPORT)/) {
+                  push @new, "our \$berkeleydb_perl_module_lib = \"".
+                             $db_path[0]."\";\n";
+                  push @new, $ln;
+                  $bd=1;
+               } else {
+                  push @new, $ln;
+               }
+            }
+         }
+         seek CH, 0, 0;
+         truncate CH, 0;
+         print CH @new;
+         close CH;
+      }
+   }
+   my $bcmd="${Net::FullAuto::FA_Core::stringspath}strings ".
+            "$berkeleydb_perl_module_lib ".
+            "| ${Net::FullAuto::FA_Core::greppath}grep Release";
+   my $bver=`$bcmd`;
+   $bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
+   if ((defined $fa_conf::berkeleydb) &&
+         ($fa_conf::berkeleydb) && (-d $fa_conf::berkeleydb)) {
+      if (-1<index $fa_conf::berkeleydb,$bver) {
+         if (-d $fa_conf::berkeleydb.'/bin') {
+            return $fa_conf::berkeleydb.'/bin/db_recover';
+         } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
+            return $fa_conf::berkeleydb.'/db_recover';
+         }
+      } elsif (-d $fa_conf::berkeleydb.'/include') {
+         if (-f $fa_conf::berkeleydb.'/include/db.h') {
+            my $dbh=$fa_conf::berkeleydb.'/include/db.h';
+            open(FH,"<$fa_conf::berkeleydb/include/db.h")
+               or &handle_error(
+               "Cannot open $fa_conf::berkeleydb/include/db.h");
+            my @finc=<FH>;
+            close(FH);
+            foreach my $line (@finc) {
+               if ($line=~/^.*VERSION.*$bver.*$/) {
+                  if (-d $fa_conf::berkeleydb.'/bin') {
+                     return $fa_conf::berkeleydb.'/bin/db_recover';
+                  } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
+                     return $fa_conf::berkeleydb.'/db_recover';
+                  }
+               }
+            }
+            &handle_error("Cannot Locate BerkeleyDB installation");
+         } elsif (-d $fa_conf::berkeleydb.'/bin') {
+            return $fa_conf::berkeleydb.'/bin/db_recover';
+         } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
+            return $fa_conf::berkeleydb.'/db_recover';
+         } else {
+            &handle_error("Cannot Locate BerkeleyDB db_recover utility");
+         }
+      } elsif (-d $fa_conf::berkeleydb.'/bin') {
+         return $fa_conf::berkeleydb.'/bin/db_recover';
+      } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
+         return $fa_conf::berkeleydb.'/db_recover';
+      } elsif ($^O eq 'cygwin' && (-f "/bin/db${bver}_recover.exe")) {
+         return "/bin/db${bver}_recover.exe";
+      } else {
+         &handle_error("Cannot Locate BerkeleyDB db_recover utility");
+      }
+   } else {
+      my @output=();
+      my $testgrep =`${Net::FullAuto::FA_Core::greppath}grep -H 2>&1`;
+      my $testgrep2=`${Net::FullAuto::FA_Core::greppath}grep 2>&1`;
+      my $grepopt='';
+      if ((-1==index $testgrep,'illegal option')
+            && (-1==index $testgrep2,'-insvxbhwyu')) {
+         $grepopt='-H ';
+      }
+      my $find_cmd1="${Net::FullAuto::FA_Core::findpath}find ";
+      my $find_cmd2=" -name \"*.h\" ".
+                   "| ${Net::FullAuto::FA_Core::xargspath}xargs ".
+                   "${Net::FullAuto::FA_Core::greppath}grep ".
+                   "${grepopt}DB_VERSION_STRING";
+      print "\nSearching for latest verison of BerkeleyDB.\n".
+            "This may take up to five minutes ...\n\n";
+      foreach my $dir ('/usr/local/',
+            '/usr/','/opt/',(getpwuid $>)[7].'/') {
+         next if unpack('a1',$dir) eq '.';
+         next unless -d $dir;
+         opendir(DIR, $dir) or die $!;
+         while (my $file = readdir(DIR) ) {
+            next if ($file eq "." or $file eq ".." or $file eq "doc" or
+                     $file eq "X11R6" or $file eq "docs" or
+                     $file eq "man" or $file eq "ssl" or
+                     $file eq "license" or $file eq "logfile" or
+                     $file eq "bin" or ($^O eq 'cygwin' &&
+                     ($file eq "Application Data" or
+                      $file eq "Favorites" or $file eq
+                      "Local Settings" or $file eq "Recent" or
+                      $file eq "Start Menu" or $file eq "SendTo" or
+                      $file eq "NetHood" or $file eq "PrintHood")));
+            if (-d $dir.$file) {
+               print "Searching $dir$file ...\n";
+               my @subout=`$find_cmd1\"$dir$file\"$find_cmd2`;
+               if (-1<$#subout) {
+                  require CPAN::Config;
+                  my $ccon=(defined $CPAN::Config &&
+                        exists $CPAN::Config->{cpan_home})?
+                        $CPAN::Config->{cpan_home}:'';
+                  my @vers=();my %verhash=();
+                  foreach my $version (@subout) {
+                     next if (-1<index $version, $ccon) ||
+                             (-1<index $version, 'Net-FullAuto-') ||
+                             $version!~/db.h:.*DB_VERSION_STRING/;
+                     my @fileparts=split 'db.h:', $version;
+                     $fileparts[1]=~s/^.*DB (\d+[^:]+):.*$/$1/;
+                     if (-1<index $fileparts[1], $bver) {
+                        my $bintest=$subout[0];
+                        substr($bintest,(rindex $bintest,'include'))='bin';
+                        $berkeleydb=substr($bintest,0,-4)
+                           if -d $bintest;
+                     }
+                  }
+               }
+            }
+            last if $berkeleydb;
+         } last if $berkeleydb;
+      }
+      $berkeleydb||='';
+      if ($berkeleydb) {
+         my $fconf=$Hosts{"__Master_${$}__"}{'FA_Core'}.'Custom/'.
+                   $Net::FullAuto::FA_Core::fa_conf;
+         open(CH,"+<$fconf") or &handle_error("Cannot open $fconf");
+         flock CH, 2;
+         my @data=<CH>;
+         my $bd=0;my @new=();
+         foreach my $ln (@data) {
+            if (($bd==0) && ($ln=~/^\s*berkeleydb/)) {
+               push @new, "our \$berkeleydb = \"$berkeleydb\";\n";
+               $bd=1;
+            } else {
+               push @new, $ln;
+            }
+         }
+         unless ($bd) {
+            @new=();
+            foreach my $ln (@data) {
+               my $l=$ln;
+               if (($bd==0) && ($l=~/^\s*our (?!ISA|VERSION|EXPORT)/)) {
+                  push @new, "our \$berkeleydb = \"".
+                             $berkeleydb."\";\n";
+                  push @new, $ln;
+                  $bd=1;
+               } else {
+                  push @new, $ln;
+               }
+            }
+         }
+         seek CH, 0, 0;
+         truncate CH, 0;
+         print CH @new;
+         close CH;
+      }
+      return $berkeleydb.'/bin/db_recover';
+   }
 }
 
 sub edit {
@@ -1599,6 +1824,12 @@ my $fulldays=sub { package fulldays;
 sub plan {
 
 print "PLANCALLER=",caller,"\n";
+
+   #my $bcmd="${Net::FullAuto::FA_Core::stringspath}strings ".
+   #         "$Net::FullAuto::FA_Core::berklib ".
+   #         "| ${Net::FullAuto::FA_Core::greppath}grep Release";
+   #my $bver=`$bcmd`;
+   #$bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
 
    my $track='';
    my %new_plan_options_menu=(
@@ -4918,9 +5149,15 @@ sub getpasswd
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/^Successful/) {
+            my $bcmd="${Net::FullAuto::FA_Core::stringspath}strings ".
+                     "$Net::FullAuto::FA_Core::berklib ".
+                     "| ${Net::FullAuto::FA_Core::greppath}grep Release";
+            my $bver=`$bcmd`;
+            $bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
             my ($output,$error)=('','');
+            my $berkeleydb=find_berkeleydb_recover();
             ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               "$berkeleydb -v -h ".
                $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
          } else {
@@ -5230,8 +5467,9 @@ sub getpasswd
          );
          unless ($BerkeleyDB::Error=~/^Successful/) {
             my ($output,$error)=('','');
+            my $berkeleydb=find_berkeleydb_recover();
             ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               "$berkeleydb -v -h ".
                $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
          } else {
@@ -6281,7 +6519,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
          unless ($BerkeleyDB::Error=~/^Successful/) {
             my ($output,$error)=('','');
             ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               "$berkeleydb/db_recover -v -h ".
                $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
          } else {
@@ -6396,8 +6634,9 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                );
                unless ($BerkeleyDB::Error=~/^Successful/) {
                   my ($output,$error)=('','');
+                  my $berkeleydb=find_berkeleydb_recover();
                   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                     "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                     "$berkeleydb -v -h ".
                      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus');
 # BERKERR
                   last;
@@ -6474,8 +6713,9 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                   );
                   unless ($BerkeleyDB::Error=~/^Successful/) {
                      my ($output,$error)=('','');
+                     my $berkeleydb=find_berkeleydb_recover();
                      ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                        "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                        "$berkeleydb -v -h ".
                         $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus');
 # BERKERR
                      last;
@@ -6526,8 +6766,9 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                );
                unless ($BerkeleyDB::Error=~/^Successful/) {
                   my ($output,$error)=('','');
+                  my $berkeleydb=find_berkeleydb_recover();
                   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                     "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                     "$berkeleydb -v -h ".
                      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
 # BERKERR
                   last;
@@ -6660,8 +6901,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             );
             if ($BerkeleyDB::Error!~/^Successful/) {
                my ($output,$error)=('','');
+               my $berkeleydb=find_berkeleydb_recover();
                ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                  "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                  "$berkeleydb -v -h ".
                   $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
             } else {
@@ -7301,8 +7543,9 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                   );
                   unless ($BerkeleyDB::Error=~/^Successful/) {
                      my ($output,$error)=('','');
+                     my $berkeleydb=find_berkeleydb_recover();
                      ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                     "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                     "$berkeleydb -v -h ".
                      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
                   } else {
@@ -7518,7 +7761,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             unless ($BerkeleyDB::Error=~/^Successful/) {
                my ($output,$error)=('','');
                ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                  "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                  "$berkeleydb/db_recover -v -h ".
                   $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
             } else {
@@ -8216,8 +8459,9 @@ sub passwd_db_update
       );
       unless ($BerkeleyDB::Error=~/^Successful/) {
          my ($output,$error)=('','');
+         my $berkeleydb=find_berkeleydb_recover();
          ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-            "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+            "$berkeleydb -v -h ".
             $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
       } else {
@@ -8327,8 +8571,9 @@ sub su_scrub
       );
       unless ($BerkeleyDB::Error=~/^Successful/) {
          my ($output,$error)=('','');
+         my $berkeleydb=find_berkeleydb_recover();
          ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-            "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+            "$berkeleydb -v -h ".
             $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
       } else {
@@ -8474,8 +8719,9 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             );
             unless ($BerkeleyDB::Error=~/^Successful/) {
                my ($output,$error)=('','');
+               my $berkeleydb=find_berkeleydb_recover();
                ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                  "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+                  "$berkeleydb -v -h ".
                   $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 # BERKERR
             } else {
@@ -9347,8 +9593,9 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB ERROR IS ANY=>$BerkeleyDB::Error<==\n"
          if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          unless ($BerkeleyDB::Error=~/^Successful/) {
             my ($output,$error)=('','');
+            my $berkeleydb=find_berkeleydb_recover();
             ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "/usr/local/BerkeleyDB.5.1/bin/db_recover -v -h ".
+               "$berkeleydb -v -h ".
                $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
 print $Net::FullAuto::FA_Core::MRLOG "db_recover OUTPUT=$output\n";
 print $Net::FullAuto::FA_Core::MRLOG "db_recover ERROR=$error\n";
@@ -10563,9 +10810,9 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                             my $mr="__Master_${$}__";
                             unless ($BerkeleyDB::Error=~/^Successful/) {
                                my ($output,$error)=('','');
+                               my $berkeleydb=find_berkeleydb_recover();
                                ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                                  "/usr/local/BerkeleyDB.5.1/bin/db_recover".
-                                  " -v -h ".
+                                  "$berkeleydb -v -h ".
                                   $Hosts{$mr}{'FA_Secure'}.'Passwds');
                            # BERKERR
                            } else {

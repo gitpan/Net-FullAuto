@@ -12,6 +12,7 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
+inc/Module/Install/Admin.pm
 lib/Net/FullAuto.pm
 lib/Net/FullAuto/Custom/BackUp/README
 lib/Net/FullAuto/Custom/README
