@@ -45,7 +45,17 @@
 ################################################################
 
 
-2011-07-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2011-07-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9950 released.
+
+        * Fixed BerkeleyDB code to work with latest 5.2
+          release.
+
+        * Better handling for top script indicated menu_config.
+
+
+2011-07-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9949 released.
 
