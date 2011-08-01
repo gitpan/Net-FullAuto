@@ -1274,7 +1274,7 @@ sub grep_for_string_existence_only
    my $pattern=$_[1];
    my $return_value=0;
    eval {
-      open(FH,"<$file");
+      open(FH,"<$file") || return 0;
       while (my $line=<FH>) {
          if ($line=~/$pattern/) {
             $return_value=1;

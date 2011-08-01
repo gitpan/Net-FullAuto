@@ -63,10 +63,8 @@ END
       if ((substr($incdir,-3) eq 'inc') &&
             (1<index $incdir,'par-')) {
          $main::PARdir=substr($incdir,0,-4);
-         #$main::unshift_incdir=1;
       }
    }
-   #unless (-e "$main::PARdir/editor.txt") {
    unless (exists $ENV{FA_EDITOR}) {
       print $fa_banner;
       sleep 2;
@@ -74,7 +72,6 @@ END
    use CPAN;
    use File::Path;
 
-   #$main::unshift_incdir=0;
    $main::root_dir=$main::curdir;
 
    my $incflag=0;my @drive_options=();
@@ -124,14 +121,6 @@ END
                      $linenumber=~s/^(?:Next|Previous) Page\s*//;
                   }
                   ($linenumber,$endcount)=split '-', $linenumber;
-                  #my $PARdir='';
-                  #foreach my $dir (@INC) {
-                  #   my $incdir=$dir;
-                  #   if ((substr($incdir,-3) eq 'inc') &&
-                  #         (1<index $incdir,'par-')) {
-                  #      $PARdir=substr($incdir,0,-4);
-                  #   }
-                  #}
                   open (FH,"<$main::PARdir/inc/LICENSE")
                      or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
                   @content=<FH>;
@@ -173,14 +162,6 @@ END
          },
          Banner => sub {
                my $linenumber="]P[";
-               #my $PARdir='';
-               #foreach my $dir (@INC) {
-               #   my $incdir=$dir;
-               #   if ((substr($incdir,-3) eq 'inc') &&
-               #         (1<index $incdir,'par-')) {
-               #      $PARdir=substr($incdir,0,-4);
-               #   }
-               #}
                open (FH,"<$main::PARdir/inc/LICENSE")
                   or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
                my @content=<FH>;
@@ -632,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9951';
+version         '0.9952';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -650,7 +631,7 @@ require Term::Menus;
 require Term::ReadKey;
 require Term::RawInput;
 my $last_known_good_location=
-      "http://download.oracle.com/berkeley-db/db-5.1.25.tar.gz";
+      "http://download.oracle.com/berkeley-db/db-5.2.28.tar.gz";
 
 if ($^O eq 'cygwin' || $^O eq 'MSWin32' || $^O eq 'MSWin64') {
    $ENV{'CYGWIN'}='nodosfilewarning' if $^O eq 'cygwin';
@@ -801,40 +782,48 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $sysdr=~s/^\s*(.*)\s*$/$1/s;
                my $let=substr($sysdr,0,1);
                my $lt=lc($let);
-               $editor="\"/cygdrive/$lt/Program Files/Windows NT/".
-                       "Accessories/wordpad.exe\"";
+               $editor='/cygdrive/'.$lt.'/Program Files/Windows NT/'.
+                       'Accessories/wordpad.exe';
             }
          } elsif (0<$#editors) {
             $selection=Term::Menus::Menu(\%Menu_select_editor);
-            if ($selection=~/(TextPad)/) {
-               $selection=$1;
-               if ($tp eq 'default') {
-                  my $sysdr=`cmd /c echo %SystemDrive%`;
-                  $sysdr=~s/^\s*(.*)\s*$/$1/s;
-                  my $let=substr($sysdr,0,1);
-                  my $lt=lc($let);
-                  $editor="\"/cygdrive".
-                     "/$lt/Program Files/TextPad 5/TextPad.exe\"";
-               } else {
-                  $tp=~s/\\/\//g;
-                  $tp=~s/^([A-Za-z]):(.*)/$1$2/;
-                  $editor="\"/cygdrive/$tp\"";
-               }
-            } elsif ($selection=~/(vim)/) {
-               $selection=$1;
-               $editor='"/bin/vim-nox.exe"';
-            } elsif ($selection=~/(emacs)/) {
-               $selection=$1;
-               $editor='"/bin/emacs-nox.exe"';
-            } elsif ($selection=~/(joe)/) {
-               $selection=$1;
-               $editor='"/bin/joe.exe"';
-            } elsif ($selection=~/(mc)/) {
-               $selection=$1;
-               $editor='"/bin/mc.exe"';
-            }
          } elsif (0==$#editors) {
             $selection=$editors[0];
+         }
+         if ($selection=~/([Ww]ordpad)/) {
+            $selection=$1;
+            my $sysdr=`cmd /c echo %SystemDrive%`;
+            $sysdr=~s/^\s*(.*)\s*$/$1/s;
+            my $let=substr($sysdr,0,1);
+            my $lt=lc($let);
+            $editor='/cygdrive/'.$lt.
+               '/Program Files/Windows NT/Accessories/wordpad.exe';
+         } elsif ($selection=~/(TextPad)/) {
+            $selection=$1;
+            if ($tp eq 'default') {
+               my $sysdr=`cmd /c echo %SystemDrive%`;
+               $sysdr=~s/^\s*(.*)\s*$/$1/s;
+               my $let=substr($sysdr,0,1);
+               my $lt=lc($let);
+               $editor='/cygdrive/'.$lt.
+                  '/Program Files/TextPad 5/TextPad.exe';
+            } else {
+               $tp=~s/\\/\//g;
+               $tp=~s/^([A-Za-z]):(.*)/$1$2/;
+               $editor='/cygdrive/'.$tp;
+            }
+         } elsif ($selection=~/(vim)/) {
+            $selection=$1;
+            $editor='/bin/vim-nox.exe';
+         } elsif ($selection=~/(emacs)/) {
+            $selection=$1;
+            $editor='/bin/emacs-nox.exe';
+         } elsif ($selection=~/(joe)/) {
+            $selection=$1;
+            $editor='/bin/joe.exe';
+         } elsif ($selection=~/(mc)/) {
+            $selection=$1;
+            $editor='/bin/mc.exe';
          }
          exit if $selection eq ']quit[';
       }
@@ -927,24 +916,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'setup.exe -P openssh -X -A -q '
                       ."-r $main::root_dir ".'-s '
                       .'http://cygwin.mirrors.pair.com';
-         }
-         if ($selection!~/MINIMAL/s) {
-            if ($selection=~/[Ww]ordpad/) {
-               my $sysdr=`cmd /c echo %SystemDrive%`;
-               $sysdr=~s/^\s*(.*)\s*$/$1/s;
-               my $let=substr($sysdr,0,1);
-               my $lt=lc($let);
-               $editor='"'.'/cygdrive'.
-                  '/$lt/Program Files/Windows NT/Accessories/wordpad.exe'.'"';
-            } else {
-               $editor="/bin/${selection}.exe";
-            }
-         }
-         if ($editor) {
-            open(ED,">$main::PARdir/editor.txt")
-               or die "Cannot open $main::PARdir/editor.txt: $!\n";
-            print ED $editor."\n";
-            close(ED);
          }
          
          my $wver=&windows_ver;
@@ -1200,7 +1171,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                        "cmd /c $clo\\\\bin\\\\bash -lc ".
                        '"net start sshd 2>&1"';
                   my $netot=`$net_start`;
-#print "WHAT IS NETOUT???=$netot\n";<STDIN>;
                }
                system('SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $cygwin_loc\\bin\\bash -lc ".
@@ -1218,7 +1188,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                     "cmd /c $clo\\\\bin\\\\bash -lc ".
                     '"net start sshd 2>&1"';
                my $netut=`$nettstart`;
-#print "WHAT IS NETSTARTOUT=$netut and CYGSRVS=$cygsrvs\n";<STDIN>;
                if (-1<index $netut,'System error') {
                   my $netdel='SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $clo\\\\bin\\\\bash -lc ".
@@ -1243,9 +1212,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                        "cmd /c $clo\\\\bin\\\\bash -lc ".
                        '"net start sshd 2>&1"';
                   my $netot=`$net_start`;
-#print "WHAT IS NETOUT???=$netot\n";<STDIN>;
                }
-#print "WHAT IS THE OUTPUT3=$netut\n";<STDIN>;
             }
             if (-1==index $cygsrvs,'cygserver') {
                system('SET CYGWIN=nodosfilewarning & '.
@@ -1286,12 +1253,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'URI\')}\""');
-               #system('export CYGWIN=nodosfilewarning & '.
-               #       "cmd /c $clo\\\\bin\\\\bash -lc ".
-               #       '"/usr/bin/perl -e \"eval { require LWP;1 }'.
-               #       ' or do {require CPAN and '.
-               #       'CPAN::Shell-^^^>notest(\'install\','.
-               #       '\'LWP\')}\""');
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e \"eval {require ExtUtils::Depends;1}'.
@@ -1411,12 +1372,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'URI\')}\""');
-               #system('SET CYGWIN=nodosfilewarning & '.
-               #       "cmd /c $cygwin_loc\\bin\\bash -lc ".
-               #       '"/usr/bin/perl -e \"eval { require LWP;1 }'.
-               #       ' or do {require CPAN and '.
-               #       'CPAN::Shell-^^^>notest(\'install\','.
-               #       '\'LWP\')}\""');
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/perl -e \"eval {require ExtUtils::Depends;1}'.
@@ -1448,7 +1403,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do { print \'NODDS\' }\""';
                my $ddst=`$ddstest`;
                chomp($ddst);
-#print "DDSTEST=$ddst\n";
                if ($ddst eq 'NODDS') {
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
@@ -1487,7 +1441,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '\$t=\$d;\$n=\$f;}}\$n=\$f if !\$n and \$f;'.
                          'print \$f\""';
                   my $sdir=`$streamdir`; 
-#print "WHAT IS SDIR=$sdir\n";sleep 20;
                   system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"cd \"'.$sdir.'\";/usr/bin/perl Build.PL NODDS;"');
@@ -1634,17 +1587,6 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
               "   you will need to choose an editor.";
    unless ($editor) {
       if ($^O eq 'cygwin') {
-print "WHAT IS THE VALUE OF MAIN::PARDIR=$main::PARdir<==\n";<STDIN>;
-         #if (-e "$main::PARdir/editor.txt") {
-         #   open(ED,"<$main::PARdir/editor.txt")
-         #      or die "Cannot open $main::PARdir/editor.txt: $!\n";
-         #   my @editor=<ED>;
-         #   close(ED);
-         #   $editor=~join '', @editor;
-         #   $editor=~s/^\s*//s;
-         #   $editor=~s/\s*$//s;
-         #   my $un_out=unlink "$main::PARdir/editor.txt";
-         #   print "ERROR $main::PARdir/editor.txt: $!\n" unless $un_out; 
          if (exists $ENV{FA_EDITOR} and $ENV{FA_EDITOR}) {
             $editor=$ENV{FA_EDITOR};
          } else {
@@ -1732,21 +1674,21 @@ print "WHAT IS THE VALUE OF MAIN::PARDIR=$main::PARdir<==\n";<STDIN>;
                   $sysdr=~s/^\s*(.*)\s*$/$1/s;
                   my $let=substr($sysdr,0,1);
                   my $lt=lc($let);
-                  $editor="\"$mount".
-                     "/$lt/Program Files/TextPad 5/TextPad.exe\"";
+                  $editor=$mount.
+                     "/$lt/Program Files/TextPad 5/TextPad.exe";
                } else {
                   $tp=~s/\\/\//g;
                   $tp=~s/^([A-Za-z]):(.*)/$1$2/;
-                  $editor="\"$mount/$tp\"";
+                  $editor="$mount/$tp";
                }
             } elsif ($selection=~s/(vim)/$1/) {
-               $editor='"/bin/vim-nox.exe"';
+               $editor='/bin/vim-nox.exe';
             } elsif ($selection=~s/(emacs)/$1/) {
-               $editor='"/bin/emacs-nox.exe"';
+               $editor='/bin/emacs-nox.exe';
             } elsif ($selection=~s/(joe)/$1/) {
-               $editor='"/bin/joe.exe"';
+               $editor='/bin/joe.exe';
             } elsif ($selection=~s/(mc)/$1/) {
-               $editor='"/bin/mc.exe"';
+               $editor='/bin/mc.exe';
             }
          }
       } else {
@@ -1771,14 +1713,14 @@ print "WHAT IS THE VALUE OF MAIN::PARDIR=$main::PARdir<==\n";<STDIN>;
             );
             $selection=Term::Menus::Menu(\%Menu_select_editor);
             if ($selection=~s/(vi)/$1/) {
-               $editor='"/usr/bin/vi"';
+               $editor='/usr/bin/vi';
             } elsif ($selection=~s/(emacs)/$1/) {
-               $editor='"/usr/bin/emacs"';
+               $editor='/usr/bin/emacs';
             }
          } elsif (1==$#editors) {
             $editor=$editors[0];
          } else {
-            $editor='\'\'';
+            $editor='';
          }
       }
    }
@@ -2447,14 +2389,13 @@ sub test_windows_user {
    my $test_user=`net user $sshd_account 2>&1`;
    if (-1<index $test_user,'not be found') {
       my $return=&remove_sshd($sshd_account); 
-print "RETURNING ${return}ZERO\n";
       return 1;
    }
    # Is Cygwin installed?
    my $cygwin_location=get_cygwin_location();
    if ($cygwin_location) {
       my $rights=`$cygwin_location\\bin\\editrights -u $sshd_account -l`;
-print "RIGHTS for $sshd_account ======>\n$rights\n<=======\n";
+      print "RIGHTS for $sshd_account ======>\n$rights\n<=======\n";
       if ((-1==index $rights,'SeServiceLogonRight') || 
             ((-1==index $rights,'SeDenyRemoteInteractiveLogonRight') &&
             (-1==index $rights,'SeDenyInteractiveLogonRight'))) {
@@ -2474,13 +2415,10 @@ print "RIGHTS for $sshd_account ======>\n$rights\n<=======\n";
                "\n   Microsoft Infrastructure Admins if you suspect this",
                "\n   may be a possibility with your setup. You will need",
                "\n   to get an exception added to their configuration.\n\n";
-         #sleep 10; 
          print "   Press ANY key to continue . . . ",<STDIN>;
          my $remove_out=`net user /delete cyg_server 2>&1`;
-#print "WHAT IS REMOVE_OUT=$remove_out\n";sleep 10;
          if (-1<index $remove_out,"command completed successfully") {
             my $return=&remove_sshd($sshd_account);
-print "RETURNING ${return}ONE\n";
             return $return;
          } else {
             print "\n      FullAuto Install attempted to remove the ID ",
@@ -2500,7 +2438,6 @@ print "RETURNING ${return}ONE\n";
          my $remove_out=`net user /delete $sshd_account 2>&1`;
          if (-1<index $remove_out,"command completed successfully") {
             my $return=&remove_sshd($sshd_account);
-print "RETURNING ${return}TWO\n";
             return $return;
          } else {
             print "\n\n   FullAuto Install has determined that the.",
@@ -2520,10 +2457,8 @@ print "RETURNING ${return}TWO\n";
             exit;
          }
       }
-print "RETURNING 0THREE\n";
       return 0;
    } else {
-print "RETURNING 0FOUR\n";
       return 0;
    }
 }
@@ -2615,7 +2550,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
       };
       if ($@) {
          # timed out
-         #exit;
+         # exit;
       } elsif ($a=~/^[Yy]$/s) {
          $regc='cmd /c "REG ADD HKLM\\Software\\Microsoft\\Windows\\'.
                'CurrentVersion\\Explorer\\AlwaysUnloadDLL '.
@@ -3140,12 +3075,12 @@ sub MY::pm_to_blib {
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
-         'our \\1'."editor = $editor;/g\' ".
+         'our \\1'."editor = \'$editor\';/g\' ".
          "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
          "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
          if defined $editor and $editor;
       #$inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)berkeleydb[ ]*[=].*/".
-      #   'our \\1'."berkeleydb = $berkeleydb;/g\' ".
+      #   'our \\1'."berkeleydb = \'$berkeleydb\';/g\' ".
       #   "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
       #   "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
       #   if defiend $berkeleydb and $berkeleydb;
@@ -3237,7 +3172,8 @@ sub _get_username_and_password_from_user {
         }
     else {
         $CPAN::Frontend->mywarn(
-            "Warning: Term::ReadKey seems not to be available, your password will be echoed to the terminal!\n"
+            "Warning: Term::ReadKey seems not to be available, ".
+            "your password will be echoed to the terminal!\n"
         );
     }
     $password = prompt("Password:");
