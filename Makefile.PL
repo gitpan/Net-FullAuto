@@ -63,17 +63,18 @@ END
       if ((substr($incdir,-3) eq 'inc') &&
             (1<index $incdir,'par-')) {
          $main::PARdir=substr($incdir,0,-4);
-         $main::unshift_incdir=1;
+         #$main::unshift_incdir=1;
       }
    }
-   unless (-e "$main::PARdir/editor.txt") {
+   #unless (-e "$main::PARdir/editor.txt") {
+   unless (exists $ENV{FA_EDITOR}) {
       print $fa_banner;
       sleep 2;
    }
    use CPAN;
    use File::Path;
 
-   $main::unshift_incdir=0;
+   #$main::unshift_incdir=0;
    $main::root_dir=$main::curdir;
 
    my $incflag=0;my @drive_options=();
@@ -123,16 +124,16 @@ END
                      $linenumber=~s/^(?:Next|Previous) Page\s*//;
                   }
                   ($linenumber,$endcount)=split '-', $linenumber;
-                  my $PARdir='';
-                  foreach my $dir (@INC) {
-                     my $incdir=$dir;
-                     if ((substr($incdir,-3) eq 'inc') &&
-                           (1<index $incdir,'par-')) {
-                        $PARdir=substr($incdir,0,-4);
-                     }
-                  }
-                  open (FH,"<$PARdir/inc/LICENSE")
-                     or die "Cannot open $PARdir/inc/LICENSE: $!\n";
+                  #my $PARdir='';
+                  #foreach my $dir (@INC) {
+                  #   my $incdir=$dir;
+                  #   if ((substr($incdir,-3) eq 'inc') &&
+                  #         (1<index $incdir,'par-')) {
+                  #      $PARdir=substr($incdir,0,-4);
+                  #   }
+                  #}
+                  open (FH,"<$main::PARdir/inc/LICENSE")
+                     or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
                   @content=<FH>;
                   close FH;
                   $tl=$#content+1;
@@ -172,16 +173,16 @@ END
          },
          Banner => sub {
                my $linenumber="]P[";
-               my $PARdir='';
-               foreach my $dir (@INC) {
-                  my $incdir=$dir;
-                  if ((substr($incdir,-3) eq 'inc') &&
-                        (1<index $incdir,'par-')) {
-                     $PARdir=substr($incdir,0,-4);
-                  }
-               }
-               open (FH,"<$PARdir/inc/LICENSE")
-                  or die "Cannot open $PARdir/inc/LICENSE: $!\n";
+               #my $PARdir='';
+               #foreach my $dir (@INC) {
+               #   my $incdir=$dir;
+               #   if ((substr($incdir,-3) eq 'inc') &&
+               #         (1<index $incdir,'par-')) {
+               #      $PARdir=substr($incdir,0,-4);
+               #   }
+               #}
+               open (FH,"<$main::PARdir/inc/LICENSE")
+                  or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
                my @content=<FH>;
                close FH;
                my $co=$#content+1;
@@ -631,14 +632,14 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9950';
+version         '0.9951';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
 license         'GPL-3.0';
 perl_version    '5.006';
 
-unshift @INC, $main::PARdir if $main::unshift_incdir;
+#unshift @INC, $main::PARdir if $main::unshift_incdir;
 
 use Config;
 use File::stat;
@@ -1363,6 +1364,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
+                      'export FA_EDITOR="'.$editor.'";'.
+                      'export PARdir="'.$main::PARdir.'";'.
                       '/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
             } else {
                my $build_dir='SET CYGWIN=nodosfilewarning & '.
@@ -1533,6 +1536,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
+                      'export FA_EDITOR="'.$editor.'";'.
+                      'export PARdir="'.$main::PARdir.'";'.
                       '/usr/bin/cpan -i Net::FullAuto"');
             }
          }
@@ -1549,12 +1554,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          print "ERROR /inc/Module/Install: $!\n" unless $rmdir_out;
          $rmdir_out=rmdir $main::curdir.'/inc/Module';
          print "ERROR $main::curdir/inc/Module: $!\n" unless $rmdir_out;
-         unless (-e $main::PARdir.'/inc_exists.txt') {
+         unless ((exists $ENV{PARdir} && (-f $ENV{PARdir}.'/inc_exists.txt'))) {
             $rmdir_out=rmdir $main::curdir.'/inc';
             print "ERROR $main::curdir/inc: $!\n" unless $rmdir_out;
          } else {
-            $un_out=unlink $main::PARdir.'/inc_exists.txt';
-            print "ERROR $main::PARdir/inc_exists.txt: $!\n" unless $un_out;
+            $un_out=unlink $ENV{PARdir}.'/inc_exists.txt';
+            print "ERROR $ENV{PARdir}/inc_exists.txt: $!\n" unless $un_out;
          }
          opendir(CD,$main::curdir)
             or die "Cannot open ".$main::curdir.": $!\n";
@@ -1629,16 +1634,19 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
               "   you will need to choose an editor.";
    unless ($editor) {
       if ($^O eq 'cygwin') {
-         if (-e "$main::PARdir/editor.txt") {
-            open(ED,"<$main::PARdir/editor.txt")
-               or die "Cannot open $main::PARdir/editor.txt: $!\n";
-            my @editor=<ED>;
-            close(ED);
-            $editor=~join '', @editor;
-            $editor=~s/^\s*//s;
-            $editor=~s/\s*$//s;
-            my $un_out=unlink "$main::PARdir/editor.txt";
-            print "ERROR $main::PARdir/editor.txt: $!\n" unless $un_out; 
+print "WHAT IS THE VALUE OF MAIN::PARDIR=$main::PARdir<==\n";<STDIN>;
+         #if (-e "$main::PARdir/editor.txt") {
+         #   open(ED,"<$main::PARdir/editor.txt")
+         #      or die "Cannot open $main::PARdir/editor.txt: $!\n";
+         #   my @editor=<ED>;
+         #   close(ED);
+         #   $editor=~join '', @editor;
+         #   $editor=~s/^\s*//s;
+         #   $editor=~s/\s*$//s;
+         #   my $un_out=unlink "$main::PARdir/editor.txt";
+         #   print "ERROR $main::PARdir/editor.txt: $!\n" unless $un_out; 
+         if (exists $ENV{FA_EDITOR} and $ENV{FA_EDITOR}) {
+            $editor=$ENV{FA_EDITOR};
          } else {
             my $tp='';
             my $mount=`/bin/mount -p`;
@@ -2307,6 +2315,11 @@ if ($get_BerkeleyDB) {
 chdir $main::curdir;
 
 if ($get_BerkeleyDB) {
+
+   #($stdout,$stderr)=&fa_install_module('BerkeleyDB','install','Makefile');
+   #print $stdout if $stdout;
+   #&fa_err_exit($stderr,'BerkeleyDB') if $stderr;
+
    do {
       my $p='BerkeleyDB';
       eval "use $p;1" or
@@ -2326,7 +2339,7 @@ if ($get_BerkeleyDB) {
                require CPANPLUS::Shell;
                my $u=CPANPLUS::Shell->new();
                $u->shell;
-               $u->dispatch_on_input(input=>'o conf force 1');
+              $u->dispatch_on_input(input=>'o conf force 1');
                $u->dispatch_on_input(input=>"install $p")
             };
             eval "use $p;1"
@@ -3127,13 +3140,15 @@ sub MY::pm_to_blib {
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
-                 '\\1'."editor = $editor;/g\' ".
-                 "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
-                 "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
+         'our \\1'."editor = $editor;/g\' ".
+         "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
+         "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
+         if defined $editor and $editor;
       #$inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)berkeleydb[ ]*[=].*/".
-      #           '\\1'."berkeleydb = $berkeleydb;/g\' ".
-      #           "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
-      #           "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n";
+      #   'our \\1'."berkeleydb = $berkeleydb;/g\' ".
+      #   "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
+      #   "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
+      #   if defiend $berkeleydb and $berkeleydb;
    } else {
       $inherited .= "\n";
    }

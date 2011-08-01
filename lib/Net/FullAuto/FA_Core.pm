@@ -12928,8 +12928,7 @@ sub wait_for_passwd_prompt
                         "\n   intial configurtion of Secure Shell".
                         "\n   to complete. All future FullAuto".
                         "\n   startups will go MUCH faster. Please".
-                        "\n   be patient and when the next prompt".
-                        "\n   eventually appears, please type 'yes'.";
+                        "\n   be patient.";
                }
             }
             if (-1<index $line,'Permission denied') {
