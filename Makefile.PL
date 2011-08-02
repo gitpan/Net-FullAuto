@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9952';
+version         '0.9953';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2415,7 +2415,7 @@ sub test_windows_user {
                "\n   Microsoft Infrastructure Admins if you suspect this",
                "\n   may be a possibility with your setup. You will need",
                "\n   to get an exception added to their configuration.\n\n";
-         print "   Press ANY key to continue . . . ",<STDIN>;
+         print "   Press ANY key to continue . . . ";<STDIN>;
          my $remove_out=`net user /delete cyg_server 2>&1`;
          if (-1<index $remove_out,"command completed successfully") {
             my $return=&remove_sshd($sshd_account);
@@ -3075,12 +3075,12 @@ sub MY::pm_to_blib {
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
-         'our \\1'."editor = \'$editor\';/g\' ".
+         'our \\1'."editor = \\\'$editor\\\';/g\' ".
          "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
          "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
          if defined $editor and $editor;
       #$inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)berkeleydb[ ]*[=].*/".
-      #   'our \\1'."berkeleydb = \'$berkeleydb\';/g\' ".
+      #   'our \\1'."berkeleydb = \\\'$berkeleydb\\\';/g\' ".
       #   "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
       #   "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
       #   if defiend $berkeleydb and $berkeleydb;
