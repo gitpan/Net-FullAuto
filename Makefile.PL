@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9953';
+version         '0.9954';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1989,6 +1989,7 @@ if ($get_BerkeleyDB) {
                   $fh = FileHandle->new;
                   $filename = "${file}_$$.tar.gz";
                }
+               chomp($filename);
                my $end_flag=0;
                my %errors = ('500'=>'Bad hostname supplied',
                              '404'=>'URL not found',
@@ -2011,7 +2012,6 @@ if ($get_BerkeleyDB) {
                      my $status_line=$res->status_line;
                      ($status_line) = ($status_line =~ /(\d+)/);
                      if (defined($errors{$status_line})) {
-                        validate_error($errors{$status_line});
                         print(
                            "LWP failed with code $status_line, ",
                            "message $errors{$status_line}\n".
@@ -2068,7 +2068,6 @@ if ($get_BerkeleyDB) {
                      my $status_line=$res->status_line;
                      ($status_line) = ($status_line =~ /(\d+)/);
                      if (defined($errors{$status_line})) {
-                        validate_error($errors{$status_line});
                         print(
                            "LWP failed with code $status_line, ",
                            "message $errors{$status_line}\n".
@@ -2123,7 +2122,6 @@ if ($get_BerkeleyDB) {
                   close(FILE);
                   last;
                }
-               `$CPAN::Config->{gzip} -d $filename`;
                unless ($CPAN::Config->{gzip}) {
                   if (-e '/usr/bin/gzip') {
                      $CPAN::Config->{gzip}='/usr/bin/gzip';
@@ -2139,6 +2137,11 @@ if ($get_BerkeleyDB) {
                         exit;
                   }
                }
+               open(FH, $CPAN::Config->{gzip}." -d $filename|");
+               while (my $line=<FH>) {
+                  print $line;
+               }
+               close FH;
                unless ($CPAN::Config->{tar}) {
                   if (-e '/usr/bin/tar') {
                      $CPAN::Config->{tar}='/usr/bin/tar';
@@ -3075,15 +3078,15 @@ sub MY::pm_to_blib {
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
-         'our \\1'."editor = \\\'$editor\\\';/g\' ".
+         'our \\1'."editor = \"$editor\";/g\' ".
          "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
          "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
          if defined $editor and $editor;
       #$inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)berkeleydb[ ]*[=].*/".
-      #   'our \\1'."berkeleydb = \\\'$berkeleydb\\\';/g\' ".
+      #   'our \\1'."berkeleydb = \"$berkeleydb\";/g\' ".
       #   "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
       #   "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
-      #   if defiend $berkeleydb and $berkeleydb;
+      #   if defined $berkeleydb and $berkeleydb;
    } else {
       $inherited .= "\n";
    }
