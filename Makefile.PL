@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9954';
+version         '0.9955';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2331,7 +2331,7 @@ if ($@) {
 sub get_cygwin_location {
    my $cygwin_query=`REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup`;
    if (-1<index $cygwin_query,'REG_SZ') {
-      $cygwin_query=~s/^.*REG_SZ (.*)\s*$/$1/s;
+      $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
       $cygwin_query=~s/^\s*//s;
       $cygwin_query=~s/\s*$//s;
       return $cygwin_query;
