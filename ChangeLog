@@ -45,6 +45,15 @@
 ################################################################
 
 
+2011-08-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9956 released.
+
+        * More changes to Makefile.PL.
+
+        * Added &persist_get() and &persist_put().
+
+
 2011-08-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9955 released.

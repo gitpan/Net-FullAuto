@@ -2517,9 +2517,11 @@ print "STDERRCRONT=$stderr<==\n";
 
 sub persist_get {
 
-   print "persist_get CALLER=",caller,"\n";
    my $track='';
-   my $persist_this=$_[0];
+   my $key=$_[0]||'';
+   &handle_error("Missing Arguements: ".
+      "&persist_get\(\[key\]\)")
+      unless $key;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
       File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist');
    }
@@ -2531,26 +2533,32 @@ sub persist_get {
    my $bdb = BerkeleyDB::Btree->new(
       -Filename => "${Net::FullAuto::FA_Core::progname}_persist.db",
       -Flags    => DB_CREATE,
-      -Compare  => sub { $_[0] <=> $_[1] },
       -Env      => $dbenv
    ) or &handle_error(
      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-   my $key=join '&', caller;
-   $key.=$Net::FullAuto::FA_Core::local_hostname.$username;
+   $key.='&';
+   $key.=join '&', caller;
+   $key.='&'.$Net::FullAuto::FA_Core::local_hostname.$username;
    my $value='';
    my $status=$bdb->db_get($key,$value);
+   $value||='';
    undef $bdb;
    $dbenv->close();
    undef $dbenv;
-   return ($value,$status);
+   return ($value,$key,$status);
 
 }
 
 sub persist_put {
 
-   my $value=$_[0];
+   my $key=$_[0]||'';
+   my $value=$_[1]||'';
+   &handle_error("Missing Arguements: ".
+      "&persist_put\(".
+      "\[key_returned_from_persist_get\],".
+      "\[string_to_persist\]\)")
+      unless $key && $value;
    my $track='';
-   my $persist_this=$_[0];
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
       File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist');
    }
@@ -2562,18 +2570,14 @@ sub persist_put {
    my $bdb = BerkeleyDB::Btree->new(
       -Filename => "${Net::FullAuto::FA_Core::progname}_persist.db",
       -Flags    => DB_CREATE,
-      -Compare  => sub { $_[0] <=> $_[1] },
       -Env      => $dbenv
    ) or &handle_error(
      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-   print "CALLER=",caller,"\n";
-   my $key=join '&', caller;
-   $key.=$Net::FullAuto::FA_Core::local_hostname.$username;
    my $status=$bdb->db_put($key,$value);
-print "STATUS=$status\n";
    undef $bdb;
    $dbenv->close();
    undef $dbenv;
+   return $status;
 
 }
 

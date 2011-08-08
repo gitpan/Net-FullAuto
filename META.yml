@@ -40,7 +40,7 @@ recommends:
   Crypt::Rijndael: 0
 requires:
   Module::Load::Conditional: 0
-  Term::Menus: 1.88
+  Term::Menus: 1.89
   Tie::Cache: 0
   Sort::Versions: 0
   Crypt::CBC: 0
