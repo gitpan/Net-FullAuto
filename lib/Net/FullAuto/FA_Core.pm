@@ -497,8 +497,8 @@ BEGIN {
 
 # Globally Scoped Variables, but Intentionally NOT Initialized.
 # Getopt::Long needs it this way for some args to work properly. 
-our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,
-     $menu,$passwrd,$usrname,$VERSION,%GLOBAL,@GLOBAL);
+our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,
+     $defaults,$menu,$passwrd,$usrname,$VERSION,%GLOBAL,@GLOBAL);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -2725,7 +2725,11 @@ sub acquire_semaphore
                 print
                   "\n\n  Status:  Waiting for lock release. Another FullAuto",
                   "\n           process has a lock on ",$process_description,
-                  "\n           . . .\n\n";
+                  "\n           . . .\n",
+                  "\n  (Hint: If lock fails to release in a reasonable\n",
+                  "\n         time period, use command line tools 'ipcs'\n",
+                  "\n         and 'ipcrm' to investigate and resolve, or\n",
+                  "\n         simply restart the host computer)";
             }
             eval {
                $SIG{ALRM} = sub { die "alarm\n" }; # \n required
@@ -6184,8 +6188,11 @@ sub fa_login
                 'unattended:s'          => \$cron,
                 'batch:s'               => \$cron,
                 'fullauto:s'            => \$cron,
+                'defaults'              => \$defaults,
                 'menu:s'                => \$menu,
                 'm:s'                   => \$menu,
+                'set:s'                 => \$set,
+                's:s'                   => \$set,
                 'random'                => \$random,
                 'timeout=i'             => \$cltimeout,
                 'prod'                  => \$prod,
@@ -6628,7 +6635,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                "FullAuto Process Limit at Line: ".__LINE__,2);
 
          }
-         if (defined $menu) {
+         if (defined $defaults || defined $menu || defined $set) {
             if ($Net::FullAuto::cpu) {
                my $idle=(split ',', $Net::FullAuto::cpu)[3];
                $idle=~s/^\s*//;
@@ -6642,7 +6649,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                }
             }
             my $dbenv = BerkeleyDB::Env->new(
-               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus',
+               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
                -Flags =>
                   DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
             ) or &handle_error(
@@ -6652,7 +6659,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
             while (1) {
                $bdb = BerkeleyDB::Btree->new(
                   -Filename => ${Net::FullAuto::FA_Core::progname}.
-                               "_menus.db",
+                               "_defaults.db",
                   -Flags    => DB_CREATE,
                   -Env      => $dbenv
                );
@@ -6661,102 +6668,126 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                   my $berkeleydb=find_berkeleydb_recover();
                   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
                      "$berkeleydb -v -h ".
-                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus');
-# BERKERR
+                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults');
+# BERKERR1
                   last;
                } else { last }
             }
             &handle_error(
                "cannot open Btree for DB: $BerkeleyDB::Error\n",
                '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
-            my $default_menu='';
-            my $status=$bdb->db_get($username,$default_menu);
-            chomp($default_menu);
-            my @menu_items=();
-            if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
-                  'Custom/fa_menu.pm') {
-               push @menu_items, 'Custom/fa_menu.pm';
+            my $default_modules='';
+            my $status=$bdb->db_get($username,$default_modules);
+            $default_modules||='';
+            $default_modules=~s/\$HASH\d*\s*=\s*//s
+               if -1<index $default_modules,'$HASH';
+            $default_modules=eval $default_modules;
+            $default_modules||='';
+            if ((-1<index $status,
+                  'DB_NOTFOUND: No matching key/data pair found')
+                  || !($default_modules)
+                  || !exists $default_modules->{fa_code}
+                  || !exists $default_modules->{fa_conf}
+                  || !exists $default_modules->{fa_host} 
+                  || !exists $default_modules->{fa_maps}
+                  || !exists $default_modules->{fa_menu}) {
+               $default_modules={
+                 fa_code => 'Net/FullAuto/Distro/fa_code_demo.pm',
+                 fa_conf => 'Net/FullAuto/Distro/fa_conf_demo.pm',
+                 fa_host => 'Net/FullAuto/Distro/fa_host_demo.pm',
+                 fa_maps => 'Net/FullAuto/Distro/fa_maps_demo.pm',
+                 fa_menu => 'Net/FullAuto/Distro/fa_menu_demo.pm',
+               };
             }
-            if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
-                  'Distro/fa_menu_demo.pm') {
-               push @menu_items, 'Distro/fa_menu_demo.pm';
-            }
-            if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
-                  'Distro/fa_menu.pm') {
-               push @menu_items, 'Distro/fa_menu.pm';
-            }
-            if (-d $Hosts{"__Master_${$}__"}{'FA_Core'}.
-                  "Custom/$username/Menus") {
-               my $path=$Hosts{"__Master_${$}__"}{'FA_Core'}.
-                        "Custom/$username/Menus";
-               opendir(my $dh, $path) ||
-                  &handle_error("can't opendir $path: $!");
-               my @userm=();
-               while (my $file=readdir($dh)) {
-                  chomp($file);
-                  push @userm, "Custom/$username/Menus/$file"
-                     if $file!~/^[.]|README$/   
+            if (defined $menu) {
+               my $default_menu=$default_modules->{'fa_menu'};
+               my @menu_items=();
+               if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                     'Custom/fa_menu.pm') {
+                  push @menu_items, 'Custom/fa_menu.pm';
                }
-               close($dh);
-               unshift @menu_items, @userm;
-            }
-            undef $bdb;
-            $dbenv->close();
-            undef $dbenv;
-            my $def_menu=$default_menu;
-            substr($def_menu,0,13)='';
-            my %show_default_menu=(
-
-                Label  => 'show_default_menu',
-                Item_1 => {
-
-                   Text    => ']C[',
-                   Convey  => \@menu_items,
-                   Default => $def_menu,
-
-                },
-                Banner => "   Current FullAuto Default Menu for $username:\n\n".
-                          "      $def_menu\n\n",
-            );
-            my $selection=Menu(\%show_default_menu);
-            if ($selection ne $def_menu && $selection ne ']quit[') {
-               my $dbenv = BerkeleyDB::Env->new(
-                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus',
-                  -Flags =>
-                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-               ) or &handle_error(
-                  "cannot open environment for DB: $BerkeleyDB::Error\n",'',
-                  $track);
-               my $bdb='';
-               while (1) {
-                  $bdb = BerkeleyDB::Btree->new(
-                     -Filename => ${Net::FullAuto::FA_Core::progname}.
-                                  "_menus.db",
-                     -Flags    => DB_CREATE,
-                     -Env      => $dbenv
-                  );
-                  unless ($BerkeleyDB::Error=~/Successful/) {
-                     my ($output,$error)=('','');
-                     my $berkeleydb=find_berkeleydb_recover();
-                     ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                        "$berkeleydb -v -h ".
-                        $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus');
-# BERKERR
-                     last;
-                  } else { last }
+               if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                     'Distro/fa_menu_demo.pm') {
+                  push @menu_items, 'Distro/fa_menu_demo.pm';
                }
-               &handle_error(
-                  "cannot open Btree for DB: $BerkeleyDB::Error\n",
-                  '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
-               my $default_menu='';
-               my $status=$bdb->db_put($username,
-                     'Net/FullAuto/'.$selection);
+               if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                     'Distro/fa_menu.pm') {
+                  push @menu_items, 'Distro/fa_menu.pm';
+               }
+               if (-d $Hosts{"__Master_${$}__"}{'FA_Core'}.
+                     "Custom/$username/Menus") {
+                  my $path=$Hosts{"__Master_${$}__"}{'FA_Core'}.
+                           "Custom/$username/Menus";
+                  opendir(my $dh, $path) ||
+                     &handle_error("can't opendir $path: $!");
+                  my @userm=();
+                  while (my $file=readdir($dh)) {
+                     chomp($file);
+                     push @userm, "Custom/$username/Menus/$file"
+                        if $file!~/^[.]|README$/   
+                  }
+                  close($dh);
+                  unshift @menu_items, @userm;
+               }
                undef $bdb;
                $dbenv->close();
                undef $dbenv;
+               my $def_menu=$default_menu;
+               substr($def_menu,0,13)='';
+               my %show_default_menu=(
+
+                   Label  => 'show_default_menu',
+                   Item_1 => {
+
+                      Text    => ']C[',
+                      Convey  => \@menu_items,
+                      Default => $def_menu,
+
+                   },
+                   Banner => "   Current FullAuto Default Menu for $username:\n\n".
+                             "      $def_menu\n\n",
+               );
+               my $selection=Menu(\%show_default_menu);
+               if ($selection ne $def_menu && $selection ne ']quit[') {
+                  my $dbenv = BerkeleyDB::Env->new(
+                     -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
+                     -Flags =>
+                        DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                  ) or &handle_error(
+                     "cannot open environment for DB: $BerkeleyDB::Error\n",'',
+                     $track);
+                  my $bdb='';
+                  while (1) {
+                     $bdb = BerkeleyDB::Btree->new(
+                        -Filename => ${Net::FullAuto::FA_Core::progname}.
+                                     "_defaults.db",
+                        -Flags    => DB_CREATE,
+                        -Env      => $dbenv
+                     );
+                     unless ($BerkeleyDB::Error=~/Successful/) {
+                        my ($output,$error)=('','');
+                        my $berkeleydb=find_berkeleydb_recover();
+                        ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                           "$berkeleydb -v -h ".
+                           $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults');
+# BERKERR
+                        last;
+                     } else { last }
+                  }
+                  &handle_error(
+                     "cannot open Btree for DB: $BerkeleyDB::Error\n",
+                     '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
+                  $default_modules->{'fa_menu'}='Net/FullAuto/'.$selection;
+                  my $defaultmodules=
+                     Data::Dump::Streamer::Dump($default_modules)->Out();
+                  my $status=$bdb->db_put($username,$defaultmodules);
+                  undef $bdb;
+                  $dbenv->close();
+                  undef $dbenv;
+               }
+               &release_semaphore(9361);
+               &cleanup();
             }
-            &release_semaphore(9361);
-            &cleanup();
          }
          if ($plan || $plan_ignore_error) {
             if ($Net::FullAuto::cpu) {
@@ -8115,9 +8146,9 @@ print "DOING PASSWD UPDATE\n";
       $plan=$plan->{Plan};
    }
    my $menu_config_module_file='';my $die='';
-   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus') {
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
       File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-                  'Menus',{error => \my $err});
+                  'Defaults',{error => \my $err});
       if (@$err) {
          for my $diag (@$err) {
             my ($file, $message) = %$diag;
@@ -8148,25 +8179,38 @@ print "DOING PASSWD UPDATE\n";
            'Custom/'.$username.'/Menus') || do{ $die="copy failed: $!" };
    }
    my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Menus',
+      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
-      -Filename => "${Net::FullAuto::FA_Core::progname}_menus.db",
+      -Filename => "${Net::FullAuto::FA_Core::progname}_defaults.db",
       -Flags    => DB_CREATE,
       -Env      => $dbenv
    ) or &handle_error(
      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
    my $dmenu='';
    my $status=$bdb->db_get($username,$dmenu);
+   $dmenu||='';
+   $dmenu=~s/\$HASH\d*\s*=\s*//s
+      if -1<index $dmenu,'$HASH';
+   $dmenu=eval $dmenu;
+   $dmenu=$dmenu->{'fa_menu'};
    my $pdir=$Hosts{"__Master_${$}__"}{'FA_Core'};
    substr($pdir,-13)='';
    if (!(-f $pdir.$dmenu) || (-1<index $status,
          'DB_NOTFOUND: No matching key/data pair found')) {
       $status=$bdb->db_del($username);
-      $dmenu='Net/FullAuto/Distro/fa_menu.pm';
-      $status=$bdb->db_put($username,$dmenu);
+      my $d_menu={
+         fa_code => 'Net/FullAuto/Distro/fa_code_demo.pm',
+         fa_conf => 'Net/FullAuto/Distro/fa_conf_demo.pm',
+         fa_host => 'Net/FullAuto/Distro/fa_host_demo.pm',
+         fa_maps => 'Net/FullAuto/Distro/fa_maps_demo.pm',
+         fa_menu => 'Net/FullAuto/Distro/fa_menu_demo.pm',
+      };
+      $dmenu=$d_menu->{'fa_menu'};
+      $d_menu=Data::Dump::Streamer::Dump($d_menu)->Out();
+      $status=$bdb->db_put($username,$d_menu);
    }
    undef $bdb;
    $dbenv->close();
@@ -9454,7 +9498,9 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
          } return $stdout;
 #$Net::FullAuto::FA_Core::log=0 if $logreset;
       }
-      if ((-1<index $localhost,'HASH')
+      if (defined $localhost &&
+            $localhost &&
+            (-1<index $localhost,'HASH')
             && exists $localhost->{_cmd_handle}
             && defined fileno $localhost->{_cmd_handle}) {
          my $cfh_ignore='';my $cfh_error='';
