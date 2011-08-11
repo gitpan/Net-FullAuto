@@ -45,6 +45,13 @@
 ################################################################
 
 
+2011-08-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9958 released.
+
+        * More changes to Makefile.PL for Win XP.
+
+
 2011-08-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9957 released.

@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9957';
+version         '0.9958';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1322,11 +1322,16 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
+               my $par_dir='export CYGWIN=nodosfilewarning & '.
+                      "cmd /c $clo\\\\bin\\\\bash -lc ".
+                      '"/usr/bin/cygpath -lm \"'.$main::PARdir.'\""';
+               my $pardir=`$par_dir`;
+               chomp($pardir);
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
-                      'export FA_EDITOR="'.$editor.'";'.
-                      'export PARdir="'.$main::PARdir.'";'.
+                      'export FA_EDITOR=\\"'.$editor.'\\";'.
+                      'export PARdir=\\"'.$pardir.'\\";'.
                       '/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
             } else {
                my $build_dir='SET CYGWIN=nodosfilewarning & '.
@@ -1420,7 +1425,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   chomp($stmout);
                   $streamdir='SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $clo\\\\bin\\\\bash -lc ".
-                         '"/usr/bin/cygpath -m \"'.$stmout.'\""';
+                         '"/usr/bin/cygpath -lm \"'.$stmout.'\""';
                   $stmout=`$streamdir`;
                   chomp($stmout);
                   $streamdir='SET CYGWIN=nodosfilewarning & '.
@@ -1486,11 +1491,16 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
+               my $par_dir='SET CYGWIN=nodosfilewarning & '.
+                      "cmd /c $clo\\\\bin\\\\bash -lc ".
+                      '"/usr/bin/cygpath -lm \"'.$main::PARdir.'\""';
+               my $pardir=`$par_dir`;
+               chomp($pardir);
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
-                      'export FA_EDITOR="'.$editor.'";'.
-                      'export PARdir="'.$main::PARdir.'";'.
+                      'export FA_EDITOR=\\"'.$editor.'\\";'.
+                      'export PARdir=\\"'.$pardir.'\\";'.
                       '/usr/bin/cpan -i Net::FullAuto"');
             }
          }
