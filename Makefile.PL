@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9958';
+version         '0.9959';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2703,9 +2703,12 @@ if ($@) {
    $selection = 'Default';
 }
 
-my $permission = 'Default';
+#my $permission = 'Default';
+my $permission = 'Setuid';
 #print "SELECTION = $selection<==\n";sleep 3;
-if (-1<index $selection,'Setuid') {
+if (-1<index $selection,'Default') {
+   $permission = 'Default';
+} elsif (-1<index $selection,'Setuid') {
    $permission = 'Setuid';
 } elsif (-1<index $selection,'Setgid') {
    $permission = 'Setgid';

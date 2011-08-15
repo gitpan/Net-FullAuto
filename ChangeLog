@@ -45,6 +45,16 @@
 ################################################################
 
 
+2011-08-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9959 released.
+
+        * More changes to Makefile.PL - changed perms to
+          setuid.
+
+        * Added more code for managing FullAuto user files.
+
+
 2011-08-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9958 released.
