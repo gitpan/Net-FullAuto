@@ -87,7 +87,7 @@ package Net::FullAuto::FA_Core;
 
 use strict;
 use warnings;
-our $progname=substr($0,(rindex $0,'/')+1);
+our $progname=substr($0,(rindex $0,'/')+1,-3);
 our @tran=('','',0,$$."_".$^T,'',0);
 $ENV{OS}='' if !$ENV{OS};
 my $md_='';our $thismonth='';our $thisyear='';
@@ -2727,10 +2727,10 @@ sub acquire_semaphore
                   "\n\n  Status:  Waiting for lock release. Another FullAuto",
                   "\n           process has a lock on ",$process_description,
                   "\n           . . .\n",
-                  "\n  (Hint: If lock fails to release in a reasonable\n",
-                  "\n         time period, use command line tools 'ipcs'\n",
-                  "\n         and 'ipcrm' to investigate and resolve, or\n",
-                  "\n         simply restart the host computer)";
+                  "\n  (Hint: If lock fails to release in a reasonable",
+                  "\n         time period, use command line tools 'ipcs'",
+                  "\n         and 'ipcrm' to investigate and resolve, or",
+                  "\n         simply restart the host computer)\n";
             }
             eval {
                $SIG{ALRM} = sub { die "alarm\n" }; # \n required
@@ -5703,7 +5703,7 @@ sub apache_download
       }
    } else {
       print "\n" if $shown;
-      print "$Net::FullAuto::FA_Core::progname: ", $res->status_line, "\n";
+      print "${Net::FullAuto::FA_Core::progname}.pl: ", $res->status_line, "\n";
       exit 1;
    }
 
@@ -6759,6 +6759,49 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                   &handle_error($die);
                }
             }
+            unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm') {
+               my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm';
+print "FD=$fd\n";
+               open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
+               print FD "package fa_defs;\n\n",
+                  "### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######\n",
+                  "#\n",
+                  "#    Net::FullAuto - Powerful Network Process Automation Software\n",
+                  "#    Copyright (C) 2011  Brian M. Kelly\n",
+                  "#\n",
+                  "#    This program is free software: you can redistribute it and/or modify\n",
+                  "#    it under the terms of the GNU General Public License as published by\n",
+                  "#    the Free Software Foundation, either version 3 of the License, or\n",
+                  "#    any later version.\n",
+                  "#\n",
+                  "#    This program is distributed in the hope that it will be useful,\n",
+                  "#    but **WITHOUT ANY WARRANTY**; without even the implied warranty of\n",
+                  "#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n",
+                  "#    GNU General Public License for more details.\n",
+                  "#\n",
+                  "#    You should have received a copy of the GNU General Public License\n",
+                  "#    along with this program.  If not, see <http://www.gnu.org/licenses/>.\n",
+                  "#\n",
+                  "################################################################\n\n",
+                  "use strict;\n",
+                  "use warnings;\n\n",
+                  "#################################################################\n",
+                  "##  Do NOT alter code ABOVE this block.\n",
+                  "#################################################################\n",
+                  "##  -------------------------------------------------------------\n",
+                  "##  ADD SETTINGS HERE:\n",
+                  "##  -------------------------------------------------------------\n\n",
+                  "our \$FA_Secure = \"",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\";\n\n",
+                  "#################################################################\n",
+                  "##  Do NOT alter code BELOW this block.\n",
+                  "#################################################################\n",
+                  "1;";
+               close(FD); 
+            } 
+            unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
+               File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+               'Defaults');
+            }
             $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
                -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
                -Flags =>
@@ -6804,9 +6847,9 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
                   || !exists $default_modules->{fa_menu}) {
                $default_modules={
                  fa_code => 'Net/FullAuto/Distro/fa_code_demo.pm',
-                 fa_conf => 'Net/FullAuto/Distro/fa_conf_demo.pm',
-                 fa_host => 'Net/FullAuto/Distro/fa_host_demo.pm',
-                 fa_maps => 'Net/FullAuto/Distro/fa_maps_demo.pm',
+                 fa_conf => 'Net/FullAuto/Distro/fa_conf.pm',
+                 fa_host => 'Net/FullAuto/Distro/fa_host.pm',
+                 fa_maps => 'Net/FullAuto/Distro/fa_maps.pm',
                  fa_menu => 'Net/FullAuto/Distro/fa_menu_demo.pm',
                };
             }
@@ -8100,6 +8143,11 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                      ." ...\n\n";
                }
             }
+#LOGINMASTERERROR=Can't locate object method "cmd" via package "fa_code_demo"
+# at /usr/lib/perl5/site_perl/5.10/Net/FullAuto/FA_Core.pm line 4759.
+#
+# THIS ERROR OCCURS WHEN THE FILENAME AND PACKAGE NAME DIFFER
+
 print "LOGINMASTERERROR=$login_Mast_error\n";sleep 5;
             if ($login_Mast_error=~/invalid log|ogin incor|sion den/) {
                if (($^O eq 'cygwin')
@@ -8229,8 +8277,8 @@ print "DOING PASSWD UPDATE\n";
    $dmenu=~s/\$HASH\d*\s*=\s*//s
       if -1<index $dmenu,'$HASH';
    $dmenu=eval $dmenu;
-   $dmenu||='';
-   $dmenu=$dmenu->{'fa_menu'};
+   $dmenu||={};
+   $dmenu=$dmenu->{'fa_menu'}||'';
    my $pdir=$Hosts{"__Master_${$}__"}{'FA_Core'};
    substr($pdir,-13)='';
    if (!(-f $pdir.$dmenu) || (-1<index $status,
@@ -8238,9 +8286,9 @@ print "DOING PASSWD UPDATE\n";
       $status=$bdb->db_del($username);
       my $d_menu={
          fa_code => 'Net/FullAuto/Distro/fa_code_demo.pm',
-         fa_conf => 'Net/FullAuto/Distro/fa_conf_demo.pm',
-         fa_host => 'Net/FullAuto/Distro/fa_host_demo.pm',
-         fa_maps => 'Net/FullAuto/Distro/fa_maps_demo.pm',
+         fa_conf => 'Net/FullAuto/Distro/fa_conf.pm',
+         fa_host => 'Net/FullAuto/Distro/fa_host.pm',
+         fa_maps => 'Net/FullAuto/Distro/fa_maps.pm',
          fa_menu => 'Net/FullAuto/Distro/fa_menu_demo.pm',
       };
       $dmenu=$d_menu->{'fa_menu'};
