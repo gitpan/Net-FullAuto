@@ -45,6 +45,13 @@
 ################################################################
 
 
+2011-08-18  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9961 released.
+
+        * Added fa_code_demo.pm to Distro.
+
+
 2011-08-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9960 released.

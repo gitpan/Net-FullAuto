@@ -1,32 +1,12 @@
 package fa_code_demo;
 
-### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
-#
-#    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2011  Brian M. Kelly
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but **WITHOUT ANY WARRANTY**; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-################################################################
-
 ################################################################
 #
 #   WARNING:  THIS IS A ***BETA*** RELEASE OF Net::FullAuto
 #
 #   Net::FullAuto is powerful network process automation
 #   software that has been in un-released development for
-#   more than eleven years. For this reason, you may find
+#   more than seven years. For this reason, you may find
 #   it to be useful for many process automation projects.
 #   Because it has been worked on for so long, it may appear
 #   to work well, and pass a number of non-intensive tests.
@@ -76,8 +56,6 @@ $test=1; # comment-out this line for Production mode
 #----------  TEST PARAMETERS  ----------------
 
 our $build_type= $test ? 'test' : '';
-our $toggle_rootdir= $build_type ? 'tmp' : 'usr'; 
-our $toggle_staticdir= $build_type ? 'tmp' : 'webfs';
 
 #---------------------------------------------
 
@@ -85,12 +63,8 @@ our $toggle_staticdir= $build_type ? 'tmp' : 'webfs';
 $timeout=90;
 ##############################################
 
-######## SET PASSWORD FILE LOCATION  #########
-if ($^O eq 'cygwin') {
-   $passwd_file_loc="/passwds_ms";
-} else {
-   $passwd_file_loc="/passwds_ux"
-}
+############  SET TOSSPASS  ##################
+#$tosspass=1;
 ##############################################
 
 #####  SET EMAIL AUTOMATION SETTINGS  ########
@@ -98,73 +72,170 @@ if ($^O eq 'cygwin') {
    'bkelly' => 'Brian.Kelly@fullautosoftware.net',
 );
 my $email_to=[
-               ']USERNAME[',
-               'Brian.Kelly@fullautosoftware.net',
+               #']USERNAME[',
+               #'Brian.Kelly@fullautosoftware.net',
              ];
-#%email_defaults=(
-#   Usage       => 'notify_on_error',
-#   Mail_Method => 'smtp',
-#   Mail_Server => 'mailserver.fullautosoftware.net',
-#   Reply_To    => 'Brian.Kelly@fullautosoftware.net',
-#   To          => $email_to,
-#   From        => "$progname\@fullautosoftware.net"
-#);
+%email_defaults=(
+   #Usage       => 'notify_on_error',
+   Mail_Method => 'smtp',
+   Mail_Server => '',
+   #Reply_To    => 'Brian.Kelly@bcbsa.com',
+   #To          => $email_to,
+   #From        => "$progname\@fullautosoftware.net"
+);
 ##############################################
 
 ##  -------------------------------------------------------------
 ##  WRITE "RESULT" SUBROUTINES HERE:
 ##  -------------------------------------------------------------
 
+sub image_magick {
+
+   # Check for installation
+   our $path='';my ($key,$status)=('','');
+   ($path,$key,$status)=&persist_get('image_magick_path');
+   if ($status=~/DB_NOTFOUND: No matching key\/data pair found/ or !$path) {
+      #Look for installation
+      if ($^O eq 'cygwin') {
+         if (-f '/usr/bin/convert.exe') {
+            $path='/usr/bin/convert.exe';
+         } elsif (-f '/bin/convert.exe') {
+            $path='/usr/bin/convert.exe';
+         } elsif (-f '/usr/local/bin/convert.exe') {
+            $path='/usr/local/bin/convert.exe';
+         }
+         $status=persist_put($key,$path) if $path;
+      } else {
+         if (-f '/usr/bin/convert') {
+            $path='/usr/bin/convert';
+         } elsif (-f '/bin/convert') {
+            $path='/usr/bin/convert';
+         } elsif (-f '/usr/local/bin/convert') {
+            $path='/usr/local/bin/convert';
+         }
+         $status=persist_put($key,$path) if $path;
+      }
+      unless ($path) {
+         print "\n\n       INFO: FullAuto needs to do a one time ",
+               " Search for ImageMagick.\n             This may ",
+               "take a few minutes. Future invocations\n       ",
+               "      will not require this search.\n\n";
+         require File::Find;
+         do { 
+            sub Wanted {
+               return if $path;
+               /.cpan/ and $File::Find::prune = 1;
+               return if -d;
+               if (/^convert(.exe)*$/) {
+                  my $out=`$File::Find::name -version 2>&1`;
+                  if (-1<index $out,'ImageMagick') {
+                     $path=$File::Find::name;
+                  }
+               }
+            }
+            my @dirs=();
+            push @dirs,('/usr','/opt',(getpwuid $>)[7]);
+            File::Find::find(\&Wanted,@dirs);
+         };
+         $status=persist_put($key,$path);
+      }
+   }
+   print "PATH=$path\n";
+
+}
+
+sub test_email {
+
+       my %mail=(
+          'To'      => [ 'Brian.Kelly@bcbsa.com' ],
+          'From'    => 'brian.kelly@fullautosoftware.net',
+          'Body'    => "\nFullAuto ERROR =>\n\n"."HA HA".
+                       "       in fa_code.pm Line ".__LINE__,
+          'Subject' => "FullAuto ERROR Encountered When Connecting to NOWHERE",
+       );
+       my $ignore='';my $emerr='';
+       ($ignore,$emerr)=&send_email(\%mail);
+       if ($emerr) {
+          die "\n\nEMAIL ERROR =>$emerr<==\n\n";
+       } else {
+          return;
+       }
+
+}
 
 sub hello_world {
+   open (FH,">briangreat.txt");
+   FH->autoflush(1);
+   my $cnt=0;
+   while (1) {
+      print FH $cnt++;
+#      sleep 2;
+      last if $cnt==20;
+   }
+   print "LOGIN SUCCESSFUL\n";
+   print FH "LOGIN SUCCESSFUL ",`date`,"\n";
+   close FH;
+   &cleanup();
+}
 
-    #print "\nFIRST PARAMETER=$_[0]\n";
-    #print "SECOND PARAMETER=$_[1]\n";
-    my $hostname=$localhost->cmd('hostname');
-    my $stdout='';
-    my $stderr='';
-    my $computer_zero='';
-    my $computer_one='';
-    ($computer_zero,$stderr)=connect_host('Zero'); # Connect to
-                                        # Remote Host via ssh
-    if ($stderr) {
-       print "We Have an ERROR when attempting to connect to Zero! : $stderr\n";
-    }
+sub howdy_world {
+   open (FH,">FullAuto_howdy_world.txt");
+   FH->autoflush(1);
+   my $cnt=0;
+   while (1) {
+      print FH $cnt++;
+#      sleep 2;
+      last if $cnt==20;
+   }
+   #----------------------------------------------
+   # Connect to Remote Host with *BOTH* ssh & sftp
+   #----------------------------------------------
+   my ($host,$stderr)=('','');
+   ($host,$stderr)=connect_secure('Ubuntu');
+   if ($stderr) {
+      print "       We Have an ERROR when attempting to connect ",
+            "to Ubuntu! :\n$stderr       in fa_code.pm ",
+            "Line ",__LINE__,"\n";
+      my %mail=(
+         'To'      => [ 'Brian.Kelly@bcbsa.com' ],
+         'From'    => 'Brian.Kelly@fullautosoftware.net',
+         'Body'    => "\nFullAuto ERROR =>\n\n".$stderr.
+                      "       in fa_code.pm Line ".__LINE__,
+         'Subject' => "FullAuto ERROR Encountered When Connecting to Ubuntu",
+      );
+      my $ignore='';my $emerr='';
+      ($ignore,$emerr)=&send_email(\%mail);
+      if ($emerr) {
+         die "\n\n       $stderr\n       EMAIL ERROR =>$emerr<==\n\n";
+      } else {
+         #die $stderr;
+         return;
+      }
+   }
+   print "LOGIN SUCCESSFUL\n";
+   print FH "LOGIN SUCCESSFUL ",`date`,"\n";
+   close FH;
+   &cleanup();
+}
 
-    if ($hostname eq 'bkelly-laptop') {
-       $computer_one=connect_ssh('VB_Ubuntu'); # Connect to
-                                            # Remote Host via ssh
-    } else {
-       $computer_one=connect_host('Ubuntu'); # Connect to
-                                            # Remote Host via ssh
-    }
-    print "\nHELLO=",$localhost->cmd('echo "hello world"'),"\n";
-    print "HOSTNAME=$hostname\n";
-    print "HELLO WORLD\n";
-    ($stdout,$stderr)=$computer_one->cmd('hostname');
-    print "Ubuntu=$stdout\n";
-    ($stdout,$stderr)=$computer_zero->cmd('hostname');
-    print "Zero=$stdout\n\n";
-    ($stdout,$stderr)=$computer_zero->cwd('/develop/deployment/dest');
-    print "STDERR=$stderr<==\n" if $stderr;
-    my $file='';
-    ($file,$stderr)=$computer_zero->cmd('ls ID*');
-    print "Zero File=$file<==\n\n";
-    return unless $file;
-    ($stdout,$stderr)=$computer_zero->get($file); # Get the File
-    if ($stderr) {                                # Check Results
-       print "We Have an ERROR! : $stderr\n";
-    }
-    ($stdout,$stderr)=$computer_one->cwd('/home/qa/import');
-    print "STDERR=$stderr\n" if $stderr;
-    ($stdout,$stderr)=$computer_one->put($file); # Get the File
-    if ($stderr) {                               # Check Results
-       print "We Have an ERROR! : $stderr\n";
-    }
-    ($stdout,$stderr)=$computer_one->cmd('ls');
-    print $computer_one->{_hostlabel}->[0]," ls output:\n\n$stdout\n";
-    ($stdout,$stderr)=$computer_one->cmd('pwd');
-    print "CURDIR=$stdout\n\n" if $stdout;
+sub menu_demo {
+
+   my @list=`ls -1 /bin`;
+   my %Menu_1=(
+
+      Item_1 => {
+
+         Text    => "/bin Utility - ]Convey[",
+         Convey  => [ `ls -1 /bin` ],
+
+      },
+
+      Select => 'Many',
+      Banner => "\n   Choose a /bin Utility :"
+   );
+
+   my @selections=&Menu(\%Menu_1,$unattended);
+   print "\nSELECTIONS = @selections\n";
 
 }
 

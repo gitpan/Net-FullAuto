@@ -57,6 +57,12 @@ our %Menu_1=(
       Result => "&image_magick()",
 
    },
+   Item_4 => {
+
+      Text   => "Menu Demo",
+      Result => "&menu_demo()",
+
+   },
 
    Select => 'One',
    Banner => "\n   Choose a Task to Perform :"
