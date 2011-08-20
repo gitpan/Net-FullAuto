@@ -45,6 +45,13 @@
 ################################################################
 
 
+2011-08-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9962 released.
+
+        * Fixed image_magick in fa_code_demo.pm in Distro.
+
+
 2011-08-18  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9961 released.

@@ -5170,7 +5170,7 @@ sub getpasswd
       &acquire_semaphore(9361,
          "BDB DB Access: ".__LINE__);
       my $bdb='';
-      while (1) {
+      #while (1) {
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -5178,21 +5178,34 @@ sub getpasswd
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            my $bcmd="${Net::FullAuto::FA_Core::stringspath}strings ".
-                     "$Net::FullAuto::FA_Core::berklib ".
-                     "| ${Net::FullAuto::FA_Core::greppath}grep Release";
-            my $bver=`$bcmd`;
-            $bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
-            my ($output,$error)=('','');
-            my $berkeleydb=find_berkeleydb_recover();
-            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "$berkeleydb -v -h ".
-               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-         } else {
-            last
+            $bdb = BerkeleyDB::Btree->new(
+               -Filename => 
+                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Env      => $dbenv
+            );
+            unless ($BerkeleyDB::Error=~/Successful/) {
+               die "Cannot Open DB: ".
+                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                   " $BerkeleyDB::Error\n";
+            }
          }
-      }
+         #unless ($BerkeleyDB::Error=~/Successful/) {
+         #   my $bcmd="${Net::FullAuto::FA_Core::stringspath}strings ".
+         #            "$Net::FullAuto::FA_Core::berklib ".
+         #            "| ${Net::FullAuto::FA_Core::greppath}grep Release";
+         #   my $bver=`$bcmd`;
+         #   $bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
+         #   my ($output,$error)=('','');
+         #   my $berkeleydb=find_berkeleydb_recover();
+         #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+         #      "$berkeleydb -v -h ".
+         #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+         #} else {
+         #   last
+         #}
+      #}
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",
          '__cleanup__',$track)
@@ -5487,7 +5500,7 @@ sub getpasswd
       &acquire_semaphore(9361,
          "BDB DB Access: ".__LINE__);
       my $bdb='';
-      while (1) {
+      #while (1) {
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -5495,16 +5508,29 @@ sub getpasswd
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            my ($output,$error)=('','');
-            my $berkeleydb=find_berkeleydb_recover();
-            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "$berkeleydb -v -h ".
-               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-         } else {
-            last
+            $bdb = BerkeleyDB::Btree->new(
+               -Filename =>
+                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Env      => $dbenv
+            );
+            unless ($BerkeleyDB::Error=~/Successful/) {
+               die "Cannot Open DB:".
+                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                   " $BerkeleyDB::Error\n";
+            }
          }
-      }
+         #unless ($BerkeleyDB::Error=~/Successful/) {
+         #   my ($output,$error)=('','');
+         #   my $berkeleydb=find_berkeleydb_recover();
+         #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+         #      "$berkeleydb -v -h ".
+         #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+         #} else {
+         #   last
+         #}
+      #}
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",
          '__cleanup__',$track)
@@ -6136,7 +6162,7 @@ sub set_fa_modules
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',
          $track);
-      while (1) {
+      #while (1) {
          $Net::FullAuto::FA_Core::bdb_once = BerkeleyDB::Btree->new(
             -Filename => ${Net::FullAuto::FA_Core::progname}.
                          "_defaults.db",
@@ -6144,15 +6170,31 @@ sub set_fa_modules
             -Env      => $Net::FullAuto::FA_Core::dbenv_once
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            my ($output,$error)=('','');
-            my $berkeleydb=find_berkeleydb_recover();
-            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "$berkeleydb -v -h ".
-               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults');
+            $Net::FullAuto::FA_Core::bdb_once =
+                  BerkeleyDB::Btree->new(
+               -Filename =>
+                  "${Net::FullAuto::FA_Core::progname}_defaults.db",
+               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Env      => $Net::FullAuto::FA_Core::dbenv_once
+            );
+            unless ($BerkeleyDB::Error=~/Successful/) {
+               die "Cannot Open DB: ".
+                   "${Net::FullAuto::FA_Core::progname}_defaults.db".
+                   " $BerkeleyDB::Error\n";
+            }
+         }
+         #unless ($BerkeleyDB::Error=~/Successful/) {
+         #   my ($output,$error)=('','');
+         #   my $berkeleydb=find_berkeleydb_recover();
+         #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+         #      "$berkeleydb -v -h ".
+         #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults');
 # BERKERR
-            last;
-         } else { last }
-      }
+         #   last;
+         #} else {
+         # last
+         #}
+      #}
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",
          '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
@@ -6646,7 +6688,7 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
       &acquire_semaphore(9361,
          "BDB DB Access: ".__LINE__);
       my $bdb='';
-      while (1) {
+      #while (1) {
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -6654,15 +6696,28 @@ print "FA_SUCURE5=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            my ($output,$error)=('','');
-            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "$berkeleydb/db_recover -v -h ".
-               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-         } else {
-            last
+            $bdb = BerkeleyDB::Btree->new(
+               -Filename =>
+                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Env      => $dbenv
+            );
+            unless ($BerkeleyDB::Error=~/Successful/) {
+               die "Cannot Open DB:".
+                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                   " $BerkeleyDB::Error\n";
+            }
          }
-      }
+         #unless ($BerkeleyDB::Error=~/Successful/) {
+         #   my ($output,$error)=('','');
+         #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+         #      "$berkeleydb/db_recover -v -h ".
+         #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+         #} else {
+         #   last
+         #}
+      #}
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",
          '__cleanup__',$track)
@@ -6809,7 +6864,7 @@ print "FD=$fd\n";
             ) or &handle_error(
                "cannot open environment for DB: $BerkeleyDB::Error\n",'',
                $track);
-            while (1) {
+            #while (1) {
                $Net::FullAuto::FA_Core::bdb_once = BerkeleyDB::Btree->new(
                   -Filename => ${Net::FullAuto::FA_Core::progname}.
                                "_defaults.db",
@@ -6817,15 +6872,29 @@ print "FD=$fd\n";
                   -Env      => $Net::FullAuto::FA_Core::dbenv_once
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
-                  my ($output,$error)=('','');
-                  my $berkeleydb=find_berkeleydb_recover();
-                  ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                     "$berkeleydb -v -h ".
-                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults');
+                  $Net::FullAuto::FA_Core::bdb_once =
+                        BerkeleyDB::Btree->new(
+                     -Filename =>
+                        "${Net::FullAuto::FA_Core::progname}_defaults.db",
+                     -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                     -Env      => $Net::FullAuto::FA_Core::dbenv_once
+                  );
+                  unless ($BerkeleyDB::Error=~/Successful/) {
+                     die "Cannot Open DB: ".
+                         "${Net::FullAuto::FA_Core::progname}_defaults.db".
+                         " $BerkeleyDB::Error\n";
+                  }
+               }
+               #unless ($BerkeleyDB::Error=~/Successful/) {
+               #   my ($output,$error)=('','');
+               #   my $berkeleydb=find_berkeleydb_recover();
+               #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+               #      "$berkeleydb -v -h ".
+               #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults');
 # BERKERR1
-                  last;
-               } else { last }
-            }
+               #   last;
+               #} else { last }
+            #}
             &handle_error(
                "cannot open Btree for DB: $BerkeleyDB::Error\n",
                '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
@@ -6888,7 +6957,7 @@ print "OK GOOD\n";
                "cannot open environment for DB: $BerkeleyDB::Error\n",'',
                $track);
             my $bdb='';
-            while (1) {
+            #while (1) {
                $bdb = BerkeleyDB::Btree->new(
                   -Filename => ${Net::FullAuto::FA_Core::progname}.
                                "_plans.db",
@@ -6897,15 +6966,31 @@ print "OK GOOD\n";
                   -Env      => $dbenv
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
-                  my ($output,$error)=('','');
-                  my $berkeleydb=find_berkeleydb_recover();
-                  ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                     "$berkeleydb -v -h ".
-                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+                  $bdb = BerkeleyDB::Btree->new(
+                     -Filename =>
+                        "${Net::FullAuto::FA_Core::progname}_plans.db",
+                     -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                     -Compare  => sub { $_[0] <=> $_[1] },
+                     -Env      => $dbenv
+                  );
+                  unless ($BerkeleyDB::Error=~/Successful/) {
+                     die "Cannot Open DB: ".
+                         "${Net::FullAuto::FA_Core::progname}_plans.db".
+                         " $BerkeleyDB::Error\n";
+                  }
+               }
+               #unless ($BerkeleyDB::Error=~/Successful/) {
+               #   my ($output,$error)=('','');
+               #   my $berkeleydb=find_berkeleydb_recover();
+               #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+               #      "$berkeleydb -v -h ".
+               #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
 # BERKERR
-                  last;
-               } else { last }
-            }
+               #   last;
+               #} else {
+               #   last
+               #}
+            #}
             &handle_error(
                "cannot open Btree for DB: $BerkeleyDB::Error\n",
                '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
@@ -7023,24 +7108,37 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          &acquire_semaphore(9361,
             "BDB DB Access: ".__LINE__);
          my $bdb='';
-         while (1) {
+         #while (1) {
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
                -Flags    => DB_CREATE,
                -Env      => $dbenv
             );
-            if ($BerkeleyDB::Error!~/Successful/) {
-               my ($output,$error)=('','');
-               my $berkeleydb=find_berkeleydb_recover();
-               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                  "$berkeleydb -v -h ".
-                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-            } else {
-               last
+            unless ($BerkeleyDB::Error=~/Successful/) {
+               $bdb = BerkeleyDB::Btree->new(
+                  -Filename =>
+                     "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                  -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                  -Env      => $dbenv
+               );
+               unless ($BerkeleyDB::Error=~/Successful/) {
+                  die "Cannot Open DB: ".
+                      "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                      " $BerkeleyDB::Error\n";
+               }
             }
-         }
+            #if ($BerkeleyDB::Error!~/Successful/) {
+            #   my ($output,$error)=('','');
+            #   my $berkeleydb=find_berkeleydb_recover();
+            #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+            #      "$berkeleydb -v -h ".
+            #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+            #} else {
+            #   last
+            #}
+         #}
          &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n",
             '__cleanup__',$track)
@@ -7665,7 +7763,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                &acquire_semaphore(9361,
                   "BDB DB Access: ".__LINE__);
                my $bdb='';
-               while (1) {
+               #while (1) {
                   $bdb = BerkeleyDB::Btree->new(
                      -Filename =>
                      "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -7673,16 +7771,29 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                      -Env      => $dbenv
                   );
                   unless ($BerkeleyDB::Error=~/Successful/) {
-                     my ($output,$error)=('','');
-                     my $berkeleydb=find_berkeleydb_recover();
-                     ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                     "$berkeleydb -v -h ".
-                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-                  } else {
-                     last
+                     $bdb = BerkeleyDB::Btree->new(
+                        -Filename =>
+                           "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                        -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                        -Env      => $dbenv
+                     );
+                     unless ($BerkeleyDB::Error=~/Successful/) {
+                        die "Cannot Open DB: ".
+                            "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                            " $BerkeleyDB::Error\n";
+                     }
                   }
-               }
+                  #unless ($BerkeleyDB::Error=~/Successful/) {
+                  #   my ($output,$error)=('','');
+                  #   my $berkeleydb=find_berkeleydb_recover();
+                  #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                  #   "$berkeleydb -v -h ".
+                  #   $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+                  #} else {
+                  #   last
+                  #}
+               #}
                unless ($BerkeleyDB::Error=~/Successful/) {
                   &release_semaphore(6543);
                   &handle_error(
@@ -7882,7 +7993,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-         while (1) {
+         #while (1) {
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -7890,15 +8001,28 @@ print $Net::FullAuto::FA_Core::MRLOG
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
-               my ($output,$error)=('','');
-               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                  "$berkeleydb/db_recover -v -h ".
-                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-            } else {
-               last
+               $bdb = BerkeleyDB::Btree->new(
+                  -Filename =>
+                     "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                  -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                  -Env      => $dbenv
+               );
+               unless ($BerkeleyDB::Error=~/Successful/) {
+                  die "Cannot Open DB: ".
+                      "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                      " $BerkeleyDB::Error\n";
+               }
             }
-         }
+            #unless ($BerkeleyDB::Error=~/Successful/) {
+            #   my ($output,$error)=('','');
+            #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+            #      "$berkeleydb/db_recover -v -h ".
+            #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+            #} else {
+            #   last
+            #}
+         #}
          &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n",
             '__cleanup__',$track)
@@ -8601,7 +8725,7 @@ sub passwd_db_update
    &acquire_semaphore(9361,
       "BDB DB Access: ".__LINE__);
    my $bdb='';
-   while (1) {
+   #while (1) {
       $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -8609,16 +8733,29 @@ sub passwd_db_update
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         my ($output,$error)=('','');
-         my $berkeleydb=find_berkeleydb_recover();
-         ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-            "$berkeleydb -v -h ".
-            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-      } else {
-         last
+         $bdb = BerkeleyDB::Btree->new(
+            -Filename =>
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+            -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+            -Env      => $dbenv
+         );
+         unless ($BerkeleyDB::Error=~/Successful/) {
+            die "Cannot Open DB: ".
+                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                " $BerkeleyDB::Error\n";
+         }
       }
-   }
+      #unless ($BerkeleyDB::Error=~/Successful/) {
+      #   my ($output,$error)=('','');
+      #   my $berkeleydb=find_berkeleydb_recover();
+      #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+      #      "$berkeleydb -v -h ".
+      #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+      #} else {
+         #last
+      #}
+   #}
    &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
       unless $BerkeleyDB::Error=~/Successful/;
@@ -8714,7 +8851,7 @@ sub su_scrub
    &acquire_semaphore(9361,
       "BDB DB Access: ".__LINE__);
    my $bdb='';
-   while (1) {
+   #while (1) {
       $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -8722,16 +8859,29 @@ sub su_scrub
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         my ($output,$error)=('','');
-         my $berkeleydb=find_berkeleydb_recover();
-         ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-            "$berkeleydb -v -h ".
-            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-      } else {
-         last
+         $bdb = BerkeleyDB::Btree->new(
+            -Filename =>
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+            -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+            -Env      => $dbenv
+         );
+         unless ($BerkeleyDB::Error=~/Successful/) {
+            die "Cannot Open DB: ".
+                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                " $BerkeleyDB::Error\n";
+         }
       }
-   }
+      #unless ($BerkeleyDB::Error=~/Successful/) {
+      #   my ($output,$error)=('','');
+      #   my $berkeleydb=find_berkeleydb_recover();
+      #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+      #      "$berkeleydb -v -h ".
+      #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+      #} else {
+      #   last
+      #}
+   #}
    &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
       unless $BerkeleyDB::Error=~/Successful/;
@@ -8862,7 +9012,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
          &acquire_semaphore(9361,
             "BDB DB Access: ".__LINE__);
          my $bdb='';
-         while (1) {
+         #while (1) {
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -8870,16 +9020,29 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
-               my ($output,$error)=('','');
-               my $berkeleydb=find_berkeleydb_recover();
-               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                  "$berkeleydb -v -h ".
-                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-# BERKERR
-            } else {
-               last
+               $bdb = BerkeleyDB::Btree->new(
+                  -Filename =>
+                     "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+                  -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                  -Env      => $dbenv
+               );
+               unless ($BerkeleyDB::Error=~/Successful/) {
+                  die "Cannot Open DB: ".
+                      "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                      " $BerkeleyDB::Error\n";
+               }
             }
-         }
+            #unless ($BerkeleyDB::Error=~/Successful/) {
+            #   my ($output,$error)=('','');
+            #   my $berkeleydb=find_berkeleydb_recover();
+            #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+            #      "$berkeleydb -v -h ".
+            #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+# BERKERR
+            #} else {
+            #   last
+            #}
+         #}
          &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n",
             '__cleanup__',$track)
@@ -9734,35 +9897,48 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
       &acquire_semaphore(9361,
          "BDB DB Access: ".__LINE__);
       my $bdb='';
-      while (1) {
+      #while (1) {
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
             -Flags    => DB_CREATE,
             -Env      => $dbenv
          );
-print $Net::FullAuto::FA_Core::MRLOG "GOT BDB CREATED<==\n"
-         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-print $Net::FullAuto::FA_Core::MRLOG "BDB ERROR IS ANY=>$BerkeleyDB::Error<==\n"
-         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#print $Net::FullAuto::FA_Core::MRLOG "GOT BDB CREATED<==\n"
+#         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#print $Net::FullAuto::FA_Core::MRLOG "BDB ERROR IS ANY=>$BerkeleyDB::Error<==\n"
+#         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          unless ($BerkeleyDB::Error=~/Successful/) {
-            my ($output,$error)=('','');
-            my $berkeleydb=find_berkeleydb_recover();
-            ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-               "$berkeleydb -v -h ".
-               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
-print $Net::FullAuto::FA_Core::MRLOG "db_recover OUTPUT=$output\n";
-print $Net::FullAuto::FA_Core::MRLOG "db_recover ERROR=$error\n";
-            &handle_error(
-               "cannot open Btree for DB: $BerkeleyDB::Error\n",
-               '__cleanup__',$track) if $error;
-# BERKERR
-         } else {
-print $Net::FullAuto::FA_Core::MRLOG "I\'M SUPPOSED TO BE LEAVING LOOP<==\n"
-         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-           last
+            $bdb = BerkeleyDB::Btree->new(
+               -Filename =>
+                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
+               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Env      => $dbenv
+            );
+            unless ($BerkeleyDB::Error=~/Successful/) {
+               die "Cannot Open DB: ".
+                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
+                   " $BerkeleyDB::Error\n";
+            }
          }
-      }
+         #unless ($BerkeleyDB::Error=~/Successful/) {
+         #   my ($output,$error)=('','');
+         #   my $berkeleydb=find_berkeleydb_recover();
+         #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+         #      "$berkeleydb -v -h ".
+         #      $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+#print $Net::FullAuto::FA_Core::MRLOG "db_recover OUTPUT=$output\n";
+#print $Net::FullAuto::FA_Core::MRLOG "db_recover ERROR=$error\n";
+#            &handle_error(
+#               "cannot open Btree for DB: $BerkeleyDB::Error\n",
+#               '__cleanup__',$track) if $error;
+# BERKERR
+         #} else {
+#print $Net::FullAuto::FA_Core::MRLOG "I\'M SUPPOSED TO BE LEAVING LOOP<==\n"
+#         if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+        #   last
+         #}
+      #}
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
@@ -10954,25 +11130,38 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         &acquire_semaphore(9361,
                            "BDB DB Access: ".__LINE__);
                         my $bdb='';
-                        while (1) {
+                        #while (1) {
                             my $pn=$Net::FullAuto::FA_Core::progname;
                             $bdb = BerkeleyDB::Btree->new(
                                  -Filename => "${pn}_${kind}_passwds.db",
                                  -Flags    => DB_CREATE,
                                  -Env      => $dbenv
                             );
-                            my $mr="__Master_${$}__";
                             unless ($BerkeleyDB::Error=~/Successful/) {
-                               my ($output,$error)=('','');
-                               my $berkeleydb=find_berkeleydb_recover();
-                               ($output,$error)=&Net::FullAuto::FA_Core::cmd(
-                                  "$berkeleydb -v -h ".
-                                  $Hosts{$mr}{'FA_Secure'}.'Passwds');
+                               $bdb = BerkeleyDB::Btree->new(
+                                    -Filename =>
+                                       "${pn}_${kind}_passwds.db",
+                                    -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                                    -Env      => $dbenv
+                               );
+                               unless ($BerkeleyDB::Error=~/Successful/) {
+                                  die "Cannot Open DB: ".
+                                      "${pn}_${kind}_passwds.db".
+                                      " $BerkeleyDB::Error\n";
+                               }
+                            }
+                            #my $mr="__Master_${$}__";
+                            #unless ($BerkeleyDB::Error=~/Successful/) {
+                            #   my ($output,$error)=('','');
+                            #   my $berkeleydb=find_berkeleydb_recover();
+                            #   ($output,$error)=&Net::FullAuto::FA_Core::cmd(
+                            #      "$berkeleydb -v -h ".
+                            #      $Hosts{$mr}{'FA_Secure'}.'Passwds');
                            # BERKERR
-                           } else {
-                              last
-                           }
-                        }
+                           #} else {
+                            #  last
+                           #}
+                        #}
                         &handle_error(
                            "cannot open Btree for DB: ".
                            "$BerkeleyDB::Error\n",'__cleanup__',$track)

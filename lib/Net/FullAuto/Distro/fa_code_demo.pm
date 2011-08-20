@@ -96,24 +96,34 @@ sub image_magick {
    ($path,$key,$status)=&persist_get('image_magick_path');
    if ($status=~/DB_NOTFOUND: No matching key\/data pair found/ or !$path) {
       #Look for installation
-      if ($^O eq 'cygwin') {
-         if (-f '/usr/bin/convert.exe') {
-            $path='/usr/bin/convert.exe';
-         } elsif (-f '/bin/convert.exe') {
-            $path='/usr/bin/convert.exe';
-         } elsif (-f '/usr/local/bin/convert.exe') {
-            $path='/usr/local/bin/convert.exe';
+      my ($stdout,$stderr)=$localhost->cmd("which convert");
+      if (-1<index $stdout,'convert') {
+         my ($stdout_ver,$stderr)=$localhost->cmd("\"$stdout\" -version");
+         if (-1<index $stdout_ver,'ImageMagick') {
+            $path=$stdout;
+            $status=persist_put($key,$path);
          }
-         $status=persist_put($key,$path) if $path;
-      } else {
-         if (-f '/usr/bin/convert') {
-            $path='/usr/bin/convert';
-         } elsif (-f '/bin/convert') {
-            $path='/usr/bin/convert';
-         } elsif (-f '/usr/local/bin/convert') {
-            $path='/usr/local/bin/convert';
+      }
+      unless ($path) {
+         if ($^O eq 'cygwin') {
+            if (-f '/usr/bin/convert.exe') {
+               $path='/usr/bin/convert.exe';
+            } elsif (-f '/bin/convert.exe') {
+               $path='/usr/bin/convert.exe';
+            } elsif (-f '/usr/local/bin/convert.exe') {
+               $path='/usr/local/bin/convert.exe';
+            }
+            $status=persist_put($key,$path) if $path;
+         } else {
+            if (-f '/usr/bin/convert') {
+               $path='/usr/bin/convert';
+            } elsif (-f '/bin/convert') {
+               $path='/usr/bin/convert';
+            } elsif (-f '/usr/local/bin/convert') {
+               $path='/usr/local/bin/convert';
+            }
+            $status=persist_put($key,$path) if $path;
          }
-         $status=persist_put($key,$path) if $path;
       }
       unless ($path) {
          print "\n\n       INFO: FullAuto needs to do a one time ",
@@ -134,13 +144,15 @@ sub image_magick {
                }
             }
             my @dirs=();
-            push @dirs,('/usr','/opt',(getpwuid $>)[7]);
+            push @dirs,('/usr');
+            push @dirs,('/opt') if -d '/opt';
+            push @dirs,(getpwuid $>)[7];
             File::Find::find(\&Wanted,@dirs);
          };
          $status=persist_put($key,$path);
       }
    }
-   print "PATH=$path\n";
+   print "\n\n   PATH=$path\n";
 
 }
 
