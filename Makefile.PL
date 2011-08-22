@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9963';
+version         '0.9964';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2583,7 +2583,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 1.92;
+requires        'Term::Menus'               => 1.93;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
@@ -3026,7 +3026,6 @@ sub MY::pm_to_blib {
 
    my $inherited = shift->SUPER::pm_to_blib(@_);
 
-   $inherited =~ s/\t([\$][(]NOECHO[)])/-$1/m;
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_host.pm") &&
          ($inherited !~ /Custom\/fa_host.pm/)) {
       my $fa_h="\t  lib\/Net\/FullAuto\/Custom\/fa_host.pm ".
@@ -3089,17 +3088,13 @@ sub MY::pm_to_blib {
    }
    
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
+   $inherited =~ s/([\$][(]NOECHO[)] [\$])/-$1/s;
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
          'our \\1'."editor = \"$editor\";/g\' ".
          "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
          "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
          if defined $editor and $editor;
-      #$inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)berkeleydb[ ]*[=].*/".
-      #   'our \\1'."berkeleydb = \"$berkeleydb\";/g\' ".
-      #   "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
-      #   "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
-      #   if defined $berkeleydb and $berkeleydb;
    } else {
       $inherited .= "\n";
    }
