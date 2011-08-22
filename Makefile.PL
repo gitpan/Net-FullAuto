@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9962';
+version         '0.9963';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2689,10 +2689,10 @@ my $timeout=120;my $selection='';my @selection=();
 eval {
    $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
    alarm $timeout;
-   my @list=('Install with Default Permissions',
-             'Install with Setuid Permissions',
-             'Install with Setgid Permissions');
-   my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE 'Default' IN 2 MINUTES ***\n".
+   my @list=('Install with Setuid Permissions (Recommended Default)',
+             'Install with Setgid Permissions',
+             'Install with Non-Privileged Permissions');
+   my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE 'Setuid' IN 2 MINUTES ***\n".
            "\n   Choose a Permission Setting :\n\n";
    @selection=&pick(\@list,$banner);
    alarm 0;
@@ -2700,18 +2700,17 @@ eval {
 if ($@) {
    # timed out
    print "\n";
-   $selection = 'Default';
+   $selection = 'Setuid';
 }
 
-#my $permission = 'Default';
 my $permission = 'Setuid';
 #print "SELECTION = $selection<==\n";sleep 3;
-if (-1<index $selection,'Default') {
-   $permission = 'Default';
-} elsif (-1<index $selection,'Setuid') {
+if (-1<index $selection,'Setuid') {
    $permission = 'Setuid';
 } elsif (-1<index $selection,'Setgid') {
    $permission = 'Setgid';
+} elsif (-1<index $selection,'Non-Privileged') {
+   $permission = 'Non-Privileged';
 } elsif (-1<index $selection,'quit') {
    exit;
 } print "\n"; 
@@ -2935,7 +2934,7 @@ sub MY::install {
    } elsif ($permission eq 'Setgid') {
       $inherited =~ s/(install ::.*)$/$1 setgid_permissions/m;
    } else {
-      $inherited =~ s/(install ::.*)$/$1 default_permissions/m;
+      $inherited =~ s/(install ::.*)$/$1 non_privileged_permissions/m;
    }
 
    my $link='';
@@ -2972,8 +2971,8 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_D-X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R-X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       $link;
-   $inherited .= "\ndefault_permissions ::\n".
-      "\t\$(NOECHO) \$(ECHO) \"Applying Default Permissions\"\n".
+   $inherited .= "\nnon_privileged_permissions ::\n".
+      "\t\$(NOECHO) \$(ECHO) \"Applying Non-Privileged Permissions\"\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
@@ -3027,6 +3026,7 @@ sub MY::pm_to_blib {
 
    my $inherited = shift->SUPER::pm_to_blib(@_);
 
+   $inherited =~ s/\t([\$][(]NOECHO[)])/-$1/m;
    unless ((-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_host.pm") &&
          ($inherited !~ /Custom\/fa_host.pm/)) {
       my $fa_h="\t  lib\/Net\/FullAuto\/Custom\/fa_host.pm ".

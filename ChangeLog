@@ -45,6 +45,13 @@
 ################################################################
 
 
+2011-08-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9963 released.
+
+        * Makefile.PL fix and change default to Setuid.
+
+
 2011-08-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9962 released.
