@@ -45,6 +45,14 @@
 ################################################################
 
 
+2011-08-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9966 released.
+
+        * Added logic for --set argument, 'Define New Module Set'
+          is now working.
+
+
 2011-08-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9965 released.
