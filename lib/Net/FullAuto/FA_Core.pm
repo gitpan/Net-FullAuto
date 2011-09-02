@@ -6884,7 +6884,6 @@ print "FD=$fd\n";
                undef $Net::FullAuto::FA_Core::bdb_once;
                $Net::FullAuto::FA_Core::dbenv_once->close();
                undef $Net::FullAuto::FA_Core::dbenv_once;
-               
             }
             my $set_default_sub=sub { 
                package set_default_sub;
@@ -6936,6 +6935,7 @@ print "FD=$fd\n";
 
             };
             if (defined $set) {
+               $default_modules->{'set'}||='none';
                my $current_default_set=$default_modules->{'set'};
                my $dm_banner="   Please Select a Module Set Operation:\n\n";
                if ($current_default_set eq 'none') {
@@ -7321,6 +7321,164 @@ FIN
                   $mm_banner.=
                      "      ** DEFAULT SET -> $current_default_set **\n";
                }
+               my %delete_sets_menu=(
+                  Label      => 'delete_sets_menu',
+                  Item_1     => {
+                     Text    => "]C[",
+                     Convey  => sub {
+                                      my $arr=$set_default_sub->();
+                                      my @ret=();
+                                      foreach my $ar (@{$arr}) {
+                                         push @ret,"$ar\n\n";
+                                      }
+                                      return @ret;
+                                    },
+                     Result  => sub {
+                                      package del_sets;
+                                      use BerkeleyDB;
+                                      use File::Path;
+                                      no strict "subs";
+                                      my $res='';
+                                      if ("]S[") {
+                                         $res="]S[";
+                                         if (substr($res,0,1) eq '[') {
+                                            $res=eval $res;
+                                         }
+                                      }
+                                      my $username=getlogin || getpwuid($<);
+                                      my $loc=substr($INC{'Net/FullAuto.pm'},
+                                                 0,-3);
+                                      my $progname=substr($0,(rindex $0,'/')+1,
+                                                 -3);
+                                      require "$loc/fa_defs.pm";
+                                      unless (-d $fa_defs::FA_Secure.'Defaults') {
+                                         File::Path::make_path(
+                                                 $fa_defs::FA_Secure.'Defaults');
+                                      }
+                                      my $dbenv = BerkeleyDB::Env->new(
+                                        -Home  => $fa_defs::FA_Secure.'Defaults',
+                                        -Flags =>
+                                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                                      ) or die(
+                                      "cannot open environment for DB: ".
+                                         $BerkeleyDB::Error,"\n",'','');
+                                      my $bdb = BerkeleyDB::Btree->new(
+                                        -Filename => "${progname}_defaults.db",
+                                        -Flags    => DB_CREATE,
+                                        -Env      => $dbenv
+                                      );
+                                      unless (
+                                            $BerkeleyDB::Error=~/Successful/) {
+                                         $bdb = BerkeleyDB::Btree->new(
+                                           -Filename => "${progname}_defaults.db",
+                                           -Flags    =>
+                                              DB_CREATE|DB_RECOVER_FATAL,
+                                           -Env      => $dbenv
+                                         );
+                                         unless (
+                                               $BerkeleyDB::Error=~/
+                                               Successful/) {
+                                            die "Cannot Open DB: ".
+                                                "${progname}_defaults.db ".
+                                                $BerkeleyDB::Error."\n";
+                                         }
+                                      }
+                                      my $default_modules='';
+                                      my $status=$bdb->db_get(
+                                            $username,$default_modules);
+                                      $default_modules||='';
+                                      $default_modules=~s/\$HASH\d*\s*=\s*//s
+                                         if -1<index $default_modules,'$HASH';
+                                      $default_modules=eval $default_modules;
+                                      $default_modules||='';
+                                      unless (-d $fa_defs::FA_Secure.'Sets') {
+                                         File::Path::make_path(
+                                                 $fa_defs::FA_Secure.'Sets');
+                                      }
+                                      my $sdbenv = BerkeleyDB::Env->new(
+                                        -Home  => $fa_defs::FA_Secure.'Sets',
+                                        -Flags =>
+                                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                                      ) or die(
+                                      "cannot open environment for DB: ".
+                                         $BerkeleyDB::Error,"\n",'','');
+                                      my $sbdb = BerkeleyDB::Btree->new(
+                                        -Filename => "${progname}_sets.db",
+                                        -Flags    => DB_CREATE,
+                                        -Env      => $sdbenv
+                                      );
+                                      unless (
+                                            $BerkeleyDB::Error=~/Successful/) {
+                                         $sbdb = BerkeleyDB::Btree->new(
+                                           -Filename => "${progname}_sets.db",
+                                           -Flags    =>
+                                              DB_CREATE|DB_RECOVER_FATAL,
+                                           -Env      => $sdbenv
+                                         );
+                                         unless (
+                                               $BerkeleyDB::Error=~/
+                                               Successful/) {
+                                            die "Cannot Open DB: ".
+                                                "${progname}_sets.db ".
+                                                $BerkeleyDB::Error."\n";
+                                         }
+                                      }
+                                      my $mysets='';
+                                      $status=$sbdb->db_get(
+                                            $username,$mysets);
+                                      $mysets=~s/\$HASH\d*\s*=\s*//s;
+                                      $mysets=eval $mysets;
+                                      foreach my $set (@{$res}) {
+                                         $set=~s/^.*Label:\s+(.*?)\s+.*$/$1/s;
+                                         if ($default_modules->{'set'} eq $set) {
+                                            my $ban="\n\n   WARNING!: You are ".
+                                                  "about to delete the default ".
+                                                  "set\n\n   -> \'$set\'; ".
+                                                  " Do you still wish to ".
+                                                  "proceed?\n\n   (The ".
+                                                  "Default Set will be set to".
+                                                  " \'none\' if \'yes\')";
+                                            my $ans=Term::Menus::pick(
+                                                    ['yes','no'],$ban);
+                                            if ($ans eq 'no') {
+                                               next;
+                                            } else {
+                                               $default_modules->{'set'}='none';
+                                            }
+                                         }
+                                         delete $mysets->{$set};
+                                      }
+                                      my $put_dref=
+                                         Data::Dump::Streamer::Dump(
+                                         $mysets)->Out();
+                                      $status=$sbdb->db_put($username,$put_dref);
+                                      my $put_fref=
+                                         Data::Dump::Streamer::Dump(
+                                         $default_modules)->Out();
+                                      $status=$bdb->db_put($username,$put_fref);
+                                      undef $bdb;
+                                      $dbenv->close();
+                                      undef $dbenv;
+                                      undef $sbdb;
+                                      $sdbenv->close();
+                                      undef $sdbenv;
+                                      return 'Finished Deleting Set';
+                                    },
+                  },
+                  Select => 'Many',
+                  Banner => sub {
+my $custds=<<FIN;
+    ___      _     _         ___      _      
+   |   \\ ___| |___| |_ ___  / __| ___| |_ ___
+   | |) / -_) / -_)  _/ -_) \\__ \\/ -_)  _(_-<
+   |___/\\___|_\\___|\\__\\___| |___/\\___|\\__/__/
+
+FIN
+
+               return "$custds   Please Select one or more Sets to Delete:"
+
+                  },
+               );
                my %manage_modules_menu=(
                   Label      => 'manage_modules_menu',
                   Item_1 => {
@@ -7331,6 +7489,7 @@ FIN
                   },
                   Item_3 => {
                      Text    => 'Delete  Module Set(s)',
+                     Result  => \%delete_sets_menu,
                   }, 
                   Item_4 => {
                      Text    => 'Export  Module Set/Components',
@@ -7398,7 +7557,8 @@ FIN
                my $selection=Menu(\%set_menu);
                if (($selection eq ']quit[') ||
                      (-1<index $selection,'will EXIT') ||
-                     ($selection eq 'Finished Defining Set')) {
+                     ($selection eq 'Finished Defining Set') ||
+                     ($selection eq 'Finished Deleting Set')) {
                   &release_semaphore(9361);
                   &cleanup();
                } 
