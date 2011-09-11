@@ -179,6 +179,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Getopt::Long;
    use Pod::Usage;
    use Term::ReadKey;
+   use Term::RawInput;
    use LWP::UserAgent ();
    use LWP::MediaTypes qw(guess_media_type media_suffix);
    use URI ();
@@ -509,7 +510,7 @@ our $shown='';our $websphere_not_running=0;my @hours=();
 our $master_hostlabel='';our $random=0;our @plans=();
 our $parent_menu='';our @menu_args=();our $savetran=0;
 our $MRLOG='';our @pid_ts=();our %drives=();our @month=();
-our $username='';our @passwd=('','');our $fa_code='';
+our $username='';our @passwd=('','');
 our $localhost={};our %localhost=();our $uhray='';
 our @RCM_Link=();our @FTM_Link=();our $cleanup=0;our %Maps=();
 our $starting_memory=0;our $custom_code_module_file='';
@@ -1310,22 +1311,38 @@ exit;
 
 sub VERSION
 {
-
    can_load(modules => { "Term::Menus" => 0 });
    can_load(modules => { "Net::FullAuto" => 0 });
-   require ExtUtils::Installed;
-   my $cwd='';
-   if ($^O eq 'cygwin') {
-      $cwd='pwd';
-      chdir "/tmp";
+   my $term_menus_path=
+      substr($INC{'Term/Menus.pm'},0,
+      (rindex $INC{'Term/Menus.pm'},'Term'));
+   my $net_fulla_path=
+      substr($INC{'Net/FullAuto.pm'},0,
+      (rindex $INC{'Net/FullAuto.pm'},'Net'));
+   my $o='';
+   foreach my $p (@INC) {
+      $o=$p;
+      last if -1<index $o,$term_menus_path;
    }
-   my ($inst) = ExtUtils::Installed->new();
-   chdir $cwd if $cwd;
-   my @menus_files = $inst->files("Term::Menus");
-   my @fullauto_files = $inst->files("Net::FullAuto");
+   my @tmlist=();
+   if (-f $o.'/auto/Term/Menus/.packlist') {
+      open (TH,"<$o/auto/Term/Menus/.packlist");
+      while (my $f=<TH>) {
+         chomp $f;
+         push @tmlist,$f;
+      }
+      close(TH);
+   }
+   my @falist=();
+   if (-f $o.'/auto/Net/FullAuto/.packlist') {
+      open (PH,"<$o/auto/Net/FullAuto/.packlist");
+      @falist=<PH>;
+      close(PH);
+   }
    my @pl=();my @exe=();my @O=();my %Cust=();my @Dist=();
    my @Tpm=();my @html=();my @Core=();my @README=();
-   foreach my $file (@fullauto_files) {
+   foreach my $file (@falist) {
+      chomp $file;
       if ($file=~/\.pm$/) {
          if (-1<index $file,'Distro') {
             push @Dist, $file;next;
@@ -1357,7 +1374,7 @@ sub VERSION
       }
    }
    print "\nTerm::Menus Version $Term::Menus::VERSION\n",
-         (join "\n",@menus_files),"\n\n",
+         (join "\n",@tmlist),"\n\n",
          "Net::FullAuto Version $Net::FullAuto::VERSION\n",
          (join "\n",@pl),"\n",
          (join "\n",@exe),"\n\n";
@@ -1369,6 +1386,7 @@ sub VERSION
          (join "\n",sort keys %Cust),"\n\n",
          (join "\n",reverse @Core),"\n";
    exit;
+
 }
 
 sub pick
@@ -6243,15 +6261,13 @@ sub fa_login
    my $email_addresses='%' . (caller)[0] . '::email_addresses';
    %email_addresses=eval $email_addresses;
    %email_addresses=() if $@;
-   $custom_code_module_file='$' . (caller)[0] . '::custom_code_module_file';
+   $custom_code_module_file='$' . (caller)[0] . '::fa_code';
    $custom_code_module_file=eval $custom_code_module_file;
    if ($@) {
       my $die="Cannot Locate the \"FullAuto Custom Code\" perl module (.pm) file"
               . "\n       < original default name 'fa_code.pm' >\n\n       $@";
       &handle_error($die,'-3');
-   } my $name_of_fa_code_file=substr($custom_code_module_file,0,-3).'=s';
-   my $arg_to_fa_code_sub=substr($custom_code_module_file,0,-3).'-arg=s';
-
+   }
    my $man=0;my $help=0;my $userflag=0;my $passerror=0;
    my $test_arg=0;my $oldcipher='';my $password_from='user_input';my $sem='';
    my @holdARGV=@ARGV;@menu_args=();my $username_from='';
@@ -6275,7 +6291,6 @@ sub fa_login
                 'local-login-id=s'      => \$usrname,
                 'login=s'               => \$usrname,
                 'code=s'                => \$cust_subname_in_fa_code_module_file,
-                $name_of_fa_code_file   => \$cust_subname_in_fa_code_module_file,
                 'subroutine'            => \$cust_subname_in_fa_code_module_file,
                 'subname'               => \$cust_subname_in_fa_code_module_file,
                 'sub'                   => \$cust_subname_in_fa_code_module_file,
@@ -6283,7 +6298,6 @@ sub fa_login
                 'sub_arg=s'             => \@menu_args,
                 'arg=s'                 => \@menu_args,
                 'a=s'                   => \@menu_args,
-                $arg_to_fa_code_sub     => \@menu_args,
                 'cron:s'                => \$cron,
                 'unattended:s'          => \$cron,
                 'batch:s'               => \$cron,
@@ -6492,7 +6506,6 @@ sub fa_login
          if ($test && !$prod) {
             print "\n  Running in TEST mode\n";
          } else { print "\n  Running in PRODUCTION mode\n" }
-         print "\n  $hostname Login <$uid> : ";
          my $usrname_timeout=350;
          my $usrname='';
          eval {
@@ -6500,8 +6513,9 @@ sub fa_login
             alarm($usrname_timeout);
             &acquire_semaphore(1234,
                "Username Input Prompt at Line: ".__LINE__,1);
-            print "\n  $hostname Login <$uid> : ";
-            $usrname=<STDIN>;
+            my $ikey='';
+            print "\n";
+            ($usrname,$ikey)=rawInput("  $hostname Login <$uid> : ");
             &release_semaphore(1234);
             alarm(0);
          };
@@ -6512,8 +6526,8 @@ sub fa_login
                '__cleanup__');
          }
          chomp $usrname;
-         $usrname=~s/^\s*//;
-         $usrname=~s/\s*$//;
+         $usrname=~s/^\s*//s;
+         $usrname=~s/\s*$//s;
          next if $usrname=~/^\d/ || !$usrname && !$uid;
          $username= ($usrname) ? $usrname : $uid;
          $username_from='user_input';
@@ -6713,12 +6727,12 @@ sub fa_login
                "FullAuto Process Limit at Line: ".__LINE__,2);
 
          }
-         if (defined $defaults || defined $facode
-                               || defined $faconf
-                               || defined $fahost
-                               || defined $famaps
-                               || defined $famenu
-                               || defined $set) {
+         if (defined $defaults || (defined $facode && !$facode)
+                               || (defined $faconf && !$faconf)
+                               || (defined $fahost && !$fahost)
+                               || (defined $famaps && !$famaps)
+                               || (defined $famenu && !$famenu)
+                               || (defined $set && !$set)) {
             if ($Net::FullAuto::cpu) {
                my $idle=(split ',', $Net::FullAuto::cpu)[3];
                $idle=~s/^\s*//;
@@ -6733,7 +6747,6 @@ sub fa_login
             }
             unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm') {
                my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm';
-print "FD=$fd\n";
                open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
                print FD "package fa_defs;\n\n",
                   "### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######\n",
@@ -6824,8 +6837,8 @@ print "FD=$fd\n";
                   || !exists $default_modules->{fa_maps}
                   || !exists $default_modules->{fa_menu}) {
                unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets') {
-                  File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-                  'Sets');
+                  File::Path::make_path(
+                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets');
                }
                $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
                   -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets',
@@ -6901,7 +6914,8 @@ print "FD=$fd\n";
                   -Home  => $fa_defs::FA_Secure.'Sets',
                   -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                ) or die(
-                  "cannot open environment for DB: $BerkeleyDB::Error\n",'','');
+                  "cannot open environment for DB: ".
+                  $BerkeleyDB::Error."\n",'','');
                my $bdb = BerkeleyDB::Btree->new(
                   -Filename => "${progname}_sets.db",
                   -Flags    => DB_CREATE,
@@ -7003,7 +7017,8 @@ print "FD=$fd\n";
                                  $ph."Menu/]P[{define_modules_menu_fa_menu}"
 
                            };
-                        my $put_mref=Data::Dump::Streamer::Dump($mysets)->Out();
+                        my $put_mref=
+                              Data::Dump::Streamer::Dump($mysets)->Out();
                         $status=$bdb->db_put($username,$put_mref);
                         undef $bdb;
                         $dbenv->close();
@@ -7331,8 +7346,8 @@ FIN
                                       foreach my $ar (@{$arr}) {
                                          push @ret,"$ar\n\n";
                                       }
-                                      return @ret;
-                                    },
+                                   return @ret;
+                                 },
                      Result  => sub {
                                       package del_sets;
                                       use BerkeleyDB;
@@ -7348,29 +7363,34 @@ FIN
                                       my $username=getlogin || getpwuid($<);
                                       my $loc=substr($INC{'Net/FullAuto.pm'},
                                                  0,-3);
-                                      my $progname=substr($0,(rindex $0,'/')+1,
-                                                 -3);
+                                      my $progname=substr($0,(rindex $0,'/')
+                                                +1,-3);
                                       require "$loc/fa_defs.pm";
-                                      unless (-d $fa_defs::FA_Secure.'Defaults') {
+                                      unless (-d
+                                            $fa_defs::FA_Secure.'Defaults') {
                                          File::Path::make_path(
-                                                 $fa_defs::FA_Secure.'Defaults');
+                                            $fa_defs::FA_Secure.'Defaults');
                                       }
                                       my $dbenv = BerkeleyDB::Env->new(
-                                        -Home  => $fa_defs::FA_Secure.'Defaults',
+                                        -Home  => $fa_defs::FA_Secure.
+                                                  'Defaults',
                                         -Flags =>
-                                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                                        DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                                       ) or die(
                                       "cannot open environment for DB: ".
                                          $BerkeleyDB::Error,"\n",'','');
                                       my $bdb = BerkeleyDB::Btree->new(
-                                        -Filename => "${progname}_defaults.db",
+                                        -Filename => $progname.
+                                                     "_defaults.db",
                                         -Flags    => DB_CREATE,
                                         -Env      => $dbenv
                                       );
                                       unless (
-                                            $BerkeleyDB::Error=~/Successful/) {
-                                         $bdb = BerkeleyDB::Btree->new(
-                                           -Filename => "${progname}_defaults.db",
+                                            $BerkeleyDB::Error=~/Successful/
+                                            ) {
+                                            $bdb = BerkeleyDB::Btree->new(
+                                           -Filename => $progname.
+                                                        "_defaults.db",
                                            -Flags    =>
                                               DB_CREATE|DB_RECOVER_FATAL,
                                            -Env      => $dbenv
@@ -7388,17 +7408,19 @@ FIN
                                             $username,$default_modules);
                                       $default_modules||='';
                                       $default_modules=~s/\$HASH\d*\s*=\s*//s
-                                         if -1<index $default_modules,'$HASH';
+                                         if -1<index $default_modules,
+                                         '$HASH';
                                       $default_modules=eval $default_modules;
                                       $default_modules||='';
-                                      unless (-d $fa_defs::FA_Secure.'Sets') {
+                                      unless (-d
+                                            $fa_defs::FA_Secure.'Sets') {
                                          File::Path::make_path(
-                                                 $fa_defs::FA_Secure.'Sets');
+                                            $fa_defs::FA_Secure.'Sets');
                                       }
                                       my $sdbenv = BerkeleyDB::Env->new(
                                         -Home  => $fa_defs::FA_Secure.'Sets',
                                         -Flags =>
-                                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                                        DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                                       ) or die(
                                       "cannot open environment for DB: ".
                                          $BerkeleyDB::Error,"\n",'','');
@@ -7408,9 +7430,10 @@ FIN
                                         -Env      => $sdbenv
                                       );
                                       unless (
-                                            $BerkeleyDB::Error=~/Successful/) {
+                                            $BerkeleyDB::Error=~/Successful/
+                                            ) {
                                          $sbdb = BerkeleyDB::Btree->new(
-                                           -Filename => "${progname}_sets.db",
+                                           -Filename => $progname."_sets.db",
                                            -Flags    =>
                                               DB_CREATE|DB_RECOVER_FATAL,
                                            -Env      => $sdbenv
@@ -7429,21 +7452,25 @@ FIN
                                       $mysets=~s/\$HASH\d*\s*=\s*//s;
                                       $mysets=eval $mysets;
                                       foreach my $set (@{$res}) {
-                                         $set=~s/^.*Label:\s+(.*?)\s+.*$/$1/s;
-                                         if ($default_modules->{'set'} eq $set) {
-                                            my $ban="\n\n   WARNING!: You are ".
-                                                  "about to delete the default ".
-                                                  "set\n\n   -> \'$set\'; ".
-                                                  " Do you still wish to ".
-                                                  "proceed?\n\n   (The ".
-                                                  "Default Set will be set to".
-                                                  " \'none\' if \'yes\')";
+                                         $set=~
+                                            s/^.*Label:\s+(.*?)\s+.*$/$1/s;
+                                         if ($default_modules->{'set'}
+                                               eq $set) {
+                                            my $ban=
+                                               "\n\n   WARNING!: You are ".
+                                               "about to delete the default".
+                                               " set\n\n   -> \'$set\'; ".
+                                               " Do you still wish to ".
+                                               "proceed?\n\n   (The ".
+                                               "Default Set will be set to".
+                                               " \'none\' if \'yes\')";
                                             my $ans=Term::Menus::pick(
                                                     ['yes','no'],$ban);
                                             if ($ans eq 'no') {
                                                next;
                                             } else {
-                                               $default_modules->{'set'}='none';
+                                               $default_modules->{'set'}=
+                                                  'none';
                                             }
                                          }
                                          delete $mysets->{$set};
@@ -7451,11 +7478,13 @@ FIN
                                       my $put_dref=
                                          Data::Dump::Streamer::Dump(
                                          $mysets)->Out();
-                                      $status=$sbdb->db_put($username,$put_dref);
+                                      $status=
+                                         $sbdb->db_put($username,$put_dref);
                                       my $put_fref=
                                          Data::Dump::Streamer::Dump(
                                          $default_modules)->Out();
-                                      $status=$bdb->db_put($username,$put_fref);
+                                      $status=
+                                         $bdb->db_put($username,$put_fref);
                                       undef $bdb;
                                       $dbenv->close();
                                       undef $dbenv;
@@ -7474,8 +7503,8 @@ my $custds=<<FIN;
    |___/\\___|_\\___|\\__\\___| |___/\\___|\\__/__/
 
 FIN
-
-               return "$custds   Please Select one or more Sets to Delete:"
+                     return "$custds   ".
+                            "Please Select one or more Sets to Delete:"
 
                   },
                );
@@ -7506,7 +7535,7 @@ FIN
                   $clearoption="Keep as 'none'\n\n";
                } else {
                   $sdf_banner.=
-                     "      ** DEFAULT SET -> $current_default_set **\n";
+                      "      ** DEFAULT SET -> $current_default_set **\n";
                   $clearoption="Set to 'none'\n\n";
                }
                my %set_default_menu=(
@@ -7571,7 +7600,8 @@ FIN
                      -Home  => $fa_defs::FA_Secure.'Defaults',
                      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                   ) or die(
-                     "cannot open environment for DB: $BerkeleyDB::Error\n",'','');
+                     "cannot open environment for DB: ".
+                     $BerkeleyDB::Error."\n",'','');
                   my $bdb = BerkeleyDB::Btree->new(
                      -Filename => "${progname}_defaults.db",
                      -Flags    => DB_CREATE,
@@ -7588,7 +7618,8 @@ FIN
                             "${progname}_defaults.db $BerkeleyDB::Error\n";
                      }
                   }
-                  my $put_dref=Data::Dump::Streamer::Dump($default_modules)->Out();
+                  my $put_dref=
+                     Data::Dump::Streamer::Dump($default_modules)->Out();
                   $status=$bdb->db_put($username,$put_dref);
                   undef $bdb;
                   $dbenv->close();
@@ -7601,7 +7632,8 @@ FIN
                      -Home  => $fa_defs::FA_Secure.'Defaults',
                      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                   ) or die(
-                     "cannot open environment for DB: $BerkeleyDB::Error\n",'','');
+                     "cannot open environment for DB: ".
+                      $BerkeleyDB::Error."\n",'','');
                   my $bdb = BerkeleyDB::Btree->new(
                      -Filename => "${progname}_defaults.db",
                      -Flags    => DB_CREATE,
@@ -7641,6 +7673,8 @@ FIN
                set_fa_modules('conf',$default_modules);
             } elsif (defined $famaps) {
                set_fa_modules('maps',$default_modules);
+            } elsif (defined $defaults) {
+##4444444444444444444444444444
             }
          }
          if ($plan || $plan_ignore_error) {
@@ -7762,8 +7796,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      alarm($usrname_timeout);
                      &acquire_semaphore(1234,
                         "Username Input Prompt at Line: ".__LINE__,1);
-                     print "\n  $hostname Login <$uid> : ";
-                     $usrname=<STDIN>;
+                     my $ikey='';
+                     print "\n";
+                     ($usrname,$ikey)=rawInput("  $hostname Login <$uid> : ");
                      &release_semaphore(1234);
                      alarm(0);
                   };
@@ -7774,8 +7809,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         '__cleanup__');
                   }
                   chomp $usrname;
-                  $usrname=~s/^\s*//;
-                  $usrname=~s/\s*$//;
+                  $usrname=~s/^\s*//s;
+                  $usrname=~s/\s*$//s;
                   next if $usrname=~/^\d/ || !$usrname && !$uid;
                   $username= ($usrname) ? $usrname : $uid;
                   $username_from='user_input';
@@ -7830,7 +7865,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                 -1<index $login_Mast_error,'Not a GLOB reference')) {
             my $status=$bdb->db_get('localhost',$href);
             $href=~s/\$HASH\d*\s*=\s*//s;
-#print "HREF=$href\n";
+print "HREF=$href\n";
             $href=eval $href;
 #delete ${$href}{"gatekeep_$username"};
             if (exists ${$href}{"gatekeep_$username"}) {
@@ -8004,7 +8039,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   alarm($passwd_timeout);
                   &acquire_semaphore(9854,
                      "Password Input Prompt at Line: ".__LINE__,1);
-                  print "\n  Password: ";
+                  print "\n\n  Password: ";
                   ReadMode 2;
                   $pas=<STDIN>;
                   &release_semaphore(9854);
@@ -8077,7 +8112,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                alarm($passwd_timeout);
                &acquire_semaphore(9854,
                   "Password Input Prompt at Line: ".__LINE__,1);
-               print "\n  Password: ";
+               print "\n\n  Password: ";
                ReadMode 2;
                $pas=<STDIN>;
                &release_semaphore(9854);
@@ -8099,7 +8134,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                undef $bdb;
                $dbenv->close();
                undef $dbenv;
-               print "\n";
+               print "\n<---";
                &handle_error(
                   "\n       FATAL ERROR: Password Input Prompt appeared".
                   "\n              in what appears to be an unattended".
@@ -8930,6 +8965,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
 # THIS ERROR OCCURS WHEN THE FILENAME AND PACKAGE NAME DIFFER
 
 print "LOGINMASTERERROR=$login_Mast_error\n";sleep 5;
+            $Net::FullAuto::FA_Core::dcipher='';
             if ($login_Mast_error=~/invalid log|ogin incor|sion den/) {
                if (($^O eq 'cygwin')
                      && 2<=$retrys) {
@@ -9008,80 +9044,7 @@ print "DOING PASSWD UPDATE\n";
       $plan=eval $pref;
       $plan=$plan->{Plan};
    }
-   my $menu_config_module_file='';my $die='';
-   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-                  'Defaults',{error => \my $err});
-      if (@$err) {
-         for my $diag (@$err) {
-            my ($file, $message) = %$diag;
-            if ($file eq '') {
-               $die="general error: $message";
-            } else {
-               $die="problem unlinking $file: $message";
-            }
-         }
-      }
-   }
-   unless (-d $Hosts{"__Master_${$}__"}{'FA_Core'}.
-        'Custom/'.$username.'/Menu') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Core'}.
-                  'Custom/'.$username.'/Menu',{error => \my $err});
-      if (@$err) {
-         for my $diag (@$err) {
-            my ($file, $message) = %$diag;
-            if ($file eq '') {
-               $die="general error: $message";
-            } else {
-               $die="problem unlinking $file: $message";
-            }
-         }
-      }
-      copy($Hosts{"__Master_${$}__"}{'FA_Core'}.'Custom/'.
-           'fa_menu.pm',$Hosts{"__Master_${$}__"}{'FA_Core'}.
-           'Custom/'.$username.'/Menus') || do{ $die="copy failed: $!" };
-   }
-   my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-   ) or &handle_error(
-     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-   my $bdb = BerkeleyDB::Btree->new(
-      -Filename => "${Net::FullAuto::FA_Core::progname}_defaults.db",
-      -Flags    => DB_CREATE,
-      -Env      => $dbenv
-   ) or &handle_error(
-     "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-   my $dmenu='';
-   my $status=$bdb->db_get($username,$dmenu);
-   $dmenu||='';
-   $dmenu=~s/\$HASH\d*\s*=\s*//s
-      if -1<index $dmenu,'$HASH';
-   $dmenu=eval $dmenu;
-   $dmenu||={};
-   $dmenu=$dmenu->{'fa_menu'}||'';
-   my $pdir=$Hosts{"__Master_${$}__"}{'FA_Core'};
-   substr($pdir,-13)='';
-   if (!(-f $pdir.$dmenu) || (-1<index $status,
-         'DB_NOTFOUND: No matching key/data pair found')) {
-      $status=$bdb->db_del($username);
-      my $d_menu={
-         fa_code => 'Net/FullAuto/Distro/fa_code_demo.pm',
-         fa_conf => 'Net/FullAuto/Distro/fa_conf.pm',
-         fa_host => 'Net/FullAuto/Distro/fa_host.pm',
-         fa_maps => 'Net/FullAuto/Distro/fa_maps.pm',
-         fa_menu => 'Net/FullAuto/Distro/fa_menu_demo.pm',
-      };
-      $dmenu=$d_menu->{'fa_menu'};
-      $d_menu=Data::Dump::Streamer::Dump($d_menu)->Out();
-      $status=$bdb->db_put($username,$d_menu);
-   }
-   undef $bdb;
-   $dbenv->close();
-   undef $dbenv;
-   $menu_config_module_file=$dmenu;
-   return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout,
-          $menu_config_module_file,$die;
+   return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
 
 } ## END of &fa_login
 
@@ -19304,7 +19267,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() SHOULD BE LAST CM=$line\n"
                if ($line=~/^\s*$|^\s*exit\s*$/s) {
                   last CM if $count++==20;
                } else { $count=0 }
-               if (-1<index $line,'password:'
+               if (-1<index $line,'assword:'
                   || -1<index $line,'Permission denied') {
                   $self->{_cmd_handle}->print("\004");
                }

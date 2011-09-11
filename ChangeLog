@@ -45,6 +45,17 @@
 ################################################################
 
 
+2011-09-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9968 released.
+
+        * Completed a significant portion of --set funtionality.
+
+        * Fixed login flow when wrong password is entered.
+
+        * Significantly improved performance of fa -V.
+
+
 2011-09-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9967 released.
