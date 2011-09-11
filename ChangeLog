@@ -45,6 +45,13 @@
 ################################################################
 
 
+2011-09-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9969 released.
+
+        * Fixed Solaris login flow when wrong password is entered.
+
+
 2011-09-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9968 released.

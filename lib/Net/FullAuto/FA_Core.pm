@@ -7765,7 +7765,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          }
 
          if ($login_Mast_error) {
-            if ($login_Mast_error=~/[Ll]ogin|sion den/) {
+            if ($login_Mast_error=~/[Ll]ogin|sion den|Passwo/) {
                $userflag=0;@passwd=();#$username='';
                chomp($login_Mast_error);
             } else {
@@ -8964,9 +8964,9 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
 #
 # THIS ERROR OCCURS WHEN THE FILENAME AND PACKAGE NAME DIFFER
 
-print "LOGINMASTERERROR=$login_Mast_error\n";sleep 5;
+#print "LOGINMASTERERROR=$login_Mast_error\n";sleep 5;
             $Net::FullAuto::FA_Core::dcipher='';
-            if ($login_Mast_error=~/invalid log|ogin incor|sion den/) {
+            if ($login_Mast_error=~/invalid log|ogin incor|sion den|Passwo/) {
                if (($^O eq 'cygwin')
                      && 2<=$retrys) {
                   $login_Mast_error.="\n       WARNING! - You may be in"
