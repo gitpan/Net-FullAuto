@@ -6264,14 +6264,15 @@ sub fa_login
    $custom_code_module_file='$' . (caller)[0] . '::fa_code';
    $custom_code_module_file=eval $custom_code_module_file;
    if ($@) {
-      my $die="Cannot Locate the \"FullAuto Custom Code\" perl module (.pm) file"
-              . "\n       < original default name 'fa_code.pm' >\n\n       $@";
+      my $die="Cannot Locate the \"FullAuto Custom Code\" "
+              ."perl module (.pm) file\n       < original "
+              ."default name 'fa_code.pm' >\n\n       $@";
       &handle_error($die,'-3');
    }
    my $man=0;my $help=0;my $userflag=0;my $passerror=0;
-   my $test_arg=0;my $oldcipher='';my $password_from='user_input';my $sem='';
+   my $test_arg=0;my $oldcipher='';my $password_from='user_input';
    my @holdARGV=@ARGV;@menu_args=();my $username_from='';
-   my $cust_subname_in_fa_code_module_file;
+   my $cust_subname_in_fa_code_module_file;my $sem='';
 
    Getopt::Long::Configure ("bundling");
    &GetOptions(
@@ -6948,6 +6949,71 @@ sub fa_login
                return [ sort @sets ];
 
             };
+            my $get_modules=sub {
+               use File::Path;
+               use File::Copy;
+               my $type=$_[0];
+               my $username=getlogin || getpwuid($<);
+               my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
+               unless (-d "$fadir/Custom/$username/$type") {
+                  File::Path::make_path(
+                     "$fadir/Custom/$username/$type");
+                  copy("$fadir/Custom/fa_".lc($type).".pm",
+                     "$fadir/Custom/$username/$type")
+                     || do{ die "copy failed: $!" };
+               }
+               opendir(DIR,"$fadir/Custom/$username/$type");
+               my @xfiles = readdir(DIR);
+               my @return=();
+               closedir(DIR);
+               foreach my $entry (@xfiles) {
+                  next if $entry eq '.';
+                  next if $entry eq '..';
+                  next if -d $entry;
+                  push @return, $entry;
+               }
+               return @return;
+            };
+my $custmm=<<FIN;
+    __  __                __  __         _      _
+   |  \\/  |___ _ _ _  _  |  \\/  |___  __| |_  _| |___
+   | |\\/| / -_) ' \\ || | | |\\/| / _ \\/ _` | || | / -_)
+   |_|  |_\\___|_||_\\_,_| |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
+my $custpm=<<FIN;
+    __  __                __  __         _      _
+   |  \\/  |__ _ _ __ ___ |  \\/  |___  __| |_  _| |___
+   | |\\/| / _` | '_ (_-< | |\\/| / _ \\/ _` | || | / -_)
+   |_|  |_\\__,_| .__/__/ |_|  |_\\___/\\__,_|\\_,_|_\\___|
+               |_|
+
+FIN
+my $custhm=<<FIN;
+    _  _        _     __  __         _      _
+   | || |___ __| |_  |  \\/  |___  __| |_  _| |___
+   | __ / _ (_-<  _| | |\\/| / _ \\/ _` | || | / -_)
+   |_||_\\___/__/\\__| |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
+my $custfm=<<FIN;
+    ___           __   __  __         _      _
+   / __|___ _ _  / _| |  \\/  |___  __| |_  _| |___
+  | (__/ _ \\ ' \\|  _| | |\\/| / _ \\/ _` | || | / -_)
+   \\___\\___/_||_|_|   |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
+my $custcm=<<FIN;
+    ___         _       __  __         _      _
+   / __|___  __| |___  |  \\/  |___  __| |_  _| |___
+  | (__/ _ \\/ _` / -_) | |\\/| / _ \\/ _` | || | / -_)
+   \\___\\___/\\__,_\\___| |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
             if (defined $set) {
                $default_modules->{'set'}||='none';
                my $current_default_set=$default_modules->{'set'};
@@ -7059,41 +7125,10 @@ FIN
                   Label      => 'define_modules_menu_fa_menu',
                   Item_1 => {
                      Text    => ']C[',
-                     Convey  => sub {
-                        use File::Path;
-                        use File::Copy;
-                        my $username=getlogin || getpwuid($<);
-                        my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
-                        unless (-d "$fadir/Custom/$username/Menu") {
-                           File::Path::make_path(
-                              "$fadir/Custom/$username/Menu");
-                           copy("$fadir/Custom/fa_menu.pm",
-                              "$fadir/Custom/$username/Menu")
-                              || do{ die "copy failed: $!" };
-                        }
-                        opendir(DIR,"$fadir/Custom/$username/Menu");
-                        my @xfiles = readdir(DIR);
-                        my @return=();
-                        closedir(DIR);
-                        foreach my $entry (@xfiles) {
-                           next if $entry eq '.';
-                           next if $entry eq '..';
-                           next if -d $entry;
-                           push @return, $entry;
-                        }
-                        return @return;
-                     },
+                     Convey  => $get_modules->('Menu'),
                      Result => \%define_modules_commit,
                   },
                   Banner => sub {
-my $custmm=<<FIN;
-    __  __                __  __         _      _     
-   |  \\/  |___ _ _ _  _  |  \\/  |___  __| |_  _| |___ 
-   | |\\/| / -_) ' \\ || | | |\\/| / _ \\/ _` | || | / -_)
-   |_|  |_\\___|_||_\\_,_| |_|  |_\\___/\\__,_|\\_,_|_\\___|
-
- 
-FIN
                      my $spc=length $main::setname;
                      $spc=pack("A$spc",'');
                      return "   New Set:  \'$main::setname\'  --> Code => ".
@@ -7112,41 +7147,10 @@ FIN
                   Label      => 'define_modules_menu_fa_maps',
                   Item_1 => {
                      Text    => ']C[',
-                     Convey  => sub {
-                        use File::Path;
-                        use File::Copy;
-                        my $username=getlogin || getpwuid($<);
-                        my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
-                        unless (-d "$fadir/Custom/$username/Maps") {
-                           File::Path::make_path(
-                              "$fadir/Custom/$username/Maps");
-                           copy("$fadir/Custom/fa_maps.pm",
-                              "$fadir/Custom/$username/Maps")
-                              || do{ die "copy failed: $!" };
-                        }
-                        opendir(DIR,"$fadir/Custom/$username/Maps");
-                        my @xfiles = readdir(DIR);
-                        my @return=();
-                        closedir(DIR);
-                        foreach my $entry (@xfiles) {
-                           next if $entry eq '.';
-                           next if $entry eq '..';
-                           next if -d $entry;
-                           push @return, $entry;
-                        }
-                        return @return;
-                     },
+                     Convey  => $get_modules->('Maps'),
                      Result => \%define_modules_menu_fa_menu,
                   },
                   Banner => sub {
-my $custpm=<<FIN;
-    __  __                __  __         _      _     
-   |  \\/  |__ _ _ __ ___ |  \\/  |___  __| |_  _| |___ 
-   | |\\/| / _` | '_ (_-< | |\\/| / _ \\/ _` | || | / -_)
-   |_|  |_\\__,_| .__/__/ |_|  |_\\___/\\__,_|\\_,_|_\\___|
-               |_|                                    
-
-FIN
                      my $spc=length $main::setname;
                      $spc=pack("A$spc",'');
                      return "   New Set:  \'$main::setname\'  --> Code => ".
@@ -7163,41 +7167,10 @@ FIN
                   Label      => 'define_modules_menu_fa_host',
                   Item_1 => {
                      Text    => ']C[',
-                     Convey  => sub {
-                        use File::Path;
-                        use File::Copy;
-                        my $username=getlogin || getpwuid($<);
-                        my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
-                        unless (-d "$fadir/Custom/$username/Host") {
-                           File::Path::make_path(
-                              "$fadir/Custom/$username/Host");
-                           copy("$fadir/Custom/fa_host.pm",
-                              "$fadir/Custom/$username/Host")
-                              || do{ die "copy failed: $!" };
-                        }
-                        opendir(DIR,"$fadir/Custom/$username/Host");
-                        my @xfiles = readdir(DIR);
-                        my @return=();
-                        closedir(DIR);
-                        foreach my $entry (@xfiles) {
-                           next if $entry eq '.';
-                           next if $entry eq '..';
-                           next if -d $entry;
-                           push @return, $entry;
-                        }
-                        return @return;
-                     },
+                     Convey  => $get_modules->('Host'),
                      Result => \%define_modules_menu_fa_maps,
                   },
                   Banner => sub {
-my $custhm=<<FIN;
-    _  _        _     __  __         _      _     
-   | || |___ __| |_  |  \\/  |___  __| |_  _| |___ 
-   | __ / _ (_-<  _| | |\\/| / _ \\/ _` | || | / -_)
-   |_||_\\___/__/\\__| |_|  |_\\___/\\__,_|\\_,_|_\\___|
-
-
-FIN
                      my $spc=length $main::setname;
                      $spc=pack("A$spc",'');
                      return "   New Set:  \'$main::setname\'  --> Code => ".
@@ -7212,41 +7185,10 @@ FIN
                   Label      => 'define_modules_menu_fa_conf',
                   Item_1 => {
                      Text    => ']C[',
-                     Convey  => sub {
-                        use File::Path;
-                        use File::Copy;
-                        my $username=getlogin || getpwuid($<);
-                        my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
-                        unless (-d "$fadir/Custom/$username/Conf") {
-                           File::Path::make_path(
-                              "$fadir/Custom/$username/Conf");
-                           copy("$fadir/Custom/fa_conf.pm",
-                              "$fadir/Custom/$username/Conf")
-                              || do{ die "copy failed: $!" };
-                        }
-                        opendir(DIR,"$fadir/Custom/$username/Conf");
-                        my @xfiles = readdir(DIR);
-                        my @return=();
-                        closedir(DIR);
-                        foreach my $entry (@xfiles) {
-                           next if $entry eq '.';
-                           next if $entry eq '..';
-                           next if -d $entry;
-                           push @return, $entry;
-                        }
-                        return @return;
-                     },
+                     Convey  => $get_modules->('Conf'),
                      Result => \%define_modules_menu_fa_host,
                   },
                   Banner => sub {
-my $custfm=<<FIN;
-    ___           __   __  __         _      _     
-   / __|___ _ _  / _| |  \\/  |___  __| |_  _| |___ 
-  | (__/ _ \\ ' \\|  _| | |\\/| / _ \\/ _` | || | / -_)
-   \\___\\___/_||_|_|   |_|  |_\\___/\\__,_|\\_,_|_\\___|
-
-
-FIN
                      return "   New Set:  \'$main::setname\'  --> Code => ".
                             "]P[{define_modules_menu_fa_code}\n\n".
                             "$custfm   Please select a fa_conf[.*].pm ".
@@ -7675,6 +7617,366 @@ FIN
                set_fa_modules('maps',$default_modules);
             } elsif (defined $defaults) {
 ##4444444444444444444444444444
+my $dfbann=<<FIN;
+
+    ___     _ _   _       _          ___       __           _ _
+   | __|  _| | | /_\\ _  _| |_ ___   |   \\ ___ / _|__ _ _  _| | |_ ___
+   | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
+   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
+
+
+FIN
+               my $banner=$dfbann;
+               if (!exists $default_modules->{'set'} ||
+                     $default_modules->{'set'} eq 'none') {
+                  $banner.="      ** NO DEFAULT SET DEFINED **\n\n";
+               }
+               my $ca_sub=sub {
+                  use File::Path;
+                  use File::Copy;
+                  my $type=$_[0];
+                  my $username=getlogin || getpwuid($<);
+                  my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
+                  unless (-d "$fadir/Custom/$username/$type") {
+                     File::Path::make_path(
+                        "$fadir/Custom/$username/$type");
+                     copy("$fadir/Custom/fa_".lc($type).".pm",
+                        "$fadir/Custom/$username/$type")
+                       || do{ die "copy failed: $!" };
+                  }
+                  opendir(DIR,"$fadir/Custom/$username/$type");
+                  my @xfiles = readdir(DIR);
+                  my @return=();
+                  closedir(DIR);
+                  foreach my $entry (@xfiles) {
+                     next if $entry eq '.';
+                     next if $entry eq '..';
+                     next if -d $entry;
+                     push @return, $entry;
+                  }
+                  return @return;
+               };
+               my %cacomm=(
+
+                     Label => 'cacomm',
+                     Item_1 => {
+                        Text   => "YES",
+                        Result  => sub {
+                                         package del_sets;
+                                         use BerkeleyDB;
+                                         use File::Path;
+                                         no strict "subs";
+                                         my $username=getlogin || getpwuid($<);
+                                         my $loc=substr($INC{'Net/FullAuto.pm'},
+                                                    0,-3);
+                                         my $progname=substr($0,(rindex $0,'/')
+                                                    +1,-3);
+                                         require "$loc/fa_defs.pm";
+                                         unless (-d
+                                               $fa_defs::FA_Secure.'Defaults') {
+                                            File::Path::make_path(
+                                               $fa_defs::FA_Secure.'Defaults');
+                                         }
+                                         my $dbenv = BerkeleyDB::Env->new(
+                                           -Home  => $fa_defs::FA_Secure.
+                                                     'Defaults',
+                                           -Flags =>
+                                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                                         ) or die(
+                                         "cannot open environment for DB: ".
+                                            $BerkeleyDB::Error,"\n",'','');
+                                         my $bdb = BerkeleyDB::Btree->new(
+                                           -Filename => $progname.
+                                                        "_defaults.db",
+                                           -Flags    => DB_CREATE,
+                                           -Env      => $dbenv
+                                         );
+                                         my $default_modules='';
+                                         my $status=$bdb->db_get(
+                                               $username,$default_modules);
+                                         $default_modules||='';
+                                         $default_modules=~s/\$HASH\d*\s*=\s*//s
+                                           if -1<index $default_modules,'$HASH';
+                                         $default_modules=eval $default_modules;
+                                         $default_modules||={};
+                                         $default_modules->{'set'}='none';
+                                         $default_modules->{'fa_code'}=
+                                            "Net/FullAuto/Custom/$username/".
+                                            "Code/]P[{cacode}";
+                                         $default_modules->{'fa_conf'}=
+                                            "Net/FullAuto/Custom/$username/".
+                                            "Conf/]P[{caconf}";
+                                         $default_modules->{'fa_host'}=
+                                            "Net/FullAuto/Custom/$username/".
+                                            "Host/]P[{cahost}";
+                                         $default_modules->{'fa_maps'}=
+                                            "Net/FullAuto/Custom/$username/".
+                                            "Maps/]P[{camaps}";
+                                         $default_modules->{'fa_menu'}=
+                                            "Net/FullAuto/Custom/$username/".
+                                            "Menu/]P[{camenu}";
+                                         my $put_dref=
+                                            Data::Dump::Streamer::Dump(
+                                            $default_modules)->Out();
+                                         $status=$bdb->db_put(
+                                            $username,$put_dref);
+                                         undef $bdb;
+                                         $dbenv->close();
+                                         undef $dbenv;
+                                         print "\n\n   New Default Modules ".
+                                               "now:\n\n   Code  =>  ".
+                                               "Net/FullAuto/Custom/$username/".
+                                               "]P[{cacode}\n   Conf  =>  ".
+                                               "Net/FullAuto/Custom/$username/".
+                                               "]P[{caconf}\n   Host  =>  ".
+                                               "Net/FullAuto/Custom/$username/".
+                                               "]P[{cahost}\n   Maps  =>  ".
+                                               "Net/FullAuto/Custom/$username/".
+                                               "]P[{camaps}\n   Menu  =>  ".
+                                               "Net/FullAuto/Custom/$username/".
+                                               "]P[{camenu}\n\n";
+                                         return "Finished Defining Defaults";
+                                       },
+
+                     },
+                     Item_2 => {
+                        Text => "No  ( FullAuto [fa --defaults] will EXIT )",
+                     },
+                     Banner => sub {
+my $custnd=<<FIN;
+    _  _              ___       __           _ _      
+   | \\| |_____ __ __ |   \\ ___ / _|__ _ _  _| | |_ ___
+   | .` / -_) V  V / | |) / -_)  _/ _` | || | |  _(_-< o
+   |_|\\_\\___|\\_/\\_/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/ o
+
+
+FIN
+                        my $username=getlogin || getpwuid($<);
+                        return "$custnd    Code  =>  ".
+                               "Net/FullAuto/Custom/$username/".
+                               "]P[{cacode}\n".
+                               "    Conf  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{caconf}\n".
+                               "    Host  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{cahost}\n".
+                               "    Maps  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{camaps}\n".
+                               "    Menu  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{camenu}\n    Set   =>  none\n\n   ".
+                               "Would you like to COMMIT the New Defaults?:";
+                     },
+               );
+               my %camenu=(
+
+                     Label => 'camenu',
+                     Item_1 => {
+                        Text   => ']C[',
+                        Convey => $get_modules->('Menu'),
+                        Result => \%cacomm,
+                     },
+                     Banner => sub {
+                        my $username=getlogin || getpwuid($<);
+                        return "   Code  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{cacode}\n".
+                               "   Conf  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{caconf}\n".
+                               "   Host  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{cahost}\n".
+                               "   Maps  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{camaps}\n\n".
+                               "$custmm   Please select a fa_menu[.*].pm ".
+                               "module:";
+                     },
+
+               );
+               my %camaps=(
+
+                     Label => 'camaps',
+                     Item_1 => {
+                        Text   => ']C[',
+                        Convey => $get_modules->('Maps'),
+                        Result => \%camenu,
+
+                     },
+                     Banner => sub {
+                        my $username=getlogin || getpwuid($<);
+                        return "   Code  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{cacode}\n".
+                               "   Conf  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{caconf}\n".
+                               "   Host  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{cahost}\n\n".
+                               "$custpm   Please select a fa_maps[.*].pm ".
+                               "module:";
+                     },
+
+               );
+               my %cahost=(
+
+                     Label => 'cahost',
+                     Item_1 => {
+                        Text   => ']C[',
+                        Convey => $get_modules->('Host'),
+                        Result => \%camaps,
+
+                     },
+                     Banner => sub {
+                        my $username=getlogin || getpwuid($<);
+                        return "   Code  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{cacode}\n".
+                               "   Conf  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{caconf}\n\n".
+                               "$custhm   Please select a fa_host[.*].pm ".
+                               "module:";
+                     },
+
+               );
+               my %caconf=(
+
+                     Label => 'caconf',
+                     Item_1 => {
+                        Text   => ']C[',
+                        Convey => $get_modules->('Conf'),
+                        Result => \%cahost,
+                     },
+                     Banner => sub {
+                        my $username=getlogin || getpwuid($<);
+                        return "   Code  =>  Net/FullAuto/Custom/$username/".
+                               "]P[{cacode}\n\n".
+                               "$custfm   Please select a fa_conf[.*].pm ".
+                               "module:";
+                     },
+
+               );
+               my %cacode=(
+
+                     Label => 'cacode',
+                     Item_1 => {
+                        Text   => ']C[',
+                        Convey => $get_modules->('Code'),
+                        Result => \%caconf,
+
+                     },
+                     Banner => "$custcm   Please select a fa_code[.*].pm ".
+                               "module:",
+
+               );
+               my $vdbanner=$banner."    Code  =>  "
+                           .$default_modules->{'fa_code'}
+                           ."\n    Conf  =>  "
+                           .$default_modules->{'fa_conf'}
+                           ."\n    Host  =>  "
+                           .$default_modules->{'fa_host'}
+                           ."\n    Maps  =>  "
+                           .$default_modules->{'fa_maps'}
+                           ."\n    Menu  =>  "
+                           .$default_modules->{'fa_menu'}
+                           ."\n";
+               my %viewdefaults=(
+
+                     Label => 'viewdefaults',
+                     Item_1 => {
+                        Text   => "Change ALL Defaults",
+                        Result => \%cacode,
+                     },
+                     Item_2 => {
+                        Text   => "Change Default ]C[",
+                        Convey => ['fa_code','fa_conf','fa_host',
+                                   'fa_maps','fa_menu'],
+                     },
+                     Banner => $vdbanner,
+
+               );
+               if (!exists $default_modules->{'set'} ||
+                     $default_modules->{'set'} eq 'none') {
+                  my $selection=Menu(\%viewdefaults);
+                  if (($selection eq ']quit[') ||
+                        (-1<index $selection,'will EXIT') ||
+                        ($selection eq 'Finished Defining Defaults')) {
+                     &release_semaphore(9361);
+                     &cleanup();
+                  }
+                  #print "SELECTION=$selection\n";sleep 5;
+               } else {
+                  my $sdbenv = BerkeleyDB::Env->new(
+                       -Home  => $fa_defs::FA_Secure.'Sets',
+                       -Flags =>
+                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                  ) or die(
+                      "cannot open environment for DB: ".
+                      $BerkeleyDB::Error,"\n",'','');
+                  my $sbdb = BerkeleyDB::Btree->new(
+                       -Filename => "${progname}_sets.db",
+                       -Flags    => DB_CREATE,
+                       -Env      => $sdbenv
+                  );
+                  unless ($BerkeleyDB::Error=~/Successful/) {
+                     $sbdb = BerkeleyDB::Btree->new(
+                         -Filename => $progname."_sets.db",
+                         -Flags    =>
+                            DB_CREATE|DB_RECOVER_FATAL,
+                         -Env      => $sdbenv
+                     );
+                     unless ($BerkeleyDB::Error=~/Successful/) {
+                        die "Cannot Open DB: ${progname}_sets.db ".
+                            $BerkeleyDB::Error."\n";
+                     }
+                  }
+                  my $mysets='';
+                  my $status=$sbdb->db_get($username,$mysets);
+                  $mysets=~s/\$HASH\d*\s*=\s*//s;
+                  $mysets=eval $mysets;
+                  undef $sbdb;
+                  $sdbenv->close();
+                  undef $sdbenv;
+                  my $set=$default_modules->{'set'};
+                  my $spc=length $set;
+                  $spc=pack("A$spc",'');
+                  $banner.="      ** DEFAULT SET -> $set **\n\n"
+                         ."     \'$set\'  --> Code => "
+                         .$mysets->{$set}->{'fa_code'}."\n"
+                         ."      $spc       Conf => "
+                         .$mysets->{$set}->{'fa_conf'}."\n"
+                         ."      $spc       Host => "
+                         .$mysets->{$set}->{'fa_host'}."\n"
+                         ."      $spc       Maps => "
+                         .$mysets->{$set}->{'fa_maps'}."\n"
+                         ."      $spc       Menu => "
+                         .$mysets->{$set}->{'fa_menu'}."\n"
+                         ."      ${spc}Description => "
+                         .$mysets->{$set}->{'Description'}."\n\n"
+                         ."      NOTE: Any action in this Menu"
+                         ." will change the Default Set to 'none'.\n"
+                         ."            To work with FullAuto Sets, "
+                         ."run  \'fa --set\'  instead.\n";
+                  my %defaultsettings=(
+
+                        Label  => 'defaultsettings',
+                        Item_1 => {
+                           Text   =>
+                              "View Defaults when Default Set equals \'none\'",
+                           Result => \%viewdefaults,
+                        },
+                        Item_2 => {
+                           Text   => "Change ALL Defaults",
+                           Result => \%cacode,
+                        },
+                        Item_3 => {
+                           Text   => "Change Default ]C[",
+                           Convey => ['fa_code','fa_conf','fa_host',
+                                      'fa_maps','fa_menu'],
+                        },
+                        Banner => $banner,
+
+                  );
+                  my $selection=Menu(\%defaultsettings);
+                  if (($selection eq ']quit[') ||
+                        (-1<index $selection,'will EXIT') ||
+                        ($selection eq 'Finished Defining Defaults')) {
+                     &release_semaphore(9361);
+                     &cleanup();
+                  }
+               }
             }
          }
          if ($plan || $plan_ignore_error) {
