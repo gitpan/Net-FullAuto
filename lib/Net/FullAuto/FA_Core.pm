@@ -499,8 +499,8 @@ BEGIN {
 # Globally Scoped Variables, but Intentionally NOT Initialized.
 # Getopt::Long needs it this way for some args to work properly. 
 our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,
-     $defaults,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
-     $usrname,$VERSION,%GLOBAL,@GLOBAL);
+     $default,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
+     $usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -6086,7 +6086,7 @@ sub set_fa_modules
    my $type=$_[0];
    my $default_modules=$_[1];
    my $track=$_[2];
-   my $default=$default_modules->{"fa_$type"};
+   my $defallt=$default_modules->{"fa_$type"};
    my @items=();
    if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
          "Custom/fa_$type.pm") {
@@ -6125,7 +6125,7 @@ sub set_fa_modules
    undef $Net::FullAuto::FA_Core::bdb_once;
    $Net::FullAuto::FA_Core::dbenv_once->close();
    undef $Net::FullAuto::FA_Core::dbenv_once;
-   my $def=$default;
+   my $def=$defallt;
    substr($def,0,13)='';
    my %show_default_type=(
 
@@ -6303,13 +6303,15 @@ sub fa_login
                 'unattended:s'          => \$cron,
                 'batch:s'               => \$cron,
                 'fullauto:s'            => \$cron,
-                'defaults'              => \$defaults,
+                'defaults'              => \$default,
+                'default'               => \$default,
                 'fa_code:s'             => \$facode,
                 'fa_conf:s'             => \$faconf,
                 'fa_host:s'             => \$fahost,
                 'fa_maps:s'             => \$famaps,
                 'fa_menu:s'             => \$famenu,
                 'm:s'                   => \$famenu,
+                'sets'                  => \$set,
                 'set:s'                 => \$set,
                 's:s'                   => \$set,
                 'random'                => \$random,
@@ -6728,12 +6730,12 @@ sub fa_login
                "FullAuto Process Limit at Line: ".__LINE__,2);
 
          }
-         if (defined $defaults || (defined $facode && !$facode)
-                               || (defined $faconf && !$faconf)
-                               || (defined $fahost && !$fahost)
-                               || (defined $famaps && !$famaps)
-                               || (defined $famenu && !$famenu)
-                               || (defined $set && !$set)) {
+         if (defined $default || (defined $facode && !$facode)
+                              || (defined $faconf && !$faconf)
+                              || (defined $fahost && !$fahost)
+                              || (defined $famaps && !$famaps)
+                              || (defined $famenu && !$famenu)
+                              || (defined $set && !$set)) {
             if ($Net::FullAuto::cpu) {
                my $idle=(split ',', $Net::FullAuto::cpu)[3];
                $idle=~s/^\s*//;
@@ -6952,7 +6954,12 @@ sub fa_login
             my $get_modules=sub {
                use File::Path;
                use File::Copy;
-               my $type=$_[0];
+               my $type=$_[0]||'';
+               unless ($type) {
+                  $type=']P[';
+                  my $ind=rindex $type,'fa_';
+                  $type=substr($type,$ind+3,$ind+7);
+               }
                my $username=getlogin || getpwuid($<);
                my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
                unless (-d "$fadir/Custom/$username/$type") {
@@ -7014,7 +7021,198 @@ my $custcm=<<FIN;
 
 
 FIN
-            if (defined $set) {
+            my $fabann=sub {
+               my $type=$_[0]||'';
+               unless ($type) {
+                  $type=']P[';
+                  my $ind=rindex $type,'fa_';
+                  $type=substr($type,$ind+3,$ind+7);
+               }
+               my $caps='';
+               if ($type eq 'code') {
+                  $caps=$custcm;
+               } elsif ($type eq 'conf') {
+                  $caps=$custfm;
+               } elsif ($type eq 'host') {
+                  $caps=$custhm;
+               } elsif ($type eq 'maps') {
+                  $caps=$custpm;
+               } else {
+                  $caps=$custmm;
+               }
+               my $set='';
+               if ($default_modules->{'set'} ne 'none') {
+                  $set="   WARNING!: Set \'$default_modules->{'set'}\'".
+                       " is currently the Default Set;\n             ".
+                       "it will be changed to \'none\' if you proceed.\n".
+                       "             Run  \'fa --set\'  to work with ".
+                       "FullAuto Sets.\n\n";
+               }
+               return "   CURRENT MODULE DEFAULTS when Default Set".
+                      " is \'none\':\n\n   Code  =>  ".
+                      $default_modules->{'fa_code'}."\n".
+                      "   Conf  =>  ".
+                      $default_modules->{'fa_conf'}."\n".
+                      "   Host  =>  ".
+                      $default_modules->{'fa_host'}."\n".
+                      "   Maps  =>  ".
+                      $default_modules->{'fa_maps'}."\n".
+                      "   Menu  =>  ".
+                      $default_modules->{'fa_menu'}."\n\n".
+                      "$caps$set   Please select the fa_".$type."[.*].pm ".
+                      "module that will become the new\n   ".
+                      ucfirst($type)." Module Default (run  \'fa --import\'".
+                      "  to add more choices):";
+            };
+            my $fasetdef=sub {
+               package fasetdef;
+               use BerkeleyDB;
+               use File::Path;
+               no strict "subs";
+               my $username=getlogin || getpwuid($<);
+               my $loc=substr($INC{'Net/FullAuto.pm'},
+                          0,-3);
+               my $progname=substr($0,(rindex $0,'/')
+                          +1,-3);
+               require "$loc/fa_defs.pm";
+               unless (-d
+                     $fa_defs::FA_Secure.'Defaults') {
+                  File::Path::make_path(
+                     $fa_defs::FA_Secure.'Defaults');
+               }
+               my $dbenv = BerkeleyDB::Env->new(
+                  -Home  => $fa_defs::FA_Secure.
+                            'Defaults',
+                  -Flags =>
+                            DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+               ) or die(
+                  "cannot open environment for DB: ".
+                  $BerkeleyDB::Error,"\n",'','');
+               my $bdb = BerkeleyDB::Btree->new(
+                  -Filename => $progname.
+                               "_defaults.db",
+                  -Flags    => DB_CREATE,
+                  -Env      => $dbenv
+               );
+               my $default_modules='';
+               my $status=$bdb->db_get(
+                     $username,$default_modules);
+               $default_modules||='';
+               $default_modules=~s/\$HASH\d*\s*=\s*//s
+                  if -1<index $default_modules,'$HASH';
+               $default_modules=eval $default_modules;
+               $default_modules||={};
+               $default_modules->{'set'}='none';
+               if (-1<index ']S[','code') {
+                  $default_modules->{'fa_code'}=
+                     "Net/FullAuto/Custom/$username/".
+                     "Code/]S[";
+               } elsif (-1<index ']S[','conf') {
+                  $default_modules->{'fa_conf'}=
+                     "Net/FullAuto/Custom/$username/".
+                     "Conf/]S[";
+               } elsif (-1<index ']S[','host') {
+                  $default_modules->{'fa_host'}=
+                     "Net/FullAuto/Custom/$username/".
+                     "Host/]S[";
+               } elsif (-1<index ']S[','maps') {
+                  $default_modules->{'fa_maps'}=
+                     "Net/FullAuto/Custom/$username/".
+                     "Maps/]S[";
+               } else {
+                  $default_modules->{'fa_menu'}=
+                     "Net/FullAuto/Custom/$username/".
+                     "Menu/]S[";
+               }
+               my $put_dref=
+                  Data::Dump::Streamer::Dump(
+                  $default_modules)->Out();
+               $status=$bdb->db_put(
+                  $username,$put_dref);
+               undef $bdb;
+               $dbenv->close();
+               undef $dbenv;
+               print "\n\n   New Default Modules ".
+                     "now:\n\n   Code  =>  ".
+                     $default_modules->{'fa_code'}.
+                     "\n   Conf  =>  ".
+                     $default_modules->{'fa_conf'}.
+                     "\n   Host  =>  ".
+                     $default_modules->{'fa_host'}.
+                     "\n   Maps  =>  ".
+                     $default_modules->{'fa_maps'}.
+                     "\n   Menu  =>  ".
+                     $default_modules->{'fa_menu'}.
+                     "\n   Set   =>  \'none\'".
+                     "\n\n";
+               return "Finished Default Module";
+            };
+            if (defined $facode) {
+               my %define_module_fa_menu=(
+                  Label      => 'define_module_fa_menu',
+                  Item_1 => {
+                     Text   => ']C[',
+                     Convey => $get_modules->('Code'),
+                     Result => $fasetdef,
+                  },
+                  Banner => $fabann->('Code'),
+               );
+               my $selection=Menu(\%define_module_fa_menu);
+               &release_semaphore(9361);
+               &cleanup();
+            } elsif (defined $faconf) {
+               my %define_module_fa_conf=(
+                  Label      => 'define_module_fa_conf',
+                  Item_1 => {
+                     Text   => ']C[',
+                     Convey => $get_modules->('Conf'),
+                     Result => $fasetdef,
+                  },
+                  Banner => $fabann->('Conf'),
+               );
+               my $selection=Menu(\%define_module_fa_conf);
+               &release_semaphore(9361);
+               &cleanup();
+            } elsif (defined $fahost) {
+               my %define_module_fa_host=(
+                  Label      => 'define_module_fa_host',
+                  Item_1 => {
+                     Text   => ']C[',
+                     Convey => $get_modules->('Host'),
+                     Result => $fasetdef,
+                  },
+                  Banner => $fabann->('Host'),
+               );
+               my $selection=Menu(\%define_module_fa_host);
+               &release_semaphore(9361);
+               &cleanup();
+            } elsif (defined $famaps) {
+               my %define_module_fa_maps=(
+                  Label      => 'define_module_fa_maps',
+                  Item_1 => {
+                     Text   => ']C[',
+                     Convey => $get_modules->('Maps'),
+                     Result => $fasetdef,
+                  },
+                  Banner => $fabann->('Maps'),
+               );
+               my $selection=Menu(\%define_module_fa_maps);
+               &release_semaphore(9361);
+               &cleanup();
+            } elsif (defined $famenu) {
+               my %define_module_fa_menu=(
+                  Label      => 'define_module_fa_menu',
+                  Item_1 => {
+                     Text   => ']C[',
+                     Convey => $get_modules->('Menu'),
+                     Result => $fasetdef,
+                  },
+                  Banner => $fabann->('Menu'),
+               );
+               my $selection=Menu(\%define_module_fa_menu);
+               &release_semaphore(9361);
+               &cleanup();
+            } elsif (defined $set) {
                $default_modules->{'set'}||='none';
                my $current_default_set=$default_modules->{'set'};
                my $dm_banner="   Please Select a Module Set Operation:\n\n";
@@ -7615,8 +7813,7 @@ FIN
                set_fa_modules('conf',$default_modules);
             } elsif (defined $famaps) {
                set_fa_modules('maps',$default_modules);
-            } elsif (defined $defaults) {
-##4444444444444444444444444444
+            } elsif (defined $default) {
 my $dfbann=<<FIN;
 
     ___     _ _   _       _          ___       __           _ _
@@ -7734,7 +7931,8 @@ FIN
                                                "Net/FullAuto/Custom/$username/".
                                                "]P[{camaps}\n   Menu  =>  ".
                                                "Net/FullAuto/Custom/$username/".
-                                               "]P[{camenu}\n\n";
+                                               "]P[{camenu}\n   Set   =>  ".
+                                               "\'none\'\n\n";
                                          return "Finished Defining Defaults";
                                        },
 
@@ -7861,6 +8059,15 @@ FIN
                                "module:",
 
                );
+               my %define_module_from_viewdef=(
+                  Label      => 'define_module_from_viewdef',
+                  Item_1 => {
+                     Text   => ']C[',
+                     Convey => $get_modules,
+                     Result => $fasetdef,
+                  },
+                  Banner => $fabann,
+               );
                my $vdbanner=$banner."    Code  =>  "
                            .$default_modules->{'fa_code'}
                            ."\n    Conf  =>  "
@@ -7883,6 +8090,7 @@ FIN
                         Text   => "Change Default ]C[",
                         Convey => ['fa_code','fa_conf','fa_host',
                                    'fa_maps','fa_menu'],
+                        Result => \%define_module_from_viewdef,
                      },
                      Banner => $vdbanner,
 
@@ -7892,7 +8100,8 @@ FIN
                   my $selection=Menu(\%viewdefaults);
                   if (($selection eq ']quit[') ||
                         (-1<index $selection,'will EXIT') ||
-                        ($selection eq 'Finished Defining Defaults')) {
+                        ($selection eq 'Finished Defining Defaults') ||
+                        ($selection eq 'Finished Default Module')) {
                      &release_semaphore(9361);
                      &cleanup();
                   }
