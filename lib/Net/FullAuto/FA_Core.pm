@@ -1691,8 +1691,9 @@ sub edit {
    };
    my $path=$@;
    $path=~s/Died at (.*)FA_Core.pm.*$/$1/;
+   my $username=getlogin || getpwuid($<);
    chomp($path);
-   my $cpath=$path.'Custom/';
+   my $cpath=$path."Custom/$username/";
    my $tpath=$path;
    $tpath=~s/Net.*//;
 
@@ -1719,17 +1720,22 @@ sub edit {
 
    my $savdir=cwd();
    if ($_[0]=~/ho*s*t*|^fa_host$/i) {
+      $cpath.='Host';
       system("cd $cpath;\"$editor\" ".
          "$Net::FullAuto::FA_Core::fa_host;cd \"$savdir\"");
    } elsif ($_[0]=~/^m$|^me$|^men$|^menu$|^fa_menu$/i) {
+      $cpath.='Menu';
       system("cd $cpath;\"$editor\" ".
          "$Net::FullAuto::FA_Core::fa_menu;cd \"$savdir\"");
    } elsif ($_[0]=~/map*s*|^fa_maps$/i) {
+      $cpath.='Maps';
       system("cd $cpath;\"$editor\" ".
          "$Net::FullAuto::FA_Core::fa_maps;cd \"$savdir\"");
    } elsif ($_[0]=~/^c$|^co$|^cod$|^code$|^fa_code$/i) {
+      $cpath.='Code';
       system("cd $cpath;\"$editor\" fa_code.pm;cd \"$savdir\"");
    } elsif ($_[0]=~/con*f*|^fa_conf$/i) {
+      $cpath.='Conf';
       system("cd $cpath;\"$editor\" ".
          "$Net::FullAuto::FA_Core::fa_conf;cd \"$savdir\"");
    } elsif ($_[0]=~/f/) {
@@ -7107,22 +7113,72 @@ FIN
                   $default_modules->{'fa_code'}=
                      "Net/FullAuto/Custom/$username/".
                      "Code/]S[";
+                  unless (exists $default_modules->{'fa_conf'}) {
+                     $default_modules->{'fa_conf'}=
+                        'Net/FullAuto/Distro/fa_conf.pm';
+                     $default_modules->{'fa_host'}=
+                        'Net/FullAuto/Distro/fa_host.pm';
+                     $default_modules->{'fa_conf'}=
+                        'Net/FullAuto/Distro/fa_maps.pm';
+                     $default_modules->{'fa_conf'}=
+                        'Net/FullAuto/Distro/fa_menu_demo.pm';
+                  }
                } elsif (-1<index ']S[','conf') {
                   $default_modules->{'fa_conf'}=
                      "Net/FullAuto/Custom/$username/".
                      "Conf/]S[";
+                  unless (exists $default_modules->{'fa_host'}) {
+                     $default_modules->{'fa_code'}=
+                        'Net/FullAuto/Distro/fa_code_demo.pm';
+                     $default_modules->{'fa_host'}=
+                        'Net/FullAuto/Distro/fa_host.pm';
+                     $default_modules->{'fa_maps'}=
+                        'Net/FullAuto/Distro/fa_maps.pm';
+                     $default_modules->{'fa_menu'}=
+                        'Net/FullAuto/Distro/fa_menu_demo.pm';
+                  }
                } elsif (-1<index ']S[','host') {
                   $default_modules->{'fa_host'}=
                      "Net/FullAuto/Custom/$username/".
                      "Host/]S[";
+                  unless (exists $default_modules->{'fa_maps'}) {
+                     $default_modules->{'fa_code'}=
+                        'Net/FullAuto/Distro/fa_code_demo.pm';
+                     $default_modules->{'fa_conf'}=
+                        'Net/FullAuto/Distro/fa_conf.pm';
+                     $default_modules->{'fa_maps'}=
+                        'Net/FullAuto/Distro/fa_maps.pm';
+                     $default_modules->{'fa_menu'}=
+                        'Net/FullAuto/Distro/fa_menu_demo.pm';
+                  }
                } elsif (-1<index ']S[','maps') {
                   $default_modules->{'fa_maps'}=
                      "Net/FullAuto/Custom/$username/".
                      "Maps/]S[";
+                  unless (exists $default_modules->{'fa_menu'}) {
+                     $default_modules->{'fa_code'}=
+                        'Net/FullAuto/Distro/fa_code_demo.pm';
+                     $default_modules->{'fa_conf'}=
+                        'Net/FullAuto/Distro/fa_conf.pm';
+                     $default_modules->{'fa_host'}=
+                        'Net/FullAuto/Distro/fa_host.pm';
+                     $default_modules->{'fa_menu'}=
+                        'Net/FullAuto/Distro/fa_menu_demo.pm';
+                  }
                } else {
                   $default_modules->{'fa_menu'}=
                      "Net/FullAuto/Custom/$username/".
                      "Menu/]S[";
+                  unless (exists $default_modules->{'fa_menu'}) {
+                     $default_modules->{'fa_code'}=
+                        'Net/FullAuto/Distro/fa_code_demo.pm';
+                     $default_modules->{'fa_conf'}=
+                        'Net/FullAuto/Distro/fa_conf.pm';
+                     $default_modules->{'fa_host'}=
+                        'Net/FullAuto/Distro/fa_host.pm';
+                     $default_modules->{'fa_maps'}=
+                        'Net/FullAuto/Distro/fa_maps.pm';
+                  }
                }
                my $put_dref=
                   Data::Dump::Streamer::Dump(
@@ -12057,7 +12113,15 @@ sub ftr_cmd
                         $ftr_cmd->{_cmd_handle});
                      &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
                         if $cfh_error;
-                  } else { last }
+                  } else {
+                     my $cfh_ignore='';my $cfh_error='';
+                     ($cfh_ignore,$cfh_error)=
+                        &Net::FullAuto::FA_Core::clean_filehandle(
+                        $ftr_cmd->{_cmd_handle});
+                     &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+                        if $cfh_error;
+                     last
+                  }
                }
                $curdir.='/' if $curdir ne '/';
                ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
@@ -23187,7 +23251,7 @@ print "WE HAVE LASTLINE CMDPROMPT AND ARE GOING TO EXIT and FO=$fulloutput and M
                         last;
                      } elsif ($lastline=~/^\s*$/) {
                         $growoutput.=$lastline;
-                     } else {
+                     } elsif (!$command_stripped_from_output) {
                         $growoutput=$lastline;
                      }
 print $Net::FullAuto::FA_Core::MRLOG "GRO_GONNA_LOOP==>$growoutput<==\n"
