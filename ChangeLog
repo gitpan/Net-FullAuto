@@ -47,6 +47,17 @@
 
 2011-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9974 released.
+
+        * &mirror() now works for local cygwin to remote unix.
+
+        * MAJOR improvements to output parsing accuracy.
+          FullAuto has made a significant leap in reliability
+          and robustness.
+
+
+2011-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9973 released.
 
         * Started work on repairing long dormant &mirror()
