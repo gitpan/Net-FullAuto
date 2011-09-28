@@ -221,94 +221,48 @@ BEGIN {
    our $curcen=unpack('a2',$curyear);
    our @invoked=($^T, $tm, $mdy, $hms, $hr, $mn, $sc, $mdyyyy);
    my $customdir='Net/FullAuto/Custom';
+
    our $fa_conf='';
-   if (defined $main::fa_conf) {
-      if (-1<index $main::fa_conf,'/') {
-         require $main::fa_conf;
-         my $fc=substr($main::fa_conf,
-                (rindex $main::fa_conf, '/')+1,-3);
-         import $fc;
-         $fa_conf=$fc.'.pm';
-      } else {
-         require $main::fa_conf;
-         my $fc=substr($main::fa_conf,0,-3);
-         import $fc;
-         $fa_conf=$main::fa_conf;
-      }
-   } else {
+   if (defined $Term::Menus::fa_conf) {
+      $fa_conf=$Term::Menus::fa_conf;
       eval {
-         require $customdir.'/fa_conf.pm';
-         import fa_conf;
-         $fa_conf='fa_conf.pm';
+         require $fa_conf->[0];
+         my $mod=substr($fa_conf->[0],(rindex $fa_conf->[0],'/')+1,-3);
+         import $mod;
+         $fa_conf=$mod.'.pm';
       };
-      if ($@) {
-         die $@;
-      }
    }
 
    our $fa_host='';
-   if (defined $main::fa_host) {
-      if (-1<index $main::fa_host,'/') {
-         require $main::fa_host;
-         my $fh=substr($main::fa_host,
-                (rindex $main::fa_host, '/')+1,-3);
-         import $fh;
-         $fa_host=$fh.'.pm';
-      } else {
-         require $main::fa_host;
-         my $fh=substr($main::fa_host,0,-3);
-         import $fh;
-         $fa_host=$main::fa_host;
-      }
-   } else {
+   if (defined $Term::Menus::fa_host) {
+      $fa_host=$Term::Menus::fa_host;
       eval {
-         require $customdir.'/fa_host.pm';
-         import fa_host;
-         $fa_host='fa_host.pm';
+         require $fa_host->[0];
+         my $mod=substr($fa_host->[0],(rindex $fa_host->[0],'/')+1,-3);
+         import $mod;
+         $fa_host=$mod.'.pm';
       };
    }
 
    our $fa_maps='';
-   if (defined $main::fa_maps) {
-      if (-1<index $main::fa_maps,'/') {
-         require $main::fa_maps;
-         my $fm=substr($main::fa_maps,
-                (rindex $main::fa_maps, '/')+1,-3);
-         import $fm;
-         $fa_maps=$fm.'.pm';
-      } else {
-         require $main::fa_maps;
-         my $fm=substr($main::fa_maps,0,-3);
-         import $fm;
-         $fa_maps=$fm.'.pm';
-      }
-   } else {
+   if (defined $Term::Menus::fa_maps) {
+      $fa_maps=$Term::Menus::fa_maps;
       eval {
-         require $customdir.'/fa_maps.pm';
-         import fa_maps;
-         $fa_maps='fa_maps.pm';
+         require $fa_maps->[0];
+         my $mod=substr($fa_maps->[0],(rindex $fa_maps->[0],'/')+1,-3);
+         import $mod;
+         $fa_maps=$mod.'.pm';
       };
    }
 
    our $fa_menu='';
-   if (defined $main::fa_menu) {
-      if (-1<index $main::fa_menu,'/') {
-         require $main::fa_menu;
-         my $fu=substr($main::fa_menu,
-                (rindex $main::fa_menu, '/')+1,-3);
-         import $fu;
-         $fa_menu=$fu.'.pm';
-      } else {
-         require $main::fa_menu;
-         my $fu=substr($main::fa_menu,0,-3);
-         import $fu;
-         $fa_maps=$fu.'.pm';
-      }
-   } else {
+   if (defined $Term::Menus::fa_menu) {
+      $fa_menu=$Term::Menus::fa_menu;
       eval {
-         require $customdir.'/fa_menu.pm';
-         import fa_menu;
-         $fa_menu='fa_menu.pm';
+         require $fa_menu->[0];
+         my $mod=substr($fa_menu->[0],(rindex $fa_menu->[0],'/')+1,-3);
+         import $mod;
+         $fa_menu=$mod.'.pm';
       };
    }
 
@@ -3053,9 +3007,9 @@ sub check_Hosts
    my $name=substr($_[0],0,-3);
    my @Hosts=eval "\@${name}::Hosts";
    foreach my $host (@Hosts) {
-      next if exists ${$host}{'sshport'};
-      my $hostn=(exists ${$host}{'HostName'})?lc(${$host}{'HostName'}):'';
-      my $ipn=(exists ${$host}{'IP'})?${$host}{'IP'}:''; 
+      next if exists $host->{'sshport'};
+      my $hostn=(exists $host->{'HostName'})?lc($host->{'HostName'}):'';
+      my $ipn=(exists $host->{'IP'})?$host->{'IP'}:''; 
       if ($hostn eq lc($Local_FullHostName)) {
          $chk_hostname=$Local_FullHostName;
       } elsif ($hostn eq lc($Local_HostName)) {
@@ -3065,8 +3019,8 @@ sub check_Hosts
       } else { next }
       if ($chk_hostname || $chk_ip) {
          my $hash="\'Label\'=>\'__Master_${$}__\'\,";
-# --CONTINUE-- print "WHAT IS THISHOST=${$host}{'Label'}\n";
-         $same_host_as_Master{${$host}{'Label'}}='-';
+# --CONTINUE-- print "WHAT IS THISHOST=$host->{'Label'}\n";
+         $same_host_as_Master{$host->{'Label'}}='-';
          foreach my $key (keys %{$host}) {
             if ($key eq 'Label' || $key eq 'SMB_Proxy'
                   || $key eq 'RCM_Proxy'
@@ -3547,7 +3501,7 @@ sub connect_host
              ."&connect_host()\n              ->  \"$hostlabel"
              ."\"\n              Called from the User Defined "
              ."Subroutine\n              -> \&$sub\n       "
-             ."       in the \"user subs\" subroutine file"
+             ."       in the \"Custom Code\" module file"
              ."\n              ->   $caller   is NOT a\n"
              ."              Valid Host Label\n\n"
              ."              Be sure there is Valid Host "
@@ -3939,7 +3893,8 @@ sub lookup_hostinfo_from_label
    print "lookup_hostinfo_from_label() CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "lookup_hostinfo_from_label() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log
+      && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $ip='';my $hostname='';my $use='';my $ms_share='';
    my $ms_domain='';my $cmd_cnct=[''];my $ftr_cnct=[''];
    my $login_id='';my $su_id='';my $chmod='';my $ping='';
@@ -3961,7 +3916,11 @@ print $Net::FullAuto::FA_Core::MRLOG "KEY FROM HOST HASH=$key and USE=$use\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       if (!$use || (!$defined_use && $ip && !$hostname)) {
          if ($key eq 'IP') {
-            $ip=$Hosts{$hostlabel}{$key};
+            if (ref $Hosts{$hostlabel}{$key} eq 'CODE') {
+               $ip=$Hosts{$hostlabel}{$key}->();
+            } else {
+               $ip=$Hosts{$hostlabel}{$key};
+            }
             if (exists $same_host_as_Master{$ip} || $ping) {
                if (exists $same_host_as_Master{$ip}
                      || !(&ping($ip,'__return__'))[1]) {
@@ -4735,7 +4694,6 @@ sub master_transfer_dir
                   ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_pre_mswin};
                   ${$work_dirs}{_cwd}=${$work_dirs}{_pre};
                }
-print "WHAT IS _cwd_mswinX=${$work_dirs}{_cwd_mswin}\n";sleep 5;
                ${$work_dirs}{'_tmp_mswin'}=${$work_dirs}{'_cwd_mswin'};
                $master_transfer_dir=${$work_dirs}{'_tmp'}=${$work_dirs}{'_cwd'};
                return $work_dirs;
@@ -4779,7 +4737,6 @@ print "WHAT IS _cwd_mswinX=${$work_dirs}{_cwd_mswin}\n";sleep 5;
          }
          ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_cwd_mswin}
             if $^O eq 'cygwin';
-print "WHAT IS _cwd_mswinZ=${$work_dirs}{_cwd_mswin}\n";sleep 5;
          $master_transfer_dir=${$work_dirs}{_tmp}
                              =${$work_dirs}{_cwd};
          return $work_dirs;
@@ -4855,7 +4812,6 @@ print "WHAT IS _cwd_mswinZ=${$work_dirs}{_cwd_mswin}\n";sleep 5;
                &handle_error($stderr,'-2','__cleanup__') if $stderr;
             }
             ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_cwd_mswin};
-print "WHAT IS _cwd_mswin1=${$work_dirs}{_cwd_mswin}\n";sleep 5;
             $master_transfer_dir=${$work_dirs}{_tmp}
                                 =${$work_dirs}{_cwd};
             return $work_dirs;
@@ -4875,7 +4831,6 @@ print "WHAT IS _cwd_mswin1=${$work_dirs}{_cwd_mswin}\n";sleep 5;
             ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_cwd_mswin};
             $master_transfer_dir=${$work_dirs}{_tmp}
                                 =${$work_dirs}{_cwd};
-print "WHAT IS _cwd_mswin2=${$work_dirs}{_cwd_mswin}\n";sleep 5;
             return $work_dirs;
          }
       }
@@ -4906,7 +4861,6 @@ print "WHAT IS _cwd_mswin2=${$work_dirs}{_cwd_mswin}\n";sleep 5;
          if ($testd eq 'WRITE') {
             ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$cdr.'\\';
             ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=$curdir;
-print "WHAT IS _cwd_mswin3=${$work_dirs}{_cwd_mswin}\n";sleep 5;
             return $work_dirs;
          } else {
             ($output,$stderr)=$localhost->cmd('cd -')
@@ -4918,7 +4872,6 @@ print "WHAT IS _cwd_mswin3=${$work_dirs}{_cwd_mswin}\n";sleep 5;
          ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_pre_mswin};
          ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_pre_mswin};
          ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=${$work_dirs}{_pre};
-print "WHAT IS _cwd_mswin4=${$work_dirs}{_cwd_mswin}\n";sleep 5;
          return $work_dirs;
       } else {
          my $die="\n       FATAL ERROR - Cannot Write to "
@@ -4932,7 +4885,6 @@ print "WHAT IS _cwd_mswin4=${$work_dirs}{_cwd_mswin}\n";sleep 5;
       &handle_error($stderr,'-2','__cleanup__') if $stderr;
       $master_transfer_dir=${$work_dirs}{_cwd}
          =${$work_dirs}{_tmp}='/tmp/';
-print "WHAT IS _cwd_mswin6=${$work_dirs}{_cwd_mswin}\n";
       return $work_dirs;
    } $testd=&test_dir($localhost->{_cmd_handle},$home_dir);
    if ($testd eq 'WRITE') {
@@ -4941,7 +4893,6 @@ print "WHAT IS _cwd_mswin6=${$work_dirs}{_cwd_mswin}\n";
       &handle_error($stderr,'-2','__cleanup__') if $stderr;
       $master_transfer_dir=${$work_dirs}{_cwd}
          =${$work_dirs}{_tmp}=$home_dir.'/';
-print "WHAT IS _cwd_mswin7=${$work_dirs}{_cwd_mswin}\n";
       return $work_dirs;
    }
    $testd=&test_dir($localhost->{_cmd_handle},$curdir);
@@ -4957,7 +4908,6 @@ print "WHAT IS _cwd_mswin7=${$work_dirs}{_cwd_mswin}\n";
    if ($testd eq 'WRITE') {
       $master_transfer_dir=${$work_dirs}{_cwd}
          =${$work_dirs}{_tmp}=$curdir.'/';
-print "WHAT IS _cwd_mswin8=${$work_dirs}{_cwd_mswin}\n";
       return $work_dirs;
    } else {
       my $die="\n       FATAL ERROR - Cannot Write to "
@@ -5039,7 +4989,11 @@ sub getpasswd
          if (exists $Hosts{$passlabel}{'IP'}) {
             if (exists $Hosts{$passlabel}{'Use'}) {
                if (lc($Hosts{$passlabel}{'Use'}) eq 'ip') {
-                  $host=$Hosts{$passlabel}{'IP'};
+                  if (ref $Hosts{$passlabel}{'IP'} eq 'CODE') {
+                     $host=$Hosts{$passlabel}{'IP'}->();
+                  } else {
+                     $host=$Hosts{$passlabel}{'IP'};
+                  }
                   $use='ip';
                } else {
                   $host=$Hosts{$passlabel}{'HostName'};
@@ -5054,7 +5008,11 @@ sub getpasswd
             $use='hostname';
          }
       } elsif (exists $Hosts{$passlabel}{'IP'}) {
-         $host=$Hosts{$passlabel}{'IP'};
+         if (ref $Hosts{$passlabel}{'IP'} eq 'CODE') {
+            $host=$Hosts{$passlabel}{'IP'}->();
+         } else {
+            $host=$Hosts{$passlabel}{'IP'};
+         }
          $use='ip';
       }
    }
@@ -6855,6 +6813,7 @@ sub fa_login
             undef $Net::FullAuto::FA_Core::bdb_once;
             $Net::FullAuto::FA_Core::dbenv_once->close();
             undef $Net::FullAuto::FA_Core::dbenv_once;
+print "HELLO THERE\n";sleep 10;
             if ((-1<index $status,
                   'DB_NOTFOUND: No matching key/data pair found')
                   || !($default_modules)
@@ -10670,7 +10629,6 @@ sub work_dirs
       if ($ms_share) {
          my $host=($use eq 'ip')?$ip:$hostname;
          ${$work_dirs}{_cwd_mswin}="\\\\$host\\$ms_share\\";
-print "WHAT IS _cwd_mswinQ=${$work_dirs}{_cwd_mswin}\n";sleep 5;
       }
       return $work_dirs if ${$work_dirs}{_tmp};
    } ${$work_dirs}{_tmp}=${$work_dirs}{_tmp_mswin}='';
@@ -12084,7 +12042,6 @@ sub ftr_cmd
             }
             ${$work_dirs}{_cwd}=${$work_dirs}{_tmp};
             ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin};
-print "WHAT IS _cwd_mswinU=${$work_dirs}{_cwd_mswin}\n";sleep 5;
             $Net::FullAuto::FA_Core::tran[0]=${$work_dirs}{_tmp};
             $Net::FullAuto::FA_Core::tran[1]=$hostlabel;
             $Net::FullAuto::FA_Core::ftpcwd{$ftr_cmd->{_ftp_handle}}{cd}
@@ -12101,7 +12058,6 @@ print "WHAT IS _cwd_mswinU=${$work_dirs}{_cwd_mswin}\n";sleep 5;
             ${$work_dirs}{_pre}=${$work_dirs}{_cwd}='';
             ${$work_dirs}{_pre_mswin}=${$work_dirs}{_cwd_mswin}=
                "\\\\$host\\$ms_share\\";
-print "WHAT IS _cwd_mswinT=${$work_dirs}{_cwd_mswin}\n";sleep 5;
             ($output,$stderr)=$ftr_cmd->cmd('cd '.${$work_dirs}{_tmp});
             if ($stderr) {
                @FA_Core::tran=();
@@ -12148,7 +12104,6 @@ print "WHAT IS _cwd_mswinT=${$work_dirs}{_cwd_mswin}\n";sleep 5;
                   }
                   ${$work_dirs}{_pre_mswin}=
                      ${$work_dirs}{_cwd_mswin}=$cdr.'\\\\';
-print "WHAT IS _cwd_mswinP=${$work_dirs}{_cwd_mswin}\n";sleep 5;
                   ${$work_dirs}{_tmp_mswin}=
                      $ftr_cmd->{_work_dirs}->{_tmp_mswin};
                }
@@ -12495,12 +12450,10 @@ print "FTR_RETURN7\n";
       $login_id=$su_id if $su_id;
       $hostlabel=$Net::FullAuto::FA_Core::DeploySMB_Proxy[0];
       if (defined $transfer_dir && $transfer_dir) {
-print "FTRTHREE\n";
          $work_dirs=&Net::FullAuto::FA_Core::work_dirs($transfer_dir,
                     $hostlabel,$ftr_cmd,$cmd_type,'',$_connect);
          ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_pre_mswin}
             ="\\\\$ms_host\\$ms_ms_share\\";
-print "WHAT IS _cwd_mswinW=${$work_dirs}{_cwd_mswin}\n";sleep 5;
          ${$work_dirs}{_cwd}=${$work_dirs}{_pre}='';
          my ($output,$stderr)=$ftr_cmd->cmd('cd '.${$work_dirs}{_tmp});
          if ($stderr) {
@@ -14811,7 +14764,6 @@ sub cwd
             $self->{_work_dirs}->{_pre_mswin}=
                $self->{_work_dirs}->{_cwd_mswin};
             $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
-print "WHATTTTTT=$self->{_work_dirs}->{_cwd_mswin}<==\n";sleep 5;
             $output="CWD command successful";
          } else {
             $output=~s/^.*Directory of [^\n]*(.*)$/$1/s;
@@ -14857,7 +14809,6 @@ print "WHATTTTTT=$self->{_work_dirs}->{_cwd_mswin}<==\n";sleep 5;
          $self->{_work_dirs}->{_pre_mswin}=
             $self->{_work_dirs}->{_cwd_mswin};
          $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
-print "WAHT HEH=$self->{_work_dirs}->{_cwd_mswin}\n";sleep 5;
       } elsif ($self->{_uname} eq 'cygwin' &&
             $target_dir=~/^[A-Za-z]:/) {
          my ($drive,$path)=unpack('a1 x1 a*',$target_dir);
@@ -14876,7 +14827,6 @@ print "WAHT HEH=$self->{_work_dirs}->{_cwd_mswin}\n";sleep 5;
             $self->{_work_dirs}->{_cwd_mswin};
          $self->{_work_dirs}->{_cwd}=$tar_dir.'/';
          $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
-print "KKKKKKKK=$self->{_work_dirs}->{_cwd_mswin}\n";sleep 5;
       } else {
          if (1<$len_tdir && unpack('a2',$target_dir) eq '..') {
             if ($self->{_ftm_type}=~/s*ftp/) {
@@ -14911,7 +14861,6 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
             } else {
                $target_dir=$self->{_work_dirs}->{_cwd_mswin}
                    ="$self->{_work_dirs}->{_cwd_mswin}\\$target_dir\\";
-print "HUHHHHHHHHH=$self->{_work_dirs}->{_cwd_mswin}\n";sleep 5;
             }
          }
          if (exists $self->{_smb} && $ms_share &&
@@ -14929,7 +14878,6 @@ print "HUHHHHHHHHH=$self->{_work_dirs}->{_cwd_mswin}\n";sleep 5;
                      =$self->{_work_dirs}->{_cwd_mswin};
                   $tdir=~s/[\\]*$//;
                   $self->{_work_dirs}->{_cwd_mswin}=$tdir.'\\';
-print "ooooooo=$self->{_work_dirs}->{_cwd_mswin}\n";sleep 5;
                }
                $output='CWD command successful';
                return $output,'';

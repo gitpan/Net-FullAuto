@@ -45,7 +45,19 @@
 ################################################################
 
 
-2011-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2011-09-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9975 released.
+
+        * Fix for fa --defaults functionality.
+
+        * Added support code to dynamically discover IP
+          address of host, rather than having it hard-coded
+          in fa_host.pm file. This is for interaction from
+          Virtual Box guest OS to host.
+
+
+2011-09-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9974 released.
 
