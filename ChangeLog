@@ -45,6 +45,13 @@
 ################################################################
 
 
+2011-10-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9976 released.
+
+        * Fix fa --edit
+
+
 2011-09-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9975 released.

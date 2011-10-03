@@ -1651,6 +1651,37 @@ sub edit {
    my $tpath=$path;
    $tpath=~s/Net.*//;
 
+   our $fa_code='';
+   our $fa_conf='';
+   our $fa_host='';
+   our $fa_maps='';
+   our $fa_menu='';
+   require Term::Menus;
+   if (defined $Term::Menus::fa_conf) {
+      $fa_conf=$Term::Menus::fa_conf;
+      eval {
+         require 'Net/FullAuto/Custom/'.$username.'/Conf/'.$fa_conf;
+         my $mod=substr($fa_conf,(rindex $fa_conf,'/')+1,-3);
+         import $mod;
+         $fa_conf=$mod.'.pm';
+      };
+      if ($@) {
+         die "ERROR=$@\n";
+      }
+   }
+   if (defined $Term::Menus::fa_code) {
+      $fa_code=$Term::Menus::fa_code;
+   }
+   if (defined $Term::Menus::fa_host) {
+      $fa_host=$Term::Menus::fa_host;
+   }
+   if (defined $Term::Menus::fa_maps) {
+      $fa_maps=$Term::Menus::fa_maps;
+   }
+   if (defined $Term::Menus::fa_menu) {
+      $fa_menu=$Term::Menus::fa_menu;
+   }
+
    my $editor='';
    unless ($editor=$fa_conf::editor) {
       if ($^O eq 'cygwin') {
@@ -1676,22 +1707,27 @@ sub edit {
    if ($_[0]=~/ho*s*t*|^fa_host$/i) {
       $cpath.='Host';
       system("cd $cpath;\"$editor\" ".
-         "$Net::FullAuto::FA_Core::fa_host;cd \"$savdir\"");
+         "$fa_host;cd \"$savdir\"");
    } elsif ($_[0]=~/^m$|^me$|^men$|^menu$|^fa_menu$/i) {
       $cpath.='Menu';
+      $fa_menu=~s/^(fa_.*)_demo(.pm)$/$1$2/
+         unless -f "$cpath./$fa_menu";
       system("cd $cpath;\"$editor\" ".
-         "$Net::FullAuto::FA_Core::fa_menu;cd \"$savdir\"");
+         "$fa_menu;cd \"$savdir\"");
    } elsif ($_[0]=~/map*s*|^fa_maps$/i) {
       $cpath.='Maps';
       system("cd $cpath;\"$editor\" ".
-         "$Net::FullAuto::FA_Core::fa_maps;cd \"$savdir\"");
+         "$fa_maps;cd \"$savdir\"");
    } elsif ($_[0]=~/^c$|^co$|^cod$|^code$|^fa_code$/i) {
       $cpath.='Code';
-      system("cd $cpath;\"$editor\" fa_code.pm;cd \"$savdir\"");
+      $fa_code=~s/^(fa_.*)_demo(.pm)$/$1$2/
+         unless -f "$cpath./$fa_code";
+      system("cd $cpath;\"$editor\" ".
+         "$fa_code;cd \"$savdir\"");
    } elsif ($_[0]=~/con*f*|^fa_conf$/i) {
       $cpath.='Conf';
       system("cd $cpath;\"$editor\" ".
-         "$Net::FullAuto::FA_Core::fa_conf;cd \"$savdir\"");
+         "$fa_conf;cd \"$savdir\"");
    } elsif ($_[0]=~/f/) {
       system("cd $path;\"$editor\" FA_Core.pm;cd \"$savdir\"");
    } elsif ($_[0]=~/t/) {
@@ -1699,16 +1735,25 @@ sub edit {
    } else {
       my $stderr='';my $stdout='';
       chdir $cpath;
-      ($stdout,$stderr)=cmd("${Net::FullAuto::FA_Core::lspath}ls -F");
+      ($stdout,$stderr)=cmd("${Net::FullAuto::FA_Core::lspath}ls -lR");
       die $stderr if $stderr;
       my @files=split "\n", $stdout;
-      my @file=();
+      my @file=();my $dirr='';
       foreach my $file (@files) {
+         next if $file=~/^\s*$/;
+         next if unpack('a1',$file) eq 'd';
+         next if $file=~/^total/;
+         next if $file eq '.:';
+         if (unpack('a2',$file) eq './') {
+            $dirr=unpack('x2a*',$file);
+            chop($dirr);
+            next;
+         } 
          chomp($file);
          next if $file=~/\/$/;
          next if $file eq 'README';
-         chop($file);
-         push @file,$file;
+         $file=~s/^.*\d\d:\d\d\s+(.*)$/$1/;
+         push @file,$dirr.'/'.$file;
       }
       my %Menu_1=(
 
@@ -20941,6 +20986,12 @@ print $Net::FullAuto::FA_Core::MRLOG
                   ${$work_dirs}{_cwd_mswin}=$cdr.'\\\\';
                ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
             } else {
+               my $cfh_ignore='';my $cfh_error='';
+               ($cfh_ignore,$cfh_error)=
+                  &Net::FullAuto::FA_Core::clean_filehandle(
+               $cmd_handle);
+               &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+                  if $cfh_error;
                ($curdir,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_handle,
                     _hostlabel=>[ $hostlabel,'' ] },'pwd');
@@ -22835,11 +22886,13 @@ print $Net::FullAuto::FA_Core::MRLOG "OOOOOOOOOOOO=$o\n" if $Net::FullAuto::FA_C
                                  $output=unpack("x$llc a*",$output);
                               }
                               $first=0;$growoutput=$output;
-                              $growoutput=~s/^(.*)($cmd_prompt)*$/$1/s;
-print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput\n"
-   if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
+                              while (
+                                 $growoutput=~s/^(.*)$cmd_prompt$/$1/s
+                              ) {}
+print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput<= and OUTPUT=$output\n" if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
                               if ($output=~/$cmd_prompt$/s &&
                                     $growoutput!~/$cmd_prompt$/s) {
+print $Net::FullAuto::FA_Core::MRLOG "IM IN THE CONDITIONAL\n" if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
                                  $growoutput=$output;
                                  $output='';
                                  $command_stripped_from_output=1;
