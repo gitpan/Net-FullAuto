@@ -77,6 +77,23 @@ our @Hosts = (
                               "$Net::FullAuto::FA_Core::invoked[2]".
                               "$Net::FullAuto::FA_Core::invoked[3].txt",
        },
+       {
+          'IP'             => '169.254.25.129',
+          'Label'          => 'Laptop',
+          'LoginID'        => 'KB06606',
+          'LogFile'        => "/tmp/FAlog${$}d".
+                              "$Net::FullAuto::FA_Core::invoked[2]".
+                              "$Net::FullAuto::FA_Core::invoked[3].txt",
+       },
+       {
+          'IP'             => '169.254.25.129',
+          'Label'          => 'Solaris',
+          'LoginID'        => 'opens',
+          'sshport'        => '2223',
+          'LogFile'        => "/tmp/FAlog${$}d".
+                              "$Net::FullAuto::FA_Core::invoked[2]".
+                              "$Net::FullAuto::FA_Core::invoked[3].txt",
+       },
 
 #################################################################
 ##  Do NOT alter code BELOW this block.

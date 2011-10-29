@@ -45,6 +45,16 @@
 ################################################################
 
 
+2011-10-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9977 released.
+
+        * mirror() functionality repaired for both cygwin-unix
+          and unix-cygwin.
+
+        * su() fixed for unix.
+
+
 2011-10-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9976 released.

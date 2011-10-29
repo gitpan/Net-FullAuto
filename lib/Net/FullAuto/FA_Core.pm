@@ -885,6 +885,8 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() SHOULD BE LAST CC=$line\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                               $gone=0;last CC;
+                           } elsif (-1<index $line,'Exit status 0') {
+                              last CC;
                            } elsif (-1<index $line,
                                  'Connection to localhost closed') {
                               $was_a_local=1;
@@ -3051,39 +3053,121 @@ sub check_Hosts
    my $chk_hostname='';my $chk_ip='';my $trandir_flag='';
    my $name=substr($_[0],0,-3);
    my @Hosts=eval "\@${name}::Hosts";
-   foreach my $host (@Hosts) {
-      next if exists $host->{'sshport'};
-      my $hostn=(exists $host->{'HostName'})?lc($host->{'HostName'}):'';
-      my $ipn=(exists $host->{'IP'})?$host->{'IP'}:''; 
+   my @Cycle=@Hosts;
+   my $username=getlogin || getpwuid($<);
+   HOST: foreach my $h (@Cycle) {
+      my $host=$h;
+      my $hostn='';my $ipn='';my $lh_key=0;
+      foreach my $keee (keys %{$host}) {
+         my $ke=$keee;
+         if (lc($ke) eq 'label' && lc($host->{$ke}) eq 'localhost') {
+            $lh_key=1; 
+         } elsif (lc($ke) eq 'hostname') {
+            $hostn=$host->{$ke};
+         } elsif (lc($ke) eq 'ip') {
+            $ipn=$host->{$ke};
+         }
+      }
       if ($hostn eq lc($Local_FullHostName)) {
          $chk_hostname=$Local_FullHostName;
       } elsif ($hostn eq lc($Local_HostName)) {
          $chk_hostname=$Local_HostName;
       } elsif (exists $Local_IP_Address->{$ipn}) {
          $chk_ip=$ipn;
+      } elsif ($lh_key) {
       } else { next }
-      if ($chk_hostname || $chk_ip) {
+      if ($chk_hostname || $chk_ip || $lh_key==1) {
          my $hash="\'Label\'=>\'__Master_${$}__\'\,";
-# --CONTINUE-- print "WHAT IS THISHOST=$host->{'Label'}\n";
          $same_host_as_Master{$host->{'Label'}}='-';
          foreach my $key (keys %{$host}) {
-            if ($key eq 'Label' || $key eq 'SMB_Proxy'
+            if (lc($key) eq 'sshport') {
+               next HOST;
+            } elsif (lc($key) eq 'label') {
+               if (lc($host->{$key}) eq 'localhost') {
+                  $hash="\'Label\'=>\'__Master_${$}__\'\,";
+                  foreach my $kee (keys %{$host}) {
+                     if (lc($kee) eq 'label') {
+                        next;
+                     } elsif ((lc(unpack('a1',$kee)) eq 's') &&
+                           (lc($kee) eq 'su' || lc($kee) eq 'su_id' ||
+                           lc($kee) eq 'suloginid' || lc($kee) eq 'suid' ||
+                           lc($kee) eq 'sulogin')) {
+                        if ($host->{$kee}) {
+                           $hash.="\'SU_ID\'=>\'$host->{$kee}\'\,";
+                        } else {
+                           $hash.="\'SU_ID\'=>\'root\'\,";
+                        } next;
+                     } elsif (lc($kee) eq 'hostname' && !$chk_hostname) {
+                        if (defined $Local_HostName) {
+                           $hash.="\'HostName'=>\'".$Local_HostName."\'\,";
+                        } elsif (defined $Local_FullHostName) {
+                           $hash.="\'HostName'=>\'".$Local_FullHostName."\'\,";
+                        } next;
+                     } elsif (lc($kee) eq 'ip' && !$chk_hostname && keys
+                              %{$Local_IP_Address}) {
+                        $hash.="\'IP'=>\'".
+                                  (keys %{$Local_IP_Address})[0]."\'\,";
+                        next;
+                     } else {
+                        $hash.="\'$kee'=>\'".$host->{$kee}."\'\,";
+                     }
+                  }
+                  my $li_flag=0;my $hn_flag=0;my $ip_flag=0;
+                  foreach my $ky (eval "\{ $hash \}") {
+                     if (lc($ky) eq 'loginid' || lc($ky) eq 'login') {
+                        $li_flag=1;
+                     } elsif (lc($ky) eq 'hostname') {
+                        $hn_flag=1;
+                     } elsif (lc($ky) eq 'ip') {
+                        $ip_flag=1;
+                     }
+                  }
+                  $hash.="\'LoginID'=>\'".$username."\'\," unless $li_flag;
+                  unless ($hn_flag) {
+                     if (defined $Local_HostName) {
+                        $hash.="\'HostName'=>\'".$Local_HostName."\'\,";
+                     } elsif (defined $Local_FullHostName) {
+                        $hash.="\'HostName'=>\'".$Local_FullHostName."\'\,";
+                     } 
+                  }
+                  unless ($ip_flag) {
+                     if (keys %{$Local_IP_Address}) {
+                        $hash.="\'IP'=>\'".
+                                 (keys %{$Local_IP_Address})[0]."\'\,";
+                     }
+                  }
+                  $hash.="\'Uname'=>\'".(uname)[0]."\'\,";
+                  my $has=eval "\{ $hash \}";
+                  unshift @Hosts, $has;
+                  next HOST;
+               } else {
+                  next;
+               }
+            } elsif ((lc(unpack('a1',$key)) eq 's') && (lc($key) eq 'su' ||
+                  lc($key) eq 'su_id' || lc($key) eq 'suloginid'
+                  || lc($key) eq 'suid' || lc($key) eq 'sulogin')) {
+               next if $host->{'Label'} eq 'localhost';
+               next HOST;
+            } elsif ((lc(unpack('a1',$key)) eq 'l') && (lc($key) eq 'loginid'
+                  || lc($key) eq 'login') && $host->{$key} eq $username) {
+               next;
+            } elsif ($key eq 'SMB_Proxy'
                   || $key eq 'RCM_Proxy'
                   || $key eq 'FTM_Proxy') {
                next;
-            } elsif ($key eq 'HostName' && !$chk_hostname) {
+            } elsif (lc($key) eq 'hostName' && !$chk_hostname) {
                if (defined $Local_HostName) {
                   $hash.="\'HostName'=>\'".$Local_HostName."\'\,";
                } elsif (defined $Local_FullHostName) {
                   $hash.="\'HostName'=>\'".$Local_FullHostName."\'\,";
                } next;
-            } elsif ($key eq 'IP' && !$chk_hostname && keys
+            } elsif (lc($key) eq 'ip' && !$chk_hostname && keys
                      %{$Local_IP_Address}) {
                $hash.="\'IP'=>\'".(keys %{$Local_IP_Address})[0]."\'\,";
                next;
-            } elsif ($key eq 'TransferDir') {
+            } elsif (lc($key) eq 'transferdir') {
                $hash.="\'TransferDir'=>\'".${$host}{$key}."\'\,";
-               next;
+               next HOST;
             } 
             $hash.="\'$key'=>\'".${$host}{$key}."\'\,";
          } $hash.="\'Uname'=>\'".(uname)[0]."\'\,";
@@ -3135,8 +3219,8 @@ my %msproxies=();my %uxproxies=();my %labels=();
 my %DeploySMB_Proxy=();my %DeployFTM_Proxy=();
 my %DeployRCM_Proxy=();my $msflag='';my $uxflag='';
 foreach my $host (@Hosts) {
-   if (exists $labels{${$host}{'Label'}}) {
-        &handle_error("DUPLICATE LABEL DETECTED - ${$host}{'Label'}");
+   if (exists $labels{$host->{'Label'}}) {
+        &handle_error("DUPLICATE LABEL DETECTED - $host->{'Label'}");
    } $labels{${$host}{'Label'}}='';
    if (exists ${$host}{'SMB_Proxy'}) {
       if (exists $msproxies{${$host}{'SMB_Proxy'}} &&
@@ -4031,7 +4115,8 @@ print $Net::FullAuto::FA_Core::MRLOG "KEY FROM HOST HASH=$key and USE=$use\n"
                      && $rem_cnct ne 'connect_reverse'))) {
                   my $die.="\n              \"Remote\" Value:  \'$rem_cnct\'"
                          ."\n              for Host Block  --> $hostlabel"
-                         ."\n              in file $Net::FullAuto::FA_Core::fa_host"
+                         ."\n              in file "
+                         .$Net::FullAuto::FA_Core::fa_host
                          ."\n              conflicts with calling connect"
                          ."\n              method:  $_connect";
                   &handle_error($die);          
@@ -4072,10 +4157,15 @@ print $Net::FullAuto::FA_Core::MRLOG "KEY FROM HOST HASH=$key and USE=$use\n"
                $cmd_cnct=[ 'telnet','ssh' ];
             }
          }
-      } elsif ($key eq 'LoginID') {
+      } elsif ((lc(unpack('a1',$key)) eq 'l') && (lc($key) eq 'loginid'
+            || $key eq 'login')) {
          $login_id=$Hosts{$hostlabel}{$key};
-      } elsif ($key eq 'SU_ID') {
+         $Hosts{$hostlabel}{'LoginID'}=$login_id;
+      } elsif ((lc(unpack('a1',$key)) eq 's') && (lc($key) eq 'su' ||
+            lc($key) eq 'su_id' || lc($key) eq 'suloginid'
+            || lc($key) eq 'suid' || lc($key) eq 'sulogin')) {
          $su_id=$Hosts{$hostlabel}{$key};
+         $Hosts{$hostlabel}{'SU_ID'}=$su_id;
       } elsif ($key eq 'Chmod') {
          $chmod=$Hosts{$hostlabel}{$key};
       } elsif ($key eq 'Owner') {
@@ -4334,16 +4424,23 @@ sub test_dir
                if ($line=~/^WRITE|^(?:[>]\s)*WRITE/m) {
                   $test_result='WRITE';
                   $leave=1;
+                  $l='';
                } elsif ($line=~/^READ|^(?:[>]\s)*READ/m) {
                   $test_result='READ';
                   $leave=1;
+                  $l='';
                } elsif ($line=~/^NODIR|^(?:[>]\s)*NODIR/m) {
                   $test_result=0;
                   $leave=1;
+                  $l='';
                }
+               $cmd_handle->print();
+               next;
             }
-            if ($l=~/-\s*_funkyPrompt_/s) {
+            if ($l=~/_funkyPrompt_$/s) {
                last TD;
+            } else {
+               $cmd_handle->print;
             }
          } last if $leave;
          $cmd_handle->print;
@@ -4483,14 +4580,19 @@ my $onemore=0;
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             chomp($line=~tr/\0-\11\13-\37\177-\377//d);
             $all_lines.=$line;
-            if ($all_lines=~/${$Net::FullAuto::FA_Core::uhray}[0]_-.+$/s) {
+            if (-1<index $all_lines,"$Net::FullAuto::FA_Core::uhray->[0]_-") {
+               if ($all_lines=~/_funkyPrompt_$/s) {
+                  return '','';
+               } else {
+                  last;
+               }
+            } elsif (-1<index $all_lines,'Exit status 0') {
                last;
-            }
-            if ($all_lines=~/(Conn.*reset|Conn.*closed|filehandle.*isn)/s) {
+            } elsif (
+                  $all_lines=~/(Conn.*reset|Conn.*closed|filehandle.*isn)/s) {
                $closederror=$1;
                last;
-            }
-            if ($loop2==100) {
+            } elsif ($loop2==100) {
                my $die="100 attempts without indication ".
                        "that filehandle is clean";
                if (wantarray) {
@@ -4702,13 +4804,13 @@ sub master_transfer_dir
       $master_transfer_dir=$tdir=$Hosts{"__Master_${$}__"}{'TransferDir'};
       if ($^O eq 'cygwin' && $tdir=~/^[\\|\/]/
             && $tdir!~/$localhost->{_cygdrive_regex}/o) {
-         if ((${$work_dirs}{_tmp},${$work_dirs}{_tmp_mswin})
+         if (($work_dirs->{_tmp},$work_dirs->{_tmp_mswin})
                =&File_Transfer::get_drive(
                $tdir,'Target','',"__Master_${$}__")) {
                $testd=&test_dir($localhost->{_cmd_handle},
-                      ${$work_dirs}{_tmp});
+                      $work_dirs->{_tmp});
             if ($testd eq 'WRITE') {
-               if (lc(${$work_dirs}{_tmp_mswin}) ne lc($curdir)) {
+               if (lc($work_dirs->{_tmp_mswin}) ne lc($curdir)) {
                   ($output,$stderr)=$localhost->cmd(
                      'cd '.${Net::FullAuto::FA_Core::work_dirs}{_tmp});
                   &handle_error($stderr,'-2','__cleanup__') if $stderr;
@@ -4732,20 +4834,20 @@ sub master_transfer_dir
             if ($testd eq 'WRITE') {
                if ($tdir ne $curdir) {
                   ($output,$stderr)=$localhost->cmd(
-                     'cd '.${$work_dirs}{_cwd});
+                     'cd '.$work_dirs->{_cwd});
                   &handle_error($stderr,'-2','__cleanup__') if $stderr;
-                  ${$work_dirs}{_cwd_mswin}=$tdir.'\\';
+                  $work_dirs->{_cwd_mswin}=$tdir.'\\';
                } else {
-                  ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_pre_mswin};
-                  ${$work_dirs}{_cwd}=${$work_dirs}{_pre};
+                  $work_dirs->{_cwd_mswin}=$work_dirs->{_pre_mswin};
+                  $work_dirs->{_cwd}=$work_dirs->{_pre};
                }
-               ${$work_dirs}{'_tmp_mswin'}=${$work_dirs}{'_cwd_mswin'};
-               $master_transfer_dir=${$work_dirs}{'_tmp'}=${$work_dirs}{'_cwd'};
+               $work_dirs->{'_tmp_mswin'}=$work_dirs->{'_cwd_mswin'};
+               $master_transfer_dir=$work_dirs->{'_tmp'}=$work_dirs->{'_cwd'};
                return $work_dirs;
             } else {
                &Net::FullAuto::FA_Core::handle_error(
                   "TransferDir not Writable and TESTD=$testd<==".
-                  " and work_dirs-_cwd=${$work_dirs}{_cwd}<==");
+                  " and work_dirs-_cwd=$work_dirs->{_cwd}<==");
             }
          }
          my $warn="Cannot cd to $tdir\n\tOperating " .
@@ -4764,26 +4866,26 @@ sub master_transfer_dir
          }
          if ($tdir ne $curdir) {
             if ($^O eq 'cygwin') {
-               ${$work_dirs}{_cwd}=$localhost->{_cygdrive}
+               $work_dirs->{_cwd}=$localhost->{_cygdrive}
                                   .'/'.lc($drive).$path.'/';
                ($output,$stderr)=$localhost->cmd(
-                  'cd '.${$work_dirs}{_cwd});
+                  'cd '.$work_dirs->{_cwd});
                &handle_error($stderr,'-2','__cleanup__') if $stderr;
-               ${$work_dirs}{_cwd_mswin}=$tdir.'\\';
+               $work_dirs->{_cwd_mswin}=$tdir.'\\';
             } else {
                ($output,$stderr)=$localhost->cmd("cd $tdir");
                &handle_error($stderr,'-2','__cleanup__') if $stderr;
-               ${$work_dirs}{_cwd}=$tdir.'/';
+               $work_dirs->{_cwd}=$tdir.'/';
             } 
          } else {
-            ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_pre_mswin}
+            $work_dirs->{_cwd_mswin}=$work_dirs->{_pre_mswin}
                if $^O eq 'cygwin';
-            ${$work_dirs}{_cwd}=${$work_dirs}{_pre};
+            $work_dirs->{_cwd}=$work_dirs->{_pre};
          }
-         ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_cwd_mswin}
+         $work_dirs->{_tmp_mswin}=$work_dirs->{_cwd_mswin}
             if $^O eq 'cygwin';
-         $master_transfer_dir=${$work_dirs}{_tmp}
-                             =${$work_dirs}{_cwd};
+         $master_transfer_dir=$work_dirs->{_tmp}
+                             =$work_dirs->{_cwd};
          return $work_dirs;
       }
    }
@@ -4849,33 +4951,33 @@ sub master_transfer_dir
             =&File_Transfer::get_drive(
             '/tmp','Target','',"__Master_${$}__")) {
          $testd=&test_dir($localhost->{_cmd_handle},
-                   ${$work_dirs}{_tmp});
+                   $work_dirs->{_tmp});
          if ($testd eq 'WRITE') {
-            if (lc(${$work_dirs}{_tmp_mswin}) ne lc($curdir)) {
+            if (lc($work_dirs->{_tmp_mswin}) ne lc($curdir)) {
                ($output,$stderr)=$localhost->cmd(
-                  'cd '.${$work_dirs}{_tmp});
+                  'cd '.$work_dirs->{_tmp});
                &handle_error($stderr,'-2','__cleanup__') if $stderr;
             }
-            ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_cwd_mswin};
-            $master_transfer_dir=${$work_dirs}{_tmp}
-                                =${$work_dirs}{_cwd};
+            $work_dirs->{_tmp_mswin}=$work_dirs->{_cwd_mswin};
+            $master_transfer_dir=$work_dirs->{_tmp}
+                                =$work_dirs->{_cwd};
             return $work_dirs;
          }
       }
-      if ((${$work_dirs}{_tmp},${$work_dirs}{_tmp_mswin})
+      if (($work_dirs->{_tmp},$work_dirs->{_tmp_mswin})
             =&File_Transfer::get_drive(
             '/temp','Target','',"__Master_${$}__")) {
          $testd=&test_dir($localhost->{_cmd_handle},
-                   ${$work_dirs}{_tmp});
+                   $work_dirs->{_tmp});
          if ($testd eq 'WRITE') {
-            if (lc(${$work_dirs}{_tmp_mswin}) ne lc($curdir)) {
+            if (lc($work_dirs->{_tmp_mswin}) ne lc($curdir)) {
                ($output,$stderr)=$localhost->cmd(
-                  'cd '.${$work_dirs}{_tmp});
+                  'cd '.$work_dirs->{_tmp});
                &handle_error($stderr,'-2','__cleanup__') if $stderr;
             }
-            ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_cwd_mswin};
-            $master_transfer_dir=${$work_dirs}{_tmp}
-                                =${$work_dirs}{_cwd};
+            $work_dirs->{_tmp_mswin}=$work_dirs->{_cwd_mswin};
+            $master_transfer_dir=$work_dirs->{_tmp}
+                                =$work_dirs->{_cwd};
             return $work_dirs;
          }
       }
@@ -4904,8 +5006,8 @@ sub master_transfer_dir
          }
          $testd=&test_dir($localhost->{_cmd_handle},$curdir);
          if ($testd eq 'WRITE') {
-            ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin}=$cdr.'\\';
-            ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=$curdir;
+            $work_dirs->{_cwd_mswin}=$work_dirs->{_tmp_mswin}=$cdr.'\\';
+            $work_dirs->{_cwd}=$work_dirs->{_tmp}=$curdir;
             return $work_dirs;
          } else {
             ($output,$stderr)=$localhost->cmd('cd -')
@@ -4914,9 +5016,9 @@ sub master_transfer_dir
       }
       $testd=&test_dir($localhost->{_cmd_handle},$curdir);
       if ($testd eq 'WRITE') {
-         ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_pre_mswin};
-         ${$work_dirs}{_tmp_mswin}=${$work_dirs}{_pre_mswin};
-         ${$work_dirs}{_cwd}=${$work_dirs}{_tmp}=${$work_dirs}{_pre};
+         $work_dirs->{_cwd_mswin}=$work_dirs->{_pre_mswin};
+         $work_dirs->{_tmp_mswin}=$work_dirs->{_pre_mswin};
+         $work_dirs->{_cwd}=$work_dirs->{_tmp}=$work_dirs->{_pre};
          return $work_dirs;
       } else {
          my $die="\n       FATAL ERROR - Cannot Write to "
@@ -4928,16 +5030,16 @@ sub master_transfer_dir
       ($output,$stderr)=$localhost->cmd('cd /tmp')
          if '/tmp' ne $curdir;
       &handle_error($stderr,'-2','__cleanup__') if $stderr;
-      $master_transfer_dir=${$work_dirs}{_cwd}
-         =${$work_dirs}{_tmp}='/tmp/';
+      $master_transfer_dir=$work_dirs->{_cwd}
+         =$work_dirs->{_tmp}='/tmp/';
       return $work_dirs;
    } $testd=&test_dir($localhost->{_cmd_handle},$home_dir);
    if ($testd eq 'WRITE') {
       ($output,$stderr)=$localhost->cmd("cd $home_dir")
          if $home_dir ne $curdir;
       &handle_error($stderr,'-2','__cleanup__') if $stderr;
-      $master_transfer_dir=${$work_dirs}{_cwd}
-         =${$work_dirs}{_tmp}=$home_dir.'/';
+      $master_transfer_dir=$work_dirs->{_cwd}
+         =$work_dirs->{_tmp}=$home_dir.'/';
       return $work_dirs;
    }
    $testd=&test_dir($localhost->{_cmd_handle},$curdir);
@@ -4951,8 +5053,8 @@ sub master_transfer_dir
       if !$Net::FullAuto::FA_Core::cron &&
          $Net::FullAuto::FA_Core::debug;
    if ($testd eq 'WRITE') {
-      $master_transfer_dir=${$work_dirs}{_cwd}
-         =${$work_dirs}{_tmp}=$curdir.'/';
+      $master_transfer_dir=$work_dirs->{_cwd}
+         =$work_dirs->{_tmp}=$curdir.'/';
       return $work_dirs;
    } else {
       my $die="\n       FATAL ERROR - Cannot Write to "
@@ -5009,7 +5111,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING CURDIR FOR TRANSFER=",cwd(),"\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       $master_transfer_dir=$curdir;
    }
-   ${$localhost}{_cwd}{_cwd}=Cwd::getcwd();
+   $localhost->{_cwd}{_cwd}=Cwd::getcwd();
    return $master_transfer_dir;
 
 }
@@ -5203,7 +5305,8 @@ sub getpasswd
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db","<==\n"
          if -1<index $MRLOG,'*';
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+         File::Path::make_path(
+         $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -5242,7 +5345,7 @@ sub getpasswd
       print $MRLOG "HREF=$href and KEY=$key and KEYS=",
          (join "\n",keys %{$href}),"<==\n" 
          if -1<index $MRLOG,'*';
-      if (exists ${$href}{$key} && !$force) {
+      if (exists $href->{$key} && !$force) {
          my $pspath=$Net::FullAuto::FA_Core::pspath;
          if (exists $Hosts{"__Master_${$}__"}{'ps'}) {
             $pspath=$Hosts{"__Master_${$}__"}{'ps'};
@@ -5254,11 +5357,11 @@ sub getpasswd
             "${pspath}ps -e",'__escape__');
          &Net::FullAuto::FA_Core::handle_error($stderr,'__cleanup__')
             if $stderr;
-         my $encrypted_passwd=${$href}{$key};
+         my $encrypted_passwd=$href->{$key};
          foreach my $ky (keys %{$href}) {
             if ($ky=~/_X_(\d+)_X_\d+$/) {
                my $one=$1;
-               delete ${$href}{$ky} if (-1==index $stdout,$one);
+               delete $href->{$ky} if (-1==index $stdout,$one);
             }
          }
          my $put_href=Data::Dump::Streamer::Dump($href)->Out();
@@ -5283,7 +5386,7 @@ sub getpasswd
          foreach my $ky (keys %{$href}) {
             if ($ky=~/_X_(\d+)_X_\d+$/) {
                unless (&Net::FullAuto::FA_Core::testpid($1)) {
-                  delete ${$href}{$ky}
+                  delete $href->{$ky}
                      unless &Net::FullAuto::FA_Core::testpid($1);
                }
             }
@@ -5315,8 +5418,10 @@ sub getpasswd
                    ."          Needed For:  $host\n\n        "
                    ."      &getpasswd() Called from ".(caller(0))[1]." line "
                    .(caller(0))[2]."\n"
-                   ."\n       - 'cron' and 'tossposs' are incompatible conditions "
-                   ."\n          and cannot be specified together for any FullAuto "
+                   ."\n       - 'cron' and 'tossposs' are incompatible "
+                   ."conditions "
+                   ."\n          and cannot be specified together for any "
+                   ."FullAuto "
                    ."\n          invocation.\n";
             &handle_error($die,'',$track);
             return '',$die;
@@ -5353,18 +5458,24 @@ sub getpasswd
          if ($ms_domain) {
             if ($local_host_flag) {
                if ($Net::FullAuto::FA_Core::debug) {
-                  $print1="\n  Please Enter (1) the MS Domain password for $login_id"
-                         ."\n  (Needed for Local Host \'$passlabel\' - $host)\n";
+                  $print1="\n  Please Enter (1) the MS Domain password for "
+                         .$login_id
+                         ."\n  (Needed for Local Host \'$passlabel\' - $host)"
+                         ."\n";
                } else {
-                  $print1="\n  Please Enter the MS Domain password for $login_id"
-                         ."\n  (Needed for Local Host \'$passlabel\' - $host)\n"; 
+                  $print1="\n  Please Enter the MS Domain password for "
+                         .$login_id
+                         ."\n  (Needed for Local Host \'$passlabel\' - $host)"
+                         ."\n"; 
                }
             } elsif ($host) {
                if ($Net::FullAuto::FA_Core::debug) {
-                  $print1="\n  Please Enter (2) the MS Domain password for $login_id"
+                  $print1="\n  Please Enter (2) the MS Domain password "
+                         ."for $login_id"
                          ."\n  (Needed for HostLabel \'$passlabel\' - $host)\n";
                } else {
-                  $print1="\n  Please Enter the MS Domain password for $login_id"
+                  $print1="\n  Please Enter the MS Domain password for "
+                         .$login_id
                          ."\n  (Needed for HostLabel \'$passlabel\' - $host)\n";
                }
             } else {
@@ -5379,7 +5490,8 @@ sub getpasswd
          } elsif ($login_id eq 'root') {
             if ($local_host_flag) {
                if ($Net::FullAuto::FA_Core::debug) {
-                  $print1="\n  Please Enter (4) the \'root\' password for $host."
+                  $print1="\n  Please Enter (4) the \'root\' password "
+                         ."for $host."
                          ."\n  (Needed for Local Host, "
                          ."HostLabel \'$passlabel\')\n";
                } else {
@@ -5389,7 +5501,8 @@ sub getpasswd
                }
             } elsif ($host) {
                if ($Net::FullAuto::FA_Core::debug) {
-                  $print1="\n  Please Enter (5) the \'root\' password for $host."
+                  $print1="\n  Please Enter (5) the \'root\' password "
+                         ."for $host."
                          ."\n  (Needed for HostLabel \'$passlabel\')\n";
                } else {
                   $print1="\n  Please Enter the \'root\' password for $host."
@@ -5407,7 +5520,8 @@ sub getpasswd
          } else {
             if ($local_host_flag && !$passlabel) {
                if ($Net::FullAuto::FA_Core::debug) {
-                  $print1="\n  Please Enter (7) $login_id\'s password for $host."
+                  $print1="\n  Please Enter (7) $login_id\'s "
+                         ."password for $host."
                          ."\n  (WNeeded for ${prox}Local Host \'$host\')\n";
                } else {
                   $print1="\n  Please Enter $login_id\'s password for $host."
@@ -5415,7 +5529,8 @@ sub getpasswd
                }
             } elsif ($host) {
                if ($Net::FullAuto::FA_Core::debug) {
-                  $print1="\n  Please Enter (8) $login_id\'s password for $host."
+                  $print1="\n  Please Enter (8) $login_id\'s password "
+                         ."for $host."
                          ."\n  (Needed for ${prox}HostLabel \'$passlabel\')\n";
                } else {
                   $print1="\n  Please Enter $login_id\'s password for $host."
@@ -5515,7 +5630,8 @@ sub getpasswd
    }
    unless ($Net::FullAuto::FA_Core::tosspass) {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+         File::Path::make_path(
+            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -5550,7 +5666,7 @@ sub getpasswd
       $status=$bdb->db_get($passlabel,$href);
       $href=~s/\$HASH\d*\s*=\s*//s;
       $href=eval $href;
-      while (delete ${$href}{$key}) {}
+      while (delete $href->{$key}) {}
       $save_passwd.='X' if $save_passwd
          eq substr($Net::FullAuto::FA_Core::progname,0,
          (rindex $Net::FullAuto::FA_Core::progname,'.'));
@@ -5575,7 +5691,7 @@ sub getpasswd
       #$cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
       #   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
       my $new_encrypted=$cipher->encrypt($save_passwd);
-      ${$href}{$key}=$new_encrypted;
+      $href->{$key}=$new_encrypted;
       my $put_href=Data::Dump::Streamer::Dump($href)->Out();
       $status=$bdb->db_put($passlabel,$put_href);
       undef $bdb;
@@ -5952,8 +6068,10 @@ sub send_email
             my $going_to='';
             foreach my $item (@{$to}) {
                if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\,"
-                     if exists $email_addresses{$Net::FullAuto::FA_Core::username};
+                  $going_to.="$email_addresses{
+                              $Net::FullAuto::FA_Core::username}\,"
+                     if exists $email_addresses{
+                               $Net::FullAuto::FA_Core::username};
                   next;
                } $going_to.="$item\,";
             } $to=substr($going_to,0,-1);
@@ -5973,8 +6091,10 @@ sub send_email
             my $going_to='';
             foreach my $item (@{$to}) {
                if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                  $going_to.="$email_addresses{$Net::FullAuto::FA_Core::username}\,"
-                     if exists $email_addresses{$Net::FullAuto::FA_Core::username};
+                  $going_to.="$email_addresses{
+                              $Net::FullAuto::FA_Core::username}\,"
+                     if exists $email_addresses{
+                               $Net::FullAuto::FA_Core::username};
                   next;
                } $going_to.="$item\,";
             } $to=substr($going_to,0,-1);
@@ -6297,7 +6417,7 @@ sub fa_login
    my $man=0;my $help=0;my $userflag=0;my $passerror=0;
    my $test_arg=0;my $oldcipher='';my $password_from='user_input';
    my @holdARGV=@ARGV;@menu_args=();my $username_from='';
-   my $cust_subname_in_fa_code_module_file;my $sem='';
+   my $cust_subnam_in_fa_code_module_file;my $sem='';
 
    Getopt::Long::Configure ("bundling");
    &GetOptions(
@@ -6316,10 +6436,10 @@ sub fa_login
                 'updatepw'              => \$updatepw,
                 'local-login-id=s'      => \$usrname,
                 'login=s'               => \$usrname,
-                'code=s'                => \$cust_subname_in_fa_code_module_file,
-                'subroutine'            => \$cust_subname_in_fa_code_module_file,
-                'subname'               => \$cust_subname_in_fa_code_module_file,
-                'sub'                   => \$cust_subname_in_fa_code_module_file,
+                'code=s'                => \$cust_subnam_in_fa_code_module_file,
+                'subroutine'            => \$cust_subnam_in_fa_code_module_file,
+                'subname'               => \$cust_subnam_in_fa_code_module_file,
+                'sub'                   => \$cust_subnam_in_fa_code_module_file,
                 'sub-arg=s'             => \@menu_args,
                 'sub_arg=s'             => \@menu_args,
                 'arg=s'                 => \@menu_args,
@@ -6695,7 +6815,7 @@ sub fa_login
             }
             my $href_2='';
             my $status=$bdb->db_get($k,$href_2);
-            my $encrypted_passwd=${$href_2}{$key};
+            my $encrypted_passwd=$href_2->{$key};
             my $pass=$cipher->decrypt($encrypted_passwd);
             if ($pass && $pass!~tr/\0-\37\177-\377//) {
                print "Updated $key\n";
@@ -6715,6 +6835,9 @@ sub fa_login
       &release_semaphore(9361);
       &cleanup();
    }
+
+   &acquire_semaphore(9876,
+      "FullAuto Process Limit at Line: ".__LINE__,2);
 
    my $loop_count=0;
    while (1) {
@@ -6752,9 +6875,6 @@ sub fa_login
                print $MRLOG "\n\n#### NEW PROCESS - ",
                   scalar localtime(time)," #####\n\n";
             }
-
-            &acquire_semaphore(9876,
-               "FullAuto Process Limit at Line: ".__LINE__,2);
 
          }
          if (defined $default || (defined $facode && !$facode)
@@ -6858,7 +6978,6 @@ sub fa_login
             undef $Net::FullAuto::FA_Core::bdb_once;
             $Net::FullAuto::FA_Core::dbenv_once->close();
             undef $Net::FullAuto::FA_Core::dbenv_once;
-print "HELLO THERE\n";sleep 10;
             if ((-1<index $status,
                   'DB_NOTFOUND: No matching key/data pair found')
                   || !($default_modules)
@@ -8456,8 +8575,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             $href=~s/\$HASH\d*\s*=\s*//s;
             $href=eval $href;
 #delete ${$href}{"gatekeep_$username"};
-            if (exists ${$href}{"gatekeep_$username"}) {
-               my $zyxarray=${$href}{"passetts_$username"};
+            if (exists $href->{"gatekeep_$username"}) {
+               my $zyxarray=$href->{"passetts_$username"};
                $zyxarray=~s/\$ARRAY\d*\s*=\s*//s;
                $passetts=eval $zyxarray;
                undef $zyxarray;
@@ -8466,19 +8585,19 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
 #print "WHAT IS IGNORED EXP=$ignore_expiration and PASSWORD FROM=$password_from\n";
                if ($now<$ignore_expiration) {
                   $passetts->[9]=$dcipher = new Crypt::CBC(
-                     ${$href}{"gatekeep_$username"},
+                     $href->{"gatekeep_$username"},
                      $Net::FullAuto::FA_Core::Hosts{
                      "__Master_${$}__"}{'Cipher'});
                   my $rstr=new String::Random;
                   if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-                     ${$href}{"gatekeep_$username"}=
+                     $href->{"gatekeep_$username"}=
                         $rstr->randpattern("........");
                   } else {
-                     ${$href}{"gatekeep_$username"}=
+                     $href->{"gatekeep_$username"}=
                         $rstr->randpattern("..............");
                   }
                   my $ecipher = new Crypt::CBC(
-                     ${$href}{"gatekeep_$username"},
+                     $href->{"gatekeep_$username"},
                      $Net::FullAuto::FA_Core::Hosts{
                      "__Master_${$}__"}{'Cipher'});
                   my $tpess=$dcipher->decrypt($passetts->[0]);
@@ -8504,7 +8623,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         $dcipher->decrypt($passetts->[0]));
                      my $arr=[$tpess,$ignore_expiration];
                      undef $tpess;
-                     ${$href}{"passetts_$username"}=
+                     $href->{"passetts_$username"}=
                         Data::Dump::Streamer::Dump($arr)->Out();
                      my $put_href=
                         Data::Dump::Streamer::Dump($href)->Out();
@@ -8514,14 +8633,14 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                } elsif ($password_from ne 'user_input') {
                   my $rstr=new String::Random;
                   if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-                     ${$href}{"gatekeep_$username"}=
+                     $href->{"gatekeep_$username"}=
                         $rstr->randpattern("........");
                   } else {
-                     ${$href}{"gatekeep_$username"}=
+                     $href->{"gatekeep_$username"}=
                         $rstr->randpattern("..............");
                   }
                   my $ecipher = new Crypt::CBC(
-                     ${$href}{"gatekeep_$username"},
+                     $href->{"gatekeep_$username"},
                      $Net::FullAuto::FA_Core::Hosts{
                      "__Master_${$}__"}{'Cipher'});
                   $passetts->[0]=$ecipher->encrypt($passwd[0]);
@@ -8585,14 +8704,14 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   print "\n\n";
                   my $rstr=new String::Random;
                   if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-                     ${$href}{"gatekeep_$username"}=
+                     $href->{"gatekeep_$username"}=
                         $rstr->randpattern("........");
                   } else {
-                     ${$href}{"gatekeep_$username"}=
+                     $href->{"gatekeep_$username"}=
                         $rstr->randpattern("..............");
                   }
                   my $ecipher = new Crypt::CBC(
-                     ${$href}{"gatekeep_$username"},
+                     $href->{"gatekeep_$username"},
                      $Net::FullAuto::FA_Core::Hosts{
                      "__Master_${$}__"}{'Cipher'});
                   $passetts->[0]=$ecipher->encrypt($passwd[0]);
@@ -8603,20 +8722,20 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             } elsif ($passwd[0]) {
                my $rstr=new String::Random;
                if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-                  ${$href}{"gatekeep_$username"}=
+                  $href->{"gatekeep_$username"}=
                      $rstr->randpattern("........");
                } else {
-                  ${$href}{"gatekeep_$username"}=
+                  $href->{"gatekeep_$username"}=
                      $rstr->randpattern("..............");
                }
                my $ecipher = new Crypt::CBC(
-                  ${$href}{"gatekeep_$username"},
+                  $href->{"gatekeep_$username"},
                   $Net::FullAuto::FA_Core::Hosts{
                   "__Master_${$}__"}{'Cipher'});
                $passetts->[0]=$ecipher->encrypt($passwd[0]);
                $passetts->[9]=$dcipher=$ecipher;
                undef $passwd[0];
-#print "WHAT IS GATEKEEP=",${$href}{"gatekeep_$username"},"\n";
+#print "WHAT IS GATEKEEP=",$href->{"gatekeep_$username"},"\n";
             } else {
 #print "LOGIN_MAST_ERROR2=$login_Mast_error and BDB=$bdb<==\n";
                my $passwd_timeout=350;
@@ -8674,15 +8793,15 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                print "\n\n";
                my $rstr=new String::Random;
                if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-                  ${$href}{"gatekeep_$username"}=
+                  $href->{"gatekeep_$username"}=
                      $rstr->randpattern("........");
                } else {
-                  ${$href}{"gatekeep_$username"}=
+                  $href->{"gatekeep_$username"}=
                      $rstr->randpattern("..............");
                }
-#print "WHAT IS GATEKEEP2=",${$href}{"gatekeep_$username"},"\n";
+#print "WHAT IS GATEKEEP2=",$href->{"gatekeep_$username"},"\n";
                my $ecipher = new Crypt::CBC(
-                  ${$href}{"gatekeep_$username"},
+                  $href->{"gatekeep_$username"},
                   $Net::FullAuto::FA_Core::Hosts{
                   "__Master_${$}__"}{'Cipher'});
                $passetts->[0]=$ecipher->encrypt($passwd[0]);
@@ -8749,8 +8868,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             $href=eval $href;
             my $pselection='';
             my $ignore_expiration=0;
-            if (exists ${$href}{"gatekeep_$username"}) {
-               my $zyxarray=${$href}{"passetts_$username"};
+            if (exists $href->{"gatekeep_$username"}) {
+               my $zyxarray=$href->{"passetts_$username"};
                $zyxarray=~s/\$ARRAY\d*\s*=\s*//s;
                $passetts=eval $zyxarray;
                undef $zyxarray;
@@ -8760,7 +8879,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
 #print "WHAT IS IGNORED EXP=$ignore_expiration and PASSWORD FROM=$password_from\n";
                if ($now<$ignore_expiration) {
                   $tdcipher = new Crypt::CBC(
-                     ${$href}{"gatekeep_$username"},
+                     $href->{"gatekeep_$username"},
                      $Net::FullAuto::FA_Core::Hosts{
                      "__Master_${$}__"}{'Cipher'});
                   if ($passwd[0] eq $tdcipher->decrypt($passetts->[0])) {
@@ -8803,21 +8922,21 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             my $rstr=new String::Random;
             if (exists $Hosts{"__Master_${$}__"}{'Cipher'} 
                && $Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-               ${$href}{"gatekeep_$username"}=
+               $href->{"gatekeep_$username"}=
                   $rstr->randpattern("........");
             } else {
-               ${$href}{"gatekeep_$username"}=
+               $href->{"gatekeep_$username"}=
                   $rstr->randpattern("..............");
             }
             my $ecipher = new Crypt::CBC(
-               ${$href}{"gatekeep_$username"},
+               $href->{"gatekeep_$username"},
                $Net::FullAuto::FA_Core::Hosts{
                "__Master_${$}__"}{'Cipher'});
             $passetts->[0]=$ecipher->encrypt($passwd[0]);
             $passetts->[9]=$dcipher=$ecipher;
             undef $passwd[0];
             if ($pselection ne 'Keep the Saved Password') {
-               delete ${$href}{"gatekeep_$username"};
+               delete $href->{"gatekeep_$username"};
             } else {
                print "\n  Saved Password will Expire: ".
                   scalar localtime($ignore_expiration)."\n"
@@ -8827,7 +8946,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $dcipher->decrypt($passetts->[0]));
                my $arr=[$tpess,$ignore_expiration];
                undef $tpess;
-               ${$href}{"passetts_$username"}=
+               $href->{"passetts_$username"}=
                   Data::Dump::Streamer::Dump($arr)->Out();
             }
             my $put_href=Data::Dump::Streamer::Dump($href)->Out();
@@ -8837,14 +8956,14 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             my $rstr=new String::Random;
             if (exists $Hosts{"__Master_${$}__"}{'Cipher'}
                && $Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
-               ${$href}{"gatekeep_$username"}=
+               $href->{"gatekeep_$username"}=
                   $rstr->randpattern("........");
             } else {
-               ${$href}{"gatekeep_$username"}=
+               $href->{"gatekeep_$username"}=
                   $rstr->randpattern("..............");
             }
             my $ecipher = new Crypt::CBC(
-               ${$href}{"gatekeep_$username"},
+               $href->{"gatekeep_$username"},
                $Net::FullAuto::FA_Core::Hosts{
                "__Master_${$}__"}{'Cipher'});
             $passetts->[0]=$ecipher->encrypt($passwd[0]);
@@ -9010,7 +9129,6 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          $local_host->print($dcipher->decrypt($passetts->[0]));
-
          if (!$Net::FullAuto::FA_Core::cron &&
                !$Net::FullAuto::FA_Core::debug &&
                !$Net::FullAuto::FA_Core::quiet) {
@@ -9028,7 +9146,6 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
             print "--> Logging (1) into $host via $cmd_type",
                   "  . . .\n\n";
          }
-
          my $newpw='';$passline=__LINE__+1;
          while (my $line=$local_host->get) {
             print "WAITING FOR CMDPROMPT=$line<== at Line ",__LINE__,"\n"
@@ -9095,14 +9212,14 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                my $status=$bdb->db_get('localhost',$href);
                $href=~s/\$HASH\d*\s*=\s*//s;
                $href=eval $href;
-               if (exists ${$href}{"gatekeep_$username"}) {
+               if (exists $href->{"gatekeep_$username"}) {
                   my $tdcipher = new Crypt::CBC(
-                     ${$href}{"gatekeep_$username"},
+                     $href->{"gatekeep_$username"},
                      $Net::FullAuto::FA_Core::Hosts{
                      "__Master_${$}__"}{'Cipher'});
                   if ($dcipher->decrypt($passetts->[0]) eq
                         $tdcipher->decrypt($passetts->[0])) {
-                     delete ${$href}{"gatekeep_$username"};
+                     delete $href->{"gatekeep_$username"};
                      my $put_href=Data::Dump::Streamer::Dump($href)->Out();
                      $status=$bdb->db_put('localhost',$put_href);
                   }
@@ -9177,6 +9294,18 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
                $Hosts{$host}{'LoginID'}=$username;
             }
          }
+         if (exists $Hosts{"__Master_${$}__"}{'SU_ID'}) {
+            my $ignore='';my $su_err='';
+            my $su_id=$Hosts{"__Master_${$}__"}{'SU_ID'};
+            &release_semaphore(6543);
+            ($ignore,$su_err)=&su($localhost->{_cmd_handle},$hostlabel,
+                    $username,$su_id,$hostname,
+                    $ip,$use,$^O,$_connect,$cmd_type,
+                    [],$login_Mast_error);
+            &handle_error($su_err,'-1') if $su_err;
+            &acquire_semaphore(6543,
+               "Local Host Login at Line: ".__LINE__,1);
+         }
          while (1) {
             my $_sh_pid='';
             ($_sh_pid,$stderr)=Rem_Command::cmd(
@@ -9242,7 +9371,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                &handle_error($stderr);
             }
          }
- 
+
          &su_scrub($hostlabel) if $su_scrub;
 
          my $switch_user='';
@@ -9253,7 +9382,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             #   &Net::FullAuto::FA_Core::getpasswd($hostlabel,
             #   $switch_user,'',$stderr,'__su__');
             my $ecipher = new Crypt::CBC(
-               ${$href}{"gatekeep_$username"},
+               $href->{"gatekeep_$username"},
                $Net::FullAuto::FA_Core::Hosts{
                "__Master_${$}__"}{'Cipher'});
             #$passetts->[0]=$ecipher->encrypt($passwd[0]);
@@ -9393,7 +9522,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                sleep 2;
             }
             my @tpass=@{$passetts}[0..1];
-            ${$href}{"passetts_$username"}=
+            $href->{"passetts_$username"}=
                Data::Dump::Streamer::Dump(\@tpass)->Out();
             my $put_href=
                Data::Dump::Streamer::Dump($href)->Out();
@@ -9406,7 +9535,8 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
             my $ignore='';
             ($ignore,$su_err)=&su($local_host,$hostlabel,
                     $username,$switch_user,$hostname,
-                    $ip,$use,$login_Mast_error);
+                    $ip,$use,$^O,$_connect,$cmd_type,
+                    [],$login_Mast_error);
             &handle_error($su_err,'-1') if $su_err;
          }
 
@@ -9419,7 +9549,8 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
             my $ignore='';
             ($ignore,$su_err)=&su($local_host,$hostlabel,
                     $login_id,$su_id,$hostname,
-                    $ip,$use,$login_Mast_error);
+                    $ip,$use,$^O,$_connect,$cmd_type,
+                    [],$login_Mast_error);
             &handle_error($su_err,'-1') if $su_err;
          }
 
@@ -9479,7 +9610,6 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
          my $kill_arg=($^O eq 'cygwin')?'f':9;
          if ((-1<index $@,'Not a GLOB reference') ||
                (-1<index $@,'Connection reset by peer')) {
-#print "DO WE GET HERE\n";<STDIN>;
             print $Net::FullAuto::FA_Core::MRLOG
                "\nERROR: main::fa_login() CONNECTION ERROR:\n       ",
                "$@\n       and SH_PID=$localhost->{_sh_pid}",
@@ -9636,7 +9766,7 @@ print "DOING PASSWD UPDATE\n";
       $plan=eval $pref;
       $plan=$plan->{Plan};
    }
-   return $cust_subname_in_fa_code_module_file, \@menu_args, $fatimeout;
+   return $cust_subnam_in_fa_code_module_file, \@menu_args, $fatimeout;
 
 } ## END of &fa_login
 
@@ -10155,23 +10285,44 @@ sub su
    my $hostname=$_[4];
    my $ip=$_[5];
    my $use=$_[6];
-   my $errmsg=$_[7];
+   my $uname=$_[7];
+   my $_connect=$_[8];
+   my $cmd_type=$_[9];
+   my @connect_method=@{$_[10]};
+   my $errmsg=$_[11];
    my $pass_flag=0;
    my $id='';my $stderr='';my $track='';
+   my $cfh_ignore='';my $cfh_error='';
    if ($su_id eq 'root') {
       my $gids='';
-      $fh->print('groups');
-      while (my $line=$fh->get) {
-         chomp($line=~tr/\0-\37\177-\377//d);
-         $gids.=$line;
-print $Net::FullAuto::FA_Core::MRLOG "su() GIDS=$gids<==\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         last if $gids=~s/_funkyPrompt_//gs;
-      }
+      #$fh->print('groups');
+      #while (my $line=$fh->get) {
+      #   chomp($line=~tr/\0-\37\177-\377//d);
+      #   $gids.=$line;
+#print $Net::FullAuto::FA_Core::MRLOG "su() GIDS=$gids<==\n"
+#   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#         last if $gids=~s/_funkyPrompt_//gs;
+#      }
+# --CONTINUE-- print "GOING FOR GIDS\n";
+            my $ctt=2;
+            while ($ctt--) {
+               ($gids,$stderr)=Rem_Command::cmd(
+                  { _cmd_handle=>$fh,
+                    _hostlabel=>[ $hostlabel,'' ] },'groups');
+               if (!$gids && !$stderr) {
+                              ($cfh_ignore,$cfh_error)=
+                  &Net::FullAuto::FA_Core::clean_filehandle(
+                     $fh);
+                  &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+                     if $cfh_error;
+               } last if $gids;
+            }
+            die 'no-gids' if !$gids || $stderr;
+
 print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-      $gids=unpack('x6 a*',$gids);
-      unless (-1<index $gids,'suroot') {
+      #$gids=unpack('x6 a*',$gids);
+      if (lc($uname) eq 'aix' && (-1==index $gids,'suroot')) {
          my $hostlb=$hostlabel;
          if ($hostlabel eq "__Master_${$}__") {
             foreach my $hostlab (keys %same_host_as_Master) {
@@ -10185,9 +10336,11 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
                 ."       \"$username\" is not a member of the \"suroot\""
                 ." UNIX group.\n       Contact your system administrator.\n";
          my $kind='prod';
-         $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+         $kind='test' if $Net::FullAuto::FA_Core::test &&
+                      !$Net::FullAuto::FA_Core::prod;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+               'Passwds');
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -10220,7 +10373,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             "cannot open Btree for DB: $BerkeleyDB::Error\n",
             '__cleanup__',$track)
             unless $BerkeleyDB::Error=~/Successful/;
-print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
+print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          my $href='';
          my $status=$bdb->db_get($hostlabel,$href);
          $href=~s/\$HASH\d*\s*=\s*//s;
@@ -10241,42 +10394,37 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
    #} else {
    #   $fh->print("login $su_id");
    #}
-print $Net::FullAuto::FA_Core::MRLOG "CHECKING ERROR\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   return '', $fh->errmsg if $fh->errmsg;
-   #$fh->print("su - $su_id");
-   #print $Net::FullAuto::FA_Core::MRLOG "DONE CHECKING ERROR" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
-   ## Wait for password prompt.
-   my $lin='';
-   while (my $line=$fh->get) {
-print $Net::FullAuto::FA_Core::MRLOG "su() GETPASSPROMPTLINE=$line\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-      chomp($line=~tr/\0-\37\177-\377//d);
-      $lin.=$line;
-      if ($lin=~/password[: ]+$/si) {
-         $pass_flag=1;last;
-      } elsif (!$Net::FullAuto::FA_Core::cron && $lin=~/\[YOU HAVE NEW MAIL\]/m) {
-         my $hostlab=$hostlabel;
-         $hostlab=(keys %same_host_as_Master)[1]
-            if $hostlabel eq "__Master_${$}__";
-         print "\nAttn: $su_id on $hostlab --> [YOU HAVE NEW MAIL]\n\n";
-         sleep 1;
-      } last if $lin=~/[$|%|>|#|-|:] ?$/m;
+   return '', $fh->errmsg if $fh->errmsg;
+
+   # Wait for password prompt.
+   my $ignore='';
+   ($ignore,$stderr)=&File_Transfer::wait_for_passwd_prompt(
+      { _cmd_handle=>$fh,
+        _hostlabel=>[ $hostlabel,'' ],
+        _cmd_type=>$cmd_type,
+        _connect=>$_connect });
+   if ($stderr) {
+      return '',$stderr if $stderr;
    }
 
    ## Send password.
-print $Net::FullAuto::FA_Core::MRLOG "su() PASSFLAG=$pass_flag\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   if ($pass_flag) {
-      $fh->print(&getpasswd(
-         $hostlabel,$su_id,'',
-         $errmsg,'__su__'));
-   }
+   $fh->print(&getpasswd(
+      $hostlabel,$su_id,'',
+      $errmsg,'__su__'));
 
-   ($id,$stderr)=&unix_id($fh,$su_id,$hostlabel,$errmsg);
-   return '',$stderr if $stderr;
+   $fh=&Rem_Command::wait_for_prompt(
+      $fh,$timeout,\@connect_method,$hostlabel,'__su__');
 
-   $id=~s/^(.*)?\n.*$/$1/s;
+   ($id,$stderr)=Rem_Command::cmd(
+      { _cmd_handle=>$fh,
+        _hostlabel=>[ $hostlabel,'' ] },
+        'id -unr');
+
+   #($cfh_ignore,$cfh_error)=&clean_filehandle($localhost);
+   #&handle_error($cfh_error,'-1') if $cfh_error;
+
+   return '',$fh->errmsg if $fh->errmsg;
 
    if ($id ne $su_id && $id ne 'root') {
 
@@ -10289,7 +10437,8 @@ print $Net::FullAuto::FA_Core::MRLOG "su() PASSFLAG=$pass_flag\n"
          chomp($line=~tr/\0-\37\177-\377//d);
          if ($line=~/password[: ]*$/i) {
             $pass_flag=1;last;
-         } elsif (!$Net::FullAuto::FA_Core::cron && $line=~/\[YOU HAVE NEW MAIL\]/m) {
+         } elsif (!$Net::FullAuto::FA_Core::cron &&
+               $line=~/\[YOU HAVE NEW MAIL\]/m) {
             my $hostlab=$hostlabel;
             $hostlab=(keys %same_host_as_Master)[1]
                if $hostlabel eq "__Master_${$}__";
@@ -10359,8 +10508,8 @@ sub unix_id {
 #else { $Net::FullAuto::FA_Core::log=1 }
 
    my @topcaller=caller;
-   print "unix_id() CALLER=", (join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_Core::debug;
+   print "unix_id() CALLER=", (join ' ',@topcaller),"\n";
+      #if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG 
       "unix_id() CALLER=", (join ' ',@topcaller),
       "\n" if $Net::FullAuto::FA_Core::log &&
@@ -10397,11 +10546,12 @@ print "OUTOFGETMAIL\n" if $Net::FullAuto::FA_Core::debug;
       while (my $line=$localhost->get) {
 print $Net::FullAuto::FA_Core::MRLOG "GETPROMPTLINE=$line\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-print "GETPROMPTLINE=$line\n" if $Net::FullAuto::FA_Core::debug;
+print "GETPROMPTLINE=$line\n"; #if $Net::FullAuto::FA_Core::debug;
          chomp($line=~tr/\0-\11\13-\37\177-\377//d);
          next if $line=~/^\s*$/s;
          ($prompt=$line)=~s/^.*\n(.*)$/$1/s;
          $prompt=~s/^\^C//;
+print "WHAT IS PROMPT=$prompt<===\n";
          return if $prompt;
       }
    };
@@ -10553,7 +10703,8 @@ sub work_dirs
    print "work_dirs() CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "work_dirs() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log
+      && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $transfer_dir=$_[0];
    $transfer_dir||='';
    my $hostlabel=$_[1];
@@ -10614,6 +10765,9 @@ sub work_dirs
    }
    if (&Net::FullAuto::FA_Core::test_dir($cmd_handle->{_cmd_handle},'/tmp')
          eq 'WRITE') {
+      my $cfh_ignore='';my $cfh_error='';
+      ($cfh_ignore,$cfh_error)=&clean_filehandle($cmd_handle);
+      &handle_error($cfh_error,'-1') if $cfh_error;
       ${$work_dirs}{_tmp}='/tmp/';
       if ($cmd_handle->{_uname} eq 'cygwin') {
          my $pwd='';my $curdir='';my $cnt=5;
@@ -11166,22 +11320,27 @@ sub new {
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
        $owner,$group,$fttimeout,$transfer_dir,$rcm_chain,
        $rcm_map,$uname,$ping)
-       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label($hostlabel,$_connect);
+       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
+       $hostlabel,$_connect);
    my $host=($use eq 'ip') ? $ip : $hostname;
    my $chk_id='';
    if ($su_id) { $chk_id=$su_id }
    elsif ($login_id) { $chk_id=$login_id }
    else { $chk_id=$Net::FullAuto::FA_Core::username }
    if (!$new_master &&
-         exists $Net::FullAuto::FA_Core::Connections{"${hostlabel}__%-$chk_id"}) {
+         exists $Net::FullAuto::FA_Core::Connections{
+         "${hostlabel}__%-$chk_id"}) {
       if ($ping) {
          if (&Net::FullAuto::FA_Core::ping($host,'__return__')) {
-            return $Net::FullAuto::FA_Core::Connections{"${hostlabel}__%-$chk_id"},'';
+            return $Net::FullAuto::FA_Core::Connections{
+               "${hostlabel}__%-$chk_id"},'';
          } else {
-            delete $Net::FullAuto::FA_Core::Connections{"${hostlabel}__%-$chk_id"};
+            delete $Net::FullAuto::FA_Core::Connections{
+               "${hostlabel}__%-$chk_id"};
          }
       } else {
-         return $Net::FullAuto::FA_Core::Connections{"${hostlabel}__%-$chk_id"},'';
+         return $Net::FullAuto::FA_Core::Connections{
+            "${hostlabel}__%-$chk_id"},'';
       }
    }
    my ($ftp_handle,$ftp_pid,$work_dirs,$ftr_cmd,$ftm_type,
@@ -11196,7 +11355,8 @@ sub new {
       return $ftp_handle,$die;
    }
    if ($smb) {
-      $self->{_hostlabel}=[ $hostlabel,$Net::FullAuto::FA_Core::DeploySMB_Proxy[0] ];
+      $self->{_hostlabel}=[ $hostlabel,
+         $Net::FullAuto::FA_Core::DeploySMB_Proxy[0] ];
       $self->{_smb}=1;
    } else {
       $self->{_hostlabel}=[ $hostlabel,'' ];
@@ -12077,58 +12237,60 @@ sub ftr_cmd
             &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
                if $cfh_error;
             $output=join '',
-               $ftr_cmd->{_ftp_handle}->cmd('cd '.${$work_dirs}{_tmp});
+               $ftr_cmd->{_ftp_handle}->cmd('cd '.$work_dirs->{_tmp});
             if ($output=~/^(5.*)$/m) {
                my $line=$1;
                chomp($line=~tr/\0-\37\177-\377//d);
-               my $die="Cannot cd to TransferDir -> ".${$work_dirs}{_tmp}
+               my $die="Cannot cd to TransferDir -> ".$work_dirs->{_tmp}
                       ."\n        $line";
                &Net::FullAuto::FA_Core::handle_error($die,'-7');
             }
-            ${$work_dirs}{_cwd}=${$work_dirs}{_tmp};
-            ${$work_dirs}{_cwd_mswin}=${$work_dirs}{_tmp_mswin};
-            $Net::FullAuto::FA_Core::tran[0]=${$work_dirs}{_tmp};
+            $work_dirs->{_cwd}=$work_dirs->{_tmp};
+            $work_dirs->{_cwd_mswin}=$work_dirs->{_tmp_mswin};
+            $Net::FullAuto::FA_Core::tran[0]=$work_dirs->{_tmp};
             $Net::FullAuto::FA_Core::tran[1]=$hostlabel;
             $Net::FullAuto::FA_Core::ftpcwd{$ftr_cmd->{_ftp_handle}}{cd}
                =${$work_dirs}{_tmp};
          } elsif (${$ftr_cnct}[0] eq 'smb' && defined
-               $Net::FullAuto::FA_Core::Hosts{$Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}
+               $Net::FullAuto::FA_Core::Hosts{
+               $Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}
                {'TransferDir'} &&
-               $Net::FullAuto::FA_Core::Hosts{$Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}
+               $Net::FullAuto::FA_Core::Hosts{
+               $Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}
                {'TransferDir'}) {
-            my $transfer_dir=$Net::FullAuto::FA_Core::Hosts{$Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}
+            my $transfer_dir=$Net::FullAuto::FA_Core::Hosts{
+               $Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}
                {'TransferDir'};
             $work_dirs=&Net::FullAuto::FA_Core::work_dirs($transfer_dir,
                           $hostlabel,$ftr_cmd,$cmd_type,'',$_connect);
-            ${$work_dirs}{_pre}=${$work_dirs}{_cwd}='';
-            ${$work_dirs}{_pre_mswin}=${$work_dirs}{_cwd_mswin}=
+            $work_dirs->{_pre}=$work_dirs->{_cwd}='';
+            $work_dirs->{_pre_mswin}=$work_dirs->{_cwd_mswin}=
                "\\\\$host\\$ms_share\\";
-            ($output,$stderr)=$ftr_cmd->cmd('cd '.${$work_dirs}{_tmp});
+            ($output,$stderr)=$ftr_cmd->cmd('cd '.$work_dirs->{_tmp});
             if ($stderr) {
                @FA_Core::tran=();
-               my $die="Cannot cd to TransferDir -> ".${$work_dirs}{_tmp}
+               my $die="Cannot cd to TransferDir -> ".$work_dirs->{_tmp}
                       ."\n        $stderr";
                &Net::FullAuto::FA_Core::handle_error($die,'-5');
             }
             $output=join '',
-               $ftr_cmd->{_ftp_handle}->cmd('cd '.${$work_dirs}{_tmp});
+               $ftr_cmd->{_ftp_handle}->cmd('cd '.$work_dirs->{_tmp});
             if ($output=~/^(5.*)$/m) {
                my $line=$1;
                chomp($line=~tr/\0-\37\177-\377//d);
-               my $die="Cannot cd to TransferDir -> ".${$work_dirs}{_tmp}
+               my $die="Cannot cd to TransferDir -> ".$work_dirs->{_tmp}
                       ."\n        $line";
                &Net::FullAuto::FA_Core::handle_error($die,'-7');
-            } $Net::FullAuto::FA_Core::tran[0]=${$work_dirs}{_tmp};
+            } $Net::FullAuto::FA_Core::tran[0]=$work_dirs->{_tmp};
             $Net::FullAuto::FA_Core::tran[1]=$hostlabel;
-            $Net::FullAuto::FA_Core::ftpcwd{$ftr_cmd->{_ftp_handle}}{cd}=${$work_dirs}{_tmp};
+            $Net::FullAuto::FA_Core::ftpcwd{$ftr_cmd->{_ftp_handle}}{cd}=
+               $work_dirs->{_tmp};
             $smb=1;
          } else {
             my $curdir='';
             if ($ftr_cmd->{_uname} eq 'cygwin') {
                ($curdir,$stderr)=&Net::FullAuto::FA_Core::cmd($localhost,'pwd');
                &handle_error($stderr,'-1') if $stderr;
-               #$curdir=&Net::FullAuto::FA_Core::attempt_cmd_xtimes($ftr_cmd,
-               #        'cmd /c chdir',$ftr_cmd->{'hostlabel'}[0]);
                if ($^O eq 'cygwin') {
                   my $cdr='';
                   if (exists $localhost->{_cygdrive} &&
@@ -12147,13 +12309,13 @@ sub ftr_cmd
                      $cdr=~s/\\/\\\\/g;
                      $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
                   }
-                  ${$work_dirs}{_pre_mswin}=
-                     ${$work_dirs}{_cwd_mswin}=$cdr.'\\\\';
-                  ${$work_dirs}{_tmp_mswin}=
+                  $work_dirs->{_pre_mswin}=
+                     $work_dirs->{_cwd_mswin}=$cdr.'\\\\';
+                  $work_dirs->{_tmp_mswin}=
                      $ftr_cmd->{_work_dirs}->{_tmp_mswin};
                }
-               ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
-               ${$work_dirs}{_tmp}=$ftr_cmd->{_work_dirs}->{_tmp};
+               $work_dirs->{_pre}=$work_dirs->{_cwd}=$curdir;
+               $work_dirs->{_tmp}=$ftr_cmd->{_work_dirs}->{_tmp};
             } else {
                my $cnt=3;
                while ($cnt--) {
@@ -12176,8 +12338,8 @@ sub ftr_cmd
                   }
                }
                $curdir.='/' if $curdir ne '/';
-               ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
-               ${$work_dirs}{_tmp}=$ftr_cmd->{_work_dirs}->{_tmp};
+               $work_dirs->{_pre}=$work_dirs->{_cwd}=$curdir;
+               $work_dirs->{_tmp}=$ftr_cmd->{_work_dirs}->{_tmp};
             }
          } return $work_dirs,$ftr_cmd,$cmd_type,$ftm_type,'' if $ftr_cmd;
       } elsif ($rcm_chain) {
@@ -12253,9 +12415,10 @@ print "FTR_RETURN3\n";
                            $login_id=$su_id;$cygwin=1;
                         } else { $su_id='' }
                      }
-                     $Net::FullAuto::FA_Core::Hosts{"$hostlabel"}{'Uname'}='cygwin';
+                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'Uname'}=
+                        'cygwin';
                   } elsif (-1<index $line,'AIX') {
-                     $Net::FullAuto::FA_Core::Hosts{"$hostlabel"}{'Uname'}='aix';
+                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'Uname'}='aix';
                   }
                   last if $line=~
                      /(?<!Last )login[: ]*$|username[: ]*$/i;
@@ -12271,8 +12434,9 @@ print "FTR_RETURN3\n";
                      }
 
                      ## Send password.
-                     my $recurse_passwd=&Net::FullAuto::FA_Core::getpasswd($hostlabel,
-                                $login_id,'',$ftr_cmd_error);
+                     my $recurse_passwd=
+                           &Net::FullAuto::FA_Core::getpasswd($hostlabel,
+                           $login_id,'',$ftr_cmd_error);
                      $ftr_cmd->{_cmd_handle}->print($recurse_passwd);
 
                      my $alloutput='';my $output='';my $stderr='';
@@ -12297,7 +12461,7 @@ print "FTR_RETURN3\n";
                                    {'FA_Secure'}.
                                    ${Net::FullAuto::FA_Core::progname}.
                                    "_${kind}_passwds.db";
-print "DBPATHHHH=$dbpath<==\n";sleep 2;
+print "DBPATHHHH=$dbpath<==\n";
                         unless (-d $Hosts{$mr}{'FA_Secure'}.'Passwds') {
                            File::Path::make_path($Hosts{$mr}{'FA_Secure'}.
                               'Passwds');
@@ -12342,7 +12506,7 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         $href=eval $href;
                         my $key="${Net::FullAuto::FA_Core::username}_X_"
                                ."${Net::FullAuto::FA_Core::username}_X_${host}";
-                        while (delete $href->{"$key"}) {}
+                        while (delete $href->{$key}) {}
                         my $cipher='';
 #my $mr="__Master_${$}__";
                         if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
@@ -12365,10 +12529,6 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                                $passetts->[0]),
                                $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
                         }
-                        #my $cipher=Crypt::CBC->new({ 'key' => 
-                        #      $Net::FullAuto::FA_Core::passwd[1], 'cipher' =>
-                              #$Net::FullAuto::FA_Core::passetts->[1], 'cipher' =>
-                        #      $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'} });
                         my $new_encrypted=$cipher->encrypt(
                               $recurse_passwd);
                         $href->{$key}=$new_encrypted;
@@ -12389,9 +12549,11 @@ print "DBPATHHHH=$dbpath<==\n";sleep 2;
                         if $cfh_error;
                      my ($ignore,$su_err)=
                         &Net::FullAuto::FA_Core::su($ftr_cmd->{_cmd_handle},
-                           $host_label,
-                           $Net::FullAuto::FA_Core::username,$su_id,$hostname,
-                           $ip,$use,$ftr_cmd_error) if !$cygwin;
+                        $host_label,
+                        $Net::FullAuto::FA_Core::username,$su_id,$hostname,
+                        $ip,$use,$ftr_cmd->{_uname},$ftr_cmd->{_connect},
+                        $ftr_cmd->{_cmd_type},[],$ftr_cmd_error)
+                        if !$cygwin;
                      &Net::FullAuto::FA_Core::handle_error($su_err) if $su_err;
 
                   };
@@ -12406,15 +12568,16 @@ print "FTR_CMD_ERROR=$ftr_cmd_error\n";<STDIN>;
                         if ($^O eq 'cygwin' && $retrys==2) {
                            $ftr_cmd_error.="\nWARNING! - You may be in Danger"
                                          ." of locking out MS Domain ID - "
-                                         ."$Net::FullAuto::FA_Core::username!\n\n";
+                                         ."$Net::FullAuto::FA_Core::username!"
+                                         ."\n\n";
                         }
                         next;
                      } elsif ($su_id &&
                            -1<index($ftr_cmd_error,'ation is d')) {
 print "GOOD - SCRUBBING\n";
                         $su_scrub=
-                           &Net::FullAuto::FA_Core::scrub_passwd_file($hostlabel,
-                           $su_id);
+                           &Net::FullAuto::FA_Core::scrub_passwd_file(
+                           $hostlabel,$su_id);
                         next;
                      }
 
@@ -12428,7 +12591,8 @@ print "GOOD - SCRUBBING\n";
                             .(caller(0))[2]." :\n\n       "
                             ."$ftr_cmd_error\n";
                      print $Net::FullAuto::FA_Core::MRLOG $die
-                        if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                        if $Net::FullAuto::FA_Core::log &&
+                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      &Net::FullAuto::FA_Core::handle_error($die);
 
                   } last;
@@ -12577,7 +12741,8 @@ sub ftm_login
             $smb=1;
             $ms_hostlabel=$hostlabel;
             $ms_host=$host;
-            if (!exists $same_host_as_Master{$Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}) {
+            if (!exists $same_host_as_Master{
+                  $Net::FullAuto::FA_Core::DeploySMB_Proxy[0]}) {
                if (!defined $Net::FullAuto::FA_Core::DeploySMB_Proxy[0]) {
                   my $die="The Action You Selected Requires the Use of"
                          ."\n       an MSWin Proxy Host - and None are"
@@ -12795,7 +12960,7 @@ print "WHAT IS SLAVE=$Net::FullAuto::FA_Core::slave<==\n";
                ## Wait for password prompt.
                my $allines='';
                while (my $line=$fpx_handle->get) {
-print "SFTPLINE=$line<==\n";sleep 2;
+print "SFTPLINE=$line<==\n";
                   $allines.=$line;
                   if ($allines=~/password[: ]+$/si) {
                      last;
@@ -12859,7 +13024,8 @@ print "FTRFOUR\n";
                $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
                $owner,$group,$fttimeout,$transfer_dir,$rcm_chain,
                $rcm_map,$uname,$ping)
-               =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label($hostlabel,$_connect);
+               =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
+               $hostlabel,$_connect);
             my $sftploginid=($su_id)?$su_id:$login_id;
             if ($Net::FullAuto::FA_Core::cltimeout ne 'X') {
                $fttimeout=$Net::FullAuto::FA_Core::cltimeout;
@@ -13020,7 +13186,8 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST3333=$host\n"
                               ($ftp_handle,$stderr)=
                                  &Rem_Command::new('Rem_Command',
                                  "__Master_${$}__",$new_master);
-                              &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+                              &Net::FullAuto::FA_Core::handle_error(
+                                 $stderr,'-1') if $stderr;
                               my $ftp_pid=$ftp_handle->{_cmd_pid};
                               $cmd_type=$ftp_handle->{_cmd_type};
                               $ftp_handle=$ftp_handle->{_cmd_handle};
@@ -13243,7 +13410,6 @@ print "FTRFIVE\n";
                   &Net::FullAuto::FA_Core::handle_error($die);
                } $Net::FullAuto::FA_Core::ftpcwd{$ftp_handle}{cd}=${$work_dirs}{_tmp};
             }
-print "ARE WE HERE FOLKS????????\n";<STDIN>;
             my $ftmtype='';
             ($work_dirs,$ftr_cmd,$cmd_type,$ftmtype,$stderr)
                =ftr_cmd($hostlabel,$ftp_handle,
@@ -13703,21 +13869,24 @@ print "RETURNFOUR and FTR_CMD=$ftr_cmd\n";<STDIN>;
                                     $ftp_handle->get;
                                     $ftp_handle->timeout($fttimeout);
                                     my $sftploginid=($su_id)?$su_id:$login_id;
-                                    my $ftp__cmd="${Net::FullAuto::FA_Core::ftppath}ftp $host";
+                                    my $ftp__cmd=
+                                       $Net::FullAuto::FA_Core::ftppath.
+                                       "ftp $host";
+                                    my $sp=$Net::FullAuto::FA_Core::sftpport;
                                     foreach $connect_method (@{$ftr_cnct}) {
                                        if (lc($connect_method) eq 'ftp') {
                                           $ftp_handle->print(
-                                             "${Net::FullAuto::FA_Core::ftppath}ftp $host");
+                                             $Net::FullAuto::FA_Core::ftppath.
+                                             "ftp $host");
                                           $ftm_type='ftp';
                                        } elsif (lc($connect_method) eq 'sftp') {
                                           my $sshport='';
                                           if (exists 
-                                                $Net::FullAuto::FA_Core::Hosts{$hostlabel}
-                                                {'sshport'}) {
-                                             my $sp=$Net::FullAuto::FA_Core::sftpport;
+                                                $Net::FullAuto::FA_Core::Hosts{
+                                                $hostlabel}{'sshport'}) {
                                              $sshport=$sp.
-                                                $Net::FullAuto::FA_Core::Hosts{$hostlabel}
-                                                {'sshport'}.' ';
+                                                $Net::FullAuto::FA_Core::Hosts{
+                                                $hostlabel}{'sshport'}.' ';
                                           }
                                           $ftp_handle->print(
                                              "${Net::FullAuto::FA_Core::sftppath}sftp ".
@@ -13815,24 +13984,31 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
             } elsif (lc($connect_method) eq 'sftp') {
                my $sftploginid=($su_id)?$su_id:$login_id;
                my $sshport='';
-               if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+               if (exists
+                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
                   my $sp=$Net::FullAuto::FA_Core::sftpport;
-                  $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+                  $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
+                     $hostlabel}{'sshport'}.' ';
                }
                $ftp_handle->print("${Net::FullAuto::FA_Core::sftppath}sftp ".
                                   "${sshport}$sftploginid\@$host");
-               FH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
-                  foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
-                     foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
+               FH: foreach my $hlabel (
+                     keys %Net::FullAuto::FA_Core::Processes) {
+                  foreach my $sid (
+                        keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
+                     foreach my $type (
+                           keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
                            {$sid}}) {
                         if ($ftp_handle eq ${$Net::FullAuto::FA_Core::Processes
                               {$hlabel}{$sid}{$type}}[0]) {
                            my $value=$Net::FullAuto::FA_Core::Processes
                               {$hlabel}{$sid}{$type};
                            delete
-                              $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type};
+                              $Net::FullAuto::FA_Core::Processes{
+                              $hlabel}{$sid}{$type};
                            substr($type,0,3)='ftm';
-                           $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
+                           $Net::FullAuto::FA_Core::Processes{
+                              $hlabel}{$sid}{$type}=
                               $value;
                            last FH;
                         }
@@ -13844,14 +14020,15 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                      !$Net::FullAuto::FA_Core::debug &&
                      !$Net::FullAuto::FA_Core::quiet) {
                   # Logging (3)
-                  print "\n       Logging into $host ($hostlabel) via $connect_method  . . .\n\n";
+                  print "\n       Logging into $host ($hostlabel) via ",
+                        "$connect_method  . . .\n\n";
                } elsif ($Net::FullAuto::FA_Core::debug) {
-                  print "\n       Logging (3) into $host ($hostlabel) via $connect_method".
-                        "  . . .\n\n";
+                  print "\n       Logging (3) into $host ($hostlabel) via ",
+                        "$connect_method  . . .\n\n";
                }
                print $Net::FullAuto::FA_Core::MRLOG
-                  "\n       Logging (3) into $host via $connect_method  . . .\n\n"
-                  if $Net::FullAuto::FA_Core::log
+                  "\n       Logging (3) into $host via $connect_method ",
+                  " . . .\n\n" if $Net::FullAuto::FA_Core::log
                   && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ## Wait for password prompt.
                my $ignore='';
@@ -13879,18 +14056,20 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
 
          my $lin='';my $asked=0;my $authyes=0;my @choices=();
          while (1) {
-            while (my $line=$ftp_handle->get) {
+            while (my $line=$ftp_handle->get(Timeout=>$fttimeout)) {
                if ($line=~/command not found/) {
                   die 'Perm';
                }
                print $Net::FullAuto::FA_Core::MRLOG
-                  "\nFile_Transfer::ftm_login() LOOKING FOR $ftm_type PROMPT AFTER PASSWD OUTPUT:",
+                  "\nFile_Transfer::ftm_login() ",
+                  "LOOKING FOR $ftm_type PROMPT AFTER PASSWD OUTPUT:",
                   "\n       ==>$line<==\n       ",
                   "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                   "\n       at Line ",__LINE__,"\n\n"
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               print "\nFile_Transfer::ftm_login() LOOKING FOR $ftm_type PROMPT AFTER PASSWD OUTPUT:",
+               print "\nFile_Transfer::ftm_login() ",
+                  "LOOKING FOR $ftm_type PROMPT AFTER PASSWD OUTPUT:",
                   "\n       ==>$line<==\n       ",
                   "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                   "\n       at Line ",__LINE__,"\n\n"
@@ -13898,7 +14077,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                   $Net::FullAuto::FA_Core::debug;
                chomp($line=~tr/\0-\11\13-\37\177-\377//d);
                $lin.=$line;
-               if ($lin=~/Perm/s) {
+               if (-1<index $lin,'Perm') {
                   if ($lin=~/password[:\s]+$/si) {
                      if ($su_id && $su_id ne $login_id) {
                         if (!$asked++) {
@@ -13932,7 +14111,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                                     $ftp_handle->print($newpass);
                                     print $Net::FullAuto::FA_Core::MRLOG $show
                                        if $Net::FullAuto::FA_Core::log &&
-                                       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                                       -1<index
+                                       $Net::FullAuto::FA_Core::MRLOG,'*';
                                     $lin='';last;
                                  }
                               } else {
@@ -13952,10 +14132,12 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                     last if $line=~/Killed by signal 2\.$/s;
                                  } $lin='';
                                  my $sshport='';
-                                 if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+                                 if (exists $Net::FullAuto::FA_Core::Hosts{
+                                       $hostlabel}{'sshport'}) {
                                     my $sp=$Net::FullAuto::FA_Core::sftpport;
                                     $sshport=$sp.
-                                       $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+                                       $Net::FullAuto::FA_Core::Hosts{
+                                       $hostlabel}{'sshport'}.' ';
                                  }
                                  $ftp_handle->print(
                                     "${Net::FullAuto::FA_Core::sftppath}sftp ".
@@ -13991,18 +14173,22 @@ print "111 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";
                                        !$Net::FullAuto::FA_Core::debug &&
                                        !$Net::FullAuto::FA_Core::quiet) {
                                     # Logging (4)
-                                    print "\n       Logging into $host ($hostlabel) ",
+                                    print "\n       Logging into $host (",
+                                          "$hostlabel) ",
                                           "via $ftm_type  . . .\n\n";
                                  } elsif ($Net::FullAuto::FA_Core::debug) {
                                     print
-                                       "\n       Logging (4) into $host ($hostlabel) ",
+                                       "\n       Logging (4) into $host (",
+                                       "$hostlabel) ",
                                        "via $ftm_type  . . .\n\n";
                                  }
                                  print $Net::FullAuto::FA_Core::MRLOG
-                                    "\n       Logging (4) into $host ($hostlabel) ",
+                                    "\n       Logging (4) into $host (",
+                                    "$hostlabel) ",
                                     "via $ftm_type  . . .\n\n"
                                     if $Net::FullAuto::FA_Core::log
-                                    && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                                    && -1<index
+                                    $Net::FullAuto::FA_Core::MRLOG,'*';
                                  last;
                               }
                            } else { 
@@ -14050,12 +14236,15 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                      }
                   } elsif ($line=~/_funkyPrompt_$|Connection closed/s) {
                      my $sshport='';
-                     if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+                     if (exists $Net::FullAuto::FA_Core::Hosts{
+                           $hostlabel}{'sshport'}) {
                         my $sp=$Net::FullAuto::FA_Core::sftpport;
-                        $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+                        $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
+                           $hostlabel}{'sshport'}.' ';
                      }
                      $ftp_handle->print(
-                        "${Net::FullAuto::FA_Core::sftppath}sftp ${sshport}$login_id\@$host");
+                        "${Net::FullAuto::FA_Core::sftppath}sftp ".
+                        "${sshport}$login_id\@$host");
 
                      ## Wait for password prompt.
                      my $ignore='';
@@ -14127,7 +14316,8 @@ print "AUTHENHERE!1111\n";<STDIN>;
                   $warning=~s/^/       /gm;
                   $warning="WARNING! - sftp on Host $host is not configured\n"
                           ."              for user $login_id :\n\n$warning";
-                  &Net::FullAuto::FA_Core::handle_error($warning,'__return__','__warn__');
+                  &Net::FullAuto::FA_Core::handle_error(
+                     $warning,'__return__','__warn__');
                   die $lin;
                } elsif ($line=~/^530 /m) {
                   $line=~s/^.*(530.*)/$1/s;
@@ -14155,7 +14345,8 @@ print "AUTHENHERE!1111\n";<STDIN>;
             _uname      => $uname,
             _luname     => $^O,
             _hostlabel  => [ $hostlabel,
-                             $Net::FullAuto::FA_Core::localhost->{_hostlabel}->[0] ],
+                             $Net::FullAuto::FA_Core::localhost->{
+                             '_hostlabel'}->[0] ],
             _ftp_pid    => $ftp_pid
          );
 
@@ -14258,17 +14449,27 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST6666=$host\n"
                   while (my $line=$ftp_handle->get) {
 print $Net::FullAuto::FA_Core::MRLOG "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
-                     last if $line=~/logout|Connection.*closed|A remote host refused/s;
+                     if ($line=~/[\$\%\>\#\-\:]+ ?$/s) {
+                        return $ftp_handle,$ftp_pid,$work_dirs,$ftr_cmd,
+                           $ftm_type,$cmd_type,$smb,'','',$die;
+                     } elsif ($line=~
+                           /logout|Connection.*closed|A remote host refused/s) {
+                        last;
+                     }
                   }
                }
-               FTH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
-                  foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
-                     foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
+               FTH: foreach my $hlabel (
+                     keys %Net::FullAuto::FA_Core::Processes) {
+                  foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{
+                        $hlabel}}) {
+                     foreach my $type (
+                           keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
                            {$sid}}) {
                         if ($ftp_handle eq ${$Net::FullAuto::FA_Core::Processes
                               {$hlabel}{$sid}{$type}}[0]) {
                            delete
-                              $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type};
+                              $Net::FullAuto::FA_Core::Processes{
+                              $hlabel}{$sid}{$type};
                            last FTH;
                         }
                      }
@@ -14302,14 +14503,16 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
             }
          }
          $die_login_id=($su_login)?$su_id:$login_id;
-         if ($retrys<2 && (-1==index $ftm_errmsg,'No more authentication methods')) {
+         if ($retrys<2 &&
+               (-1==index $ftm_errmsg,'No more authentication methods')) {
             if ($ftm_errmsg=~/530 |Perm|(channel is being closed)/) {
                my $shipht=$1;
                shift @connect_method if $shipht;
                if ($su_login) {
                   &Net::FullAuto::FA_Core::scrub_passwd_file($hostlabel,$su_id);
                } else {
-                  &Net::FullAuto::FA_Core::scrub_passwd_file($hostlabel,$login_id);
+                  &Net::FullAuto::FA_Core::scrub_passwd_file(
+                     $hostlabel,$login_id);
                }
                $retrys++;
                $retrys=0 if $shipht;
@@ -14330,14 +14533,18 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
                while (my $line=$ftp_handle->get) {
                   last if $line=~/_funkyPrompt_|221 Goodbye/s;
                }
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg)
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+                  $shell_pid,$kill_arg)
                   if &Net::FullAuto::FA_Core::testpid($shell_pid)
-                  && $shell_pid ne $Net::FullAuto::FA_Core::localhost->{_sh_pid};
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($ftp_pid,$kill_arg)
+                  && $shell_pid ne
+                  $Net::FullAuto::FA_Core::localhost->{_sh_pid};
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+                  $ftp_pid,$kill_arg)
                   if &Net::FullAuto::FA_Core::testpid($ftp_pid)
                   && $ftp_pid ne $Net::FullAuto::FA_Core::localhost{_cmd_pid};
                $ftp_handle->close;
-               if (-1<$#connect_method && ($shipht || !$Net::FullAuto::FA_Core::cron)) {
+               if (-1<$#connect_method && ($shipht ||
+                     !$Net::FullAuto::FA_Core::cron)) {
                   next;
                }
             } elsif (unpack('a10',$ftm_errmsg) eq 'System err' &&
@@ -14345,7 +14552,8 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
                if ($su_login) {
                   &Net::FullAuto::FA_Core::scrub_passwd_file($hostlabel,$su_id);
                } else {
-                  &Net::FullAuto::FA_Core::scrub_passwd_file($hostlabel,$login_id);
+                  &Net::FullAuto::FA_Core::scrub_passwd_file(
+                     $hostlabel,$login_id);
                } $retrys++;next if !$Net::FullAuto::FA_Core::cron;
             }
          } else { shift @connect_method;next if $#connect_method }
@@ -14505,8 +14713,10 @@ sub wait_for_passwd_prompt
                   }
                }
             } elsif ($lin=~/password[: ]+$/si) {
-print $Net::FullAuto::FA_Core::MRLOG "wait_for_passwd_prompt() GETGOTPASS!!=$lin<==\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               print $Net::FullAuto::FA_Core::MRLOG
+                  "wait_for_passwd_prompt() PASSWORD PROMPT=$lin<==\n"
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                $gotpass=1;alarm 0;last PW;
             } elsif ((-1<index $lin,'530 ')
                   || (-1<index $lin,'421 ')
@@ -14748,6 +14958,9 @@ sub cwd
          return 'CWD command successful.','';
       } else { return 'CWD command successful.' }
    }
+print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    eval {
       if (((exists $self->{_smb}) ||
              $self->{_uname} eq 'cygwin') &&
@@ -14859,7 +15072,7 @@ sub cwd
          my ($drive,$path)=unpack('a1 x1 a*',$target_dir);
          $path=~tr/\\/\//;
          my $tar_dir=$self->{_cygdrive}.'/'.lc($drive).$path;
-         ($output,$stderr)=$self->cmd("cd $tar_dir");
+         ($output,$stderr)=$self->cmd("cd \"$tar_dir\"");
          if ($stderr) {
             if (wantarray) {
                return $output,$stderr;
@@ -15096,7 +15309,7 @@ sub mirror
          return '',$die;
       } else { &Net::FullAuto::FA_Core::handle_error($die) }
    }
-   my $dest_output='';my $base_output='';
+   my $dest_output='';my $base_output='';my $lsgnu=0;
    my $num_of_levels='';my $mirrormap='';my $trantar='';
    my $trandir='';my $chk_id='';my $local_transfer_dir='';
    my $destFH={};my $bprxFH='';my $dprxFH='';
@@ -15286,6 +15499,7 @@ sub mirror
          } my $cnt=0;
       } else {
          $dir=$baseFH->{_work_dirs}->{_cwd};
+#print "WHAT IS THE DIRRRRRR=$dir<== and THIS=$baseFH->{_cwd}\n";<STDIN>;
       } my $cnt=0;
       if (!exists $base_shortcut_info{$baseFH} ||
             $base_shortcut_info{$baseFH} ne $dir ||
@@ -15301,7 +15515,7 @@ sub mirror
             }
             $base_shortcut_info{$baseFH}=$dir;
             if (exists $baseFH->{_unaltered_basehash} &&
-                  $baseFH->{_unaltered_basehash}) { # line 7058
+                  $baseFH->{_unaltered_basehash}) {
                foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
                   my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
                   while (-1<--$elems) {
@@ -15338,7 +15552,7 @@ sub mirror
             } else { last }
          }
       } else {
-         $baseFH->{_bhash}={};
+         $baseFH->{_bhash}={}; # cygwin
          foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
             if (ref ${$baseFH->{_unaltered_basehash}}{$key} eq 'ARRAY') {
                foreach my $elem (@{${$baseFH->{_unaltered_basehash}}{$key}}) {
@@ -15353,7 +15567,7 @@ sub mirror
                   }
                }
             } else {
-               ${$baseFH->{_bhash}}{$key}=
+               ${$baseFH->{_bhash}}{$key}= # cygwin
                   ${$baseFH->{_unaltered_basehash}}{$key};
             }
          }
@@ -15377,9 +15591,41 @@ print "BASE3\n";
             $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
             $ls_path.='/' if $ls_path!~/\/$/;
          }
-         ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRs \'$dir\'");
+         ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls --version");
+         if (-1<index $base_output,'GNU') {
+            $lsgnu=1;
+            ($base_output,$stderr)=$baseFH->cmd(
+               "${ls_path}ls -lRFs --block-size=1 \'$dir\'");
+         } else {
+            ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRFs \'$dir\'");
+         }
+         if ($stderr) {
+            my $die=$stderr;
+            if (wantarray) {
+               return '',$die;
+            } else { &Net::FullAuto::FA_Core::handle_error($die) }
+         } elsif (unpack('x2a1',$base_output) eq 'l' ||
+                     unpack('x4a1',$base_output) eq 'l') {
+            $dir=substr($base_output,(index $base_output,'-> .')+4);
+            $dir=~s/\/?$//;
+            $base_fdr=$dir;
+print "DIR=$dir<==\n";
+            if ($lsgnu) {
+               ($base_output,$stderr)=$baseFH->cmd(
+                  "${ls_path}ls -lRFs --block-size=1 \'$dir\'");
+            } else {
+               ($base_output,$stderr)=$baseFH->cmd(
+                  "${ls_path}ls -lRFs \'$dir\'");
+            }
+            if ($stderr) {
+               my $die=$stderr;
+               if (wantarray) {
+                  return '',$die;
+               } else { &Net::FullAuto::FA_Core::handle_error($die) }
+            }
+         }
          $base_shortcut_info{$baseFH}=$dir;
-         if ($baseFH->{_unaltered_basehash}) { # line 7112
+         if ($baseFH->{_unaltered_basehash}) {
             foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
                my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
                while (-1<--$elems) {
@@ -15415,7 +15661,14 @@ print "BASE3\n";
          $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
          $ls_path.='/' if $ls_path!~/\/$/;
       }
-      ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRs \'$dir\'");
+      ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls --version");
+      if (-1<index $base_output,'GNU') {
+         $lsgnu=1;
+         ($base_output,$stderr)=$baseFH->cmd(
+            "${ls_path}ls -lRs --block-size=1 \'$dir\'");
+      } else {
+         ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRs \'$dir\'");
+      }
       if ($baseFH->{_unaltered_basehash}) { # line 7144
          foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
             my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
@@ -15502,8 +15755,13 @@ print "BASE3\n";
                      $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
                      $ls_path.='/' if $ls_path!~/\/$/;
                   }
-                  ($base_output,$err)=$_[7]->cmd(
-                     "${ls_path}ls -lRs \'$_[0]\'");
+                  if ($lsgnu) {
+                     ($base_output,$err)=$_[7]->cmd(
+                        "${ls_path}ls -lRs --block-size=1 \'$_[0]\'");
+                  } else {
+                     ($base_output,$err)=$_[7]->cmd(
+                        "${ls_path}ls -lRs \'$_[0]\'");
+                  }
                   &Net::FullAuto::FA_Core::handle_error($err,'-3') if $err;
                   ($ignore,$stderr)=&build_base_dest_hashes(
                      $base_fdr,\$base_output,$args{Directives},
@@ -15626,7 +15884,7 @@ print "BASE3\n";
       $dms_share||='';
       $dtransfer_dir||='';
 
-      my $dest_dir='';my $dest_fld='';
+      my $dest_dir='';
       my $dhost=($duse eq 'ip')?$dip:$dhostname;
       my $die="The System $dhost Returned"
              ."\n              the Following Unrecoverable Error "
@@ -15644,35 +15902,34 @@ print "BASE3\n";
                if (($test_chr1 eq '/' && $test_chr2 ne '//')
                      || ($test_chr1 eq '\\' &&
                      $test_chr2 ne '\\\\')) {
-                  $dir=$dest_fdr;
-                  if ($dest_fdr=~s/$destFH->{_cygdrive_regex}//) {
-                     $dir=~s/^(.)/$1:/;
-                     $dir=~tr/\//\\/;
-print "PPPPPPPP\n";<STDIN>;
+                  $dest_dir=$dest_fdr;
+                  if ($dest_dir=~s/$destFH->{_cygdrive_regex}//) {
+                     $dest_dir=~s/^(.)/$1:/;
+                     $dest_dir=~tr/\//\\/;
                   } else {
                      my $de_f=$dest_fdr;
                      $de_f=~s/^[\/\\]+//;
                      $de_f=~tr/\//\\/;
                      if (exists $destFH->{_smb}) {
-                        $dir="\\\\$dhost\\$dms_share\\$de_f";
+                        $dest_dir="\\\\$dhost\\$dms_share\\$de_f";
                      } else {
-                        $dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
+                        $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
 print "JDKKDK\n";<STDIN>;
                         $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
                      }
                   }
                } elsif ($test_chr2 eq '//' ||
                     $test_chr2 eq '\\\\') {
-                  $dir=$dest_fdr;
+                  $dest_dir=$dest_fdr;
 print "NAKED\n";<STDIN>;
                } elsif ($test_chr2=~/^[a-zA-Z]:$/) {
-                  $dir=$dest_fdr;
+                  $dest_dir=$dest_fdr;
 print "NAKED\n";<STDIN>;
                } elsif ($test_chr1!~/\W/) {
                   my $de_f=$dest_fdr;
                   $de_f=~s/^[\/\\]+//;
                   $de_f=~tr/\//\\/;
-                  $dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
+                  $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
                   $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
 print "DIRRRRRRR=$dir\n";<STDIN>;
                } else {
@@ -15681,40 +15938,40 @@ print "DIRRRRRRR=$dir\n";<STDIN>;
                   &Net::FullAuto::FA_Core::handle_error($die);
               }
             } elsif ($test_chr1 eq '/' || $test_chr1 eq '\\') {
-               if ($dest_fdr=~s/$destFH->{_cygdrive_regex}//) {
-                  $dir=~s/^(.)/$1:/;
-                  $dir=~tr/\//\\/;
+               $dest_dir=$dest_fdr;
+               if ($dest_dir=~s/$destFH->{_cygdrive_regex}//) {
+                  $dest_dir=~s/^(.)/$1:/;
+                  $dest_dir=~tr/\//\\/;
 print "OLSKDKF\n";
                } else {
                   my $de_f=$dest_fdr;
                   $de_f=~s/^[\/\\]+//;
                   $de_f=~tr/\//\\/;
-                  $dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
+                  $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
                   $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
-print "WOOEEE\n";sleep 10;
+print "WOOEEE\n";
                }
             } elsif ($test_chr1=~/^[a-zA-Z]$/) {
 print "BLECKKK\n";
-               $dir=$test_chr1 . ':\\';
+               $dest_dir=$test_chr1 . ':\\';
             } else {
                my $die="Destination Directory - $dest_fdr"
                       ." CANNOT Be Located";
                &Net::FullAuto::FA_Core::handle_error($die);
             }
-print "YEPDIR=$dir<==\n";
          } else {
-            $dir=$destFH->{_work_dirs}->{_cwd_mswin};
+            $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin};
 print "HMMMM=$dir\n";
 print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
          } my $cnt=0;
          while (1) {
             ($dest_output,$stderr)=$destFH->cmd(
-               "cmd /c dir /s /-C /A- \"$dir\"");
+               "cmd /c dir /s /-C /A- \"$dest_dir\"");
             &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
             if ($dest_output!~/bytes free\s*/s) {
                $dest_output='';next unless $cnt++;
                my $die="Attempt to retrieve output from the command:\n"
-                      ."\n       cmd /c dir /-C \"$dir\"\n"
+                      ."\n       cmd /c dir /-C \"$dest_dir\"\n"
                       ."\n       run on the host "
                       ."$destFH->{_hostlabel}->[0] FAILED";
                &Net::FullAuto::FA_Core::handle_error($die,'-1');
@@ -15728,8 +15985,22 @@ print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
          } else {
             $dest_dir=$dest_fdr;
          }
-         ($dest_output,$stderr)=$destFH->cmd(
-            "ls -lRs \"$dest_dir\"");
+         my $ls_path='';
+         if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
+               exists $Hosts{"__Master_${$}__"}{'ls'}) {
+            $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+            $ls_path.='/' if $ls_path!~/\/$/;
+         }
+         ($dest_output,$stderr)=$destFH->cmd("${ls_path}ls --version");
+         if (-1<index $dest_output,'GNU') {
+            $lsgnu=1;
+            ($dest_output,$stderr)=$destFH->cmd(
+               "${ls_path}ls -lRs --block-size=1 \'$dest_dir\'");
+         } else {
+            $lsgnu=0;
+            ($dest_output,$stderr)=$destFH->cmd(
+               "${ls_path}ls -lRs \'$dest_dir\'");
+         }
          if ($stderr) {
             print $Net::FullAuto::FA_Core::MRLOG "$die$stderr"
                if $Net::FullAuto::FA_Core::log &&
@@ -15745,9 +16016,23 @@ print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
             }
          }
       } else {
-         my $dest_dir=$destFH->{_work_dirs}->{_cwd}
-         ($dest_output,$stderr)
-            =$destFH->cmd("ls -lRs \'$dest_dir\'");
+         my $dest_dir=$destFH->{_work_dirs}->{_cwd};
+         my $ls_path='';
+         if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
+               exists $Hosts{"__Master_${$}__"}{'ls'}) {
+            $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+            $ls_path.='/' if $ls_path!~/\/$/;
+         }
+         ($dest_output,$stderr)=$destFH->cmd("${ls_path}ls --version");
+         if (-1<index $dest_output,'GNU') {
+            $lsgnu=1;
+            ($dest_output,$stderr)=$destFH->cmd(
+               "${ls_path}ls -lRs --block-size=1 \'$dest_dir\'");
+         } else {
+            $lsgnu=0;
+            ($dest_output,$stderr)=$destFH->cmd(
+               "${ls_path}ls -lRs \'$dest_dir\'");
+         }
          if ($stderr) {
             print $Net::FullAuto::FA_Core::MRLOG "$die$stderr"
                if $Net::FullAuto::FA_Core::log &&
@@ -15763,6 +16048,7 @@ print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
       }
       ($output,$stderr)=$destFH->cwd($dest_dir)
          if $dest_fdr && (!exists $destFH->{_smb});
+print "WHAT IS OUT=$output and STDERR=$stderr\n";
       if ($stderr) {
          if (wantarray) {
             return '',$stderr;
@@ -15801,6 +16087,7 @@ print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
                   undef ${$baseFH->{_bhash}}{$key}[$elems];
                }
             } undef ${$baseFH->{_bhash}}{$key};
+print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
             delete ${$baseFH->{_bhash}}{$key};
          } undef %{$baseFH->{_bhash}};$baseFH->{_bhash}={};
          foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
@@ -15834,8 +16121,19 @@ print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
                   $stderr=~/does not exist/s) {
                while (1) {
                   my $dest_output='';my $err='';
-                  ($dest_output,$err)=$destFH->cmd(
-                     "ls -lRs \'$dest_fdr\'");
+                  my $ls_path='';
+                  if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
+                        exists $Hosts{"__Master_${$}__"}{'ls'}) {
+                     $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+                     $ls_path.='/' if $ls_path!~/\/$/;
+                  }
+                  if ($lsgnu) {
+                     ($dest_output,$err)=$destFH->cmd(
+                        "${ls_path}ls -lRs --block-size=1 \'$dest_fdr\'");
+                  } else {
+                     ($dest_output,$err)=$destFH->cmd(
+                        "${ls_path}ls -lRs \'$dest_fdr\'");
+                  }
                   &Net::FullAuto::FA_Core::handle_error($err,'-3') if $err;
                   ($ignore,$stderr)=&build_base_dest_hashes(
                      $dest_fdr,\$dest_output,$args{Directives},
@@ -16041,7 +16339,7 @@ print "SETTING SHORTCUT TO ZERO 6\n";sleep 6;
             %Net::FullAuto::FA_Core::rename_file;
          $shortcut=0;
       }
-print "WHAT IS SHORTCUT AFTER LOOKING AT FIRSTDESTHASH=$shortcut\n";sleep 5;
+#print "WHAT IS SHORTCUT AFTER LOOKING AT FIRSTDESTHASH=$shortcut\n";sleep 5;
 
       if ($shortcut) {
          foreach my $key (keys %{$baseFH->{_bhash}}) {
@@ -16115,9 +16413,8 @@ print "WHAT IS SHORTCUT AFTER LOOKING AT FIRSTDESTHASH=$shortcut\n";sleep 5;
       }
 
       $dest_output='';$deploy_info='';
-      ($baseFH,$destFH,$timehash,$deploy_info,
-            $debug_info)
-            =&build_mirror_hashes($baseFH,$destFH,$bhostlabel,$dhostlabel);
+      ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
+         =&build_mirror_hashes($baseFH,$destFH,$bhostlabel,$dhostlabel);
 
       $mirror_output.="\n\n### mirror() output for Base Host:"
                     ." $bhostlabel and Destination Host $dhostlabel"
@@ -16127,16 +16424,22 @@ print "WHAT IS SHORTCUT AFTER LOOKING AT FIRSTDESTHASH=$shortcut\n";sleep 5;
                    ." $bhostlabel and Destination Host $dhostlabel"
                    ." :\n\n$debug_info";
 
+#my $id=$baseFH->cmd("id -unr");
+#print "WHAT IS THE IDNOWBADDD=$id<==\n";<STDIN>;
+print "WJAT IS THIS=",keys %{$baseFH},"\n";
 print "KEYSBASEHASH=",keys %{$baseFH->{_bhash}},"\n";
 print "KEYSDESTHASH=",keys %{$destFH->{_dhash}},"\n";
-print "KEYSTIMEHASH=",keys %{$timehash},"\n";sleep 5;
+print "KEYSTIMEHASH=",keys %{$timehash},"\n";
 
       if (keys %{$baseFH->{_bhash}}) {
          if ($baseFH->{_uname} ne 'cygwin' ||
                $base_fdr!~/^[\/|\\][\/|\\]/ ||
                !$bms_share || !$#{$baseFH->{_hostlabel}}) {
-            my $base__dir=$baseFH->{_work_dirs}->{_cwd};
+            #my $base__dir=$baseFH->{_work_dirs}->{_cwd};
+            my $base__dir=$base_fdr;
             my $bcurdir=$baseFH->{_work_dirs}->{_tmp};
+print "BASE_DIR_CWD=$base__dir<=========\n";
+print "BASE_DIR_TMP=$bcurdir<===========\n";
             my $aix_tar_input_variable_flag=0;
             my $aix_tar_input_variable1='';
             my $aix_tar_input_variable2='';
@@ -16145,6 +16448,9 @@ print "KEYSTIMEHASH=",keys %{$timehash},"\n";sleep 5;
             my $gnu_tar_input_file2='';
             my $gnu_tar_input_list1='';
             my $gnu_tar_input_list2='';
+            my $solaris_tar_input_variable_flag=0;
+            my $solaris_tar_input_variable1='';
+            my $solaris_tar_input_variable2='';
             my @dirt=();my $tmp_dir='';
             if ($baseFH->{_uname} eq 'cygwin' && 
                   $destFH->{_uname} eq 'cygwin' &&
@@ -16284,12 +16590,15 @@ print "BE SURE TO ADD NEW CODE TO CHANGE BACK TO ",
                      $Net::FullAuto::FA_Core::tranback=2;
                   } $activity=0;
                   my @basekeys=sort keys %{$baseFH->{_bhash}};
+print "WHAT ARE THE BASEKEYS=@basekeys<==\n";
                   my $f_cnt=0;
                   ($output,$stderr)=$baseFH->cmd(
                      "${Net::FullAuto::FA_Core::tarpath}tar --help");
                   if ($stderr) {
                      if (-1<index $stderr,'-LInputList') {
                         $aix_tar_input_variable_flag=1;
+                     } elsif (-1<index $stderr,'BDeEFhilmnopPqTvw') {
+                        $solaris_tar_input_variable_flag=1;
                      } else {
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-5');
                      }
@@ -16315,6 +16624,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2" if $Net::FullAuto::FA_Core::log
                         $activity=1;
                         my $base___dir='';
                         my $dir= ($key eq '/') ? '' : "$key/";
+print "WHAT IS DIR=$dir<== and KEY=$key\n";
                         if ($dir && $baseFH->{_uname} eq 'cygwin') {
                            if (exists $Net::FullAuto::FA_Core::cygpathu{$dir}) {
                               $dir=$Net::FullAuto::FA_Core::cygpathu{$dir};
@@ -16370,6 +16680,10 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                               $aix_tar_input_variable2.="$bcurdir/$file\n";
                               push @dirt, $file;
                               $tmp_dir=$bcurdir;
+                           } elsif ($solaris_tar_input_variable_flag) {
+                              $solaris_tar_input_variable2.="$bcurdir/$file\n";
+                              push @dirt, $file;
+                              $tmp_dir=$bcurdir;
                            } next
                         } else { $base___dir=$base__dir }
                         if ($gnu_tar_input_file_flag) {
@@ -16379,19 +16693,22 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            $gnu_tar_input_list1.="$dir$file\n";
                         } elsif ($aix_tar_input_variable1) {
                             $aix_tar_input_variable1.="$dir$file\n";
+                        } elsif ($solaris_tar_input_variable1) {
+                            $solaris_tar_input_variable1.="$dir$file\n";
                         } else {
                            my $tar_cmd='';
                            if (!$f_cnt) {
                               $f_cnt++;
                               $tar_cmd=
-                                 "tar cvf $bcurdir/transfer".
+                                 "tar cvf ${bcurdir}transfer".
                                  "$Net::FullAuto::FA_Core::tran[3].tar ";
                            } else {
                               $tar_cmd=
-                                 "tar rvf $bcurdir/transfer".
+                                 "tar rvf ${bcurdir}transfer".
                                  "$Net::FullAuto::FA_Core::tran[3].tar ";
                            }
                            $tar_cmd.="-C \"$base___dir\" \"$dir$file\"";
+print "TAR_CMD=$tar_cmd<== and BASE_FDR=$base_fdr<==\n";
                            ($output,$stderr)=$baseFH->cmd($tar_cmd,500);
                            &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                               if $stderr;
@@ -16487,6 +16804,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                         if $stderr;
                   }
                } elsif ($aix_tar_input_variable1) {
+
+               } elsif ($solaris_tar_input_variable1) {
 
                }
 print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -17000,7 +17319,6 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO TOUCH TIME=$time and FILE=$file\n
          }
       }
    }
-print "WE ARE HERE\n";sleep 5;
    %base_shortcut_info=();
    if (exists $destFH->{_work_dirs}->{_pre} && $destFH->{_work_dirs}->{_pre}
          && $destFH->{_work_dirs}->{_pre} ne $destFH->{_work_dirs}->{_cwd}
@@ -17740,7 +18058,9 @@ print $Net::FullAuto::FA_Core::MRLOG "ftm_connect::cmd() HAD TO DO LOGIN_RETRY".
    " for $ftpFH->{_cmd_handle} and HOSTLABEL=$ftpFH->{_hostlabel}->[0] and $ftpFH->{_hostlabel}->[1]\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ($ftpFH->{_cmd_handle}->{_cmd_handle},$stderr)=
                   &Rem_Command::login_retry(
-                  $ftpFH->{_cmd_handle},$@);
+                  $ftpFH->{_cmd_handle},
+                  $ftpFH->{_connect},
+                  $ftpFH->{_cmd_type},$@);
                if ($stderr) {
                   $stderr="$@\n       $stderr";
                   return 0;
@@ -17791,7 +18111,9 @@ print $Net::FullAuto::FA_Core::MRLOG "ftm_connect::cmd() HAD TO DO FTP LOGIN_RET
    " for $ftpFH->{_cmd_handle} and HOSTLABEL=$ftpFH->{_hostlabel}->[0] and $ftpFH->{_hostlabel}->[1]\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   ($ftpFH->{_cmd_handle},$stderr)
                      =&Rem_Command::login_retry(
-                     $ftpFH->{_cmd_handle},$stderr);
+                     $ftpFH->{_cmd_handle},
+                     $ftpFH->{_connect},
+                     $ftpFH->{_cmd_type},$stderr);
                   &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
                   @connect_method=();
                   @connect_method=@{$ftr_cnct};
@@ -17896,7 +18218,9 @@ print $Net::FullAuto::FA_Core::MRLOG "ftm_connect::cmd() HAD TO DO SFTP LOGIN_RE
    " for $ftpFH->{_cmd_handle} and HOSTLABEL=$ftpFH->{_hostlabel}->[0] and $ftpFH->{_hostlabel}->[1]\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ($ftpFH->{_cmd_handle},$stderr)
                   =&Rem_Command::login_retry(
-                  $ftpFH->{_cmd_handle},$stderr);
+                  $ftpFH->{_cmd_handle},
+                  $ftpFH->{_connect},
+                  $ftpFH->{_cmd_type},$stderr);
                &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
                @connect_method=();
                @connect_method=@{$ftr_cnct};
@@ -18800,8 +19124,8 @@ sub build_mirror_hashes
       delete ${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFBASEFILES"};
       delete ${$destFH->{_dhash}}{"___%EXCluD%E--NUMOFFILES"};
       delete ${$destFH->{_dhash}}{"___%EXCluD%E--NUMOFBASEFILES"};
-#print "NUM_OF_FILES=$num_of_files\n";
-#print "NUM_OF_BASEFILES=$num_of_basefiles\n";<STDIN>;
+print "NUM_OF_FILES=$num_of_files\n";
+print "NUM_OF_BASEFILES=$num_of_basefiles\n";
       foreach my $key (sort keys %{$baseFH->{_bhash}}) {
          next if ${$baseFH->{_bhash}}{$key}[0] eq 'EXCLUDE';
          my @keys=();
@@ -18842,8 +19166,8 @@ sub build_mirror_hashes
 #   print "DESTKEYYYYYY=$key\n";
 #}
 #print "WHAT IS THE BAD KEY==>$key<==\n";<STDIN>;
-print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE BAD KEY==>$key<==\n";
-#   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE BAD KEY==>$key<==\n"
+   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ${$baseFH->{_bhash}}{$key}[3]='NOT_ON_DEST';
                $dest_dir_status='DIR_NOT_ON_DEST';
                $deploy_info.="DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
@@ -18882,9 +19206,10 @@ print $Net::FullAuto::FA_Core::MRLOG "KEY=$key DEST TIMELINE ENTRY=",
       ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],"\n"
       ." and FILE=$file\n" if $Net::FullAuto::FA_Core::debug;
 #}
-print "STRING=${${$destFH->{_dhash}}{$key}[1]{$file}}[1] and FILE=$file\n";
+print "STRING_DEST=${${$destFH->{_dhash}}{$key}[1]{$file}}[1] and FILE=$file\n";
+               my $y=qr(\d\d\d\d);
                ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]=~
-                  /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+(\d\d\d\d)\s+(\d+)$/;
+                  /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
                $dtime1=$1;$dtime2=$2;$dtime3=$3;
                $dyear=$4;$dsize=$5;$dchmod=$6;
                $dtime2="0$dtime2" if length $dtime2==1;
@@ -18892,8 +19217,8 @@ print "STRING=${${$destFH->{_dhash}}{$key}[1]{$file}}[1] and FILE=$file\n";
                $dchmod||='';
             }
             ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]=~
-               /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+(\d\d\d\d)\s+(\d+)\s*$/;
-print "STRING=${${$baseFH->{_bhash}}{$key}[1]{$file}}[1] and FILE=$file\n";
+               /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+(\d\d\d\d)\s+(\d+)\s*(\d*)*\s*$/;
+print "STRING_BASE=${${$baseFH->{_bhash}}{$key}[1]{$file}}[1] and FILE=$file\n";
             my $btime1=$1;my $btime2=$2;my $btime3=$3;
             my $byear=$4;my $bsize=$5;my $bchmod=$6;
             $btime2="0$btime2" if length $btime2==1;
@@ -18941,7 +19266,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DEPLOY NEEDED for KEY=$key and ",
 print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH1=> TIMEKEY(FILE)=$timekey ",
                      "and BYEAR=$byear and BTIME=$btime\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               ${$timehash}{$timekey}=[$byear,$btime];
+               $timehash->{$timekey}=[$byear,$btime];
                next;
             }
 #if ($key=~/about/) {
@@ -19155,7 +19480,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
                      "and BYEAR=$byear and BTIME=$btime\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          }
-print "OUT OF FILE COMPARE LOOP\n";<STDIN>;
+#print "OUT OF FILE COMPARE LOOP\n";
          if ($skip) {
             if ($deploy) {
                ${$baseFH->{_bhash}}{$key}[2]='DEPLOY_SOMEFILES_OF_CURDIR';
@@ -19195,6 +19520,7 @@ print "OUT OF FILE COMPARE LOOP\n";<STDIN>;
    };
    if ($@) {
       if (unpack('a10',$@) eq 'The System') {
+print "BUILDRETURN1\n";
          return '','','','',$@;
       } else {
 #print "IS THIS REALLY WHERE WE ARE DYINGEEEEEEEEEEEE<==\n";<STDIN>;
@@ -19204,11 +19530,13 @@ print "OUT OF FILE COMPARE LOOP\n";<STDIN>;
                 ."line ".(caller(0))[2]." :\n\n       $@";
          print $Net::FullAuto::FA_Core::MRLOG $die 
             if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print "BUILDRETURN2 and DIE=$die and CALLER=",caller,"\n";
          return '','','','',$die;
       }
    }
 print $Net::FullAuto::FA_Core::MRLOG "KEYSBASEHASHTEST=",keys %{$baseFH->{_bhash}},"\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print "BUILDRETURN3\n";
  return $baseFH, $destFH, $timehash, $deploy_info, $debug_info;
 
 }
@@ -19221,7 +19549,6 @@ print "BBDH CALLER=",caller,"\n";
    my $num_of_included=0;my $num_of_excluded=0;
    my @modifiers=();
    my $base_or_dest_folder=$_[0];
-print "WAHT IS DAGG=$base_or_dest_folder\n";
    my $ms_share=$_[4];$ms_share||='';
    my $ms_domain=$_[5];$ms_domain||='';
    my $cygwin = (-1<index lc($_[6]),'cygwin') ? 1 : 0;
@@ -19229,7 +19556,7 @@ print "WAHT IS DAGG=$base_or_dest_folder\n";
    my $base_dest=$_[8];my $bd='';
    $bd=($base_dest eq 'BASE')?'b':'d';
    my ($stdout,$stderr)=('','');
-   my %navhash=();
+   my %navhash=();my $lsgnu=0;
    eval {
       if ($_[2]) {
          my @directives=@{$_[2]};my @delim=();
@@ -19330,7 +19657,7 @@ print "WAHT IS DAGG=$base_or_dest_folder\n";
                   }
                } else {
                   $result=1 if $string=~m#${$ex}[0]#;
-               } return $result,${$ex}[2]||='';
+               } return $result,${$ex}[2]||'';
             };
             $sub;
          }
@@ -19338,6 +19665,7 @@ print "WAHT IS DAGG=$base_or_dest_folder\n";
       my $len_dir='';
       if (!$ms_share && !$ms_domain && !$cygwin) {
          $len_dir=(length $base_or_dest_folder)+2;
+print "WHAT IS THIS=$len_dir and BD=$base_or_dest_folder<==\n";
       } elsif ($base_or_dest_folder=~/$cmd_handle->{_cygdrive_regex}/) {
          my $tmp_basedest=$base_or_dest_folder;
          $tmp_basedest=~s/$cmd_handle->{_cygdrive_regex}//;
@@ -19386,6 +19714,7 @@ print "WAHT IS DAGG=$base_or_dest_folder\n";
          }
          next if $line=~/^\s*$/;
          WH: while ($parse || ($line=pop @sublines)) {
+print "KEY=$key<====================\n";
             $parse=0;
             $mn=0;$dy=0;$yr=0;$hr=0;
             $mt='';$pm='';$size='';$file='';
@@ -19450,7 +19779,7 @@ print "WAHT IS DAGG=$base_or_dest_folder\n";
                if ($file eq '' && $mn ne ' D') { next }
             } else { # Else Base is UNIX
 #if ($line=~/entry_flash.swf/s && !$cygwin) {
-#print "UNIX_LINE=$line<--\n";#<STDIN>;
+#print "UNIX_LINE=$line<-- and KEY=$key\n";#<STDIN>;
 #}
                $fchar='';$u='';$g='';$o='';$chmod='';
                chomp($line);
@@ -19464,9 +19793,12 @@ print "WAHT IS DAGG=$base_or_dest_folder\n";
                }
                my $endofline=substr($line,-2);
                if ($line=~s/^\s*([0-9]+)\s//) {
+print "WHAT IS LINE=$line<== \n";
                   $bytesize=$1;
                   ($fchar,$u,$g,$o)=unpack('a1 a3 a3 a3',$line);
+print "ADDING ==>$bytesize<==\n";
                   $addbytes+=$bytesize;
+print "TOTAL BYTESIZE==>$addbytes<==\n";
                   $dofiles=1;
                   if ($endofline eq '..' || $endofline eq ' .') { next }
                } else {
@@ -19476,7 +19808,7 @@ print "WAHT IS DAGG=$base_or_dest_folder\n";
 #print $Net::FullAuto::FA_Core::MRLOG "TOTAL=$total and ADDBYTES=$addbytes and "
 #                     "PREVKEY=$prevkey\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      if ($dofiles && $total!=$addbytes) {
-#print "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey<--\n";
+print "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey<--\n";
 print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey<--\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         @sublines=();
@@ -19485,19 +19817,35 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                         $key=$prevkey;
                         die 'redo ls' if $key eq '/';
                         $addbytes=0;
+                        my $ls_path='';
+                           if ($cmd_handle->{_hostlabel}->[0] eq
+                                 "__Master_${$}__" &&
+                                 exists $Hosts{"__Master_${$}__"}{'ls'}) {
+                              $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+                              $ls_path.='/' if $ls_path!~/\/$/;
+                        }
                         while (1) {
 print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                            ($stdout,$stderr)=$cmd_handle->cmd(
-                              "ls -lRs $key");
-                           &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
+                              "${ls_path}ls --version") unless $lsgnu;
+                           if ($lsgnu || (-1<index $stdout,'GNU')) {
+                              $lsgnu=1;
+                              ($stdout,$stderr)=$cmd_handle->cmd(
+                                 "${ls_path}ls -lRs --block-size=1 \'$key\'");
+                           } else {
+                              ($stdout,$stderr)=$cmd_handle->cmd(
+                                 "${ls_path}ls -lRs \'$key\'");
+                           }
+                           &Net::FullAuto::FA_Core::handle_error($stderr)
+                              if $stderr;
                            my $add_bytes=0;
-#print "LS LOOPING STDOUT=$stdout\n";
+print "LS LOOPING STDOUT=$stdout\n";
                            foreach my $line (split /^/, $stdout) {
                               chomp($line);
                               next if $line eq '';
                               if ($line=~/^total /) {
                                  $total+=unpack('x6 a*',$line);
-#print "TOTAL=$total and LINE=$line\n";
+print "TOTAL=$total and LINE=$line\n";
                                  next;
                               }
                               my $lchar=substr($line,-1);
@@ -19509,7 +19857,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                                  } chop $line;
                               }
                               my $endofline=substr($line,-2);
-#print "NOW LINE=$line\n";
+print "NOW LINE=$line\n";
                               if ($line=~s/^\s*([0-9]+)\s//) {
                                  my $bytesize=$1;
                                  next if $bytesize!~/\d+/;
@@ -19524,7 +19872,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                         } next WH;
                      } else {
                         $total=unpack('x6 a*',$line);
-#print "WHAT IS TOTALNOW=$total and LINE=$line\n";
+print "WHAT IS TOTALNOW=$total and LINE=$line\n";
                         if (-1<index $total,'stdout:') {
                            $total=~s/^(\d+)(stdout:.*)$/$1/;
                            push @sublines, $2;
@@ -19562,8 +19910,9 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                   } else {
                      $bit=0;
                   }
-                  $chmod="$bit$Net::FullAuto::FA_Core::perms{$u}";
-                  $chmod.="$Net::FullAuto::FA_Core::perms{$g}$Net::FullAuto::FA_Core::perms{$o}";
+                  $chmod=$bit.$Net::FullAuto::FA_Core::perms{$u};
+                  $chmod.=$Net::FullAuto::FA_Core::perms{$g}.
+                          $Net::FullAuto::FA_Core::perms{$o};
                }
             }
 #if ($key=~/careers/) {
@@ -19617,7 +19966,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                               ${$cmd_handle->{"_${bd}hash"}}{$key}
                                  =[ 'EXCLUDE', {},
                                  'DEPLOY_NOFILES_OF_CURDIR' ];
-#print "BASE_DEST=$base_dest and EXCLUDEDKEY=$key\n";<STDIN>;
+print "BASE_DEST=$base_dest and EXCLUDEDKEY=$key\n";<STDIN>;
                               if ($base_dest eq 'BASE') {
                                  $Net::FullAuto::FA_Core::base_excluded_dirs{$key}='-';
                               }
@@ -19629,7 +19978,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                               foreach my $key (@keys) {
                                  if (${$cmd_handle->{"_${bd}hash"}}{$key}[0]
                                        eq 'EXCLUDE') {
-#print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
+print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                                     ${$cmd_handle->{"_${bd}hash"}}{$key}[0]
                                        ='SOME';
                                  }
@@ -19680,6 +20029,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                            # Get New Directory Key
                            $prevkey=$key;
                            $key=unpack("x$len_dir a*",$line);
+print "KEYYYYYYYYYYYYYY=$key and LINE=$line and LENDIR=$len_dir\n";sleep 2;
 #print "KEYHERERERERER2222222 and LINE=$line\n" if $key eq 'member/my_health/calculators/bmicalculator/images';
 #<STDIN> if $key eq 'member/my_health/calculators/bmicalculator/images';
                            if ($ms_share || $ms_domain) {
@@ -19705,7 +20055,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                      # Get New Directory Key
                      $prevkey=$key;
                      $key=unpack("x$len_dir a*",$line);
-#print "KEYHERERERERER33333 and LINE=$line\n" if $key eq 'member/my_health/calculators/bmicalculator/images';
+print "KEYHERERERERER33333 and LINE=$line and len_dir=$len_dir\n";# if $key eq 'member/my_health/calculators/bmicalculator/images';
 #<STDIN> if $key eq 'member/my_health/calculators/bmicalculator/images';
                      if ($ms_share || $ms_domain) {
                         $key=~tr/\\/\//;
@@ -19722,11 +20072,16 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
 #if ($key eq '/') {
 #print "UNIXXXYYLINE=$line and CYGWINNNN=$cygwin and MN=$mn and SIZE=$size and FILE=$file and KEY=$key\n";#<STDIN>;
 #}
-               if (!$cygwin && $fchar eq '-') {
-                  my $up=unpack('x10 a*',"$line");
+               if (!$cygwin && ($fchar eq '-' || $fchar eq 'l')) {
+                  my $up=unpack('x10 a*',$line);
                   $up=~s/^\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
                   ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
-                  if (-1==index 'JanFebMarAprMayJunJulAugSepOctNovDec',
+                  my $yr='';
+                  if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
+                     $file=$tm;
+                     $tm=$dy;
+                     $yr=$1;$mn=$2;$dy=$3;
+                  } elsif (-1==index 'JanFebMarAprMayJunJulAugSepOctNovDec',
                         $mn) {
                      ($file=$up)=~s/^.*\d+\s+\w\w\w\s+\d+\s+
                         (?:\d\d:\d\d\s+|\d\d\d\d\s+)+(.*)$/$1/x;
@@ -19747,9 +20102,12 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                   $fileyr=0;$hr=0;$mt=0;
                   if (length $tm==4) {
                      $fileyr=$tm;$hr=12;$mt='00';
+                  } elsif ($yr) {
+                     ($hr,$mt)=unpack('a2 @3 a2',$tm);
+                     $fileyr=$yr;
                   } else {
-                     ($hr,$mt)=unpack('a2 @3 a2',"$tm");
-                     my $yr=unpack('x1 a2',"$Net::FullAuto::FA_Core::thisyear");
+                     ($hr,$mt)=unpack('a2 @3 a2',$tm);
+                     $yr=unpack('x1 a2',"$Net::FullAuto::FA_Core::thisyear");
                      $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
                      if ($Net::FullAuto::FA_Core::thismonth<$mn-1) {
                         --$yr;
@@ -19765,6 +20123,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                         }
                      }
                   }
+                  $file=s/ -> .*$// if -1<index $file,' -> ';
                }
 #if ($key eq '/') {
 #print "CYGWINNNNN\n" if $cygwin;
@@ -19866,7 +20225,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                                  'DEPLOY_SOMEFILES_OF_CURDIR') {
                               if ($file_count==++$cur_dir_excluded) {
 #if ($key eq '/') {
-#print "HERE WE ARE and KEY=$key\n";<STDIN>;
+print "HERE WE ARE and KEY=$key\n";<STDIN>;
 #}
                                  ${$cmd_handle->{"_${bd}hash"}}{$key}[2]
                                     ='DEPLOY_NOFILES_OF_CURDIR'
@@ -19882,13 +20241,20 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                      my $up=unpack('x10 a*',"$line");
                      $up=~s/^\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
                      ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
+                     my $yr='';$fileyr='';
+                     if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
+                        $fileyr=$1;
+                        $file=$tm;
+                        $tm=$dy;
+                        $mn=$2;$dy=$3;
+                     }
                      $mn=$Net::FullAuto::FA_Core::month{$mn} if length $mn==3;
-                     $fileyr='';my ($hr,$mt)='';
+                     my ($hr,$mt)='';
                      if (length $tm==4) {
                         $fileyr=$tm;$hr=12;$mt='00';
-                     } else {
+                     } elsif (!$fileyr) {
                         ($hr,$mt)=unpack('a2 @3 a2',$tm);
-                        my $yr=unpack('x1 a2',$Net::FullAuto::FA_Core::thisyear);
+                        $yr=unpack('x1 a2',$Net::FullAuto::FA_Core::thisyear);
                         $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
                         if ($Net::FullAuto::FA_Core::thismonth<$mn-1) {
                            --$yr;
@@ -19905,6 +20271,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                         }
                      }
                      $file=~s/\s*$//g;
+                     $file=s/ -> .*$// if -1<index $file,' -> ';
                   } else {
                      $size=~s/^\s*//;
                      my $testyr="1$yr";
@@ -19918,7 +20285,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                   } $chmod=" $chmod" if $chmod;
                   my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
 #if ($key eq '/') {
-#print "GOOOOOOODDDDDFILE222===$file\n";<STDIN>;
+#print "GOOOOOOODDDDDFILE222===$file and KEY=$key\n";<STDIN>;
 #}
                   ${$cmd_handle->{"_${bd}hash"}}{$key}[1]{$file}=
                      [ '',"$mn $dy $hr $mt $fileyr $size$chmod" ];
@@ -19932,6 +20299,7 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
       }
    };
    if ($@) {
+print "DO WE HAVE AN ERROR AND WHAT IS IT=$@\n";<STDIN>;
       return '','redo ls' if unpack('a7',$@) eq 'redo ls';
       if (unpack('a10',$@) eq 'The System') {
          return '',$@;
@@ -19943,11 +20311,12 @@ print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
                 ."line ".(caller(0))[2]." :\n\n       ".$@;
          print $Net::FullAuto::FA_Core::MRLOG $die
             if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         return '', "$die";
+         return '', $die;
       }
    } ${$cmd_handle->{"_${bd}hash"}}{"___%EXCluD%E--NUMOFFILES"}=$num_of_included;
    ${$cmd_handle->{"_${bd}hash"}}{"___%EXCluD%E--NUMOFBASEFILES"}
                         =$num_of_included+$num_of_excluded;
+   return '','';
 
 }
 
@@ -19959,8 +20328,10 @@ package Rem_Command;
 sub new {
    print "Rem_Command::new CALLER=",caller,"\n"
       if $Net::FullAuto::FA_Core::debug;
-   print $Net::FullAuto::FA_Core::MRLOG "Rem_Command::new CALLER=",(caller),"\n"
-      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   print $Net::FullAuto::FA_Core::MRLOG
+      "Rem_Command::new CALLER=",(caller),"\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    our $timeout=$Net::FullAuto::FA_Core::timeout;
    our $test=$Net::FullAuto::FA_Core::test;
    my $self = { };
@@ -19973,7 +20344,8 @@ sub new {
       $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
       $owner,$group,$fttimeout,$transfer_dir,$rcm_chain,
       $rcm_map,$uname,$ping)
-      =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label($hostlabel,$_connect);
+      =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
+      $hostlabel,$_connect);
    my $chk_id='';
    if ($su_id) { $chk_id=$su_id }
    elsif ($login_id) { $chk_id=$login_id }
@@ -19995,7 +20367,8 @@ sub new {
       &Net::FullAuto::FA_Core::handle_error($die);
    }
    if ($smb) {
-      $self->{_hostlabel}=[ $hostlabel,$Net::FullAuto::FA_Core::DeploySMB_Proxy[0] ];
+      $self->{_hostlabel}=[ $hostlabel,
+         $Net::FullAuto::FA_Core::DeploySMB_Proxy[0] ];
       $self->{_smb}=1;
    } else {
       $self->{_hostlabel}=[ $hostlabel,'' ];
@@ -20170,21 +20543,24 @@ sub cmd_login
 print "WE GOT HOSTLABEL=$hostlabel<==\n" if !$Net::FullAuto::FA_Core::cron &&
                                             $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "WE GOT HOSTLABEL=$hostlabel<==\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my ($ip,$hostname,$use,$ms_share,$ms_domain,
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
        $owner,$group,$cdtimeout,$transfer_dir,$rcm_chain,
        $rcm_map,$uname,$ping)
-       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label($hostlabel,$_connect);
+       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
+       $hostlabel,$_connect);
    if ($override_login_id) {
       $login_id=$override_login_id;
       $su_id='';
    }
 print "WE ARE BACK FROM LOOKUP and HOSTNAME=$hostname<==\n"
-   if !$Net::FullAuto::FA_Core::cron &&
+      if !$Net::FullAuto::FA_Core::cron &&
       $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    if ($Net::FullAuto::FA_Core::cltimeout ne 'X') {
       $cdtimeout=$Net::FullAuto::FA_Core::cltimeout;
    } elsif (!$cdtimeout) {
@@ -20232,11 +20608,13 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
       }
       my $loginid = ($su_id) ? $su_id : $login_id;
       $use_su_login=1 if $su_id;
-      $login_passwd=&Net::FullAuto::FA_Core::getpasswd($Net::FullAuto::FA_Core::DeploySMB_Proxy[0],
-             $loginid,$ms_domain,'','','smb');
-             #$loginid,$ms_domain,$cmd_errmsg,'','SMB_Proxy');
+      $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
+         $Net::FullAuto::FA_Core::DeploySMB_Proxy[0],
+         $loginid,$ms_domain,'','','smb');
+         #$loginid,$ms_domain,$cmd_errmsg,'','SMB_Proxy');
    } else {
-      $login_passwd=&Net::FullAuto::FA_Core::getpasswd($hostlabel,$login_id,'','');
+      $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
+         $hostlabel,$login_id,'','');
    }
    #&Net::FullAuto::FA_Core::acquire_semaphore(1234,,1);
    $host=($use eq 'ip')?$ip:$hostname;
@@ -20259,7 +20637,8 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
                  ."          'connect_telnet_ssh'\n\n"
                  ."       \'$loc\' is INCORRECT.\n\n";
           print $Net::FullAuto::FA_Core::MRLOG $die
-             if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+             if $Net::FullAuto::FA_Core::log &&
+             -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
           &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
       } elsif ($loc eq 'connect_ssh') {
           $_connect=$loc;
@@ -20311,7 +20690,8 @@ my $w2loop=0;
                            $telnetpath=$Hosts{"__Master_${$}__"}{'telnet'};
                            $telnetpath.='/' if $telnetpath!~/\/$/;
                         }
-                        ($cmd_handle,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                        ($cmd_handle,$cmd_pid)=
+                           &Net::FullAuto::FA_Core::pty_do_cmd(
                            ["${telnetpath}telnet",$host])
                            or &Net::FullAuto::FA_Core::handle_error(
                            "couldn't launch telnet subprocess");
@@ -20319,11 +20699,13 @@ my $w2loop=0;
                         $cmd_handle=Net::Telnet->new(Fhopen => $cmd_handle,
                            Timeout => $cdtimeout);
                         if ($su_id) {
-                           $Net::FullAuto::FA_Core::Processes{$hostlabel}{$su_id}
+                           $Net::FullAuto::FA_Core::Processes{
+                              $hostlabel}{$su_id}
                               {'cmd_su_'.++$Net::FullAuto::FA_Core::pcnt}=
                               [ $cmd_handle,$cmd_pid,'','' ];
                         } else {
-                           $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
+                           $Net::FullAuto::FA_Core::Processes{
+                              $hostlabel}{$login_id}
                               {'cmd_id_'.++$Net::FullAuto::FA_Core::pcnt}=
                               [ $cmd_handle,$cmd_pid,'','' ];
                         }
@@ -20344,7 +20726,8 @@ my $w2loop=0;
                      while (my $line=$cmd_handle->get) {
 #print "TELNET_CMD_HANDLE_LINE=$line\n";
 print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         my $showline=$line;
                         chomp($showline=~tr/\0-\11\13-\37\177-\377//d);
                         $showline=~tr/\12/\033/;
@@ -20370,7 +20753,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  $hostlabel}{$su_id}
                                  {'cmd_su_'.$Net::FullAuto::FA_Core::pcnt};
                            } else {
-                              delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
+                              delete $Net::FullAuto::FA_Core::Processes{
+                                 $hostlabel}{$login_id}
                                  {'cmd_id_'.$Net::FullAuto::FA_Core::pcnt};
                            }
                            if (1<=$#connect_method) {
@@ -20387,19 +20771,25 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                               if ($su_id ne $login_id) {
                                  $login_id=$su_id;
                               } else { $su_id='' }
-                              my $value=$Net::FullAuto::FA_Core::Processes{$hostlabel}
-                                 {$login_id}{"cmd_su_$Net::FullAuto::FA_Core::pcnt"};
-                              delete $Net::FullAuto::FA_Core::Processes{$hostlabel}
-                                 {$login_id}{"cmd_su_$Net::FullAuto::FA_Core::pcnt"};
-                              $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
-                                 {"cmd_id_$Net::FullAuto::FA_Core::pcnt"}=$value;
+                              my $value=$Net::FullAuto::FA_Core::Processes{
+                                 $hostlabel}{$login_id}
+                                 {"cmd_su_$Net::FullAuto::FA_Core::pcnt"};
+                              delete $Net::FullAuto::FA_Core::Processes{
+                                 $hostlabel}{$login_id}
+                                 {"cmd_su_$Net::FullAuto::FA_Core::pcnt"};
+                              $Net::FullAuto::FA_Core::Processes{
+                                 $hostlabel}{$login_id}
+                                 {"cmd_id_$Net::FullAuto::FA_Core::pcnt"}=
+                                 $value;
                            }
                            $uname='cygwin';
-                           $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'Uname'}='cygwin';
+                           $Net::FullAuto::FA_Core::Hosts{
+                              $hostlabel}{'Uname'}='cygwin';
                            $cygwin=1;
                         } elsif (-1<index $line,'AIX') {
                            $uname='aix';
-                           $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'Uname'}='aix';
+                           $Net::FullAuto::FA_Core::Hosts{
+                              $hostlabel}{'Uname'}='aix';
                         }
                         last if $line=~
                            /(?<!Last )login[: ]+$|username[: ]+$/i;
@@ -20415,7 +20805,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                      $cmd_handle->print($login_id);
                      if ($cmd_handle->errmsg) {
                         #&Net::FullAuto::FA_Core::release_semaphore(1234);
-                        &Net::FullAuto::FA_Core::handle_error($cmd_handle->errmsg);
+                        &Net::FullAuto::FA_Core::handle_error(
+                           $cmd_handle->errmsg);
                      } $cmd_type='telnet';
                      ($ignore,$stderr)=
                         &File_Transfer::wait_for_passwd_prompt(
@@ -20440,13 +20831,16 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                            $sshport=$Hosts{$hostlabel}{'sshport'};
                         }
                         if ($sshport) {
-                           ($cmd_handle,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                              ["${sshpath}ssh",'-v',"-p$sshport","$sshloginid\@$host",
+                           ($cmd_handle,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              ["${sshpath}ssh",'-v',"-p$sshport",
+                              "$sshloginid\@$host",
                               $Net::FullAuto::FA_Core::slave])
                               or &Net::FullAuto::FA_Core::handle_error(
                               "couldn't launch ssh subprocess");
                         } else {
-                           ($cmd_handle,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                           ($cmd_handle,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
                               ["${sshpath}ssh",'-v',"$sshloginid\@$host",
                               $Net::FullAuto::FA_Core::slave])
                               or &Net::FullAuto::FA_Core::handle_error(
@@ -20455,11 +20849,13 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         $cmd_handle=Net::Telnet->new(Fhopen => $cmd_handle,
                            Timeout => $cdtimeout);
                         if ($su_id) {
-                           $Net::FullAuto::FA_Core::Processes{$hostlabel}{$su_id}
+                           $Net::FullAuto::FA_Core::Processes{
+                              $hostlabel}{$su_id}
                               {'cmd_su_'.++$Net::FullAuto::FA_Core::pcnt}=
                               [ $cmd_handle,$cmd_pid,'','' ];
                         } else {
-                           $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
+                           $Net::FullAuto::FA_Core::Processes{
+                              $hostlabel}{$login_id}
                               {'cmd_id_'.++$Net::FullAuto::FA_Core::pcnt}=
                               [ $cmd_handle,$cmd_pid,'','' ];
                         }
@@ -20575,6 +20971,10 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             ## Send password.
             $cmd_handle->print($login_passwd);
+###MMMMMMMMMMMMMMMMMMMMMMMM
+            $cmd_handle=&Rem_Command::wait_for_prompt(
+               $cmd_handle,$timeout,\@connect_method,$hostlabel);
+if (0) {
             $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
             $cmd_handle->print('cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
@@ -20614,15 +21014,15 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
 
                      print $Net::FullAuto::FA_Core::MRLOG
                         "\nRem_Command::cmd_login() $ct ",
-                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT (Timeout=$tymeout):",
-                        "\n       ==>$line<==\n       ",
+                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT",
+                        " (Timeout=$tymeout):\n       ==>$line<==\n       ",
                         "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                         "\n       at Line ",__LINE__,"\n\n"
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      print "\nRem_Command::cmd_login() $ct ",
-                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT (Timeout=$tymeout):",
-                        "\n       ==>$line<==\n       ",
+                        "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT",
+                        " (Timeout=$tymeout):\n       ==>$line<==\n       ",
                         "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                         "\n       at Line ",__LINE__,"\n\n"
                         if !$Net::FullAuto::FA_Core::cron &&
@@ -20658,14 +21058,17 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                            /${$Net::FullAuto::FA_Core::uhray}[0]_-(.*)$/s) {
                         $prompt=$1;
                         print $Net::FullAuto::FA_Core::MRLOG
-                           "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVIED:\n       ",
+                           "\nRem_Command::cmd_login() ",
+                           "PROMPT DYNAMICALLY DERIVIED:\n       ",
                            "==>$prompt<==\n       SEPARATOR=".
                            "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                            "\n       at Line ",__LINE__,"\n\n"
                            if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                        print "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVED:\n       ",
-                           "==>$line<==\n       SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+                        print "\nRem_Command::cmd_login() ",
+                           "PROMPT DYNAMICALLY DERIVED:\n       ",
+                           "==>$line<==\n       SEPARATOR=",
+                           "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                            "\n       at Line ",__LINE__,"\n\n"
                            if !$Net::FullAuto::FA_Core::cron &&
                               $Net::FullAuto::FA_Core::debug;
@@ -20674,16 +21077,18 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                      } elsif ($outpt=~/^((?:bash)*[\$%#>])\s?cmd \//m) {
                         $prompt=$1;
                         print $Net::FullAuto::FA_Core::MRLOG
-                           "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVIED:\n       ",
+                           "\nRem_Command::cmd_login() ",
+                           "PROMPT DYNAMICALLY DERIVIED:\n       ",
                            "==>$prompt<==\n       SEPARATOR=cmd \/",
                            "\n       at Line ",__LINE__,"\n\n"
                            if $Net::FullAuto::FA_Core::log &&
-                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                        print "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVED:\n       ",
+                           -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                        print "\nRem_Command::cmd_login() ",
+                           "PROMPT DYNAMICALLY DERIVED:\n       ",
                            "==>$line<==\n       SEPARATOR=cmd \/",
                            "\n       at Line ",__LINE__,"\n\n"
                            if !$Net::FullAuto::FA_Core::cron &&
-                              $Net::FullAuto::FA_Core::debug;
+                           $Net::FullAuto::FA_Core::debug;
                         alarm 0;
                         last;
                      }
@@ -20692,15 +21097,18 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                };
                if ($@) {
                   print $Net::FullAuto::FA_Core::MRLOG
-                     "\nRem_Command::cmd_login() (eval) ERROR \"set\" cmd:\n       ",
-                     "==>$@<==\n       SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+                     "\nRem_Command::cmd_login() (eval) ERROR \"set\" ",
+                     "cmd:\n       ==>$@<==\n       SEPARATOR=",
+                     "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                      "\n       at Line ",__LINE__,"\n\n"
                      if $Net::FullAuto::FA_Core::log &&
                      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  print "\nRem_Command::cmd_login() (eval) ERROR \"set\" cmd:\n       ",
-                     "==>$@<==\n       SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+                  print "\nRem_Command::cmd_login() (eval) ERROR \"set\" ",
+                     "cmd:\n       ==>$@<==\n       SEPARATOR=",
+                     "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
                      "\n       at Line ",__LINE__,"\n\n"
-                     if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
+                     if !$Net::FullAuto::FA_Core::cron
+                     && $Net::FullAuto::FA_Core::debug;
                   my $ev_err=$@;
                   if ($ev_err=~/read timed-out/s && $ct++<3) {
                      $Net::FullAuto::FA_Core::uhray=
@@ -20740,6 +21148,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                $cmd_handle);
             &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
                if $cfh_error;
+}
             # Find out what the shell is.
             #$cmd_handle->print('set | ${greppath}grep SHELL=');
             ($shell,$stderr)=Rem_Command::cmd(
@@ -20750,6 +21159,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
             $shell=~s/^['"]//;
             $shell=~s/['"]$//;
 # --CONTINUE-- print "WHAT IS THE SHELL=$shell<==\n";
+            my $cfh_ignore='';my $cfh_error='';
             ($cfh_ignore,$cfh_error)=
                &Net::FullAuto::FA_Core::clean_filehandle(
                $cmd_handle);
@@ -20778,8 +21188,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             print "\nRem_Command::cmd_login() UNAME: ==>$uname<==",
                "\n       at Line ",__LINE__,"\n\n"
-               if !$Net::FullAuto::FA_Core::cron &&
-                  $Net::FullAuto::FA_Core::debug;
+               if !$Net::FullAuto::FA_Core::cron
+               && $Net::FullAuto::FA_Core::debug;
 
             if (lc($uname)=~/cygwin/) {
                $uname='cygwin';$cygwin=1;
@@ -20852,8 +21262,11 @@ print $Net::FullAuto::FA_Core::MRLOG
                   $su_login=1;
                   my ($ignore,$su_err)=
                      &Net::FullAuto::FA_Core::su($cmd_handle,$hostlabel,$su_id,
-                     $su_id,$hostname,$ip,$use,$stderr);
+                     $su_id,$hostname,$ip,$use,$uname,$_connect,$cmd_type,
+                     [],$stderr);
                   &Net::FullAuto::FA_Core::handle_error($su_err) if $su_err;
+
+if (0) {
                   # Make sure prompt won't match anything in send data.
                   $cmd_handle->prompt("/$prompt\$/");
                   $cmd_handle->print("export PS1=\'$prompt\';".
@@ -20864,6 +21277,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                      $cmd_handle);
                   &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
                      if $cfh_error;
+}
                }
             } else {
                &Net::FullAuto::FA_Core::acquire_semaphore(8712,
@@ -20877,6 +21291,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             }
          }
          if (!$uname) {
+print "JSUT CHECKING\n";<STDIN>;
             my $cfh_ignore='';my $cfh_error='';
             ($cfh_ignore,$cfh_error)=
                &Net::FullAuto::FA_Core::clean_filehandle(
@@ -20986,12 +21401,6 @@ print $Net::FullAuto::FA_Core::MRLOG
                   ${$work_dirs}{_cwd_mswin}=$cdr.'\\\\';
                ${$work_dirs}{_pre}=${$work_dirs}{_cwd}=$curdir;
             } else {
-               my $cfh_ignore='';my $cfh_error='';
-               ($cfh_ignore,$cfh_error)=
-                  &Net::FullAuto::FA_Core::clean_filehandle(
-               $cmd_handle);
-               &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
-                  if $cfh_error;
                ($curdir,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_handle,
                     _hostlabel=>[ $hostlabel,'' ] },'pwd');
@@ -21035,14 +21444,18 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETR
                      {$su_id}{"cmd_su_$Net::FullAuto::FA_Core::pcnt"}) {
                   delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$su_id}
                      {"cmd_su_$Net::FullAuto::FA_Core::pcnt"}
-               } elsif (exists $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
+               } elsif (exists $Net::FullAuto::FA_Core::Processes{
+                     $hostlabel}{$login_id}
                      {"cmd_id_$Net::FullAuto::FA_Core::pcnt"}) {
-                  delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
+                  delete $Net::FullAuto::FA_Core::Processes{
+                     $hostlabel}{$login_id}
                      {"cmd_id_$Net::FullAuto::FA_Core::pcnt"}
                }
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg) if
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+                  $shell_pid,$kill_arg) if
                   $shell_pid && &Net::FullAuto::FA_Core::testpid($shell_pid);
-               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg) if
+               ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+                  $cmd_pid,$kill_arg) if
                   &Net::FullAuto::FA_Core::testpid($cmd_pid);
                $cmd_handle->close;next;
             } else {
@@ -21061,18 +21474,23 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETR
                {$su_id}{"cmd_su_$Net::FullAuto::FA_Core::pcnt"}) {
             delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$su_id}
                {"cmd_su_$Net::FullAuto::FA_Core::pcnt"};
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg) if $shell_pid
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+               $shell_pid,$kill_arg) if $shell_pid
                && &Net::FullAuto::FA_Core::testpid($shell_pid);
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg) if 
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+               $cmd_pid,$kill_arg) if 
                &Net::FullAuto::FA_Core::testpid($cmd_pid);
             $cmd_handle->close;
-         } elsif (exists $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
+         } elsif (exists $Net::FullAuto::FA_Core::Processes{
+               $hostlabel}{$login_id}
                {"cmd_id_$Net::FullAuto::FA_Core::pcnt"}) {
             delete $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
                {"cmd_id_$Net::FullAuto::FA_Core::pcnt"};
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($shell_pid,$kill_arg) if $shell_pid
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+               $shell_pid,$kill_arg) if $shell_pid
                && &Net::FullAuto::FA_Core::testpid($shell_pid);
-            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($cmd_pid,$kill_arg) if   
+            ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+               $cmd_pid,$kill_arg) if   
                &Net::FullAuto::FA_Core::testpid($cmd_pid);
             $cmd_handle->close;
          }
@@ -21081,7 +21499,8 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETR
                &Net::FullAuto::FA_Core::scrub_passwd_file($hostlabel,$su_id,'');
                $die_login_id=$su_id;
             } else {
-               &Net::FullAuto::FA_Core::scrub_passwd_file($hostlabel,$login_id,'');
+               &Net::FullAuto::FA_Core::scrub_passwd_file(
+                  $hostlabel,$login_id,'');
                $die_login_id=$login_id;
             }
          }
@@ -21150,10 +21569,192 @@ print $Net::FullAuto::FA_Core::MRLOG
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #$Net::FullAuto::FA_Core::log=0 if $logreset;
- return $cmd_handle,$work_dirs,$uname,$cmd_type,$ftm_type,$smb,
+   return $cmd_handle,$work_dirs,$uname,$cmd_type,$ftm_type,$smb,
         $die,$ip,$hostname,$cmd_pid,$shell_pid,$cygdrive,$shell; 
 
 } ## END of &cmd_login()
+
+sub wait_for_prompt {
+
+   my $cmd_handle=$_[0];
+   my $timeout=$_[1];
+   my @connect_method=@{$_[2]};
+   my $hostlabel=$_[3];
+   my $from_su=$_[4]||'';
+   $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
+   unless ($from_su) {
+      $cmd_handle->print('cmd /Q /C "set /A '.
+             ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
+             '|| '.$Net::FullAuto::FA_Core::printfpath.
+             'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
+             '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
+             '\\\\137\\\\055 2>/dev/null');
+   }
+   my $previous_method='';my $sshloginid='';my $ignore='';
+   my $preferred=0;my $outpt='';my $cygdrive='';my $prompt='';
+   my $output='';my $ct=0;my $tymeout=1;
+   while (1) {
+      if (($ct==1) && (5<$timeout)) {
+         $tymeout=5;
+      } elsif (($ct==2) && (10<$timeout)) {
+         $tymeout=10;
+      } elsif (2<$ct) {
+         $tymeout=$timeout;
+      }
+      eval {
+
+         print $Net::FullAuto::FA_Core::MRLOG
+            "\nINFO: Rem_Command::cmd_login() ",
+            "STARTING \$cmd_handle->get() LOOP inside eval COUNT=$ct",
+            "\n       LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT ",
+            "\n       at Line ",__LINE__,"\n\n"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         print "\nINFO: Rem_Command::cmd_login() ",
+            "STARTING \$cmd_handle->get() LOOP inside eval COUNT=$ct",
+            "\n       LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT",
+            "\n       at Line ",__LINE__,"\n\n"
+            if !$Net::FullAuto::FA_Core::cron &&
+               $Net::FullAuto::FA_Core::debug;
+         while (my $line=$cmd_handle->get(Timeout=>$tymeout)) {
+
+            $SIG{ALRM} = sub { die "read timed-out\n" }; # \n required
+            alarm $timeout+1;
+
+            print $Net::FullAuto::FA_Core::MRLOG
+               "\nRem_Command::cmd_login() $ct ",
+               "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT ",
+               "(Timeout=$tymeout):\n       ==>$line<==\n       ",
+               "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+               "\n       at Line ",__LINE__,"\n\n"
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            print "\nRem_Command::cmd_login() $ct ",
+               "LOOKING FOR CMD PROMPT AFTER PASSWORD OUTPUT ",
+               "(Timeout=$tymeout):\n       ==>$line<==\n       ",
+               "SEPARATOR=${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+               "\n       at Line ",__LINE__,"\n\n"
+               if !$Net::FullAuto::FA_Core::cron &&
+                  $Net::FullAuto::FA_Core::debug;
+
+            chomp($line=~tr/\0-\11\13-\37\177-\377//d);
+            $outpt.=$line;
+            $output.=$line;
+            $output=~s/login:.*//s;
+            if ($line=~/(?<!Last )login[: ]*$/m ||
+                  unpack('a10',$line) eq 'Login inco'
+                  || (-1<index $line,'Perm')) {
+               while (1) {
+                  last if $previous_method eq $connect_method[0];
+                  shift @connect_method;
+               }
+               $output=~s/^\s*//s;
+               $output=~s/\s*//s;
+               alarm 0;
+               if ($output=~/^.*(Perm.*)$/s) {
+                  my $one=$1;
+                  if ($output=~/^.*(No more auth.*)$/s) {
+                     die "$1\n";
+                  } die "$one\n";
+               }
+               die "$output\n";
+            } elsif ($line=~/Connection (?:closed|reset)/s) {
+               alarm 0;
+               die "$output\n";
+            }
+            if ($outpt=~
+                  /${$Net::FullAuto::FA_Core::uhray}[0]_-(.*)$/s) {
+               $prompt=$1;
+               print $Net::FullAuto::FA_Core::MRLOG
+                  "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVIED:",
+                  "\n       ==>$prompt<==\n       SEPARATOR=".
+                  "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+                  "\n       at Line ",__LINE__,"\n\n"
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               print "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVED:",
+                  "\n       ==>$line<==\n       SEPARATOR=",
+                  "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+                  "\n       at Line ",__LINE__,"\n\n"
+                  if !$Net::FullAuto::FA_Core::cron &&
+                  $Net::FullAuto::FA_Core::debug;
+               alarm 0;
+               last;
+            } elsif ($outpt=~/^((?:bash)*[\$%#>])\s?cmd \//m) {
+               $prompt=$1;
+               print $Net::FullAuto::FA_Core::MRLOG
+                  "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVIED:",
+                  "\n       ==>$prompt<==\n       SEPARATOR=cmd \/",
+                  "\n       at Line ",__LINE__,"\n\n"
+                  if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               print "\nRem_Command::cmd_login() PROMPT DYNAMICALLY DERIVED:",
+                  "\n       ==>$line<==\n       SEPARATOR=cmd \/",
+                  "\n       at Line ",__LINE__,"\n\n"
+                  if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+               alarm 0;
+               last;
+            }
+            alarm 0;
+         }
+      };
+      if ($@) {
+         print $Net::FullAuto::FA_Core::MRLOG
+            "\nRem_Command::cmd_login() (eval) ERROR \"set\" cmd:\n       ",
+            "==>$@<==\n       SEPARATOR=",
+            "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+            "\n       at Line ",__LINE__,"\n\n"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         print "\nRem_Command::cmd_login() (eval) ERROR \"set\" cmd:\n       ",
+            "==>$@<==\n       SEPARATOR=",
+            "${$Net::FullAuto::FA_Core::uhray}[0]_- ",
+            "\n       at Line ",__LINE__,"\n\n"
+            if !$Net::FullAuto::FA_Core::cron
+            && $Net::FullAuto::FA_Core::debug;
+         my $ev_err=$@;
+         if ($ev_err=~/read timed-out/s && $ct++<3) {
+            $Net::FullAuto::FA_Core::uhray=
+               &Net::FullAuto::FA_Core::get_prompt();
+            $cmd_handle->print('cmd /Q /C "set /A '.
+                ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
+                '|| '.$Net::FullAuto::FA_Core::printfpath.
+                'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
+                '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
+                '\\\\137\\\\055 2>/dev/null');
+         } elsif ($sshloginid &&
+               $ev_err=~/Permission denied/s) {
+            if ($ev_err=~/No more auth/s) {
+               die $ev_err;
+            } else {
+               $cmd_handle->print(&Net::FullAuto::FA_Core::getpasswd(
+                    $hostlabel,$sshloginid,'',$@,
+                    '__force__'));
+               $Net::FullAuto::FA_Core::uhray=
+                  &Net::FullAuto::FA_Core::get_prompt();
+               $cmd_handle->print('cmd /Q /C "set /A '
+                  .${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
+                  '|| '.$Net::FullAuto::FA_Core::printfpath.
+                  'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2]
+                  .'\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
+                  '\\\\137\\\\055 2>/dev/null');
+            }
+         } else { die $ev_err }
+      } else { last }
+   }
+   $cmd_handle->prompt('/_funkyPrompt_$/');
+   $cmd_handle->print(
+      "export PS1=_funkyPrompt_;unset PROMPT_COMMAND");
+   my $cfh_ignore='';my $cfh_error='';
+   ($cfh_ignore,$cfh_error)=
+      &Net::FullAuto::FA_Core::clean_filehandle(
+      $cmd_handle);
+   &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+      if $cfh_error;
+   return $cmd_handle;
+
+} ## END OF &wait_for_prompt
 
 sub ftpcmd
 {
@@ -21555,7 +22156,9 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
          }
          if ( -1<index $stdout,'file access p') {
             ($handle->{_ftp_handle},$stderr)=
-               &login_retry($ftp_handle,$stdout);
+               &login_retry($ftp_handle->{_cmd_handle},
+                            $ftp_handle->{_connect},
+                            $ftp_handle->{_cmd_type},$stdout);
             if ($stderr) {
                $stderr="$stdout\n       $stderr";
                if (wantarray) {
@@ -22886,15 +23489,25 @@ print $Net::FullAuto::FA_Core::MRLOG "OOOOOOOOOOOO=$o\n" if $Net::FullAuto::FA_C
                                  $output=unpack("x$llc a*",$output);
                               }
                               $first=0;$growoutput=$output;
-                              while (
-                                 $growoutput=~s/^(.*)$cmd_prompt$/$1/s
-                              ) {}
-print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput<= and OUTPUT=$output\n" if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
+                              $growoutput=~s/^(.*)($cmd_prompt)*$/$1/s;
+print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput\n"
+   if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
                               if ($output=~/$cmd_prompt$/s &&
                                     $growoutput!~/$cmd_prompt$/s) {
-print $Net::FullAuto::FA_Core::MRLOG "IM IN THE CONDITIONAL\n" if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
                                  $growoutput=$output;
                                  $output='';
+                                 $command_stripped_from_output=1;
+                              }
+                              $output='';
+                           } elsif (($lslc<$ltso) &&
+                                 (-1<index $test_stripped_output,
+                                 $stripped_live_command)) {
+                              if ($output=~/$cmd_prompt$/s &&
+                                    $growoutput!~/$cmd_prompt$/s) {
+                                 $growoutput=$output;
+                                 $output='';
+                                 #$growoutput
+                                 #   =~s/^.*$live_command(.*)$cmd_prompt$/$1/s;
                                  $command_stripped_from_output=1;
                               }
                               $output='';
@@ -22972,6 +23585,11 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT STRIPPED_COMMAND_FLAG AND GROWOUTPUT=$
                      $lcp+=18;
                      unless ($growoutput) {
 print $Net::FullAuto::FA_Core::MRLOG "NO GROWOUTPUTTTTTTTTTTTTT\n" if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
+                        if ($output && unpack('a1',$output) eq '[') {
+                           if ($output=~/^\[A(\[C)+\[K1\s*/s) {
+                              next FETCH;
+                           }
+                        }
                         if ($output=~/^\s?$cmd_prompt/) {
                            print $Net::FullAuto::FA_Core::MRLOG
                               "\nGOT $cmd_prompt AND EMPTY \$growoutput ",
@@ -23642,11 +24260,18 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT NEW SELF=$self and CURDIR=$curdir\n"
             } else {
                $save_cwd=$self->{_work_dirs}->{_cwd}||'';
             }
-print $Net::FullAuto::FA_Core::MRLOG "WHAT HANDLE IS GOING INTO LOGIN_RETRY???=$self->{_cmd_handle}\n" if $Net::FullAuto::FA_Core::log &&
+print $Net::FullAuto::FA_Core::MRLOG
+               "WHAT HANDLE IS GOING INTO LOGIN_RETRY???=$self->{_cmd_handle}\n"
+               if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             ($self->{_cmd_handle},$eval_error)=
-               &login_retry($self->{_cmd_handle},$eval_error);
-print $Net::FullAuto::FA_Core::MRLOG "WHAT HANDLE COMES BACK FROM LOGIN_RETRY???=$self->{_cmd_handle} AND LOGIN_RETRY=$login_retry\n" if $Net::FullAuto::FA_Core::log &&
+               &login_retry($self->{_cmd_handle},
+                            $self->{_connect},
+                            $self->{_cmd_type},$eval_error);
+print $Net::FullAuto::FA_Core::MRLOG
+               "WHAT HANDLE COMES BACK FROM LOGIN_RETRY???=",
+               "$self->{_cmd_handle} AND LOGIN_RETRY=$login_retry\n"
+               if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
             if ($self->{_cmd_handle}) {
@@ -23764,7 +24389,8 @@ sub login_retry
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $self=$_[0];my $error=$_[1];
+   my $self=$_[0];my $_connect=$_[1];
+   my $cmd_type=$_[2];my $error=$_[3];
    my $sid='';my $hostlabel='';
    if ($self eq $localhost->{_cmd_handle}) {
       $hostlabel=$localhost->{_hostlabel}->[0];
@@ -23877,7 +24503,8 @@ print "GOT NEW UNIX ID=$id and STDERR=$stderr and SU_ID=$su_id\n";
             if $cfh_error;
          my ($ignore,$su_err)=
             &Net::FullAuto::FA_Core::su($self,$hostlabel,$login_id,
-            $su_id,$hostname,$ip,$use,$error);
+            $su_id,$hostname,$ip,$use,$uname,$_connect,$cmd_type,
+            [],$error);
 print "SU_ERR=$su_err\n" if $su_err;
          &Net::FullAuto::FA_Core::handle_error($su_err) if $su_err;
          return $self,'';

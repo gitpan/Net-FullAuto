@@ -203,17 +203,25 @@ sub howdy_world {
    # Connect to Remote Host with *BOTH* ssh & sftp
    #----------------------------------------------
    my ($host,$stderr)=('','');
-   ($host,$stderr)=connect_secure('Ubuntu');
+   my $hostname=`hostname`;
+   chomp $hostname;
+   my $hostlab='Laptop';
+   if ($hostname eq 'opensolaris') {
+      ($host,$stderr)=connect_secure('Laptop');
+   } else {
+      $hostlab='Solaris';
+      ($host,$stderr)=connect_secure('Solaris');
+   }
    if ($stderr) {
       print "       We Have an ERROR when attempting to connect ",
-            "to Ubuntu! :\n$stderr       in fa_code.pm ",
+            "to $hostlab! :\n$stderr       in fa_code.pm ",
             "Line ",__LINE__,"\n";
       my %mail=(
          'To'      => [ 'Brian.Kelly@bcbsa.com' ],
          'From'    => 'Brian.Kelly@fullautosoftware.net',
          'Body'    => "\nFullAuto ERROR =>\n\n".$stderr.
                       "       in fa_code.pm Line ".__LINE__,
-         'Subject' => "FullAuto ERROR Encountered When Connecting to Ubuntu",
+         'Subject' => "FullAuto ERROR Encountered When Connecting to $hostlab",
       );
       my $ignore='';my $emerr='';
       ($ignore,$emerr)=&send_email(\%mail);
