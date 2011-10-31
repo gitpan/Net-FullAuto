@@ -83,6 +83,10 @@ package Net::FullAuto::FA_Core;
 #
 #  Also - in the /etc/ssh_config, set UseDNS to no.
 #
+## For configuring Microsoft Loopback adapter for VirtualBox
+#
+#  http://youtu.be/uIKOQHbMXOo
+#
 ## *************************************************************
 
 use strict;
@@ -14671,7 +14675,14 @@ sub wait_for_passwd_prompt
                die 'Connection closed';
             } elsif (-1<index $lin,'Connection reset by peer') {
                alarm 0;
-               die 'Connection closed';
+               if ($lin=~s/^.*(ssh:.*)$/$1/s) {
+                  $lin=~s/Could/       Could/s;
+                  $lin=~s/_funkyPrompt_//s;
+                  die $lin;
+               } else {
+                  $lin='Connection closed';
+               }
+               die $lin;
             } elsif (7<length $line && unpack('a8',$line) eq 'Insecure') {
                $line=~s/^Insecure/INSECURE/s;
                $eval_stdout='';$eval_stderr=$line;
