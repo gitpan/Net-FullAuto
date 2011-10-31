@@ -45,6 +45,14 @@
 ################################################################
 
 
+2011-10-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9978 released.
+
+        * Fixed issues to enable FullAuto to work on Solaris,
+          Ubuntu Linux and Windows Cygwin with same code.
+
+
 2011-10-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9977 released.

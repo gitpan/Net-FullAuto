@@ -208,20 +208,22 @@ sub howdy_world {
    my $hostlab='Laptop';
    if ($hostname eq 'opensolaris') {
       ($host,$stderr)=connect_secure('Laptop');
+   } elsif ($hostname eq 'reedfish-laptop') {
+      ($host,$stderr)=connect_secure('Laptop');
    } else {
       $hostlab='Solaris';
       ($host,$stderr)=connect_secure('Solaris');
    }
    if ($stderr) {
       print "       We Have an ERROR when attempting to connect ",
-            "to $hostlab! :\n$stderr       in fa_code.pm ",
+            "to Ubuntu! :\n$stderr       in fa_code.pm ",
             "Line ",__LINE__,"\n";
       my %mail=(
          'To'      => [ 'Brian.Kelly@bcbsa.com' ],
          'From'    => 'Brian.Kelly@fullautosoftware.net',
          'Body'    => "\nFullAuto ERROR =>\n\n".$stderr.
                       "       in fa_code.pm Line ".__LINE__,
-         'Subject' => "FullAuto ERROR Encountered When Connecting to $hostlab",
+         'Subject' => "FullAuto ERROR Encountered When Connecting to Ubuntu",
       );
       my $ignore='';my $emerr='';
       ($ignore,$emerr)=&send_email(\%mail);

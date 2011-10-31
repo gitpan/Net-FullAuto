@@ -108,6 +108,21 @@ our $curcen=unpack('a2',$curyear);
 our @invoked=($^T, $tm, $mdy, $hms, $hr, $mn, $sc, $mdyyyy);
 
 BEGIN {
+   $main::netfull='';
+   unless (exists $INC{'Net/FullAuto.pm'}) {
+      foreach my $fpath (@INC) {
+         my $f=$fpath;
+         if (-e $f.'/Net/FullAuto.pm') {
+            $main::netfull=$f.'/Net/FullAuto.pm';
+            last;
+         }
+      }
+   } else {
+      $main::netfull=$INC{'Net/FullAuto.pm'};
+   }
+}
+
+BEGIN {
 
    if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       print "\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
@@ -121,6 +136,7 @@ BEGIN {
    use if ($^O eq 'cygwin'), 'Win32::Semaphore';
    use IPC::Semaphore;
    use IPC::SysV qw(IPC_CREAT SEM_UNDO S_IRWXU);
+   push @INC, substr($main::netfull,0,-3);
 
 }
 
@@ -1275,10 +1291,13 @@ sub VERSION
    my $net_fulla_path=
       substr($INC{'Net/FullAuto.pm'},0,
       (rindex $INC{'Net/FullAuto.pm'},'Net'));
+   $term_menus_path=~s/\/share\//\/lib\//
+      if -1<index $term_menus_path,'share';
    my $o='';
    foreach my $p (@INC) {
       $o=$p;
       last if -1<index $o,$term_menus_path;
+      last if "$o/" eq $term_menus_path;
    }
    my @tmlist=();
    if (-f $o.'/auto/Term/Menus/.packlist') {
@@ -1661,14 +1680,16 @@ sub edit {
    require Term::Menus;
    if (defined $Term::Menus::fa_conf) {
       $fa_conf=$Term::Menus::fa_conf;
-      eval {
-         require 'Net/FullAuto/Custom/'.$username.'/Conf/'.$fa_conf;
-         my $mod=substr($fa_conf,(rindex $fa_conf,'/')+1,-3);
-         import $mod;
-         $fa_conf=$mod.'.pm';
-      };
-      if ($@) {
-         die "ERROR=$@\n";
+      if (-d 'Net/FullAuto/Custom/'.$username) {
+         eval {
+            require 'Net/FullAuto/Custom/'.$username.'/Conf/'.$fa_conf;
+            my $mod=substr($fa_conf,(rindex $fa_conf,'/')+1,-3);
+            import $mod;
+            $fa_conf=$mod.'.pm';
+         };
+         if ($@) {
+            die "ERROR=$@\n";
+         }
       }
    }
    if (defined $Term::Menus::fa_code) {
