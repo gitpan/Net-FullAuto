@@ -45,6 +45,14 @@
 ################################################################
 
 
+2011-11-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9980 released.
+
+        * Fixed mirror() and insured it works on both Solaris
+          and Ubuntu.
+
+
 2011-10-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9979 released.

@@ -78,7 +78,7 @@ our @Hosts = (
                               "$Net::FullAuto::FA_Core::invoked[3].txt",
        },
        {
-          'IP'             => '10.10.10.10',
+          'IP'             => '169.254.25.129',
           'Label'          => 'Laptop',
           'LoginID'        => 'KB06606',
           'LogFile'        => "/tmp/FAlog${$}d".
@@ -86,7 +86,7 @@ our @Hosts = (
                               "$Net::FullAuto::FA_Core::invoked[3].txt",
        },
        {
-          'IP'             => '10.10.10.10',
+          'IP'             => '10.0.2.2',
           'Label'          => 'Solaris',
           'LoginID'        => 'opens',
           'sshport'        => '2223',
@@ -95,7 +95,7 @@ our @Hosts = (
                               "$Net::FullAuto::FA_Core::invoked[3].txt",
        },
        {
-          'IP'             => '10.10.10.10',
+          'IP'             => '10.0.2.2',
           'Label'          => 'Ubuntu',
           'LoginID'        => 'reedfish_laptop',
           'sshport'        => '2222',
