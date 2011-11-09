@@ -83,10 +83,6 @@ package Net::FullAuto::FA_Core;
 #
 #  Also - in the /etc/ssh_config, set UseDNS to no.
 #
-## IP for SSH from VirtualBox Guest to Host
-#
-#  10.0.2.2
-#
 ## *************************************************************
 
 use strict;
@@ -892,7 +888,15 @@ print "WHAT IS THE LINE_2 EVALERROR=$@<====\n" if $Net::FullAuto::FA_Core::debug
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                           last if $line=~/logout|221\sGoodbye/sx;
+                           if (-1<index $line,'logout') {
+                              if (-1<index $line,'Exit status 0') {
+                                 last CC;
+                              } else {
+                                 last;
+                              }
+                           } elsif ($line=~/221\sGoodbye/sx) {
+                              last;
+                           }
                            if ($line=~/_funkyPrompt_$/s) {
                               my $cfh_ignore='';my $cfh_error='';
                               ($cfh_ignore,$cfh_error)=
@@ -1257,12 +1261,27 @@ sub grep_for_string_existence_only
    my $return_value=0;
    eval {
       open(FH,"<$file") || return 0;
+      my $keygen_flag=0;
       while (my $line=<FH>) {
+         if ($line=~/^\[1\]|ssh-rsa/) {
+            $keygen_flag=1;
+            last;
+         }
          if ($line=~/$pattern/) {
             $return_value=1;
             last;
          }
       }
+      if ($keygen_flag) {
+         my ($stdout,$stderr)=('','');
+         #if ($localhost && (-1<index $localhost,'HASH')) {
+         #   ($stdout,$stderr)=$localhost->cmd('ssh-keygen -F localhost');
+         #   $return_value=1 if $stdout=~/^\[1\]|ssh-rsa/s;
+         #} else {
+            my $output=`ssh-keygen -F localhost 2>&1`;
+            $return_value=1 if $output=~/^\[1\]|ssh-rsa/s;
+         #}
+      } 
    };
    return $return_value;
 }
@@ -4411,26 +4430,9 @@ sub test_file
    my $shell_cmd="if\n[[ -f $tfile ]]\nthen\nif\n[[ -w $tfile ]]"
                 ."\nthen\necho WRITE\nelse\necho READ\nfi\n"
                 ."else\necho NOFILE\nfi";
-   $cmd_handle->print($shell_cmd);
-   my $leave=0;
-   TF: while (1) {
-      while (my $line=$cmd_handle->get) {
-         if ($line=~/^WRITE/m) {
-            $test_result='WRITE';
-            $leave=1;
-         } elsif ($line=~/^READ/m) {
-            $test_result='READ';
-            $leave=1;
-         } elsif ($line=~/^NOFILE/m) {
-            $test_result='NOFILE';
-            $leave=1;
-         }
-         if ($line=~/_funkyPrompt_/s) {
-            last TF;
-         }
-      } last if $leave;
-      $cmd_handle->print;
-   } return $test_result;
+   my ($stdout,$stderr)=('','');
+   ($stdout,$stderr)=$cmd_handle->cmd($shell_cmd);
+   return $stdout;
 
 }
 
@@ -14649,6 +14651,7 @@ sub wait_for_passwd_prompt
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $filehandle=$_[0];
    my $timeout=$_[1]||$Net::FullAuto::FA_Core::timeout;
+   my $notnew=$_[2]||'';
    my $lin='';my $authyes=0;my $gotpass=0;my $warning='';
    my $eval_stdout='';my $eval_stderr='';$@='';
    my $connect_err=0;my $count=0;
@@ -14670,7 +14673,7 @@ sub wait_for_passwd_prompt
                if !$Net::FullAuto::FA_Core::cron &&
                $Net::FullAuto::FA_Core::debug;
             $lin.=$line;
-            if (!$firstflag && 5<=time()-$starttime) {
+            if (!$notnew && !$firstflag && 5<=time()-$starttime) {
                $firstflag=1;
                unless (-e $Net::FullAuto::FA_Core::home_dir.'/.ssh' &&
                      &Net::FullAuto::FA_Core::grep_for_string_existence_only(
@@ -15406,6 +15409,7 @@ sub mirror
    my $bhostlabel=$baseFH->{_hostlabel}->[0];
    my $dhostlabel=$dhostlabels[0];
    my $base_fdr=$args{BaseFileOrDir};
+   my $verbose=(exists $args{Verbose} && $args{Verbose}) ? 1 : 0;
    $base_fdr||='';
    $base_fdr=~s/[\/|\\]*$//;
    if (unpack('a1',$base_fdr) eq '~') {
@@ -15954,161 +15958,10 @@ print "BASE3\n";
              ."Condition\n              at ".(caller(0))[1]." "
              ."line ".(caller(0))[2]." :\n\n       ";
 
-      if ($destFH->{_uname} eq 'cygwin') {
-         my ($test_chr1,$test_chr2)='';
-         if ($dest_fdr) {
-            $test_chr1=unpack('a1',$dest_fdr);
-            if (1<length $dest_fdr) {
-               $test_chr2=unpack('a2',$dest_fdr);
-            }
-            if ($test_chr2) {
-               if (($test_chr1 eq '/' && $test_chr2 ne '//')
-                     || ($test_chr1 eq '\\' &&
-                     $test_chr2 ne '\\\\')) {
-                  $dest_dir=$dest_fdr;
-                  if ($dest_dir=~s/$destFH->{_cygdrive_regex}//) {
-                     $dest_dir=~s/^(.)/$1:/;
-                     $dest_dir=~tr/\//\\/;
-                  } else {
-                     my $de_f=$dest_fdr;
-                     $de_f=~s/^[\/\\]+//;
-                     $de_f=~tr/\//\\/;
-                     if (exists $destFH->{_smb}) {
-                        $dest_dir="\\\\$dhost\\$dms_share\\$de_f";
-                     } else {
-                        $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
-print "JDKKDK\n";<STDIN>;
-                        $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
-                     }
-                  }
-               } elsif ($test_chr2 eq '//' ||
-                    $test_chr2 eq '\\\\') {
-                  $dest_dir=$dest_fdr;
-print "NAKED\n";<STDIN>;
-               } elsif ($test_chr2=~/^[a-zA-Z]:$/) {
-                  $dest_dir=$dest_fdr;
-print "NAKED\n";<STDIN>;
-               } elsif ($test_chr1!~/\W/) {
-                  my $de_f=$dest_fdr;
-                  $de_f=~s/^[\/\\]+//;
-                  $de_f=~tr/\//\\/;
-                  $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
-                  $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
-print "DIRRRRRRR=$dir\n";<STDIN>;
-               } else {
-                  my $die="Destination Directory - $dest_fdr"
-                         ." CANNOT Be Located";
-                  &Net::FullAuto::FA_Core::handle_error($die);
-              }
-            } elsif ($test_chr1 eq '/' || $test_chr1 eq '\\') {
-               $dest_dir=$dest_fdr;
-               if ($dest_dir=~s/$destFH->{_cygdrive_regex}//) {
-                  $dest_dir=~s/^(.)/$1:/;
-                  $dest_dir=~tr/\//\\/;
-print "OLSKDKF\n";
-               } else {
-                  my $de_f=$dest_fdr;
-                  $de_f=~s/^[\/\\]+//;
-                  $de_f=~tr/\//\\/;
-                  $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
-                  $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
-print "WOOEEE\n";
-               }
-            } elsif ($test_chr1=~/^[a-zA-Z]$/) {
-print "BLECKKK\n";
-               $dest_dir=$test_chr1 . ':\\';
-            } else {
-               my $die="Destination Directory - $dest_fdr"
-                      ." CANNOT Be Located";
-               &Net::FullAuto::FA_Core::handle_error($die);
-            }
-         } else {
-            $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin};
-print "HMMMM=$dir\n";
-print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
-         } my $cnt=0;
-         while (1) {
-            ($dest_output,$stderr)=$destFH->cmd(
-               "cmd /c dir /s /-C /A- \"$dest_dir\"");
-            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-            if ($dest_output!~/bytes free\s*/s) {
-               $dest_output='';next unless $cnt++;
-               my $die="Attempt to retrieve output from the command:\n"
-                      ."\n       cmd /c dir /-C \"$dest_dir\"\n"
-                      ."\n       run on the host "
-                      ."$destFH->{_hostlabel}->[0] FAILED";
-               &Net::FullAuto::FA_Core::handle_error($die,'-1');
-            } else { last }
-         }
-      } elsif ($dest_fdr) {
-         my $test_char=unpack('a1',$dest_fdr);
-         if ($test_char ne '/' && $test_char ne '.') {
-            $dest_dir=$destFH->{_work_dirs}->{_cwd}
-                     .$dest_fdr;
-         } else {
-            $dest_dir=$dest_fdr;
-         }
-         my $ls_path='';
-         if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
-               exists $Hosts{"__Master_${$}__"}{'ls'}) {
-            $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
-            $ls_path.='/' if $ls_path!~/\/$/;
-         }
-         ($dest_output,$stderr)=$destFH->cmd("${ls_path}ls --version");
-         if (-1<index $dest_output,'GNU') {
-            $lsgnu=1;
-            ($dest_output,$stderr)=$destFH->cmd(
-               "${ls_path}ls -lRs --block-size=1 \'$dest_dir\'");
-         } else {
-            $lsgnu=0;
-            ($dest_output,$stderr)=$destFH->cmd(
-               "${ls_path}ls -lRs \'$dest_dir\'");
-         }
-         if ($stderr) {
-            print $Net::FullAuto::FA_Core::MRLOG "$die$stderr"
-               if $Net::FullAuto::FA_Core::log &&
-               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            if (wantarray) {
-               return '', "$die$stderr";
-            } elsif (unpack('a12',$stderr) eq 'No such file') {
-               (); # Fixes Line Nums in AIX
-               &Net::FullAuto::FA_Core::handle_error("$die$stderr",'-9');
-            } elsif ($stderr) {
-               (); # Fixes Line Nums in AIX
-               &Net::FullAuto::FA_Core::handle_error("$die$stderr",'-12');
-            }
-         }
-      } else {
-         my $dest_dir=$destFH->{_work_dirs}->{_cwd};
-         my $ls_path='';
-         if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
-               exists $Hosts{"__Master_${$}__"}{'ls'}) {
-            $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
-            $ls_path.='/' if $ls_path!~/\/$/;
-         }
-         ($dest_output,$stderr)=$destFH->cmd("${ls_path}ls --version");
-         if (-1<index $dest_output,'GNU') {
-            $lsgnu=1;
-            ($dest_output,$stderr)=$destFH->cmd(
-               "${ls_path}ls -lRs --block-size=1 \'$dest_dir\'");
-         } else {
-            $lsgnu=0;
-            ($dest_output,$stderr)=$destFH->cmd(
-               "${ls_path}ls -lRs \'$dest_dir\'");
-         }
-         if ($stderr) {
-            print $Net::FullAuto::FA_Core::MRLOG "$die$stderr"
-               if $Net::FullAuto::FA_Core::log &&
-               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            if (wantarray) {
-               return '', "$die$stderr";
-            } elsif (unpack('a12',$stderr) eq 'No such file') {
-               &Net::FullAuto::FA_Core::handle_error("$die$stderr",'-8');
-            } else {
-               &Net::FullAuto::FA_Core::handle_error("$die$stderr",'-10');
-            }
-         }
-      }
+      my $err='';
+      ($dest_output,$dest_dir,$err)=get_dest_ls_output(
+         $destFH,$dest_fdr,$dms_share,$dhost,$die);
+
       ($output,$stderr)=$destFH->cwd($dest_dir)
          if $dest_fdr && (!exists $destFH->{_smb});
       if ($stderr) {
@@ -16476,15 +16329,16 @@ print "SETTING SHORTCUT TO ZERO 6\n";sleep 6;
 
       $dest_output='';$deploy_info='';
       ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
-         =&build_mirror_hashes($baseFH,$destFH,$bhostlabel,$dhostlabel);
+         =&build_mirror_hashes($baseFH,$destFH,$bhostlabel,
+         $dhostlabel,$verbose);
 
-      $mirror_output.="\n\n### mirror() output for Base Host:"
-                    ." $bhostlabel and Destination Host $dhostlabel"
-                    ." :\n\n$deploy_info";
+      $mirror_output.="\n### mirror() output for Base Host:"
+                    ." $bhostlabel\n             and Destination Host:"
+                    ." $dhostlabel\n\n    $deploy_info";
 
-      $mirror_debug.="\n\n### mirror() debug for Base Host:"
-                   ." $bhostlabel and Destination Host $dhostlabel"
-                   ." :\n\n$debug_info";
+      $mirror_debug.="\n### mirror() debug for Base Host:\n"
+                   ." $bhostlabel\n             and Destination Host:"
+                   ." $dhostlabel\n\n    $debug_info";
 
 #print "WHAT IS THIS=",keys %{$baseFH},"\n";
 #print "KEYSBASEHASH=",keys %{$baseFH->{_bhash}},"\n";
@@ -16677,7 +16531,7 @@ print "BE SURE TO ADD NEW CODE TO CHANGE BACK TO ",
                            push @files, $file;
                         }
                      } my $tar_cmd='';my $save_dir='';
-                     foreach my $file (@files) {
+                     foreach my $file (sort @files) {
 print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         $activity=1;
                         my $base___dir='';
@@ -16766,14 +16620,15 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                  "$Net::FullAuto::FA_Core::tran[3].tar ";
                            }
                            $tar_cmd.="-C \"$base___dir\" \"$dir$file\"";
-print "TAR_CMD=$tar_cmd<== and BASE_FDR=$base_fdr<==\n";
+print "TAR_CMD=$tar_cmd<== and BASE_FDR=$base_fdr<== AND THIS=",${$baseFH->{_bhash}}{$key}[1]{$file}[0]," AND KEY=$key and FILE=$file\n";
                            ($output,$stderr)=$baseFH->cmd($tar_cmd,500);
-                           &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
-                              if $stderr;
+                           &Net::FullAuto::FA_Core::handle_error(
+                              $stderr,'-1') if $stderr;
                            if ($dirt) {
                               my $cmd="rm -rf \"$base___dir/$dirt\"";
                               ($output,$stderr)=$baseFH->cmd($cmd);
-                              $Net::FullAuto::FA_Core::savetran=1 if $stderr;
+                              $Net::FullAuto::FA_Core::savetran=1
+                                 if $stderr;
                               &Net::FullAuto::FA_Core::handle_error(
                                  $stderr,'-2') if $stderr;
                            }
@@ -16893,6 +16748,35 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log
                            $local_transfer_dir,'',
                            $bhostlabel,$dhostlabel,
                            '',$shortcut);
+               }
+               ($dest_output,$dest_dir,$err)=get_dest_ls_output(
+                     $destFH,$dest_fdr,$dms_share,$dhost,$die);
+               my $ignore='';
+               ($ignore,$stderr)=&build_base_dest_hashes(
+                     $dest_fdr,\$dest_output,$args{Directives},
+                     $dhost,$dms_share,$dms_domain,
+                     $destFH->{_uname},$destFH,'DEST');
+               ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
+                     =&build_mirror_hashes($baseFH,$destFH,
+                     $bhostlabel,$dhostlabel,$verbose);
+               my @basekeys=sort keys %{$baseFH->{_bhash}};
+               while (my $key=shift @basekeys) {
+                  my @files=();
+                  foreach my $file
+                        (keys %{${$baseFH->{_bhash}}{$key}[1]}) {
+                     if (-1<index ${$baseFH->{_bhash}}{$key}[1]{$file}[0],
+                           'DIFF_TIME') {
+                        my $ts=${$baseFH->{_bhash}}{$key}[1]{$file}[1];
+                        $ts=unpack('x12 a4',$ts).unpack('a2',$ts).
+                            unpack('x3 a2',$ts).unpack('x6 a2',$ts).
+                            unpack('x9 a2',$ts);
+                        my $key_dir=($key ne '/') ? "/$key/" : '/';
+                        ($stdout,$stderr)=$destFH->cmd(
+                           "touch -t $ts \"$dest_fdr$key_dir$file\""); 
+                        &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                           if $stderr;
+                     }
+                  }
                }
             }
             foreach my $key (keys %{$destFH->{_dhash}}) {
@@ -17014,9 +16898,8 @@ print $Net::FullAuto::FA_Core::MRLOG "DELETEFILE1b=$file\n"
             }
             my $nodif="\n       THERE ARE NO DIFFERENCES "
                      ."BETWEEN THE BASE AND TARGET\n\n";
-            print $nodif if !$activity &&
-               !$Net::FullAuto::FA_Core::cron
-               || $Net::FullAuto::FA_Core::debug;
+            print $nodif if (((!$Net::FullAuto::FA_Core::cron && $verbose)
+               || $Net::FullAuto::FA_Core::debug) && !$activity);
             print $Net::FullAuto::FA_Core::MRLOG $nodif
                if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*'
@@ -17126,6 +17009,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY10" if $Net::FullAuto::FA_Core::lo
             }
             if ($activity && $trantar) { #&& (exists $baseFH->{_smb})
                      #&& !$dms_share) {
+print "WE HAVE ACIVITY AND TRANTAR=$trantar<==\n";
                if (!$shortcut) {
                   foreach my $file (keys %Net::FullAuto::FA_Core::file_rename) {
                      my $cmd=
@@ -17363,9 +17247,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO TOUCH TIME=$time and FILE=$file\n
                }
                $nodif="\n       THERE ARE NO DIFFERENCES "
                      ."BETWEEN THE BASE AND TARGET\n\n";
-               print $nodif if !$activity &&
-                  !$Net::FullAuto::FA_Core::cron
-                  || $Net::FullAuto::FA_Core::debug;
+               print $nodif if (((!$Net::FullAuto::FA_Core::cron && $verbose)
+                  || $Net::FullAuto::FA_Core::debug) && !$activity);
                print $Net::FullAuto::FA_Core::MRLOG $nodif
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*'
@@ -17489,9 +17372,167 @@ sub get_drive
 
 }
 
+sub get_dest_ls_output {
+
+   my $destFH=$_[0];
+   my $dest_fdr=$_[1]||'';
+   my $dms_share=$_[2]||'';
+   my $dhost=$_[3]||'';
+   my $die=$_[4]||'';
+   my $dest_dir='';
+   my $dest_output='';
+   my $stderr='';my $lsgnu=0;
+   if ($destFH->{_uname} eq 'cygwin') {
+      my ($test_chr1,$test_chr2)='';
+      if ($dest_fdr) {
+         $test_chr1=unpack('a1',$dest_fdr);
+         if (1<length $dest_fdr) {
+            $test_chr2=unpack('a2',$dest_fdr);
+         }
+         if ($test_chr2) {
+            if (($test_chr1 eq '/' && $test_chr2 ne '//')
+                  || ($test_chr1 eq '\\' &&
+                  $test_chr2 ne '\\\\')) {
+               $dest_dir=$dest_fdr;
+               if ($dest_dir=~s/$destFH->{_cygdrive_regex}//) {
+                  $dest_dir=~s/^(.)/$1:/;
+                  $dest_dir=~tr/\//\\/;
+               } else {
+                  my $de_f=$dest_fdr;
+                  $de_f=~s/^[\/\\]+//;
+                  $de_f=~tr/\//\\/;
+                  if (exists $destFH->{_smb}) {
+                     $dest_dir="\\\\$dhost\\$dms_share\\$de_f";
+                  } else {
+                     $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
+print "JDKKDK\n";<STDIN>;
+                     $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
+                  }
+               }
+            } elsif ($test_chr2 eq '//' ||
+                 $test_chr2 eq '\\\\') {
+               $dest_dir=$dest_fdr;
+print "NAKED\n";<STDIN>;
+            } elsif ($test_chr2=~/^[a-zA-Z]:$/) {
+               $dest_dir=$dest_fdr;
+print "NAKED\n";<STDIN>;
+            } elsif ($test_chr1!~/\W/) {
+               my $de_f=$dest_fdr;
+               $de_f=~s/^[\/\\]+//;
+               $de_f=~tr/\//\\/;
+               $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
+               $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
+            } else {
+               my $die="Destination Directory - $dest_fdr"
+                      ." CANNOT Be Located";
+               &Net::FullAuto::FA_Core::handle_error($die);
+           }
+         } elsif ($test_chr1 eq '/' || $test_chr1 eq '\\') {
+            $dest_dir=$dest_fdr;
+            if ($dest_dir=~s/$destFH->{_cygdrive_regex}//) {
+               $dest_dir=~s/^(.)/$1:/;
+               $dest_dir=~tr/\//\\/;
+print "OLSKDKF\n";
+            } else {
+               my $de_f=$dest_fdr;
+               $de_f=~s/^[\/\\]+//;
+               $de_f=~tr/\//\\/;
+               $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
+               $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
+print "WOOEEE\n";
+            }
+         } elsif ($test_chr1=~/^[a-zA-Z]$/) {
+print "BLECKKK\n";
+            $dest_dir=$test_chr1 . ':\\';
+         } else {
+            my $die="Destination Directory - $dest_fdr"
+                   ." CANNOT Be Located";
+            &Net::FullAuto::FA_Core::handle_error($die);
+         }
+      } else {
+         $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin};
+print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
+      } my $cnt=0;
+      while (1) {
+         ($dest_output,$stderr)=$destFH->cmd(
+            "cmd /c dir /s /-C /A- \"$dest_dir\"");
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+         if ($dest_output!~/bytes free\s*/s) {
+            $dest_output='';next unless $cnt++;
+            my $die="Attempt to retrieve output from the command:\n"
+                   ."\n       cmd /c dir /-C \"$dest_dir\"\n"
+                   ."\n       run on the host "
+                   ."$destFH->{_hostlabel}->[0] FAILED";
+            &Net::FullAuto::FA_Core::handle_error($die,'-1');
+         } else { last }
+      }
+   } elsif ($dest_fdr) {
+      my $test_char=unpack('a1',$dest_fdr);
+      if ($test_char ne '/' && $test_char ne '.') {
+         $dest_dir=$destFH->{_work_dirs}->{_cwd}
+                  .$dest_fdr;
+      } else {
+         $dest_dir=$dest_fdr;
+      }
+      my $ls_path='';
+      if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
+            exists $Hosts{"__Master_${$}__"}{'ls'}) {
+         $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+         $ls_path.='/' if $ls_path!~/\/$/;
+      }
+      ($dest_output,$stderr)=$destFH->cmd("${ls_path}ls --version");
+      if (-1<index $dest_output,'GNU') {
+         $lsgnu=1;
+         ($dest_output,$stderr)=$destFH->cmd(
+            "${ls_path}ls -lRs --block-size=1 \'$dest_dir\'");
+      } else {
+         $lsgnu=0;
+         ($dest_output,$stderr)=$destFH->cmd(
+            "${ls_path}ls -lRs \'$dest_dir\'");
+      }
+      if ($stderr) {
+         print $Net::FullAuto::FA_Core::MRLOG "$die$stderr"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         return '', '', "$die$stderr";
+      }
+   } else {
+      my $dest_dir=$destFH->{_work_dirs}->{_cwd};
+      my $ls_path='';
+      if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
+            exists $Hosts{"__Master_${$}__"}{'ls'}) {
+         $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+         $ls_path.='/' if $ls_path!~/\/$/;
+      }
+      ($dest_output,$stderr)=$destFH->cmd("${ls_path}ls --version");
+      if (-1<index $dest_output,'GNU') {
+         $lsgnu=1;
+         ($dest_output,$stderr)=$destFH->cmd(
+            "${ls_path}ls -lRs --block-size=1 \'$dest_dir\'");
+      } else {
+         $lsgnu=0;
+         ($dest_output,$stderr)=$destFH->cmd(
+            "${ls_path}ls -lRs \'$dest_dir\'");
+      }
+      if ($stderr) {
+         print $Net::FullAuto::FA_Core::MRLOG "$die$stderr"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         return '', '', "$die$stderr";
+      }
+   }
+   return $dest_output,$dest_dir,'';
+
+}
+
 sub move_tarfile
 {
-print "MOVE_TARFILECALLER=",caller,"\n";
+   my @topcaller=caller;
+   print "move_tarfile() CALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG "move_tarfile() CALLER=",
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my ($baseFH,$btransfer_dir,$destFH,$shortcut)=('','','','');
    ($baseFH,$btransfer_dir,$destFH,$shortcut)=@_;
    my ($output,$stdout,$stderr)=('','','');
@@ -17574,9 +17615,13 @@ print "MOVE_TARFILECALLER=",caller,"\n";
       }
       ($output,$stderr)=&Rem_Command::ftpcmd( # Transfer the tar file
          $destFH,"!id");                      # 'put' because DEST is remote
-print $Net::FullAuto::FA_Core::MRLOG "TRYING TO DO PUT TWO\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-print "TRYING TO DO PUT TWO\n";
+      print "move_tarfile() TRYING TO DO PUT TWO\n"
+         if !$Net::FullAuto::FA_Core::cron &&
+         $Net::FullAuto::FA_Core::debug;
+      print $Net::FullAuto::FA_Core::MRLOG
+         "move_tarfile() TRYING TO DO PUT TWO\n"
+         if $Net::FullAuto::FA_Core::log &&
+         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       ($output,$stderr)=&Rem_Command::ftpcmd( # Transfer the tar file
          $destFH,                             # 'put' because DEST is remote
          "put transfer$Net::FullAuto::FA_Core::tran[3].tar");
@@ -17592,12 +17637,10 @@ print "TRYING TO DO PUT TWO\n";
             "lcd \"$baseFH->{_work_dirs}->{_tmp}\"");
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
             (-1==index $stderr,'command success');
-print "WE ARE PUTTING LCD OF DEST3=$baseFH->{_work_dirs}->{_tmp}\n";
          $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}
             =$baseFH->{_work_dirs}->{_tmp};
       }
    } elsif (&ftm_connect($destFH,$phost)) {
-print "WHAT THE FLIP ARE WE DOING HERE!!!!!!!!!!!!!\n";sleep 10;
       my %ftp=(
          _ftp_handle => $destFH->{_cmd_handle},
          _ftm_type   => $destFH->{_ftm_type},
@@ -17754,17 +17797,20 @@ print "GETTING BACK THE CMD FROM FTP LINE=$line\n";
                 ."Condition :\n\n       "
                 ."Couldn't get handle: Permission denied";
          ($output,$stderr)=$destFH->cwd('/tmp');
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1') if $stderr;
+         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+            if $stderr;
          ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
             "put transfer$Net::FullAuto::FA_Core::tran[3].tar"); 
-            #&ftp($destFH,'',"put transfer$Net::FullAuto::FA_Core::tran[3].tar");
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1') if $stderr &&
-               (-1==index $stderr,'command success');
+         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+            if $stderr &&
+            (-1==index $stderr,'command success');
          ($output,$stderr)=$destFH->cmd(
             "mv transfer$Net::FullAuto::FA_Core::tran[3].tar $d_fdr");
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1') if $stderr;
+         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+            if $stderr;
          ($output,$stderr)=$destFH->cwd($d_fdr);
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1') if $stderr;
+         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+            if $stderr;
       } elsif ($stderr && -1==index $stderr,'command success') {
          my $die="The System $destFH->{_hostlabel}->[0]"
                 ." Returned\n              the Following "
@@ -17801,13 +17847,11 @@ print "IM HERE THIS\n";
             $btrandir.='/';
          }
          ($output,$stderr)=&Rem_Command::ftpcmd(
-         #($output,$stderr)=&ftp(\%bftp,'',
             \%bftp,"cd \"$btrandir\"");
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
             (-1==index $stderr,'command success');
          $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=$btrandir;
       } elsif ($baseFH->{_work_dirs}->{_tmp}) {
-         #($output,$stderr)=&ftp(\%bftp,'',"cd $baseFH->{_work_dirs}->{_tmp}");
          ($output,$stderr)=&Rem_Command::ftpcmd(
             \%bftp,"cd $baseFH->{_work_dirs}->{_tmp}");
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
@@ -17815,7 +17859,6 @@ print "IM HERE THIS\n";
          $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=
             $baseFH->{_work_dirs}->{_tmp};
       } else {
-         #($output,$stderr)=&ftp(\%bftp,'',
          ($output,$stderr)=&Rem_Command::ftpcmd(\%bftp,
             "cd \"$baseFH->{_work_dirs}->{_cwd}\"");
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
@@ -17823,7 +17866,6 @@ print "IM HERE THIS\n";
          $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=
             $baseFH->{_work_dirs}->{_cwd};
       } 
-      #($output,$stderr)=&ftp(\%bftp,'',"get transfer$Net::FullAuto::FA_Core::tran[3].tar");
       ($output,$stderr)=&Rem_Command::ftpcmd(\%bftp,
          "get transfer$Net::FullAuto::FA_Core::tran[3].tar");
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
@@ -17875,10 +17917,13 @@ print "IM HERE THIS\n";
          (-1==index $stderr,'command success');
       $Net::FullAuto::FA_Core::ftpcwd{$dprx->{_cmd_handle}}{cd}
          =$d_fdr=$dest_fdr;
-print $Net::FullAuto::FA_Core::MRLOG "TRYING TO DO PUT ONE\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-print "TRYING TO DO PUT ONE\n";
-      #($output,$stderr)=&ftp(\%dftp,'',"put transfer$Net::FullAuto::FA_Core::tran[3].tar");
+      print "move_tarfile() TRYING TO DO PUT ONE\n"
+         if !$Net::FullAuto::FA_Core::cron &&
+         $Net::FullAuto::FA_Core::debug;
+      print $Net::FullAuto::FA_Core::MRLOG
+         "move_tarfile() TRYING TO DO PUT ONE\n"
+         if $Net::FullAuto::FA_Core::log &&
+         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       ($output,$stderr)=&Rem_Command::ftpcmd(
          \%dftp,"put transfer$Net::FullAuto::FA_Core::tran[3].tar");
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
@@ -17910,7 +17955,9 @@ print "TRYING TO DO PUT ONE\n";
 my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_Proxy[0] and "
       .(exists $Net::FullAuto::FA_Core::same_host_as_Master{"$Net::FullAuto::FA_Core::DeployFTM_Proxy[0]"})."\n";
 #print "SHOWWWWWWWWWWWWWWWWW=$shownow\n";
-#print $Net::FullAuto::FA_Core::MRLOG $shownow if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#print $Net::FullAuto::FA_Core::MRLOG $shownow
+#      if $Net::FullAuto::FA_Core::log &&
+#      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #print "HOSTNAME FOR DEST=",$destFH->cmd('hostname'),"\n";
 #print "THISHOSTNAME FOR DEST=",$destFH->cmd('hostname'),"\n";
 #print "D_FDR=$d_fdr<== and DEST_FDR=$dest_fdr<==\n";<STDIN>;
@@ -17919,7 +17966,7 @@ my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_P
           $d_fdr);                     # that now has tar file
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
       my $tdr='';
-      my $testf=&Net::FullAuto::FA_Core::test_file($destFH->{_cmd_handle},
+      my $testf=&Net::FullAuto::FA_Core::test_file($destFH,
          "transfer$Net::FullAuto::FA_Core::tran[3].tar");
       if ($testf ne 'WRITE' && $testf ne 'READ') {
          $tdr=$destFH->{_work_dirs}->{_tmp}
@@ -17927,23 +17974,27 @@ my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_P
       }
       ($output,$stderr)=
          $destFH->cmd(
-         "chmod 755 ${tdr}transfer$Net::FullAuto::FA_Core::tran[3].tar"); # chmod it
+         "chmod 755 ${tdr}transfer".
+         "$Net::FullAuto::FA_Core::tran[3].tar"); # chmod it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
       ($output,$stderr)=
          $destFH->cmd(
-         "tar xovf ${tdr}transfer$Net::FullAuto::FA_Core::tran[3].tar"); # un-tar it
+         "tar xovf ${tdr}transfer".
+         "$Net::FullAuto::FA_Core::tran[3].tar"); # un-tar it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
 print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
       if (!$shortcut) {
          foreach my $file (keys %Net::FullAuto::FA_Core::rename_file) {
-            my $cmd="mv \"$file\" \"$Net::FullAuto::FA_Core::rename_file{$file}\"";
+            my $cmd="mv \"$file\" ".
+                    "\"$Net::FullAuto::FA_Core::rename_file{$file}\"";
             my ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
       } else {
          foreach my $file (keys %Net::FullAuto::FA_Core::renamefile) {
-            my $cmd="mv \"$file\" \"$Net::FullAuto::FA_Core::renamefile{$file}\"";
+            my $cmd="mv \"$file\" ".
+                    "\"$Net::FullAuto::FA_Core::renamefile{$file}\"";
             my ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
@@ -17960,7 +18011,7 @@ print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
       $Net::FullAuto::FA_Core::tran[2]=1 if $Net::FullAuto::FA_Core::tran[4];
       &Net::FullAuto::FA_Core::handle_error($stderr,'-3') if $stderr;
       my $tdr='';
-      my $testf=&Net::FullAuto::FA_Core::test_file($destFH->{_cmd_handle},
+      my $testf=&Net::FullAuto::FA_Core::test_file($destFH,
          "transfer$Net::FullAuto::FA_Core::tran[3].tar");
       if ($testf ne 'WRITE' && $testf ne 'READ') {
          $tdr="$destFH->{_work_dirs}->{_tmp}/"
@@ -17970,22 +18021,26 @@ print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
           : $destFH->{_work_dirs}->{_tmp};
       ($output,$stderr)=
          $destFH->cmd(
-         "chmod 755 ${tdr}transfer$Net::FullAuto::FA_Core::tran[3].tar"); # chmod it
+         "chmod 755 ${tdr}transfer".
+         "$Net::FullAuto::FA_Core::tran[3].tar"); # chmod it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
       ($output,$stderr)=
           $destFH->cmd(
-             "tar xovf $dtr/transfer$Net::FullAuto::FA_Core::tran[3].tar"); # un-tar it
+             "tar xovf $dtr/transfer".
+             "$Net::FullAuto::FA_Core::tran[3].tar"); # un-tar it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-3') if $stderr;
       if (!$shortcut) {
          foreach my $file (keys %Net::FullAuto::FA_Core::rename_file) {
-            my $cmd="mv \"$file\" \"$Net::FullAuto::FA_Core::rename_file{$file}\"";
+            my $cmd="mv \"$file\" ".
+                    "\"$Net::FullAuto::FA_Core::rename_file{$file}\"";
             my ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
       } else {
          foreach my $file (keys %Net::FullAuto::FA_Core::renamefile) {
-            my $cmd="mv \"$file\" \"$Net::FullAuto::FA_Core::renamefile{$file}\"";
+            my $cmd="mv \"$file\" ".
+                    "\"$Net::FullAuto::FA_Core::renamefile{$file}\"";
             my ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
@@ -18011,41 +18066,40 @@ print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
           $dest_fdr);
       &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
       my $tdr='';
-      my $testf=&Net::FullAuto::FA_Core::test_file($destFH->{_cmd_handle},
+      my $testf=&Net::FullAuto::FA_Core::test_file($destFH,
          "transfer$Net::FullAuto::FA_Core::tran[3].tar");
-print "TESTF=$testf<===\n";#<STDIN>;
       if ($testf ne 'WRITE' && $testf ne 'READ') {
          $tdr="$destFH->{_work_dirs}->{_tmp}/"
             if $destFH->{_work_dirs}->{_tmp};
       }
-      ($output,$stderr)=
-         $destFH->cmd(
-         "chmod 777 ${tdr}transfer$Net::FullAuto::FA_Core::tran[3].tar"); # chmod it
+      ($output,$stderr)=$destFH->cmd("chmod 777 ${tdr}transfer".
+         "$Net::FullAuto::FA_Core::tran[3].tar"); # chmod it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-      ($output,$stderr)=                        # un-tar it
-          $destFH->cmd("tar xovf $d_fdr/transfer$Net::FullAuto::FA_Core::tran[3].tar");
+      ($output,$stderr)=$destFH->cmd("tar xovf $d_fdr/transfer".
+         "$Net::FullAuto::FA_Core::tran[3].tar"); # un-tar it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
       if (!$shortcut) {
          foreach my $file (keys %Net::FullAuto::FA_Core::rename_file) {
-            my $cmd="mv \"$file\" \"$Net::FullAuto::FA_Core::rename_file{$file}\"";
+            my $cmd="mv \"$file\" ".
+                    "\"$Net::FullAuto::FA_Core::rename_file{$file}\"";
             my ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
       } else {
          foreach my $file (keys %Net::FullAuto::FA_Core::renamefile) {
-            my $cmd="mv \"$file\" \"$Net::FullAuto::FA_Core::renamefile{$file}\"";
+            my $cmd="mv \"$file\" ".
+                    "\"$Net::FullAuto::FA_Core::renamefile{$file}\"";
             my ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
       }
-      ($output,$stderr)=$destFH->cmd(  # delete tar file
-                            "rm $d_fdr/transfer".
-                            $Net::FullAuto::FA_Core::tran[3].".tar");
+      ($output,$stderr)=$destFH->cmd("rm $d_fdr/transfer".
+          "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
    }
-print "ANYTHING FALLING THRROUGH BOTTOM and $destFH->{_work_dirs}->{_cwd}\n";
+
 }
 
 sub ftm_connect
@@ -18058,7 +18112,8 @@ sub ftm_connect
       if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "ftm_connect() CALLER=",
       (join ' ',@topcaller)," and HOSTLABEL=$_[1]\n"
-      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $ftpFH=$_[0];my $hostlabel=$_[1];my $_connect=$_[2]||'';
    my $ftm_type='';my $ftm_passwd='';
    my $output='';my $stderr='';
@@ -19171,22 +19226,42 @@ sub build_mirror_hashes
    my $hostlabel='';
    my $timehash={};my $num_of_files=0;my $num_of_basefiles=0;
    my $timekey='';my $deploy_needed=0;my $output='';
-   my $baseFH=$_[0];my $destFH=$_[1];
-   my $bhostlabel=$_[2];my $dhostlabel=$_[3];my $stderr='';
+   my $baseFH=$_[0];
+   my $destFH=$_[1];
+   my $bhostlabel=$_[2];
+   my $dhostlabel=$_[3];
+   my $verbose=$_[4];
+   my $base_uname='';
+   my $dest_uname='';
+   my $base_windows_daylight_savings=0;
+   my $dest_windows_daylight_savings=0;
+   my $stdout='';
+   my $stderr='';
    my $deploy_empty_dir=0;
    my $dest_dir_status='';
    my $deploy_info='';
    my $debug_info='';
    eval {
-      $num_of_files=${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFFILES"};
+      $num_of_files=${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFFILES"}
+         if exists ${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFFILES"};
       delete ${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFFILES"};
       $num_of_basefiles=
-             ${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFBASEFILES"};
+         ${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFBASEFILES"}
+         if exists ${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFBASEFILES"};
       delete ${$baseFH->{_bhash}}{"___%EXCluD%E--NUMOFBASEFILES"};
       delete ${$destFH->{_dhash}}{"___%EXCluD%E--NUMOFFILES"};
       delete ${$destFH->{_dhash}}{"___%EXCluD%E--NUMOFBASEFILES"};
-print "NUM_OF_FILES=$num_of_files\n";
-print "NUM_OF_BASEFILES=$num_of_basefiles\n";
+      if ($num_of_files) {
+         print "mirror() NUM_OF_FILES=$num_of_files\n",
+            "mirror() NUM_OF_BASEFILES=$num_of_basefiles\n"
+            if !$Net::FullAuto::FA_Core::cron &&
+            $Net::FullAuto::FA_Core::debug;
+         print $Net::FullAuto::FA_Core::MRLOG
+            "mirror() NUM_OF_FILES=$num_of_files\n",
+            "mirror() NUM_OF_BASEFILES=$num_of_basefiles\n"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      }
       foreach my $key (sort keys %{$baseFH->{_bhash}}) {
          next if ${$baseFH->{_bhash}}{$key}[0] eq 'EXCLUDE';
          my @keys=();
@@ -19216,19 +19291,14 @@ print "NUM_OF_BASEFILES=$num_of_basefiles\n";
                   }
                } unshift @keys, '/';
             }
-#if ($key=~/172/) {
-#print "ALLDESTKEYS1=",keys %{$destFH->{_dhash}},"GOT172!!!\n";
-#foreach my $key (keys %{$destFH->{_dhash}}) {
-#   print "KEYYYYYY=$key\n"; }
-#<STDIN>;
-#}
             if (!exists ${$destFH->{_dhash}}{$key}) {
-#foreach my $key (keys %{$destFH->{_dhash}}) {
-#   print "DESTKEYYYYYY=$key\n";
-#}
-#print "WHAT IS THE BAD KEY==>$key<==\n";<STDIN>;
-print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE BAD KEY==>$key<==\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               print "mirror() ERROR: WHAT IS THE BAD KEY==>$key<==\n"
+                  if !$Net::FullAuto::FA_Core::cron &&
+                  $Net::FullAuto::FA_Core::debug;
+               print $Net::FullAuto::FA_Core::MRLOG
+                  "mirror() ERROR: WHAT IS THE BAD KEY==>$key<==\n"
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ${$baseFH->{_bhash}}{$key}[3]='NOT_ON_DEST';
                $dest_dir_status='DIR_NOT_ON_DEST';
                $deploy_info.="DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
@@ -19241,18 +19311,23 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE BAD KEY==>$key<==\n"
          }
          my $skip=0;my $deploy=0;
          foreach my $file (keys %{${$baseFH->{_bhash}}{$key}[1]}) {
-#print "FILE=$file\n";
+
 if ($key=~/yglasa/) {
-print "DEST_DIR_STATUS=$dest_dir_status and KEY=$key\n";
-print "FILE=$file and BASEHASH=",@{${$baseFH->{_bhash}}{$key}[1]{$file}},"\n";
-print "DESTHASH=",${$destFH->{_dhash}}{$key}[1]{$file},"\n" if exists
+   print "DEST_DIR_STATUS=$dest_dir_status and KEY=$key\n";
+   print "FILE=$file and BASEHASH=",
+         @{${$baseFH->{_bhash}}{$key}[1]{$file}},"\n";
+   print "DESTHASH=",${$destFH->{_dhash}}{$key}[1]{$file},"\n" if exists
       ${$destFH->{_dhash}}{$key}[1]{$file};<STDIN>;
 }
+
             if (${$baseFH->{_bhash}}{$key}[1]{$file}[0] eq 'EXCLUDE') {
-print "SKIP1=> KEY=$key and FILE=$file\n"
-   if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
-print $Net::FullAuto::FA_Core::MRLOG "SKIP1=> KEY=$key and FILE=$file\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               print "mirror() SKIP1=> KEY=$key and FILE=$file\n"
+                  if !$Net::FullAuto::FA_Core::cron &&
+                  $Net::FullAuto::FA_Core::debug;
+               print $Net::FullAuto::FA_Core::MRLOG
+                  "mirror() SKIP1=> KEY=$key and FILE=$file\n"
+                  if $Net::FullAuto::FA_Core::log &&
+                 -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                if ($key eq '/') {
                   $debug_info.="SKIP FILE $file - EXCLUDED_BY_FILTER\n";
                } else {
@@ -19262,12 +19337,29 @@ print $Net::FullAuto::FA_Core::MRLOG "SKIP1=> KEY=$key and FILE=$file\n"
             } my $dchmod='';my $dtime='';my $dyear='';my $dsize='';
             my $dtime1='';my $dtime2='';my $dtime3='';
             if (exists ${$destFH->{_dhash}}{$key}[1]{$file}) {
-#if ($key=~/\//) {
-print $Net::FullAuto::FA_Core::MRLOG "KEY=$key DEST TIMELINE ENTRY=",
-      ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],"\n"
-      ." and FILE=$file\n" if $Net::FullAuto::FA_Core::debug;
-#}
-print "STRING_DEST=${${$destFH->{_dhash}}{$key}[1]{$file}}[1] and FILE=$file AND KEY=$key\n";
+               unless ($dest_uname) {
+                  $dest_uname=$destFH->{_uname};
+                  if ($dest_uname eq 'cygwin') {
+                     my $key_dir=($key ne '/')?"$key/":'/';
+                     ($stdout,$stderr)=$destFH->cmd("stat \".$key_dir$file\"");
+                     my $isto=(index $stdout,'Modify: ')+19;
+                     $stdout=unpack("x$isto a2",$stdout);
+                     my $st=unpack('x6 a2',
+                            ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]);
+                     $dest_windows_daylight_savings=1 if $st!=$stdout;
+                  }
+               }
+               print "mirror() STRING_DEST=",
+                        ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],
+                        " and FILE=$file AND KEY=$key\n"
+                        if (!$Net::FullAuto::FA_Core::cron &&
+                        $Net::FullAuto::FA_Core::debug) || $verbose;
+               print $Net::FullAuto::FA_Core::MRLOG
+                        "mirror() STRING_DEST=",
+                        ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],
+                        " and FILE=$file AND KEY=$key\n"
+                        if $Net::FullAuto::FA_Core::log &&
+                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                my $y=qr(\d\d\d\d);
                ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]=~
                   /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
@@ -19279,17 +19371,34 @@ print "STRING_DEST=${${$destFH->{_dhash}}{$key}[1]{$file}}[1] and FILE=$file AND
             }
             ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]=~
                /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+(\d\d\d\d)\s+(\d+)\s*(\d*)*\s*$/;
-print "STRING_BASE=${${$baseFH->{_bhash}}{$key}[1]{$file}}[1] and FILE=$file\n";
+            unless ($base_uname) {
+               $base_uname=$baseFH->{_uname};
+               if ($base_uname eq 'cygwin') {
+                  my $key_dir=($key ne '/')?"$key/":'/';
+                  ($stdout,$stderr)=$baseFH->cmd("stat \".$key$file\"");
+                  my $isto=(index $stdout,'Modify: ')+19;
+                  $stdout=unpack("x$isto a2",$stdout);
+                  my $st=unpack('x6 a2',
+                         ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]);
+                  $base_windows_daylight_savings=1 if $st!=$stdout;
+               }
+            }
+            print "mirror() STRING_BASE=",
+                     ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1],
+                     " and FILE=$file AND KEY=$key\n"
+                     if (!$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug) || $verbose;
+            print $Net::FullAuto::FA_Core::MRLOG
+                     "mirror() STRING_BASE=",
+                     ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1],
+                     " and FILE=$file AND KEY=$key\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             my $btime1=$1;my $btime2=$2;my $btime3=$3;
             my $byear=$4;my $bsize=$5;my $bchmod=$6;
             $btime2="0$btime2" if length $btime2==1;
             my $btime=$btime1.$btime2.$btime3;
             $bchmod||='';
-#if ($file=~/index.html/) {
-#print "BASE TIMELINE ENTRY=",${$baseFH->{_bhash}}{$key}[1]{$file}[1],"\n"
-#                 ." and FILE=$file and DEST_DIR_STATUS=$dest_dir_status"
-#                 ."\n*****************************************\n";
-#}
             if ($dest_dir_status eq 'DIR_NOT_ON_DEST') {
                if ($key eq '/') {
                   $deploy_info.="DEPLOY FILE $file - DIR_NOT_ON_DEST\n";
@@ -19308,59 +19417,59 @@ print "STRING_BASE=${${$baseFH->{_bhash}}{$key}[1]{$file}}[1] and FILE=$file\n";
                      my $tmp_file_name="X_".time."_"
                                        .$Net::FullAuto::FA_Core::increment++
                                        ."_X.mvx";
-                     $Net::FullAuto::FA_Core::file_rename{"$key/$file"}=$tmp_file_name;
-                     $Net::FullAuto::FA_Core::rename_file{$tmp_file_name}="$key/$file";
+                     $Net::FullAuto::FA_Core::file_rename{"$key/$file"}=
+                        $tmp_file_name;
+                     $Net::FullAuto::FA_Core::rename_file{$tmp_file_name}=
+                        "$key/$file";
                   }
                }
                ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                   ="NOT_ON_DEST $bsize $dsize";
                ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
-print "DEPLOY NEEDED for KEY=$key and FILE=$file because DIR_NOT_ON_DEST\n";
-print $Net::FullAuto::FA_Core::MRLOG "DEPLOY NEEDED for KEY=$key and ",
-                     "FILE=$file because DIR_NOT_ON_DEST\n"
-                     if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               print "mirror() DEPLOY NEEDED for KEY=$key and ",
+                  "FILE=$file because DIR_NOT_ON_DEST\n"
+                     if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+               print $Net::FullAuto::FA_Core::MRLOG
+                  "mirror() DEPLOY NEEDED for KEY=$key and ",
+                  "FILE=$file because DIR_NOT_ON_DEST\n"
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                $deploy_needed=$deploy=1;
                $btime=~tr/ //;
                if ($key ne '/') {
                   $timekey="$key/$file";
                } else { $timekey=$file }
-print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH1=> TIMEKEY(FILE)=$timekey ",
+                  print "UPDATEING TIMEHASH1=> TIMEKEY(FILE)=$timekey ",
                      "and BYEAR=$byear and BTIME=$btime\n"
-                     if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                     if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+                  print $Net::FullAuto::FA_Core::MRLOG
+                     "UPDATEING TIMEHASH1=> TIMEKEY(FILE)=$timekey ",
+                     "and BYEAR=$byear and BTIME=$btime\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                $timehash->{$timekey}=[$byear,$btime];
                next;
             }
-#if ($key=~/about/) {
-#print $Net::FullAuto::FA_Core::MRLOG "BEFORE DEST HASH=$file and THISSSSEXISTS="
-#                  .(exists ${$destFH->{_dhash}}{$key}[1]{$file})
-#                  ." and KEYS="
-#                  .join ' ',@{[keys %{${$destFH->{_dhash}}{$key}[1]}]}
-#                  ." and KEYYYYY=$key\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#}
             if (exists ${$destFH->{_dhash}}{$key}[1]{$file}) {
-#if ($file=~/index.html/) {
-#print "KEY=$key and FILE=$file\n";
-#print $Net::FullAuto::FA_Core::MRLOG
-#print 
-#   "BSIZE=$bsize and DSIZE=$dsize and BTIME=$btime and DTIME=$dtime\n";
-#   #if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#<STDIN>;
-#}
                if ($bsize ne $dsize) {
                   ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                       ="DIFF_SIZE $bsize $dsize";
                   if ($key eq '/') {
-                     $deploy_info.="DEPLOYa $file - DIFF_SIZE\n";
+                     $deploy_info.="DEPLOY(a) $file - DIFF_SIZE\n";
                      $debug_info.="DEPLOY $file - DIFF_SIZE\n";
                      if (99<length "$key/$file") {
                         my $tmp_file_name="X_".time."_"
                                        .$Net::FullAuto::FA_Core::increment++
                                        ."_X.mvx";
-                        $Net::FullAuto::FA_Core::file_rename{$file}=$tmp_file_name;
-                        $Net::FullAuto::FA_Core::rename_file{$tmp_file_name}=$file;
+                        $Net::FullAuto::FA_Core::file_rename{$file}=
+                           $tmp_file_name;
+                        $Net::FullAuto::FA_Core::rename_file{$tmp_file_name}=
+                           $file;
                      }
                   } else {
-                     $deploy_info.="DEPLOYb $key/$file - DIFF_SIZE\n";
+                     $deploy_info.="DEPLOY(b) $key/$file - DIFF_SIZE\n";
                      $debug_info.="DEPLOY $key/$file - DIFF_SIZE\n";
                      if (99<length "$key/$file") {
                         my $tmp_file_name="X_".time."_"
@@ -19372,10 +19481,15 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH1=> TIMEKEY(FILE)=$timek
                            "$key/$file";
                      }
                   }
-print "DEPLOY NEEDED for KEY=$key and FILE=$file because DIFF SIZE BSIZE=$bsize and DSIZE=$dsize\n";
-print $Net::FullAuto::FA_Core::MRLOG "DEPLOY NEEDED for KEY=$key and FILE=$file ",
+                  print "DEPLOY NEEDED for KEY=$key and FILE=$file ",
                      "because DIFF SIZE BSIZE=$bsize and DSIZE=$dsize\n"
-                     if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                     if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+                  print $Net::FullAuto::FA_Core::MRLOG
+                     "DEPLOY NEEDED for KEY=$key and FILE=$file ",
+                     "because DIFF SIZE BSIZE=$bsize and DSIZE=$dsize\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   $deploy_needed=$deploy=1;
                   delete ${$destFH->{_dhash}}{$key}[1]{$file}
                      if $dest_dir_status ne 'DIR_NOT_ON_DEST';
@@ -19383,9 +19497,15 @@ print $Net::FullAuto::FA_Core::MRLOG "DEPLOY NEEDED for KEY=$key and FILE=$file 
                   if ($key ne '/') {
                      $timekey="$key/$file";
                   } else { $timekey=$file }
-print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timekey ",
+                  print "UPDATEING TIMEHASH1=> TIMEKEY(FILE)=$timekey ",
                      "and BYEAR=$byear and BTIME=$btime\n"
-                     if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                     if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+                  print $Net::FullAuto::FA_Core::MRLOG
+                     "UPDATEING TIMEHASH1=> TIMEKEY(FILE)=$timekey ",
+                     "and BYEAR=$byear and BTIME=$btime\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   ${$timehash}{$timekey}=[$byear,$btime];
                   next;
                }
@@ -19393,14 +19513,9 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                   =unpack('a5 x1 a2 x1 a2',$btime);
                my ($dmndy,$dhr,$dmt)
                   =unpack('a5 x1 a2 x1 a2',$dtime);
-#print "BTIME=$btime and DTIME=$dtime\n" if $file=~/index.html/;
-#<STDIN> if $file=~/index.html/;
                if ($btime ne $dtime) {
                   my $btim=unpack('x6 a2',$btime);
                   my $dtim=unpack('x6 a2',$dtime);
-#print "BTIM=$btim and BTIME=$btime and DTIME=$dtime\n";
-#print "DTIM=$dtim and FILE=$key/$file\n";
-#<STDIN> if $file=~/index.html/;
                   my $btme=$btime;
                   my $dtme=$dtime;
                   substr($btme,6,2)='';
@@ -19410,11 +19525,16 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                      $testnum=$btim-$dtim;
                   } else { $testnum=$dtim-$btim }
                   ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
-                  if ($btme eq $dtme && ($testnum==1 ||
-                        ($btim==23 && ($testnum==12 ||
-                         $testnum==11))) || ($bmndy eq $dmndy
-                         && (($dhr eq '12' && $dmt eq '00')
-                         || ($bhr eq '12' && $bmt eq '00')))) {
+                  my $testdhr=$dtime;
+                  my $testbhr=$btime;
+                  substr($testdhr,6,2)=$dhr+1;
+                  substr($testbhr,6,2)=$bhr+1;
+                  if ((!($base_windows_daylight_savings &&
+                        $dest_windows_daylight_savings)) &&
+                        (($base_windows_daylight_savings &&
+                        ($testbhr eq $dtime)) ||
+                        ($dest_windows_daylight_savings &&
+                        ($testdhr eq $btime)))) {
                      delete ${$destFH->{_dhash}}{$key}[1]{$file}
                         if $dest_dir_status ne 'DIR_NOT_ON_DEST';
                      $skip=1;
@@ -19436,7 +19556,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                      ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                          ="NEWR_TIME $btime $dtime";
                      if ($key eq '/') {
-                        $deploy_info.="DEPLOYc $file - NEWR_TIME\n";
+                        $deploy_info.="DEPLOY(c) $file - NEWR_TIME\n";
                         $debug_info.="DEPLOY $file - NEWR_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -19448,7 +19568,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                               $file;
                         }
                      } else {
-                        $deploy_info.="DEPLOYd $key/$file - NEWR_TIME\n";
+                        $deploy_info.="DEPLOY(d) $key/$file - NEWR_TIME\n";
                         $debug_info.="DEPLOY $key/$file - NEWR_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -19464,11 +19584,10 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                      delete ${$destFH->{_dhash}}{$key}[1]{$file}
                         if $dest_dir_status ne 'DIR_NOT_ON_DEST';
                   } else {
-#print "DIFFTIME=$file<== and BTIME=$btime and DTIME=$dtime\n";#<STDIN>;
                      ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                         ="DIFF_TIME $btime $dtime";
                      if ($key eq '/') {
-                        $deploy_info.="DEPLOYe $file - DIFF_TIME\n";
+                        $deploy_info.="DEPLOY(e) $file - DIFF_TIME\n";
                         $debug_info.="DEPLOY $file - DIFF_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -19480,7 +19599,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                               $file;
                         }
                      } else {
-                        $deploy_info.="DEPLOYf $key/$file - DIFF_TIME\n";
+                        $deploy_info.="DEPLOY(f) $key/$file - DIFF_TIME\n";
                         $debug_info.="DEPLOY $key/$file - DIFF_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -19515,7 +19634,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                ${$baseFH->{_bhash}}{$key}[1]{$file}[0]='NOT_ON_DEST';
                ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
                if ($key eq '/') {
-                  $deploy_info.="DEPLOYg $file - NOT_ON_DEST\n";
+                  $deploy_info.="DEPLOY(g) $file - NOT_ON_DEST\n";
                   $debug_info.="DEPLOY $file - NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
                      my $tmp_file_name="X_".time."_"
@@ -19525,7 +19644,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH2=> TIMEKEY(FILE)=$timek
                      $Net::FullAuto::FA_Core::rename_file{$tmp_file_name}=$file;
                   }
                } else {
-                  $deploy_info.="DEPLOYh $key/$file - NOT_ON_DEST\n";
+                  $deploy_info.="DEPLOY(h) $key/$file - NOT_ON_DEST\n";
                   $debug_info.="DEPLOY $key/$file - NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
                      my $tmp_file_name="X_".time."_"
@@ -19548,18 +19667,11 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
                      "and BYEAR=$byear and BTIME=$btime\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          }
-#print "OUT OF FILE COMPARE LOOP\n";
          if ($skip) {
             if ($deploy) {
                ${$baseFH->{_bhash}}{$key}[2]='DEPLOY_SOMEFILES_OF_CURDIR';
-#print "HERE I AMMM333 AND KEY=$key\n";<STDIN>;
                ${$baseFH->{_bhash}}{$key}[0]='SOME';
                foreach my $key (@keys) {
-#print "SETTING BASEHASH TO \'SOME\' for KEY=$key and SKIP=$skip and DEPLOY=$deploy\n";
-#print $Net::FullAuto::FA_Core::MRLOG "SETTING BASEHASH TO \'SOME\' for KEY=$key and ",
-#                     "SKIP=$skip and DEPLOY=$deploy\n"
-#                     if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#print "HERE I AMMM444 AND KEY=$key\n";<STDIN>;
                   ${$baseFH->{_bhash}}{$key}[0]='SOME';
                }
             } else {
@@ -19576,9 +19688,6 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
             delete ${$destFH->{_dhash}}{$key}
                if !keys %{${$destFH->{_dhash}}{$key}[1]};
             ${$baseFH->{_bhash}}{$key}[2]='DEPLOY_NOFILES_OF_CURDIR';
-#if ($key=~/pdf/) {
-#print "SETTING1 $key to EXCLUDE\n";
-#}
             ${$baseFH->{_bhash}}{$key}[0]='EXCLUDE'
                if ${$baseFH->{_bhash}}{$key}[0] ne 'SOME'
                && ${$baseFH->{_bhash}}{$key}[0] ne 'NOT_ON_DEST' 
@@ -19588,10 +19697,8 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
    };
    if ($@) {
       if (unpack('a10',$@) eq 'The System') {
-#print "BUILDRETURN1\n";
          return '','','','',$@;
       } else {
-#print "IS THIS REALLY WHERE WE ARE DYINGEEEEEEEEEEEE<==\n";<STDIN>;
          my $die="The System $hostlabel Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
@@ -19599,14 +19706,12 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
          print $Net::FullAuto::FA_Core::MRLOG $die 
             if $Net::FullAuto::FA_Core::log &&
             -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#print "BUILDRETURN2 and DIE=$die and CALLER=",caller,"\n";
          return '','','','',$die;
       }
    }
 print $Net::FullAuto::FA_Core::MRLOG "KEYSBASEHASHTEST=",keys %{$baseFH->{_bhash}},"\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-#print "BUILDRETURN3\n";
- return $baseFH, $destFH, $timehash, $deploy_info, $debug_info;
+   return $baseFH, $destFH, $timehash, $deploy_info, $debug_info;
 
 }
 
@@ -19886,12 +19991,30 @@ sub build_base_dest_hashes
                }
                my $endofline=substr($line,-2);
                if ($line=~s/^\s*([0-9]+)\s//) {
-print "WHAT IS LINE=$line<== \n";
+                  print "LS OUTPUT LINE=$line<==\n",
+                     if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+                  print $Net::FullAuto::FA_Core::MRLOG
+                     "LS OUTPUT LINE=$line<==\n",
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   $bytesize=$1;
                   ($fchar,$u,$g,$o)=unpack('a1 a3 a3 a3',$line);
-print "ADDING ==>$bytesize<==\n";
+                  print "ADDING BYTES TO TOTAL ==>$bytesize<==\n",
+                     if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+                  print $Net::FullAuto::FA_Core::MRLOG
+                     "ADDING BYTES TO TOTAL ==>$bytesize<==\n",
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   $addbytes+=$bytesize;
-print "TOTAL BYTESIZE==>$addbytes<==\n";
+                  print "TOTAL BYTESIZE==>$addbytes<==\n",
+                     if !$Net::FullAuto::FA_Core::cron &&
+                     $Net::FullAuto::FA_Core::debug;
+                  print $Net::FullAuto::FA_Core::MRLOG
+                     "TOTAL BYTESIZE==>$addbytes<==\n",
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   $dofiles=1;
                   if ($endofline eq '..' || $endofline eq ' .') { next }
                } else {
@@ -19965,7 +20088,13 @@ print "NOW LINE=$line\n";
                         } next WH;
                      } else {
                         $total=unpack('x6 a*',$line);
-print "WHAT IS TOTALNOW=$total and LINE=$line\n";
+                        print "TOTAL BYTES FINAL TALLY==>$total<==\n",
+                           if !$Net::FullAuto::FA_Core::cron &&
+                           $Net::FullAuto::FA_Core::debug;
+                        print $Net::FullAuto::FA_Core::MRLOG
+                           "TOTAL BYTES FINAL TALLY ==>$total<==\n",
+                           if $Net::FullAuto::FA_Core::log &&
+                           -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         if (-1<index $total,'stdout:') {
                            $total=~s/^(\d+)(stdout:.*)$/$1/;
                            push @sublines, $2;
@@ -20163,7 +20292,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                   ($cygwin && $mn ne ' D' && unpack('a5',$size) ne '<DIR>')) {
                $file_count++;
 #if ($key eq '/') {
-#print "UNIXXXYYLINE=$line and CYGWINNNN=$cygwin and MN=$mn and SIZE=$size and FILE=$file and KEY=$key\n";#<STDIN>;
+#print "UNIXXXYYLINE=$line and CYGWINNNN=$cygwin and MN=$mn and SIZE=$size and FILE=$file and KEY=$key\n";<STDIN>;
 #}
                if (!$cygwin && ($fchar eq '-' || $fchar eq 'l')) {
                   my $up=unpack('x10 a*',$line);
@@ -20289,7 +20418,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                                  my $testyr=100+$yr;
                                  $fileyr=$Net::FullAuto::FA_Core::curyear;
                                  if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
-                                    $hr=12;$mt='00';
+                                    #$hr=12;$mt='00';
                                     $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
                                  } elsif ($hr<13) {
                                     $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
@@ -20370,7 +20499,7 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                      my $testyr="1$yr";
                      $fileyr=$Net::FullAuto::FA_Core::curyear;
                      if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
-                        $hr=12;$mt='00';
+                        #$hr=12;$mt='00';
                         $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
                      } elsif ($hr<13) {
                         $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
@@ -20979,7 +21108,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                            { _cmd_handle=>$cmd_handle,
                              _hostlabel=>[ $hostlabel,'' ],
                              _cmd_type=>$cmd_type,
-                             _connect=>$_connect });
+                             _connect=>$_connect },0,'_notnew_');
                      if ($stderr) {
                         if ($rm_cnt!=$#connect_method) {
                            $cmd_handle->close;
@@ -22634,7 +22763,7 @@ print "DO WE HAVE LCD????=$Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}
                         my $path=$1;
                         $path=~/^(.*)[\/|\\]([^\/|\\]+)$/;
                         my $dir=$1;my $file=$2;my $getfile='';
-                        my $testf=&Net::FullAuto::FA_Core::test_file($handle->{_cmd_handle},
+                        my $testf=&Net::FullAuto::FA_Core::test_file($handle,
                            $path);
                         if ($testf eq 'WRITE' || $testf eq 'READ') {
                            if (exists $handle->{_work_dirs}->{_tmp}) { 

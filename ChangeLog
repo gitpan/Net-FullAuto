@@ -45,6 +45,17 @@
 ################################################################
 
 
+2011-11-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9981 released.
+
+        * Fixed mirror() and insured it works between Solaris,
+          Ubuntu and Cygwin/Windows.
+
+        * Fixed Daylight Savings problem between Windows and
+          Unix.
+
+
 2011-11-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9980 released.
