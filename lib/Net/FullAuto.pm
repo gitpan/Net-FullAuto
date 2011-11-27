@@ -20,41 +20,8 @@ package Net::FullAuto;
 #
 ################################################################
 
-################################################################
-#
-#   WARNING:  THIS IS A ***BETA*** RELEASE OF Net::FullAuto
-#
-#   Net::FullAuto is powerful network process automation
-#   software that has been in un-released development for
-#   more than eleven years. For this reason, you may find
-#   it to be useful for many process automation projects.
-#   Because it has been worked on for so long, it may appear
-#   to be stable, and pass a number of non-intensive tests.
-#
-#   DO NOT - REPEAT - DO !!NOT!! USE IN A PRODUCTION
-#   ENVIRONMENT! This is newly released software that has
-#   *NOT* had the benefit of wide exposure - and the presence
-#   of here-to-now undetected bugs and design flaws is a
-#   virtual certainty. DO NOT USE IN IN/FOR A PROCESS WHERE
-#   DATA LOSS IS UNRECOVERABLE. DO NOT USE IN/FOR A PROCESS
-#   WHERE DATA INTEGRITY IS CRITICAL. DO NOT USE IN/FOR A
-#   PROCESS THAT IS TIME SENSITIVE, UNMONITORED, OR
-#   PERSISTENCE CRITICAL. DO NOT USE THIS SOFTWARE WITHOUT
-#   ANOTHER METHOD FOR EXECUTING THE PROCESS YOU WISH TO
-#   AUTOMATE WITH Net::FullAuto. DO NOT USE IN/FOR A PROCESS
-#   WHERE FAILURE OF "ANY KIND" IS UNACCEPTABLE.
-#
-#   Beware that it is provided "as is", and comes with
-#   absolutely no warranty of any kind, either express or
-#   implied.  If you use the contents of this distribution,
-#   you do so at your own risk, and you agree to free the
-#   author(s) of any consequences arising from such use,
-#   either intended or otherwise.
-#
-################################################################
 
-
-our $VERSION='0.9981';
+our $VERSION='0.9982';
 
 
 use 5.005;
@@ -1584,7 +1551,9 @@ Brian M. Kelly <Brian.Kelly@fullautosoftware.net>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
+Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
+              2008, 2009, 2010, 2011
+
 by Brian M. Kelly.
 
 This program is free software; you can redistribute it and/or

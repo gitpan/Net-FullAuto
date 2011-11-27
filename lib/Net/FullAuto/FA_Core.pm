@@ -20,32 +20,6 @@ package Net::FullAuto::FA_Core;
 #
 ################################################################
 
-################################################################
-#
-#   WARNING:  THIS IS A ***BETA*** RELEASE OF Net::FullAuto
-#
-#   Net::FullAuto is powerful network process automation
-#   software that has been in un-released development for
-#   more than eleven years. For this reason, you may find
-#   it to be useful for many process automation projects.
-#   Because it has been worked on for so long, it may appear
-#   to work well, and pass a number of non-intensive tests.
-#
-#   DO NOT - I REPEAT - DO !!NOT!! USE IN A PRODUCTION
-#   ENVIRONMENT! This is newly released software that has
-#   not had the benefit of wide exposure - and the presence
-#   of here-to-now undetected bugs and design flaws is a
-#   virtual certainty. DO NOT USE IN IN/FOR A PROCESS WHERE
-#   DATA LOSS IS UNRECOVERABLE. DO NOT USE IN/FOR A PROCESS
-#   WHERE DATA INTEGRITY IS CRITICAL. DO NOT USE IN/FOR A
-#   PROCESS THAT IS TIME SENSITIVE, UNMONITORED, OR
-#   PERSISTENCE CRITICAL. DO NOT USE THIS SOFTWARE WITHOUT
-#   ANOTHER METHOD FOR RUNNING THE PROCESS YOU WISH TO
-#   AUTOMATE WITH Net::FullAuto. DO NOT USE IN/FOR A PROCESS
-#   WHERE FAILURE OF "ANY KIND" IS UNACCEPTABLE.
-#
-################################################################
-
 ## ******* Misc Notes ******************************************
 ## For Testing Multiple Iterations in a BASH shell environment
 #
@@ -1803,7 +1777,7 @@ sub edit {
          next if $file=~/\/$/;
          next if $file eq 'README';
          $file=~s/^.*\d\d:\d\d\s+(.*)$/$1/;
-         push @file,$dirr.'/'.$file;
+         push @file,$username.'/'.$dirr.'/'.$file;
       }
       my %Menu_1=(
 
@@ -1823,6 +1797,7 @@ sub edit {
          print "\n";
          exit;
       }
+      chdir '..';
       system("\"$editor\" $file");
       chdir $savdir;
    }
@@ -1894,6 +1869,8 @@ foreach my $year ($curyear..$endyear) {
    my $cnt=0;
    if ($year ne $curyear) {
       $currmonth=1;
+   } else {
+      $cnt=$currmonth-1;
    }
    foreach my $mth ($currmonth..12) {
       $lastday=POSIX::mktime(0,0,0,0,$mth-1+1,$year-1900,0,0,-1);
@@ -1908,7 +1885,8 @@ my $fulldays=sub { package fulldays;
                    my $c=pack('A9',$a);
                    my @n=();
                    my $s=1;
-                   $s=$today if $b eq $curyear;
+                   $s=$today if $b eq $curyear &&
+                      -1<index $month[$curmonth-1],$a;
                    foreach my $d ($s..$mdates{$b}{$c}) {
                       $d='0'.$d if length $d==1;
                       push @n, $a.' '.$d.', '.$b;
@@ -16620,7 +16598,19 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                  "$Net::FullAuto::FA_Core::tran[3].tar ";
                            }
                            $tar_cmd.="-C \"$base___dir\" \"$dir$file\"";
-print "TAR_CMD=$tar_cmd<== and BASE_FDR=$base_fdr<== AND THIS=",${$baseFH->{_bhash}}{$key}[1]{$file}[0]," AND KEY=$key and FILE=$file\n";
+                           print "mirror() TAR CMD =>$tar_cmd<==",
+                                    " and BASE DIR=$base_fdr AND ATTRIBUTES=",
+                                    ${${$baseFH->{_bhash}}{$key}[1]{$file}}[0],
+                                    " AND KEY=$key AND FILE=$file\n"
+                                    if (!$Net::FullAuto::FA_Core::cron &&
+                                    $Net::FullAuto::FA_Core::debug) || $verbose;
+                           print $Net::FullAuto::FA_Core::MRLOG
+                                    "mirror() TAR CMD =>$tar_cmd<==",
+                                    " and BASE DIR=$base_fdr AND ATTRIBUTES=",
+                                    ${${$baseFH->{_bhash}}{$key}[1]{$file}}[0],
+                                    " AND KEY=$key AND FILE=$file\n"
+                                    if $Net::FullAuto::FA_Core::log &&
+                                    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            ($output,$stderr)=$baseFH->cmd($tar_cmd,500);
                            &Net::FullAuto::FA_Core::handle_error(
                               $stderr,'-1') if $stderr;
@@ -19310,7 +19300,7 @@ sub build_mirror_hashes
             }
          }
          my $skip=0;my $deploy=0;
-         foreach my $file (keys %{${$baseFH->{_bhash}}{$key}[1]}) {
+         foreach my $file (sort keys %{${$baseFH->{_bhash}}{$key}[1]}) {
 
 if ($key=~/yglasa/) {
    print "DEST_DIR_STATUS=$dest_dir_status and KEY=$key\n";
@@ -19337,18 +19327,6 @@ if ($key=~/yglasa/) {
             } my $dchmod='';my $dtime='';my $dyear='';my $dsize='';
             my $dtime1='';my $dtime2='';my $dtime3='';
             if (exists ${$destFH->{_dhash}}{$key}[1]{$file}) {
-               unless ($dest_uname) {
-                  $dest_uname=$destFH->{_uname};
-                  if ($dest_uname eq 'cygwin') {
-                     my $key_dir=($key ne '/')?"$key/":'/';
-                     ($stdout,$stderr)=$destFH->cmd("stat \".$key_dir$file\"");
-                     my $isto=(index $stdout,'Modify: ')+19;
-                     $stdout=unpack("x$isto a2",$stdout);
-                     my $st=unpack('x6 a2',
-                            ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]);
-                     $dest_windows_daylight_savings=1 if $st!=$stdout;
-                  }
-               }
                print "mirror() STRING_DEST=",
                         ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],
                         " and FILE=$file AND KEY=$key\n"
@@ -19514,6 +19492,19 @@ if ($key=~/yglasa/) {
                my ($dmndy,$dhr,$dmt)
                   =unpack('a5 x1 a2 x1 a2',$dtime);
                if ($btime ne $dtime) {
+                  unless ($dest_uname) {
+                     $dest_uname=$destFH->{_uname};
+                     if ($dest_uname eq 'cygwin') {
+                        my $key_dir=($key ne '/')?"$key/":'/';
+                        ($stdout,$stderr)=$destFH->cmd(
+                           "stat \".$key_dir$file\"");
+                        my $isto=(index $stdout,'Modify: ')+19;
+                        $stdout=unpack("x$isto a2",$stdout);
+                        my $st=unpack('x6 a2',
+                               ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]);
+                        $dest_windows_daylight_savings=1 if $st!=$stdout;
+                     }
+                  }
                   my $btim=unpack('x6 a2',$btime);
                   my $dtim=unpack('x6 a2',$dtime);
                   my $btme=$btime;
@@ -19527,8 +19518,20 @@ if ($key=~/yglasa/) {
                   ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
                   my $testdhr=$dtime;
                   my $testbhr=$btime;
-                  substr($testdhr,6,2)=$dhr+1;
-                  substr($testbhr,6,2)=$bhr+1;
+                  if ($dhr eq '23') {
+                     substr($testdhr,6,2)='01';
+                  } else {
+                     my $ddhr=$dhr+1;
+                     $ddhr='0'.$ddhr if length $ddhr==1;
+                     substr($testdhr,6,2)=$ddhr;
+                  }
+                  if ($bhr eq '23') {
+                     substr($testbhr,6,2)='01';
+                  } else {
+                     my $bbhr=$bhr+1;
+                     $bbhr='0'.$bbhr if length $bbhr==1;
+                     substr($testbhr,6,2)=$bbhr;
+                  }
                   if ((!($base_windows_daylight_savings &&
                         $dest_windows_daylight_savings)) &&
                         (($base_windows_daylight_savings &&
@@ -20420,9 +20423,9 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                                  if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
                                     #$hr=12;$mt='00';
                                     $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                                 } elsif ($hr<13) {
+                                 } #elsif ($hr<13) {
                                     $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
-                                 }
+                                 #}
                               } $chmod=" $chmod" if $chmod;
                               my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
 #if ($key eq '/') {
@@ -20501,9 +20504,9 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                      if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
                         #$hr=12;$mt='00';
                         $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                     } elsif ($hr<13) {
+                     } #elsif ($hr<13) {
                         $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
-                     }
+                     #}
                   } $chmod=" $chmod" if $chmod;
                   my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
 #if ($key eq '/') {

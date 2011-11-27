@@ -18,31 +18,19 @@
 #
 ################################################################
 
-################################################################
-#
-#   WARNING:  THIS IS A ***BETA*** RELEASE OF Net::FullAuto
-#
-#   Net::FullAuto is powerful network process automation
-#   software that has been in un-released development for
-#   more than eleven years. For this reason, you may find
-#   it to be useful for many process automation projects.
-#   Because it has been worked on for so long, it may appear
-#   to work well, and pass a number of non-intensive tests.
-#
-#   DO NOT - I REPEAT - DO !!NOT!! USE IN A PRODUCTION
-#   ENVIRONMENT! This is newly released software that has
-#   not had the benefit of wide exposure - and the presence
-#   of here-to-now undetected bugs and design flaws is a
-#   virtual certainty. DO NOT USE IN IN/FOR A PROCESS WHERE
-#   DATA LOSS IS UNRECOVERABLE. DO NOT USE IN/FOR A PROCESS
-#   WHERE DATA INTEGRITY IS CRITICAL. DO NOT USE IN/FOR A
-#   PROCESS THAT IS TIME SENSITIVE, UNMONITORED, OR
-#   PERSISTENCE CRITICAL. DO NOT USE THIS SOFTWARE WITHOUT
-#   ANOTHER METHOD iOR RUNNING THE PROCESS YOU WISH TO
-#   AUTOMATE WITH Net::FullAuto. DO NOT USE IN/FOR A PROCESS
-#   WHERE FAILURE OF "ANY KIND" IS UNACCEPTABLE.
-#
-################################################################
+
+2011-11-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9982 released.
+
+        * Fixed mirror() and insured it works between Solaris,
+          Ubuntu and Cygwin/Windows.
+
+        * Fixed FULL CALENDAR when choosing a password
+          or plan expiration.
+
+        * Removed BETA warning against running in production
+          environments. We are mere steps away from Version 1.0!
 
 
 2011-11-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
