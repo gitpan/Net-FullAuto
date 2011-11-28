@@ -2767,6 +2767,11 @@ sub acquire_semaphore
                  ."    Called by " . join ' ', @topcaller),'__cleanup__');
    } else {
       # create a semaphore
+      unless ($IPC_KEY=~/^\d+$/) {
+         $IPC_KEY=sha256_hex($IPC_KEY);
+         $IPC_KEY=~s/[A-Z|a-z]//g;
+         $IPC_KEY=substr($IPC_KEY,0,4);
+      }
       $sem = IPC::Semaphore->new($IPC_KEY,$semaphore_count,&S_IRWXU);
       if (defined $sem && $sem) {
          if ($semaphore_count<2) {
@@ -3245,8 +3250,9 @@ my %msproxies=();my %uxproxies=();my %labels=();
 my %DeploySMB_Proxy=();my %DeployFTM_Proxy=();
 my %DeployRCM_Proxy=();my $msflag='';my $uxflag='';
 foreach my $host (@Hosts) {
-   if (exists $labels{$host->{'Label'}}) {
-        &handle_error("DUPLICATE LABEL DETECTED - $host->{'Label'}");
+   if (exists $labels{$host->{'Label'}} && 
+         ($host->{'Label'} ne "__Master_${$}__")) {
+      &handle_error("DUPLICATE LABEL DETECTED - $host->{'Label'}");
    } $labels{${$host}{'Label'}}='';
    if (exists ${$host}{'SMB_Proxy'}) {
       if (exists $msproxies{${$host}{'SMB_Proxy'}} &&
@@ -12061,7 +12067,8 @@ sub get
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "File_Transfer::get() CALLER=",
       (join ' ',@topcaller),
-      "\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      "\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my ($self, @args) = @_;
    my $output='';my $stderr='';
    my $path='';my $file='';
@@ -12093,7 +12100,7 @@ sub get
                }
             } else { $file=$file_arg }
          } else { $file=$file_arg }
-         if (&Net::FullAuto::FA_Core::acquire_semaphore($file_arg,,1)) {
+         unless (&Net::FullAuto::FA_Core::acquire_semaphore($file_arg,,1)) {
             return 'SEMAPHORE','' if wantarray;
             return 'SEMAPHORE';
          }
@@ -12734,7 +12741,7 @@ sub ftm_login
    my $ftm_errmsg='';my $die='';my $s_err='';my $shell_pid=0;
    my $retrys=0;my $local_transfer_dir='';my $cmd_type='';
    my $ms_host='';my $ms_hostlabel='';my $fpx_handle='';
-   my $work_dirs='';my $die_login_id='';my $ftm_only=0;
+   my $work_dirs={};my $die_login_id='';my $ftm_only=0;
    my $ms_su_id='';my $ms_login_id='';my $smb_type='';
    my $ms_ms_domain='';my $ms_ms_share='';my $ftm_type='';
    my $desthostlabel='';my $p_uname='',my $fpx_passwd='';
@@ -14112,13 +14119,24 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                   $Net::FullAuto::FA_Core::debug;
                chomp($line=~tr/\0-\11\13-\37\177-\377//d);
                $lin.=$line;
-               if (-1<index $lin,'Perm') {
-                  if ($lin=~/password[:\s]+$/si) {
+               if ((-1<index $lin,'Perm') || $lin=~/^\s*[Pp]assword[:\s]+$/s) {
+                  if ($lin=~/[Pp]assword[:\s]+$/s) {
                      if ($su_id && $su_id ne $login_id) {
                         if (!$asked++) {
                            my $error='';
                            ($error=$lin)=~s/^\s*(.*)\n.*$/$1/s;
-                           my $banner="\n    The Host \"$hostlabel\" is "
+                           if ($error=~/^\s*[Pp]assword[:\s]+$/s) {
+                              $error='Password *NOT* accepted';
+                           }
+                           $error||='Password *NOT* accepted';
+                           my $asktimeout=300;my $a='';my $choice='';
+                           eval {
+                              $SIG{ALRM} = sub { die "alarm\n" }; # NB:
+                                                                  # \n required
+                              alarm $asktimeout;
+                              my $banner="\n       *** THIS SCREEN WILL "
+                                  ."TIMEOUT IN 5 MINUTES ***\n"
+                                  ."\n    The Host \"$hostlabel\" is "
                                   ."configured to attempt a su\n    with "
                                   ."the ID \'$su_id\'\; however, the first "
                                   ."attempt\n    resulted in the following "
@@ -14128,12 +14146,15 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                                   ."\n\n    Please Pick an Operation :\n"
                                   ."\n    NOTE:    Choice will affect all "
                                   ."future logins!\n";
-                           $choices[0]="Re-enter password and re-attempt with "
+                              $choices[0]=
+                                  "Re-enter password and re-attempt with "
                                   ."\'$su_id\'";
-                           $choices[1]=
+                              $choices[1]=
                                   "Attempt login with base id \'$login_id\'";
-                           my $choice=&Menus::pick(\@choices,$banner);
-                           chomp $choice;
+                              $choice=&Term::Menus::pick(\@choices,$banner);
+                              chomp $choice;
+                           };
+                           $choice||=']quit[';
                            if ($choice ne ']quit[') {
                               if ($choice=~/$su_id/s) {
                                  my $show='';
@@ -14432,7 +14453,8 @@ print "AUTHENHERE!1111\n";<STDIN>;
                       ."the Transfer Directory"
                       ."\n\n       -> $stderr\n";
                &Net::FullAuto::FA_Core::handle_error($die);
-            } $Net::FullAuto::FA_Core::ftpcwd{$ftp_handle}{cd}=${$work_dirs}{_tmp};
+            } $Net::FullAuto::FA_Core::ftpcwd{$ftp_handle}{cd}=
+                      ${$work_dirs}{_tmp};
          }
          if ($Net::FullAuto::FA_Core::localhost->{_work_dirs}->{_tmp}) {
             ($output,$stderr)=&Rem_Command::ftpcmd(
@@ -22130,7 +22152,8 @@ sub ftpcmd
             }
             chomp($output=~tr/\0-\11\13-\37\177-\377//d);
             $stdout.=$output;
-            if ($gpfile && (!$Net::FullAuto::FA_Core::cron || $Net::FullAuto::FA_Core::debug)) {
+            if ($gpfile && (!$Net::FullAuto::FA_Core::cron ||
+                  $Net::FullAuto::FA_Core::debug)) {
                $hashcount=$output;
                $hashcount=($hashcount=~tr/#//);
                if ($allbytes && (1<$hashcount) && ($ftm_type ne 'sftp')) {

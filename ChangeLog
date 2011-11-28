@@ -19,6 +19,19 @@
 ################################################################
 
 
+2011-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9983 released.
+
+        * Fixed some login issues with sftp when Su element is
+          present.
+
+        * Added Note describing how to set up Cygwin mintty
+          shortcut to run FullAuto on remote systems.
+
+        * Added compare_fa_login demo example to fa_code_demo.pm.
+
+
 2011-11-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9982 released.
