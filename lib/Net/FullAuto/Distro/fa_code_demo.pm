@@ -177,7 +177,8 @@ sub test_email {
 
 sub compare_fa_code {
 
-   my ($solaris,$laptop,$output,$stderr)=('','','','');
+   my ($solaris_ssh,$solaris_sftp,$laptop_sftp,$output,$stderr)=
+      ('','','','','');
    ($solaris_ssh,$stderr)=connect_ssh('Solaris');
    ($solaris_sftp,$stderr)=connect_sftp('Solaris');
    print "SFTP_CONNECT_STDERR=$stderr\n" if $stderr;
@@ -188,38 +189,35 @@ sub compare_fa_code {
    ($output,$stderr)=$solaris_ssh->cmd(
       "chown opens /export/home/opens/fa_code.pm");
    print "STDERR=$stderr\n" if $stderr;
-   ($output,$stderr)=$solaris_sftp->lcd('/home/reedfish');
-   print "OUTPUT=$output\n" if $output;
+   ($output,$stderr)=$solaris_sftp->lcd($ENV{HOME});
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$solaris_sftp->get('fa_code.pm');
-   print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$solaris_ssh->cmd("rm /export/home/opens/fa_code.pm");
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$localhost->cmd(
-      "mv /home/reedfish/fa_code.pm /home/reedfish/fa_code.prod");
+      "mv /home/ubuntu/fa_code.pm /home/ubuntu/fa_code.prod");
    print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
    ($laptop_sftp,$stderr)=connect_sftp('Laptop');
-   ($output,$stderr)=$laptop_sftp->lcd('/home/reedfish');
-   print "OUTPUT=$output\n" if $output;
+   die $stderr if $stderr;
+   ($output,$stderr)=$laptop_sftp->lcd($ENV{HOME});
    print "STDERR=$stderr\n" if $stderr;
    my $fa_code_d='/usr/lib/perl5/site_perl/5.10'.
             '/Net/FullAuto/Custom/KB06606/Code/fa_code.pm';
    ($output,$stderr)=$laptop_sftp->get($fa_code_d);
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$localhost->cmd(
+      "mv $ENV{HOME}/fa_code.pm $ENV{HOME}/fa_code.dev");
    print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$localhost->cmd(
-      "mv /home/reedfish/fa_code.pm /home/reedfish/fa_code.dev");
+      "diff $ENV{HOME}/fa_code.dev $ENV{HOME}/fa_code.prod > ".
+      "$ENV{HOME}/fa_code_dev_prod.diff");
    print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$localhost->cmd(
-      "diff /home/reedfish/fa_code.dev /home/reedfish/fa_code.prod > ".
-      "/home/reedfish/fa_code_dev_prod.diff");
-   print "OUTPUT=$output\n" if $output;
-   print "STDERR=$stderr\n" if $stderr;
-   ($output,$stderr)=$localhost->cmd(
-      "rm /home/reedfish/fa_code.prod /home/reedfish/fa_code.dev");
+      "rm $ENV{HOME}/fa_code.prod $ENV{HOME}/fa_code.dev");
    print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$laptop_sftp->cwd(
@@ -227,11 +225,11 @@ sub compare_fa_code {
    print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$laptop_sftp->put(
-      "/home/reedfish/fa_code_dev_prod.diff");
+      "/home/ubuntu/fa_code_dev_prod.diff");
    print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
    ($output,$stderr)=$localhost->cmd(
-       "rm /home/reedfish/fa_code_dev_prod.diff");
+       "rm $ENV{HOME}/fa_code_dev_prod.diff");
    print "OUTPUT=$output\n" if $output;
    print "STDERR=$stderr\n" if $stderr;
 }

@@ -52,7 +52,7 @@ our @Hosts = (
                               "$Net::FullAuto::FA_Core::invoked[3].txt",
        },
        {
-          'IP'             => '169.254.25.129',
+          'IP'             => '10.0.2.2',
           'Label'          => 'Laptop',
           'LoginID'        => 'KB06606',
           'LogFile'        => "/tmp/FAlog${$}d".

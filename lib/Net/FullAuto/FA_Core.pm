@@ -186,10 +186,17 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use POSIX qw(setsid uname);
 };
 
-our $home_dir=(getpwuid($<))[7];
-if ($home_dir eq '/' && defined $ENV{HOME}
-      && $ENV{HOME} ne '/') {
+our $home_dir='~';
+if (exists $ENV{HOME} && -d $ENV{HOME}) {
    $home_dir=$ENV{HOME};
+} elsif (exists $ENV{USER} && $ENV{USER}) {
+   if (-d "/home/$ENV{USER}") {
+      $home_dir="/home/$ENV{USER}";
+   } elsif (-d "/export/home/$ENV{USER}") {
+      $home_dir="/export/home/$ENV{USER}";
+   }
+} elsif ((getpwuid($<))[7]) {
+   $home_dir=(getpwuid($<))[7];
 }
 
 BEGIN {
@@ -1248,13 +1255,8 @@ sub grep_for_string_existence_only
       }
       if ($keygen_flag) {
          my ($stdout,$stderr)=('','');
-         #if ($localhost && (-1<index $localhost,'HASH')) {
-         #   ($stdout,$stderr)=$localhost->cmd('ssh-keygen -F localhost');
-         #   $return_value=1 if $stdout=~/^\[1\]|ssh-rsa/s;
-         #} else {
-            my $output=`ssh-keygen -F localhost 2>&1`;
-            $return_value=1 if $output=~/^\[1\]|ssh-rsa/s;
-         #}
+         my $output=`ssh-keygen -F localhost 2>&1`;
+         $return_value=1 if $output=~/localhost|^\[1\]|ssh-rsa/s;
       } 
    };
    return $return_value;
@@ -9735,8 +9737,9 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                   -1<index($login_Mast_error,'ation is d')) {
                $su_scrub=&scrub_passwd_file($hostlabel,$su_id);
                next;
-            } elsif (defined $Net::FullAuto::FA_Core::dcipher) {
-print "DOING PASSWD UPDATE\n";
+            } elsif (defined $Net::FullAuto::FA_Core::dcipher &&
+                  $Net::FullAuto::FA_Core::dcipher) {
+#print "DOING PASSWD UPDATE\n";
                &passwd_db_update($hostlabel,$login_id,$password,$cmd_type);
             }
          }
@@ -10432,10 +10435,18 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
    $fh=&Rem_Command::wait_for_prompt(
       $fh,$timeout,\@connect_method,$hostlabel,'__su__');
 
-   ($id,$stderr)=Rem_Command::cmd(
-      { _cmd_handle=>$fh,
-        _hostlabel=>[ $hostlabel,'' ] },
-        'id -unr');
+   my $cnt=2;
+   while (1) {
+      ($id,$stderr)=Rem_Command::cmd(
+         { _cmd_handle=>$fh,
+           _hostlabel=>[ $hostlabel,'' ] },
+           'id -unr');
+      if ($id eq $su_id || $id eq 'root') {
+         last;
+      } elsif ($cnt--==0) {
+         die "Cannot discover user id at ".__LINE__;
+      }
+   }
 
    #($cfh_ignore,$cfh_error)=&clean_filehandle($localhost);
    #&handle_error($cfh_error,'-1') if $cfh_error;
@@ -14618,13 +14629,14 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
             $die="$ftm_errmsg$s_err";
          } else {
             my $f_t=$ftm_type;$f_t=~s/^(.)/uc($1)/e;
+            $ftm_errmsg=~s/^(.*)\n *(.*)$/$1\n   $2/s;
             $die="The Host $host Returned\n              the "
                 ."Following Unrecoverable Error Condition\,\n"
                 ."              Rejecting the $f_t Login Attempt"
-                ." of the ID\n              -> $die_login_id "
-                ."\n\n       at ".(caller(0))[1]." "
-                ."line ".(caller(2))[2]." :\n\n       "
-                ."$ftm_errmsg$s_err"
+                ." of the ID\n              -> $die_login_id:"
+                ."\n\n       $ftm_errmsg\n$s_err"
+                ."       at ".(caller(0))[1]." "
+                ."line ".(caller(2))[2].".\n\n      ";
          } last;
       } else { last }
       last if $die;
@@ -14706,6 +14718,9 @@ sub wait_for_passwd_prompt
             } elsif (-1<index $lin,'Address already in use') {
                alarm 0;
                die 'Connection closed';
+            #} elsif (-1<index $lin,'No route to host') {
+            #   alarm 0;
+            #   die $lin;
             } elsif (-1<index $lin,'Connection reset by peer') {
                alarm 0;
                if ($lin=~s/^.*(ssh:.*)$/$1/s) {
@@ -18653,7 +18668,7 @@ print "555 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";<STDIN>;
          my $f_t=$ftm_type;$f_t=~s/^(.)/uc($1)/e;
          $die="The System $host Returned\n              the "
              ."Following Unrecoverable Error Condition\,\n"
-             ."              Rejecting the $f_t Login Attempt"
+             ."              XRejecting the $f_t Login Attempt"
              ." of the ID\n              -> $die_login_id "
              ."at ".(caller(0))[1]." "
              ."line ".(caller(2))[2]." :\n\n       $@";
