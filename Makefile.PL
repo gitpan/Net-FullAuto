@@ -613,7 +613,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9984';
+version         '0.9985';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1901,6 +1901,7 @@ if ($get_BerkeleyDB) {
          chomp($lib[0]);$berkeleydb=$lib[0];last;
       }
       my $major_minor_ver=substr($ver,0,(rindex $ver,'.'));
+      $major_minor_ver=$ver if -1==index $major_minor_ver,'.';
       if ($ENV{AUTOMATED_TESTING} || ($berkeleydb && $major_minor_ver>=5.1)) {
          $berkeleydb=~s/^(.*)\/.*$/$1/;
          $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;

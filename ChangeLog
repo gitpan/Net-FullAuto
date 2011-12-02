@@ -19,6 +19,14 @@
 ################################################################
 
 
+2011-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9985 released.
+
+        * Tweaked Makefile.PL to handle BerkeleyDB without sub-minor
+          version.
+
+
 2011-11-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9984 released.
