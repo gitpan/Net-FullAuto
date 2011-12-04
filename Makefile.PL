@@ -360,10 +360,11 @@ END
       my $p=$_[0];
       my $task=$_[1];
       my $butil=$_[2]||'';
+      my $force=$_[3]||'';
       my $dir='';
       my $cpan_error='';
       eval "require $p;1";
-      if ($@) {
+      if ($@ || $force) {
          if ($ENV{'AUTOMATED_TESTING'}) {
             print "Automated Testing Detected: FullAuto needs $p\n",
                   "   to continue, but $p was not detected on this\n",
@@ -467,6 +468,36 @@ END
    }
 
    my $stdout='';my $stderr='';
+   eval { require Module::Build };
+   if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
+      ($stdout,$stderr)=&fa_install_mod(
+         'CPAN::Meta','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'ExtUtils::ParseXS','install','Makefile','force');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'ExtUtils::ParseXS') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Parse::CPAN::Meta','install','Makefile','force');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Parse::CPAN::Meta') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Perl::OSType','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Perl::OSType') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'version','install','Makefile','force');
+      print $stdout if $stdout;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Module::Metadata','install','Makefile','force');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'version') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Module::Build','install','Build','force');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Module::Build') if $stderr;
+   }
    ($stdout,$stderr)=&fa_install_module('IO::CaptureOutput','install','Build');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'IO::CaptureOutput') if $stderr;
@@ -613,7 +644,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9985';
+version         '0.9986';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2227,6 +2258,7 @@ if ($get_BerkeleyDB) {
                   $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
                   $ENV{'DB_FILE_LIB'}=$berkeleydb;
                   $ENV{'DB_FILE_NAME'}="-ldb-$ver";
+                  $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
                }
             } else {
                if ($res->is_error(500)) {
@@ -2284,6 +2316,9 @@ if ($get_BerkeleyDB) {
          and print "*** Installing $p\n"
          and
          do {
+            if (-f '/etc/redhat-release' || -f '/etc/fedora-release') {
+               $ENV{LD_RUN_PATH}=$ENV{LD_LIBRARY_PATH};
+            }
             if (eval '$>' and lc(`sudo -V`) =~ /version/) {
                system(
                   'sudo',$^X,"-MCPANPLUS","-e","install $p");
@@ -2295,7 +2330,7 @@ if ($get_BerkeleyDB) {
                require CPANPLUS::Shell;
                my $u=CPANPLUS::Shell->new();
                $u->shell;
-              $u->dispatch_on_input(input=>'o conf force 1');
+               $u->dispatch_on_input(input=>'o conf force 1');
                $u->dispatch_on_input(input=>"install $p")
             };
             eval "use $p;1"
@@ -2577,6 +2612,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 }
 
 #Specific dependencies
+requires        'Module::Build'             => 0.3601;
 requires        'Module::Load::Conditional' => 0;
 requires        'Task::Weaken'              => 0;
 requires        'ExtUtils::Depends'         => 0;
@@ -2593,7 +2629,7 @@ requires        'HTTP::Date'                => 0;
 requires        'JSON'                      => 2.14;
 requires        'IO::Pty'                   => 0;
 requires        'IO::Capture::Stderr'       => 0;
-requires        'IO::CaptureOutput'         => 0;
+#requires        'IO::CaptureOutput'         => 0;
 requires        'Capture::Tiny'             => 0;
 requires        'Net::Telnet'               => 0;
 requires        'Term::RawInput'            => 0;

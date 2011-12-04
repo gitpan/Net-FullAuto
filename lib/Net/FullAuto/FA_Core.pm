@@ -3041,16 +3041,23 @@ sub get_master_info
    $Local_HostName=&Sys::Hostname::hostname if !$Local_HostName;
    my $addr='';
    if ($^O ne 'cygwin') {
-      $addr=gethostbyname($Local_HostName) ||
-          &handle_error(
-          "Couldn't Resolve Local Hostname $Local_HostName : ");
-      my $gip=sprintf "%vd", $addr;
+      if ($Local_HostName!~/^localhost\.local/) {
+         $addr=gethostbyname($Local_HostName) ||
+             &handle_error(
+             "Couldn't Resolve Local Hostname $Local_HostName : ");
+         my $gip=sprintf "%vd", $addr;
 # --CONTINUE-- print "WHAT IS GIP=$gip<==\n";
-      $same_host_as_Master{$gip}='-';
-      $Local_IP_Address->{$gip}='-';
-      $Local_FullHostName=gethostbyaddr($addr,AF_INET) ||
-         handle_error(
-         "Couldn't Re-Resolve Local Hostname $Local_HostName : ");
+         $same_host_as_Master{$gip}='-';
+         $Local_IP_Address->{$gip}='-';
+         $Local_FullHostName=gethostbyaddr($addr,AF_INET) ||
+            handle_error(
+            "Couldn't Re-Resolve Local Hostname $Local_HostName : ");
+      } else {
+         my $gip='127.0.0.1';
+         $same_host_as_Master{$gip}='-';
+         $Local_IP_Address->{$gip}='-';
+         $Local_FullHostName=$Local_HostName;
+      }
    } else {
       #my $route=cmd('cmd /c route print',3);
       my $route=cmd('route print',3);

@@ -15,7 +15,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.9985
+    version: 0.9986
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -39,6 +39,7 @@ provides:
 recommends:
   Crypt::Rijndael: 0
 requires:
+  Module::Build: 0.3601
   Module::Load::Conditional: 0
   Term::Menus: 2.03
   Tie::Cache: 0
@@ -65,4 +66,4 @@ requires:
   BerkeleyDB: 0
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
-version: 0.9985
+version: 0.9986
