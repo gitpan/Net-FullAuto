@@ -31,6 +31,12 @@ package Net::FullAuto::FA_Core;
 #
 #  at CPAN prompt (cpan[1]) type: o conf init
 #
+## For creating gpg secret key for use with cpansign -s
+#
+#  gpg --key-gen (then follow onscreen instructions)
+#
+#  http://irtfweb.ifa.hawaii.edu/~lockhart/gpg/gpg-cs.html (gpg cheatsheet)
+#
 ## For running CPAN with sudo
 #
 #  sudo -i cpan   (-i loads the root environment)
@@ -107,7 +113,31 @@ BEGIN {
       exit;
    }
 
-   use if ($^O eq 'cygwin'), 'Win32::Semaphore';
+   #use if ($^O eq 'cygwin'), 'Win32::Semaphore';
+   if ($^O eq 'cygwin') {
+      my $srvout=`/bin/cygrunsrv -Q cygserver 2>&1`;
+      if (-1<index $srvout,'Stopped') {
+         print "\nFatal Error: The Cygwin cygserver service is NOT",
+               " running:\n\n${srvout}To start type:  'net use cygserver'\n\n";
+         exit;
+      } elsif (-1<index $srvout,'The specified service does not exist') {
+         print "\nFatal Error: The Cygwin cygserver service is NOT",
+               " installed:\n\n${srvout}To install type:  ",
+               "'/bin/cygserver-config'\n\n";
+         exit;
+      }
+      $srvout=`/bin/cygrunsrv -Q sshd 2>&1`;
+      if (-1<index $srvout,'Stopped') {
+         print "\nFatal Error: The Cygwin sshd (Secure Shell) service is NOT",
+               " running:\n\n${srvout}To start type:  'net use sshd'\n\n";
+         exit;
+      } elsif (-1<index $srvout,'The specified service does not exist') {
+         print "\nFatal Error: The Cygwin sshd (Secure Shell) service is NOT",
+               " installed:\n\n${srvout}To install type:  ",
+               "'/bin/ssh-host-config --privileged'\n\n";
+         exit;
+      }
+   }
    use IPC::Semaphore;
    use IPC::SysV qw(IPC_CREAT SEM_UNDO S_IRWXU);
    push @INC, substr($main::netfull,0,-3);

@@ -19,6 +19,19 @@
 ################################################################
 
 
+2011-12-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9987 released.
+
+        * Updated Makefile.PL to include YAML.
+
+        * Added code to Module/Install/Admin.pm to handle
+          error when using Windows executable installer.
+
+        * Added checks for Cygwin sshd and cygserver services
+          when FullAuto is running under Cygwin. 
+
+
 2011-12-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9986 released.

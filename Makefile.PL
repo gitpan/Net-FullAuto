@@ -65,6 +65,7 @@ END
          $main::PARdir=substr($incdir,0,-4);
       }
    }
+   $INC{'Module/Install.pm'}=$main::PARdir.'/Module/Install.pm';
    unless (exists $ENV{FA_EDITOR}) {
       print $fa_banner;
       sleep 2;
@@ -468,6 +469,9 @@ END
    }
 
    my $stdout='';my $stderr='';
+   ($stdout,$stderr)=&fa_install_module('YAML','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'YAML') if $stderr;
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       ($stdout,$stderr)=&fa_install_mod(
@@ -644,7 +648,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9986';
+version         '0.9987';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';

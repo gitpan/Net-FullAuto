@@ -1,9 +1,12 @@
 ---
-abstract: 'Perl Based Secure Distributed Computing Network Process'
+abstract: Perl Based Secure Distributed Computing Network Process
 author:
   - 'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>'
-configure_requires:
-license: gpl-3.0
+build_requires:
+  ExtUtils::MakeMaker: 6.42
+dynamic_config: 0
+generated_by: 'CPAN::Meta::Converter version 2.112150, CPAN::Meta::Converter version 2.112150'
+license: unknown
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
@@ -11,59 +14,74 @@ name: Net-FullAuto
 provides:
   Bad_Handle:
     file: lib/Net/FullAuto/FA_Core.pm
+    version: 0
   File_Transfer:
     file: lib/Net/FullAuto/FA_Core.pm
+    version: 0
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
     version: 0.9987
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
+    version: 0
   Net::FullAuto::FA_DB:
     file: lib/Net/FullAuto/FA_Core.pm
+    version: 0
   Net::FullAuto::Getline:
     file: lib/Net/FullAuto/FA_Core.pm
+    version: 0
   Net::FullAuto::MemoryHandle:
     file: lib/Net/FullAuto/FA_Core.pm
+    version: 0
   Rem_Command:
     file: lib/Net/FullAuto/FA_Core.pm
+    version: 0
   fa_code:
     file: lib/Net/FullAuto/Distro/fa_code.pm
+    version: 0
   fa_conf:
     file: lib/Net/FullAuto/Distro/fa_conf.pm
+    version: 0
   fa_host:
     file: lib/Net/FullAuto/Distro/fa_host.pm
+    version: 0
   fa_maps:
     file: lib/Net/FullAuto/Distro/fa_maps.pm
+    version: 0
   fa_menu:
     file: lib/Net/FullAuto/Distro/fa_menu.pm
+    version: 0
 recommends:
   Crypt::Rijndael: 0
 requires:
-  Module::Build: .3601
-  Module::Load::Conditional: 0
-  Term::Menus: 2.03
-  Tie::Cache: 0
-  Sort::Versions: 0
+  B::Utils: 0
+  Capture::Tiny: 0
   Crypt::CBC: 0
   Crypt::DES: 0
+  Data::Dump::Streamer: 0
+  Data::Password::Check: 0
   Digest::MD5: 0
   Digest::SHA: 0
-  HTTP::Date: 0
-  JSON: 2.14
-  IO::Pty: 1.09
-  IO::Capture::Stderr: 0
-  IO::CaptureOutput: 0
-  Capture::Tiny: 0
-  Net::Telnet: 0
-  Test::Deep : 0
-  Term::RawInput : 0
-  Term::ReadKey: 0
-  URI: 0
   Email::Sender: 0
+  ExtUtils::Depends: 0
+  HTTP::Date: 0
+  IO::Capture::Stderr: 0
+  IO::Pty: 0
+  JSON: 2.14
   MIME::Entity: 0
+  Module::Build: 0.3601
+  Module::Load::Conditional: 0
+  Net::Telnet: 0
+  Sort::Versions: 0
   String::Random: 0
-  Data::Password::Check: 0
-  BerkeleyDB: 0
+  Task::Weaken: 0
+  Term::Menus: 2.03
+  Term::RawInput: 0
+  Term::ReadKey: 0
+  Test::Deep: 0
+  Tie::Cache: 0
+  URI: 0
+  perl: 5.006
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
 version: 0.9987
