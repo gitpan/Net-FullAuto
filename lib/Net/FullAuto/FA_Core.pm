@@ -1753,6 +1753,8 @@ sub edit {
       } else {
          if (-e '/usr/bin/vi') {
             $editor='/usr/bin/vi';
+         } elsif (-e '/bin/vi') {
+            $editor='/bin/vi';
          } elsif (-e '/usr/bin/emacs') {
             $editor='/usr/bin/emacs';
          }

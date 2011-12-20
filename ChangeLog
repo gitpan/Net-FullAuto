@@ -19,6 +19,13 @@
 ################################################################
 
 
+2011-12-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9988 released.
+
+        * Added /bin/vi to search for vi.
+
+
 2011-12-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9987 released.
