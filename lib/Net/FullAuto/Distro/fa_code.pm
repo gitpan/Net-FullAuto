@@ -89,8 +89,13 @@ my $email_to=[
 ##  WRITE "RESULT" SUBROUTINES HERE:
 ##  -------------------------------------------------------------
 
-
 sub hello_world {
+
+   print "\n   Net::FullAuto says \"HELLO WORLD!\"\n";
+
+}
+
+sub hello_world_old {
 
     #print "\nFIRST PARAMETER=$_[0]\n";
     #print "SECOND PARAMETER=$_[1]\n";
@@ -140,6 +145,136 @@ sub hello_world {
     ($stdout,$stderr)=$computer_one->cmd('pwd');
     print "CURDIR=$stdout\n\n" if $stdout;
 
+}
+
+sub menu_demo {
+
+   my @list=`ls -1 /bin`;
+   my %Menu_1=(
+
+      Item_1 => {
+
+         Text    => "/bin Utility - ]Convey[",
+         Convey  => [ `ls -1 /bin` ],
+
+      },
+
+      Select => 'Many',
+      Banner => "\n   Choose a /bin Utility :"
+   );
+
+   my @selections=&Menu(\%Menu_1,$unattended);
+   print "\nSELECTIONS = @selections\n";
+
+}
+
+sub howdy_world {
+   open (FH,">FullAuto_howdy_world.txt");
+   FH->autoflush(1);
+   my $cnt=0;
+   while (1) {
+      print FH $cnt++;
+#      sleep 2;
+      last if $cnt==20;
+   }
+   #----------------------------------------------
+   # Connect to Remote Host with *BOTH* ssh & sftp
+   #----------------------------------------------
+   my ($host,$stderr)=('','');
+   my $hostname=`hostname`;
+   chomp $hostname;
+   my $hostlab='Laptop';
+   if ($hostname eq 'opensolaris') {
+      ($host,$stderr)=connect_secure('Laptop');
+   } elsif ($hostname eq 'reedfish-laptop') {
+      ($host,$stderr)=connect_secure('Laptop');
+   } else {
+      $hostlab='Solaris';
+      ($host,$stderr)=connect_secure('Solaris');
+   }
+   if ($stderr) {
+      print "       We Have an ERROR when attempting to connect ",
+            "to Ubuntu! :\n$stderr       in fa_code.pm ",
+            "Line ",__LINE__,"\n";
+      my %mail=(
+         'To'      => [ 'Brian.Kelly@bcbsa.com' ],
+         'From'    => 'Brian.Kelly@fullautosoftware.net',
+         'Body'    => "\nFullAuto ERROR =>\n\n".$stderr.
+                      "       in fa_code.pm Line ".__LINE__,
+         'Subject' => "FullAuto ERROR Encountered When Connecting to Ubuntu",
+      );
+      my $ignore='';my $emerr='';
+      ($ignore,$emerr)=&send_email(\%mail);
+      if ($emerr) {
+         die "\n\n       $stderr\n       EMAIL ERROR =>$emerr<==\n\n";
+      } else {
+         #die $stderr;
+         return;
+      }
+   }
+   print "LOGIN SUCCESSFUL\n";
+   print FH "LOGIN SUCCESSFUL ",`date`,"\n";
+   close FH;
+   &cleanup();
+}
+
+sub compare_fa_code {
+
+   my ($solaris_ssh,$solaris_sftp,$laptop_sftp,$output,$stderr)=
+      ('','','','','');
+   ($solaris_ssh,$stderr)=connect_ssh('Solaris');
+   ($solaris_sftp,$stderr)=connect_sftp('Solaris');
+   print "SFTP_CONNECT_STDERR=$stderr\n" if $stderr;
+   my $fa_code_p='/usr/local/lib/perl5/site_perl/5.12.1'.
+            '/Net/FullAuto/Custom/opens/Code/fa_code.pm';
+   ($output,$stderr)=$solaris_ssh->cmd("cp $fa_code_p /export/home/opens");
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$solaris_ssh->cmd(
+      "chown opens /export/home/opens/fa_code.pm");
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$solaris_sftp->lcd($ENV{HOME});
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$solaris_sftp->get('fa_code.pm');
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$solaris_ssh->cmd("rm /export/home/opens/fa_code.pm");
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$localhost->cmd(
+      "mv /home/ubuntu/fa_code.pm /home/ubuntu/fa_code.prod");
+   print "OUTPUT=$output\n" if $output;
+   print "STDERR=$stderr\n" if $stderr;
+   ($laptop_sftp,$stderr)=connect_sftp('Laptop');
+   die $stderr if $stderr;
+   ($output,$stderr)=$laptop_sftp->lcd($ENV{HOME});
+   print "STDERR=$stderr\n" if $stderr;
+   my $fa_code_d='/usr/lib/perl5/site_perl/5.10'.
+            '/Net/FullAuto/Custom/KB06606/Code/fa_code.pm';
+   ($output,$stderr)=$laptop_sftp->get($fa_code_d);
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$localhost->cmd(
+      "mv $ENV{HOME}/fa_code.pm $ENV{HOME}/fa_code.dev");
+   print "OUTPUT=$output\n" if $output;
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$localhost->cmd(
+      "diff $ENV{HOME}/fa_code.dev $ENV{HOME}/fa_code.prod > ".
+      "$ENV{HOME}/fa_code_dev_prod.diff");
+   print "OUTPUT=$output\n" if $output;
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$localhost->cmd(
+      "rm $ENV{HOME}/fa_code.prod $ENV{HOME}/fa_code.dev");
+   print "OUTPUT=$output\n" if $output;
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$laptop_sftp->cwd(
+      "/cygdrive/c/Documents and Settings/kb06606/Desktop/Compare fa_code.pm");
+   print "OUTPUT=$output\n" if $output;
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$laptop_sftp->put(
+      "/home/ubuntu/fa_code_dev_prod.diff");
+   print "OUTPUT=$output\n" if $output;
+   print "STDERR=$stderr\n" if $stderr;
+   ($output,$stderr)=$localhost->cmd(
+       "rm $ENV{HOME}/fa_code_dev_prod.diff");
+   print "OUTPUT=$output\n" if $output;
+   print "STDERR=$stderr\n" if $stderr;
 }
 
 sub remote_hostname {

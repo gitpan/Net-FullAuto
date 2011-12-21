@@ -19,6 +19,15 @@
 ################################################################
 
 
+2011-12-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9989 released.
+
+        * Modified mirror() to do sync on two local directories.
+
+        * Started diff() functionality.
+
+
 2011-12-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9988 released.

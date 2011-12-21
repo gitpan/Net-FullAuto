@@ -4031,12 +4031,14 @@ sub handle_error
 #print $Net::FullAuto::FA_Core::MRLOG "HANDLE_ERROR ERRTXT=$errtxt<==\n";
    if ($errtxt=~/^You have mail/) {
       print $Net::FullAuto::FA_Core::MRLOG "\nAttn: --> $errtxt\n\n"
-         if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         if $Net::FullAuto::FA_Core::log &&
+         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       print "\nAttn: --> $errtxt\n\n";
       return
    } elsif ($track || $return || $cleanup) {
       print $Net::FullAuto::FA_Core::MRLOG "\n       $errtxt"
-         if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         if $Net::FullAuto::FA_Core::log &&
+         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       print "\n       $errtxt"
    }
    if ($mail) {
@@ -4104,6 +4106,7 @@ sub lookup_hostinfo_from_label
    my $rcm_chain='';my $rcm_map='';my $uname='';
    my $ip_flag='';my $hn_flag='';
    my $hostlabel=$_[0];my $_connect=$_[1]||'';
+   $hostlabel="__Master_${$}__" if lc($hostlabel) eq 'localhost';
    my $timeout=0;
    $use=$Hosts{$hostlabel}{'Use'} if exists
         $Hosts{$hostlabel}{'Use'} &&
@@ -5970,6 +5973,11 @@ sub Net::Telnet::select_dir
 {
 print "NetSELECTDIRCALLER=",caller,"\n";#<STDIN>;
    return File_Transfer::select_dir(@_);
+}
+
+sub Net::Telnet::diff
+{
+   return File_Transfer::diff(@_);
 }
 
 sub Net::Telnet::mirror
@@ -15411,9 +15419,20 @@ sub tmp
    } return $return_path;
 }
 
+sub diff
+{
+   push @_, '_diff';
+   return &mirror(@_);
+}
+
 sub mirror
 {
 
+   my $_diff=0;
+   if ($_[$#_] eq '_diff') {
+      pop @_;
+      $_diff=1;
+   }
    my ($baseFH, %args) = @_;
    unless (exists $baseFH->{_ftp_handle} ||
          !$same_host_as_Master{$baseFH->{_hostlabel}}) {
@@ -15462,7 +15481,7 @@ sub mirror
    }
    my $bhostlabel=$baseFH->{_hostlabel}->[0];
    my $dhostlabel=$dhostlabels[0];
-   my $base_fdr=$args{BaseFileOrDir};
+   my $base_fdr=$args{BaseFileOrDir} || $args{BaseDir} || $args{BaseFile};
    my $verbose=(exists $args{Verbose} && $args{Verbose}) ? 1 : 0;
    $base_fdr||='';
    $base_fdr=~s/[\/|\\]*$//;
@@ -15718,8 +15737,12 @@ print "BASE3\n";
             $lsgnu=1;
             ($base_output,$stderr)=$baseFH->cmd(
                "${ls_path}ls -lRFs --block-size=1 \'$dir\'");
+            $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
+               if $stderr;
          } else {
             ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRFs \'$dir\'");
+            $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
+               if $stderr;
          }
          if ($stderr) {
             my $die=$stderr;
@@ -15734,9 +15757,13 @@ print "BASE3\n";
             if ($lsgnu) {
                ($base_output,$stderr)=$baseFH->cmd(
                   "${ls_path}ls -lRFs --block-size=1 \'$dir\'");
+               $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
+                  if $stderr;
             } else {
                ($base_output,$stderr)=$baseFH->cmd(
                   "${ls_path}ls -lRFs \'$dir\'");
+               $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
+                  if $stderr;
             }
             if ($stderr) {
                my $die=$stderr;
@@ -15783,12 +15810,17 @@ print "BASE3\n";
          $ls_path.='/' if $ls_path!~/\/$/;
       }
       ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls --version");
+print "LSGNU=$base_output<==\n";sleep 5;
       if (-1<index $base_output,'GNU') {
          $lsgnu=1;
          ($base_output,$stderr)=$baseFH->cmd(
             "${ls_path}ls -lRs --block-size=1 \'$dir\'");
+         $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
+            if $stderr;
       } else {
          ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRs \'$dir\'");
+         $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
+            if $stderr;
       }
       if ($baseFH->{_unaltered_basehash}) { # line 7144
          foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
@@ -15841,6 +15873,7 @@ print "BASE3\n";
             return '',$stderr;
          } else { &Net::FullAuto::FA_Core::handle_error($stderr) }
       } else {
+print "HOWDYDUDE\n";
          my $die="The System $bhostlabel Returned\n       "
                 ."       the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]
@@ -15864,7 +15897,7 @@ print "BASE3\n";
          ($ignore,$stderr)=&build_base_dest_hashes(
                $base_fdr,\$base_output,$args{Directives},
                $bhost,$bms_share,$bms_domain,
-               $baseFH->{_uname},$baseFH,'BASE');
+               $baseFH->{_uname},$baseFH,'BASE',$lsgnu);
          if ($stderr) {
             if ($stderr eq 'redo ls') {
                while (1) {
@@ -15887,13 +15920,13 @@ print "BASE3\n";
                   ($ignore,$stderr)=&build_base_dest_hashes(
                      $base_fdr,\$base_output,$args{Directives},
                      $bhost,$bms_share,$bms_domain,
-                     $baseFH->{_uname},$baseFH,'BASE');
+                     $baseFH->{_uname},$baseFH,'BASE',$lsgnu);
                   next if $stderr eq 'redo ls';
                   last;
                }
             } else {
                $hostlabel=$bhostlabel;
-               &Net::FullAuto::FA_Core::handle_error($stderr,'-3');
+               &Net::FullAuto::FA_Core::handle_error($stderr,'__cleanup__');
             }
          }
       };
@@ -16084,7 +16117,7 @@ print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
          ($ignore,$stderr)=&build_base_dest_hashes(
                $dest_fdr,\$dest_output,$args{Directives},
                $dhost,$dms_share,$dms_domain,
-               $destFH->{_uname},$destFH,'DEST');
+               $destFH->{_uname},$destFH,'DEST',$lsgnu);
          if ($stderr) {
             if ($stderr eq 'redo ls' ||
                   $stderr=~/does not exist/s) {
@@ -16107,7 +16140,7 @@ print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
                   ($ignore,$stderr)=&build_base_dest_hashes(
                      $dest_fdr,\$dest_output,$args{Directives},
                      $dhost,$dms_share,$dms_domain,
-                     $destFH->{_uname},$destFH,'DEST');
+                     $destFH->{_uname},$destFH,'DEST',$lsgnu);
                   next if $stderr eq 'redo ls';
                   last;
                }
@@ -16689,7 +16722,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            ($output,$stderr)=$baseFH->cmd($tar_cmd,500);
                            &Net::FullAuto::FA_Core::handle_error(
-                              $stderr,'-1') if $stderr;
+                              $stderr,'-1') if $stderr &&
+                              $stderr!~/\[A(?:\[C)+\[K1/;
                            if ($dirt) {
                               my $cmd="rm -rf \"$base___dir/$dirt\"";
                               ($output,$stderr)=$baseFH->cmd($cmd);
@@ -16821,7 +16855,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log
                ($ignore,$stderr)=&build_base_dest_hashes(
                      $dest_fdr,\$dest_output,$args{Directives},
                      $dhost,$dms_share,$dms_domain,
-                     $destFH->{_uname},$destFH,'DEST');
+                     $destFH->{_uname},$destFH,'DEST',$lsgnu);
                ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
                      =&build_mirror_hashes($baseFH,$destFH,
                      $bhostlabel,$dhostlabel,$verbose);
@@ -17608,147 +17642,150 @@ sub move_tarfile
    my $phost= $baseFH->{_hostlabel}->[1]?
               $baseFH->{_hostlabel}->[1]:
               $baseFH->{_hostlabel}->[0];
-   if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__") {
-      if ($destFH->{_work_dirs}->{_tmp}) {  # DEST-Master has trandir
-         ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
-            "lcd \"$destFH->{_work_dirs}->{_tmp}\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-         $d_fdr=$Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}=
-            $destFH->{_work_dirs}->{_tmp};
-      } else {
-         ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,"lcd \"$dest_fdr\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-               (-1==index $stderr,'command success');
-         $d_fdr=$Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}=
-               $dest_fdr;
-      }
-      if ($baseFH->{_work_dirs}->{_tmp}) { # If BASE has remote trandir
-                                           # cd ftp handle to it
-         ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
-            "cd $baseFH->{_work_dirs}->{_tmp}");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      } else {
-         ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
-            "cd $baseFH->{_work_dirs}->{_cwd}");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      }
-      ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
-         "get transfer$Net::FullAuto::FA_Core::tran[3].tar");
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-   } elsif ($baseFH->{_hostlabel}->[0] eq "__Master_${$}__" ||
-         ($Net::FullAuto::FA_Core::DeploySMB_Proxy[0] eq "__Master_${$}__"
-         && (exists $baseFH->{_smb}))) {
-      if ($baseFH->{_work_dirs}->{_tmp} &&
-            exists $baseFH->{_ftp_handle}) {
-         ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-               "lcd \"$baseFH->{_work_dirs}->{_tmp}\"");
-         $Net::FullAuto::FA_Core::ftpcwd{$baseFH->{_ftp_handle}}{lcd}=
-            $baseFH->{_work_dirs}->{_tmp};
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-               (-1==index $stderr,'command success');
-      }
-      if ($destFH->{_work_dirs}->{_tmp}) {               # If DEST has trandir
-         ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-            "cd \"$destFH->{_work_dirs}->{_tmp}\""); # cd ftp handle to trandir
-         $d_fdr="$destFH->{_work_dirs}->{_tmp}/";
-         if (exists $destFH->{_smb}) { # If DEST needs SMB
-            ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-               "mkdir \"transfer$Net::FullAuto::FA_Core::tran[3]\""); # Add
-                                                       # tmp 'transfer' dir
-            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-               (-1==index $stderr,'command success');
-            $Net::FullAuto::FA_Core::tran[4]=1;
-            ($output,$stderr)=
-               &Rem_Command::ftpcmd($destFH, # cd ftp handle to 'transfer'
-               "cd \"transfer$Net::FullAuto::FA_Core::tran[3]\"");
-            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-               (-1==index $stderr,'command success');
-            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{cd}
-               ="transfer$Net::FullAuto::FA_Core::tran[3]";
-            $d_fdr.="transfer$Net::FullAuto::FA_Core::tran[3]";
-         }
-      } else {                                   # No trandir on DEST,
-         ($output,$stderr)=&Rem_Command::ftpcmd( # use $dest_fdr for transfer
-            $destFH,"cd \"$dest_fdr\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{cd}
-            =$d_fdr=$dest_fdr;
-      }
-      ($output,$stderr)=&Rem_Command::ftpcmd( # Transfer the tar file
-         $destFH,"!id");                      # 'put' because DEST is remote
-      print "move_tarfile() TRYING TO DO PUT TWO\n"
-         if !$Net::FullAuto::FA_Core::cron &&
-         $Net::FullAuto::FA_Core::debug;
-      print $Net::FullAuto::FA_Core::MRLOG
-         "move_tarfile() TRYING TO DO PUT TWO\n"
-         if $Net::FullAuto::FA_Core::log &&
-         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-      ($output,$stderr)=&Rem_Command::ftpcmd( # Transfer the tar file
-         $destFH,                             # 'put' because DEST is remote
-         "put transfer$Net::FullAuto::FA_Core::tran[3].tar");
-      if (-1<index "$output","permissions do not") {
-         &Net::FullAuto::FA_Core::handle_error($output,'-1');
-         die "$output       $!"
-      }
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      if ($baseFH->{_work_dirs}->{_tmp}) {
-         ($output,$stderr)=&Rem_Command::ftpcmd(
-            $destFH,                           # lcd ftp handle back to parent
-            "lcd \"$baseFH->{_work_dirs}->{_tmp}\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}
-            =$baseFH->{_work_dirs}->{_tmp};
-      }
-   } elsif (&ftm_connect($destFH,$phost)) {
-      my %ftp=(
-         _ftp_handle => $destFH->{_cmd_handle},
-         _ftm_type   => $destFH->{_ftm_type},
-         _hostname   => $destFH->{_hostname},
-         _ip         => $destFH->{_ip},
-         _uname      => $destFH->{_uname},
-         _luname     => $baseFH->{_uname},
-         _hostlabel  => [ $destFH->{_hostlabel}->[0],$phost ],
-         _ftp_pid    => $destFH->{_ftp_pid}
-      );
-      if ($destFH->{_uname} ne 'cygwin' ||
-            $dest_fdr!~/^[\/|\\][\/|\\]/ ||
-            !$destFH->{_ms_share} || !$#{$destFH->{_hostlabel}}) {
-         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,"lcd \"$dest_fdr\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-print "SAVING LCD PATH OF DEST2=transfer$Net::FullAuto::FA_Core::tran[3]\n";
-         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{lcd}
-            =$d_fdr=$dest_fdr;
-      } else {
-
-      #if (exists $destFH->{_smb}) {
-#print "XXXXXAAAAA\n";
-         if ($destFH->{_work_dirs}->{_tmp}) {
-            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
+   unless ($destFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
+         $baseFH->{_hostlabel}->[0] eq "__Master_${$}__") {
+      if ($destFH->{_hostlabel}->[0] eq "__Master_${$}__") {
+         if ($destFH->{_work_dirs}->{_tmp}) {  # DEST-Master has trandir
+            ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
                "lcd \"$destFH->{_work_dirs}->{_tmp}\"");
             &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
                (-1==index $stderr,'command success');
-            $d_fdr="$destFH->{_work_dirs}->{_tmp}/";
+            $d_fdr=$Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}=
+               $destFH->{_work_dirs}->{_tmp};
+         } else {
+            ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,"lcd \"$dest_fdr\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+                  (-1==index $stderr,'command success');
+            $d_fdr=$Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}=
+                  $dest_fdr;
          }
-         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-            "!mkdir transfer$Net::FullAuto::FA_Core::tran[3]");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-         $Net::FullAuto::FA_Core::tran[4]=1;
-         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-            "lcd transfer$Net::FullAuto::FA_Core::tran[3]");
-         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{lcd}
-            ="transfer$Net::FullAuto::FA_Core::tran[3]";
-         $d_fdr.="transfer$Net::FullAuto::FA_Core::tran[3]";
-      } #else {
+         if ($baseFH->{_work_dirs}->{_tmp}) { # If BASE has remote trandir
+                                              # cd ftp handle to it
+            ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
+               "cd $baseFH->{_work_dirs}->{_tmp}");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+                (-1==index $stderr,'command success');
+         } else {
+            ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
+               "cd $baseFH->{_work_dirs}->{_cwd}");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+         }
+         ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
+            "get transfer$Net::FullAuto::FA_Core::tran[3].tar");
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+      } elsif ($baseFH->{_hostlabel}->[0] eq "__Master_${$}__" ||
+            ($Net::FullAuto::FA_Core::DeploySMB_Proxy[0] eq "__Master_${$}__"
+            && (exists $baseFH->{_smb}))) {
+         if ($baseFH->{_work_dirs}->{_tmp} &&
+               exists $baseFH->{_ftp_handle}) {
+            ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
+                  "lcd \"$baseFH->{_work_dirs}->{_tmp}\"");
+            $Net::FullAuto::FA_Core::ftpcwd{$baseFH->{_ftp_handle}}{lcd}=
+               $baseFH->{_work_dirs}->{_tmp};
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+                  (-1==index $stderr,'command success');
+         }
+         if ($destFH->{_work_dirs}->{_tmp}) {            # If DEST has trandir
+            ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
+               "cd \"$destFH->{_work_dirs}->{_tmp}\"");
+               # cd ftp handle to trandir
+            $d_fdr="$destFH->{_work_dirs}->{_tmp}/";
+            if (exists $destFH->{_smb}) { # If DEST needs SMB
+               ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
+                  "mkdir \"transfer$Net::FullAuto::FA_Core::tran[3]\""); # Add
+                                                          # tmp 'transfer' dir
+               &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                  if $stderr && (-1==index $stderr,'command success');
+               $Net::FullAuto::FA_Core::tran[4]=1;
+               ($output,$stderr)=
+                  &Rem_Command::ftpcmd($destFH, # cd ftp handle to 'transfer'
+                  "cd \"transfer$Net::FullAuto::FA_Core::tran[3]\"");
+               &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+                  (-1==index $stderr,'command success');
+               $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{cd}
+                  ="transfer$Net::FullAuto::FA_Core::tran[3]";
+               $d_fdr.="transfer$Net::FullAuto::FA_Core::tran[3]";
+            }
+         } else {                                   # No trandir on DEST,
+            ($output,$stderr)=&Rem_Command::ftpcmd( # use $dest_fdr for transfer
+               $destFH,"cd \"$dest_fdr\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{cd}
+               =$d_fdr=$dest_fdr;
+         }
+         ($output,$stderr)=&Rem_Command::ftpcmd( # Transfer the tar file
+            $destFH,"!id");                      # 'put' because DEST is remote
+         print "move_tarfile() TRYING TO DO PUT TWO\n"
+            if !$Net::FullAuto::FA_Core::cron &&
+            $Net::FullAuto::FA_Core::debug;
+         print $Net::FullAuto::FA_Core::MRLOG
+            "move_tarfile() TRYING TO DO PUT TWO\n"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         ($output,$stderr)=&Rem_Command::ftpcmd( # Transfer the tar file
+            $destFH,                             # 'put' because DEST is remote
+            "put transfer$Net::FullAuto::FA_Core::tran[3].tar");
+         if (-1<index "$output","permissions do not") {
+            &Net::FullAuto::FA_Core::handle_error($output,'-1');
+            die "$output       $!"
+         }
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+         if ($baseFH->{_work_dirs}->{_tmp}) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(
+               $destFH,                          # lcd ftp handle back to parent
+               "lcd \"$baseFH->{_work_dirs}->{_tmp}\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}
+               =$baseFH->{_work_dirs}->{_tmp};
+         }
+      } elsif (&ftm_connect($destFH,$phost)) {
+         my %ftp=(
+            _ftp_handle => $destFH->{_cmd_handle},
+            _ftm_type   => $destFH->{_ftm_type},
+            _hostname   => $destFH->{_hostname},
+            _ip         => $destFH->{_ip},
+            _uname      => $destFH->{_uname},
+            _luname     => $baseFH->{_uname},
+            _hostlabel  => [ $destFH->{_hostlabel}->[0],$phost ],
+            _ftp_pid    => $destFH->{_ftp_pid}
+         );
+         if ($destFH->{_uname} ne 'cygwin' ||
+               $dest_fdr!~/^[\/|\\][\/|\\]/ ||
+               !$destFH->{_ms_share} || !$#{$destFH->{_hostlabel}}) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,"lcd \"$dest_fdr\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+print "SAVING LCD PATH OF DEST2=transfer$Net::FullAuto::FA_Core::tran[3]\n";
+            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{lcd}
+               =$d_fdr=$dest_fdr;
+         } else {
+
+      #if (exists $destFH->{_smb}) {
+#print "XXXXXAAAAA\n";
+            if ($destFH->{_work_dirs}->{_tmp}) {
+               ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
+                  "lcd \"$destFH->{_work_dirs}->{_tmp}\"");
+               &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+                  (-1==index $stderr,'command success');
+               $d_fdr="$destFH->{_work_dirs}->{_tmp}/";
+            }
+            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
+               "!mkdir transfer$Net::FullAuto::FA_Core::tran[3]");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+            $Net::FullAuto::FA_Core::tran[4]=1;
+            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
+               "lcd transfer$Net::FullAuto::FA_Core::tran[3]");
+            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{lcd}
+               ="transfer$Net::FullAuto::FA_Core::tran[3]";
+            $d_fdr.="transfer$Net::FullAuto::FA_Core::tran[3]";
+         } #else {
 #print "XXXXXBBBBB\n";
-#         ($output,$stderr)=&ftp(\%ftp,'',"lcd \"$dest_fdr\"");
+#        ($output,$stderr)=&ftp(\%ftp,'',"lcd \"$dest_fdr\"");
 #         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
 #               (-1==index $stderr,'command success');
 #print "SAVING LCD PATH OF DEST2=transfer$Net::FullAuto::FA_Core::tran[3]\n";
@@ -17756,268 +17793,286 @@ print "SAVING LCD PATH OF DEST2=transfer$Net::FullAuto::FA_Core::tran[3]\n";
 #         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{lcd}
 #                                      =$d_fdr=$dest_fdr;
 #      }
-      if ($baseFH->{_work_dirs}->{_tmp}) {
-         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-            "cd \"$baseFH->{_work_dirs}->{_tmp}\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-         my ($output,$stderr)=$baseFH->cwd(
-            $baseFH->{_work_dirs}->{_tmp});
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{cd}
-                                       =$baseFH->{_work_dirs}->{_tmp};
-      } else {
-         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-            "cd \"$baseFH->{_work_dirs}->{_cwd}\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{cd}
-                ="$baseFH->{_work_dirs}->{_cwd}";
-      }
-print "GOING TO GET THE TAR AND BRING IT TO DESTTTTTTTTTTTTTTTTT\n";
-      ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-            "get transfer$Net::FullAuto::FA_Core::tran[3].tar");
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      my $prompt = '_funkyPrompt_';
-      $destFH->{_cmd_handle}->prompt("/$prompt\$/");
-      $destFH->{_cmd_handle}->print('bye');
-      while (my $line=$destFH->{_cmd_handle}->get) {
-print "GETTING BACK THE CMD FROM FTP LINE=$line\n";
-         last if $line=~/_funkyPrompt_/s;
-      }
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      DH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
-         foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
-            foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
-                    {$sid}}) {
-               if ($destFH->{_cmd_handle}
-                     eq ${$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type}}[0]) {
-                  my $value=$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type};
-                  delete
-                     $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type};
-                  substr($type,0,3)='cmd';
-                  $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
-                      $value;
-                  last DH;
-               }
-            }
-         }
-      }
-   } elsif ($Net::FullAuto::FA_Core::DeployFTM_Proxy[0] eq "__Master_${$}__" ||
-         exists $Net::FullAuto::FA_Core::same_host_as_Master{
-         $Net::FullAuto::FA_Core::DeployFTM_Proxy[0]}) {
-      if ($baseFH->{_work_dirs}->{_tmp}) {
-         #($output,$stderr)=&Rem_Command::ftpcmd(\%bftp,
-         ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
-            "cd \"$baseFH->{_work_dirs}->{_tmp}\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-         ($stdout,$stderr)=$baseFH->cmd(
-            "cd \"$baseFH->{_work_dirs}->{_tmp}\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-         $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{cd}
-            =$baseFH->{_work_dirs}->{_tmp};
-      }
-      ($output,$stderr)=&Rem_Command::ftpcmd(
-         $baseFH,"get transfer$Net::FullAuto::FA_Core::tran[3].tar");
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      if (exists $destFH->{_smb}) {
-         if ($destFH->{_work_dirs}->{_tmp}) {
-            #($output,$stderr)=&ftp(\%dftp,'',
-            ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-               "cd \"$destFH->{_work_dirs}->{_tmp}\"");
+         if ($baseFH->{_work_dirs}->{_tmp}) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
+               "cd \"$baseFH->{_work_dirs}->{_tmp}\"");
             &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
                (-1==index $stderr,'command success');
-            $d_fdr="$destFH->{_work_dirs}->{_tmp}/";
+            my ($output,$stderr)=$baseFH->cwd(
+               $baseFH->{_work_dirs}->{_tmp});
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{cd}
+                                          =$baseFH->{_work_dirs}->{_tmp};
+         } else {
+            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
+               "cd \"$baseFH->{_work_dirs}->{_cwd}\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{cd}
+                   ="$baseFH->{_work_dirs}->{_cwd}";
          }
-         ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-            "mkdir transfer$Net::FullAuto::FA_Core::tran[3]");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-         $Net::FullAuto::FA_Core::tran[4]=1;
-         $d_fdr.=transfer$Net::FullAuto::FA_Core::tran[3];
-      } else {
-         $d_fdr=$destFH->{_work_dirs}->{_cwd};
-      }
-      #($output,$stderr)=&ftp(\%dftp,'',"cd $d_fdr");
-      ($output,$stderr)=&Rem_Command::ftpcmd($destFH,"cd $d_fdr");
-      if ($stderr && -1==index $stderr,'command success') {
-         my $die="The System $destFH->{_hostlabel}->[0]"
-                ." Returned\n              the Following "
-                ."Unrecoverable Error "
-                ."Condition :\n\n       $stderr";
-         &Net::FullAuto::FA_Core::handle_error($die);
-      } $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{cd}=$d_fdr;
-      my $putoutput='';
-      ($putoutput,$stderr)=&Rem_Command::ftpcmd($destFH,
-         "put transfer$Net::FullAuto::FA_Core::tran[3].tar");
-         #&ftp($destFH,'',"put transfer$Net::FullAuto::FA_Core::tran[3].tar");
-      if (-1<index $putoutput,"Couldn't get handle: Permission denied") {
-         my $die="The System $destFH->{_hostlabel}->[0]"
-                ." Returned\n              the Following "
-                ."Unrecoverable Error "
-                ."Condition :\n\n       "
-                ."Couldn't get handle: Permission denied";
-         ($output,$stderr)=$destFH->cwd('/tmp');
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
-            if $stderr;
-         ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-            "put transfer$Net::FullAuto::FA_Core::tran[3].tar"); 
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
-            if $stderr &&
-            (-1==index $stderr,'command success');
-         ($output,$stderr)=$destFH->cmd(
-            "mv transfer$Net::FullAuto::FA_Core::tran[3].tar $d_fdr");
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
-            if $stderr;
-         ($output,$stderr)=$destFH->cwd($d_fdr);
-         &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
-            if $stderr;
-      } elsif ($stderr && -1==index $stderr,'command success') {
-         my $die="The System $destFH->{_hostlabel}->[0]"
-                ." Returned\n              the Following "
-                ."Unrecoverable Error "
-                ."Condition :\n\n       $stderr";
-         &Net::FullAuto::FA_Core::handle_error($die);
-      }
-   } elsif ($Net::FullAuto::FA_Core::DeployFTM_Proxy[0]) {
-print "IM HERE THIS\n";
-      ($bprxFH,$stderr)=
-           Rem_Command::new('Rem_Command',
-           $Net::FullAuto::FA_Core::DeployFTM_Proxy[0]);
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
-      my $bprx={
-         _cmd_handle => $bprxFH,
-      };
-      &ftm_connect($bprx,$phost);
-      my %bftp=(
-         _ftp_handle => $bprx->{_cmd_handle},
-         _ftm_type   => $bprx->{_ftm_type},
-         _hostname   => $bprx->{_hostname},
-         _ip         => $bprx->{_ip},
-         _uname      => $bprx->{_uname},
-         _luname     => $baseFH->{_uname},
-         _hostlabel  => [ $Net::FullAuto::FA_Core::DeployFTM_Proxy[0],'' ],
-         _ftp_pid    => $bprx->{_cmd_pid}
-      );my $btrandir='';
-      if ($btransfer_dir) {
-         if (unpack('@1 a1',"$btransfer_dir") eq ':') {
-            my ($drive,$path)=unpack('a1 x1 a*',$btransfer_dir);
-            $path=~tr/\\/\//;
-            $btrandir=$baseFH->{_cygdrive}.'/'.lc($drive).$path.'/';
-         } elsif (substr($btransfer_dir,-1) ne '/') {
-            $btrandir.='/';
-         }
-         ($output,$stderr)=&Rem_Command::ftpcmd(
-            \%bftp,"cd \"$btrandir\"");
-         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-         $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=$btrandir;
-      } elsif ($baseFH->{_work_dirs}->{_tmp}) {
-         ($output,$stderr)=&Rem_Command::ftpcmd(
-            \%bftp,"cd $baseFH->{_work_dirs}->{_tmp}");
+print "GOING TO GET THE TAR AND BRING IT TO DESTTTTTTTTTTTTTTTTT\n";
+         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
+               "get transfer$Net::FullAuto::FA_Core::tran[3].tar");
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
                (-1==index $stderr,'command success');
-         $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=
-            $baseFH->{_work_dirs}->{_tmp};
-      } else {
+         my $prompt = '_funkyPrompt_';
+         $destFH->{_cmd_handle}->prompt("/$prompt\$/");
+         $destFH->{_cmd_handle}->print('bye');
+         while (my $line=$destFH->{_cmd_handle}->get) {
+print "GETTING BACK THE CMD FROM FTP LINE=$line\n";
+            last if $line=~/_funkyPrompt_/s;
+         }
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+         DH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
+            foreach my $sid (
+                  keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
+               foreach my $type (
+                     keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
+                       {$sid}}) {
+                  if ($destFH->{_cmd_handle}
+                        eq ${$Net::FullAuto::FA_Core::Processes
+                        {$hlabel}{$sid}{$type}}[0]) {
+                     my $value=$Net::FullAuto::FA_Core::Processes
+                        {$hlabel}{$sid}{$type};
+                     delete
+                        $Net::FullAuto::FA_Core::Processes{
+                           $hlabel}{$sid}{$type};
+                     substr($type,0,3)='cmd';
+                     $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
+                         $value;
+                     last DH;
+                  }
+               }
+            }
+         }
+      } elsif ($Net::FullAuto::FA_Core::DeployFTM_Proxy[0]
+            eq "__Master_${$}__" ||
+            exists $Net::FullAuto::FA_Core::same_host_as_Master{
+            $Net::FullAuto::FA_Core::DeployFTM_Proxy[0]}) {
+         if ($baseFH->{_work_dirs}->{_tmp}) {
+            #($output,$stderr)=&Rem_Command::ftpcmd(\%bftp,
+            ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,
+               "cd \"$baseFH->{_work_dirs}->{_tmp}\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+            ($stdout,$stderr)=$baseFH->cmd(
+               "cd \"$baseFH->{_work_dirs}->{_tmp}\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+            $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_cmd_handle}}{cd}
+               =$baseFH->{_work_dirs}->{_tmp};
+         }
+         ($output,$stderr)=&Rem_Command::ftpcmd(
+            $baseFH,"get transfer$Net::FullAuto::FA_Core::tran[3].tar");
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+         if (exists $destFH->{_smb}) {
+            if ($destFH->{_work_dirs}->{_tmp}) {
+               #($output,$stderr)=&ftp(\%dftp,'',
+               ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
+                  "cd \"$destFH->{_work_dirs}->{_tmp}\"");
+               &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+                  (-1==index $stderr,'command success');
+               $d_fdr="$destFH->{_work_dirs}->{_tmp}/";
+            }
+            ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
+               "mkdir transfer$Net::FullAuto::FA_Core::tran[3]");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+            $Net::FullAuto::FA_Core::tran[4]=1;
+            $d_fdr.=transfer$Net::FullAuto::FA_Core::tran[3];
+         } else {
+            $d_fdr=$destFH->{_work_dirs}->{_cwd};
+         }
+         #($output,$stderr)=&ftp(\%dftp,'',"cd $d_fdr");
+         ($output,$stderr)=&Rem_Command::ftpcmd($destFH,"cd $d_fdr");
+         if ($stderr && -1==index $stderr,'command success') {
+            my $die="The System $destFH->{_hostlabel}->[0]"
+                   ." Returned\n              the Following "
+                   ."Unrecoverable Error "
+                   ."Condition :\n\n       $stderr";
+            &Net::FullAuto::FA_Core::handle_error($die);
+         } $Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{cd}=$d_fdr;
+         my $putoutput='';
+         ($putoutput,$stderr)=&Rem_Command::ftpcmd($destFH,
+            "put transfer$Net::FullAuto::FA_Core::tran[3].tar");
+            #&ftp($destFH,'',
+            #     "put transfer$Net::FullAuto::FA_Core::tran[3].tar");
+            if (-1<index $putoutput,"Couldn't get handle: Permission denied") {
+            my $die="The System $destFH->{_hostlabel}->[0]"
+                   ." Returned\n              the Following "
+                   ."Unrecoverable Error "
+                   ."Condition :\n\n       "
+                   ."Couldn't get handle: Permission denied";
+            ($output,$stderr)=$destFH->cwd('/tmp');
+            &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+               if $stderr;
+            ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
+               "put transfer$Net::FullAuto::FA_Core::tran[3].tar"); 
+            &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+               if $stderr && (-1==index $stderr,'command success');
+            ($output,$stderr)=$destFH->cmd(
+               "mv transfer$Net::FullAuto::FA_Core::tran[3].tar $d_fdr");
+            &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+               if $stderr;
+            ($output,$stderr)=$destFH->cwd($d_fdr);
+            &Net::FullAuto::FA_Core::handle_error("$die\n\n       $stderr",'-1')
+               if $stderr;
+         } elsif ($stderr && -1==index $stderr,'command success') {
+            my $die="The System $destFH->{_hostlabel}->[0]"
+                   ." Returned\n              the Following "
+                   ."Unrecoverable Error "
+                   ."Condition :\n\n       $stderr";
+            &Net::FullAuto::FA_Core::handle_error($die);
+         }
+      } elsif ($Net::FullAuto::FA_Core::DeployFTM_Proxy[0]) {
+print "IM HERE THIS\n";
+         ($bprxFH,$stderr)=
+              Rem_Command::new('Rem_Command',
+              $Net::FullAuto::FA_Core::DeployFTM_Proxy[0]);
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
+         my $bprx={
+            _cmd_handle => $bprxFH,
+         };
+         &ftm_connect($bprx,$phost);
+         my %bftp=(
+            _ftp_handle => $bprx->{_cmd_handle},
+            _ftm_type   => $bprx->{_ftm_type},
+            _hostname   => $bprx->{_hostname},
+            _ip         => $bprx->{_ip},
+            _uname      => $bprx->{_uname},
+            _luname     => $baseFH->{_uname},
+            _hostlabel  => [ $Net::FullAuto::FA_Core::DeployFTM_Proxy[0],'' ],
+            _ftp_pid    => $bprx->{_cmd_pid}
+         );my $btrandir='';
+         if ($btransfer_dir) {
+            if (unpack('@1 a1',"$btransfer_dir") eq ':') {
+               my ($drive,$path)=unpack('a1 x1 a*',$btransfer_dir);
+               $path=~tr/\\/\//;
+               $btrandir=$baseFH->{_cygdrive}.'/'.lc($drive).$path.'/';
+            } elsif (substr($btransfer_dir,-1) ne '/') {
+               $btrandir.='/';
+            }
+            ($output,$stderr)=&Rem_Command::ftpcmd(
+               \%bftp,"cd \"$btrandir\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+            $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=$btrandir;
+         } elsif ($baseFH->{_work_dirs}->{_tmp}) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(
+               \%bftp,"cd $baseFH->{_work_dirs}->{_tmp}");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+                  (-1==index $stderr,'command success');
+            $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=
+               $baseFH->{_work_dirs}->{_tmp};
+         } else {
+             ($output,$stderr)=&Rem_Command::ftpcmd(\%bftp,
+               "cd \"$baseFH->{_work_dirs}->{_cwd}\"");
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+            $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=
+               $baseFH->{_work_dirs}->{_cwd};
+         } 
          ($output,$stderr)=&Rem_Command::ftpcmd(\%bftp,
-            "cd \"$baseFH->{_work_dirs}->{_cwd}\"");
+            "get transfer$Net::FullAuto::FA_Core::tran[3].tar");
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+         my $prompt = '_funkyPrompt_';
+         $bprx->{_cmd_handle}->prompt("/$prompt\$/");
+         $bprx->{_cmd_handle}->cmd('bye');
+         BPH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
+            foreach my $sid (
+                  keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
+               foreach my $type (
+                     keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
+                        {$sid}}) {
+                  if ($bprx->{_cmd_handle}
+                        eq ${$Net::FullAuto::FA_Core::Processes
+                        {$hlabel}{$sid}{$type}}[0]) {
+                     my $value=$Net::FullAuto::FA_Core::Processes
+                        {$hlabel}{$sid}{$type};
+                     delete
+                        $Net::FullAuto::FA_Core::Processes{
+                        $hlabel}{$sid}{$type};
+                     substr($type,0,3)='cmd';
+                     $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
+                        $value;
+                     last BPH;
+                  }
+               }
+            }
+         }
+         ($dprxFH,$stderr)=
+               Rem_Command::new('Rem_Command',
+               $Net::FullAuto::FA_Core::DeployFTM_Proxy[0]);
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+         my $dprx={
+           _cmd_handle => $dprxFH,
+         };
+         &ftm_connect($dprx,$destFH->{_hostlabel}->[0]);
+         my %dftp=(
+            _ftp_handle => $dprx->{_cmd_handle},
+            _ftm_type   => $dprx->{_ftm_type},
+            _hostname   => $dprx->{_hostname},
+            _ip         => $dprx->{_ip},
+            _uname      => $dprx->{_uname},
+            _luname     => $destFH->{_uname},
+            _hostlabel  => [ $Net::FullAuto::FA_Core::DeployFTM_Proxy[0],'' ],
+            _ftp_pid    => $dprx->{_cmd_pid}
+         );
+         #($output,$stderr)=&ftp(\%dftp,'',
+         ($output,$stderr)=&Rem_Command::ftpcmd(
+            \%dftp,"cd \"$dest_fdr\"");
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
             (-1==index $stderr,'command success');
-         $Net::FullAuto::FA_Core::ftpcwd{$bprx->{_cmd_handle}}{cd}=
-            $baseFH->{_work_dirs}->{_cwd};
-      } 
-      ($output,$stderr)=&Rem_Command::ftpcmd(\%bftp,
-         "get transfer$Net::FullAuto::FA_Core::tran[3].tar");
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      my $prompt = '_funkyPrompt_';
-      $bprx->{_cmd_handle}->prompt("/$prompt\$/");
-      $bprx->{_cmd_handle}->cmd('bye');
-      BPH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
-         foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
-            foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
-                    {$sid}}) {
-               if ($bprx->{_cmd_handle}
-                     eq ${$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type}}[0]) {
-                  my $value=$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type};
-                  delete
-                     $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type};
-                  substr($type,0,3)='cmd';
-                  $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
-                      $value;
-                  last BPH;
+         $Net::FullAuto::FA_Core::ftpcwd{$dprx->{_cmd_handle}}{cd}
+            =$d_fdr=$dest_fdr;
+         print "move_tarfile() TRYING TO DO PUT ONE\n"
+            if !$Net::FullAuto::FA_Core::cron &&
+            $Net::FullAuto::FA_Core::debug;
+         print $Net::FullAuto::FA_Core::MRLOG
+            "move_tarfile() TRYING TO DO PUT ONE\n"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         ($output,$stderr)=&Rem_Command::ftpcmd(
+            \%dftp,"put transfer$Net::FullAuto::FA_Core::tran[3].tar");
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
+               (-1==index $stderr,'command success');
+         $dprx->{_cmd_handle}->prompt("/$prompt\$/");
+         $dprx->{_cmd_handle}->cmd('bye');
+         DPH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
+            foreach my $sid (
+                  keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
+               foreach my $type (
+                     keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
+                     {$sid}}) {
+                  if ($dprx->{_cmd_handle}
+                        eq ${$Net::FullAuto::FA_Core::Processes
+                        {$hlabel}{$sid}{$type}}[0]) {
+                     my $value=$Net::FullAuto::FA_Core::Processes
+                        {$hlabel}{$sid}{$type};
+                     delete
+                        $Net::FullAuto::FA_Core::Processes{
+                        $hlabel}{$sid}{$type};
+                     substr($type,0,3)='cmd';
+                     $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
+                        $value;
+                     last DPH;
+                  }
                }
             }
          }
-      }
-      ($dprxFH,$stderr)=
-            Rem_Command::new('Rem_Command',
-            $Net::FullAuto::FA_Core::DeployFTM_Proxy[0]);
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-      my $dprx={
-         _cmd_handle => $dprxFH,
-      };
-      &ftm_connect($dprx,$destFH->{_hostlabel}->[0]);
-      my %dftp=(
-         _ftp_handle => $dprx->{_cmd_handle},
-         _ftm_type   => $dprx->{_ftm_type},
-         _hostname   => $dprx->{_hostname},
-         _ip         => $dprx->{_ip},
-         _uname      => $dprx->{_uname},
-         _luname     => $destFH->{_uname},
-         _hostlabel  => [ $Net::FullAuto::FA_Core::DeployFTM_Proxy[0],'' ],
-         _ftp_pid    => $dprx->{_cmd_pid}
-      );
-      #($output,$stderr)=&ftp(\%dftp,'',
-      ($output,$stderr)=&Rem_Command::ftpcmd(
-         \%dftp,"cd \"$dest_fdr\"");
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-         (-1==index $stderr,'command success');
-      $Net::FullAuto::FA_Core::ftpcwd{$dprx->{_cmd_handle}}{cd}
-         =$d_fdr=$dest_fdr;
-      print "move_tarfile() TRYING TO DO PUT ONE\n"
-         if !$Net::FullAuto::FA_Core::cron &&
-         $Net::FullAuto::FA_Core::debug;
-      print $Net::FullAuto::FA_Core::MRLOG
-         "move_tarfile() TRYING TO DO PUT ONE\n"
-         if $Net::FullAuto::FA_Core::log &&
-         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-      ($output,$stderr)=&Rem_Command::ftpcmd(
-         \%dftp,"put transfer$Net::FullAuto::FA_Core::tran[3].tar");
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
-            (-1==index $stderr,'command success');
-      $dprx->{_cmd_handle}->prompt("/$prompt\$/");
-      $dprx->{_cmd_handle}->cmd('bye');
-      DPH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
-         foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
-            foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
-                    {$sid}}) {
-               if ($dprx->{_cmd_handle}
-                     eq ${$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type}}[0]) {
-                  my $value=$Net::FullAuto::FA_Core::Processes
-                     {$hlabel}{$sid}{$type};
-                  delete
-                     $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type};
-                  substr($type,0,3)='cmd';
-                  $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
-                     $value;
-                  last DPH;
-               }
-            }
-         }
+      } else {
+         &Net::FullAuto::FA_Core::handle_error("NO FTP PROXY DEFINED");
       }
    } else {
-      &Net::FullAuto::FA_Core::handle_error("NO FTP PROXY DEFINED");
+      File::Copy::copy($destFH->{_work_dirs}->{_tmp}.
+        "transfer$Net::FullAuto::FA_Core::tran[3].tar",
+        $dest_fdr)
+        || do{ die "copy failed: $!" };
+      $d_fdr=$dest_fdr;
    }
+
 my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_Proxy[0] and "
       .(exists $Net::FullAuto::FA_Core::same_host_as_Master{"$Net::FullAuto::FA_Core::DeployFTM_Proxy[0]"})."\n";
 #print "SHOWWWWWWWWWWWWWWWWW=$shownow\n";
@@ -18048,7 +18103,7 @@ my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_P
          "tar xovf ${tdr}transfer".
          "$Net::FullAuto::FA_Core::tran[3].tar"); # un-tar it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
+#print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
       if (!$shortcut) {
          foreach my $file (keys %Net::FullAuto::FA_Core::rename_file) {
             my $cmd="mv \"$file\" ".
@@ -18066,10 +18121,8 @@ print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
       }
-      ($output,$stderr)=
-         $destFH->cmd(
-            "rm ${tdr}transfer".
-            $Net::FullAuto::FA_Core::tran[3].".tar"); # delete tar file
+      ($output,$stderr)=$destFH->cmd("rm -f ${tdr}transfer".
+         $Net::FullAuto::FA_Core::tran[3].".tar"); # delete tar file
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
    } elsif (exists $destFH->{_smb}) {
       ($output,$stderr)=$destFH->cwd(  # cd cmd handle to folder
@@ -18124,7 +18177,7 @@ print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
          $Net::FullAuto::FA_Core::tran[2]=0;
       }
       ($output,$stderr)=
-         $destFH->cmd("rm $dtr/transfer".
+         $destFH->cmd("rm -f $dtr/transfer".
             $Net::FullAuto::FA_Core::tran[3].".tar"); # delete tar file
       &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
    } else {
@@ -18135,7 +18188,7 @@ print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
       my $testf=&Net::FullAuto::FA_Core::test_file($destFH,
          "transfer$Net::FullAuto::FA_Core::tran[3].tar");
       if ($testf ne 'WRITE' && $testf ne 'READ') {
-         $tdr="$destFH->{_work_dirs}->{_tmp}/"
+         $tdr=$destFH->{_work_dirs}->{_tmp}
             if $destFH->{_work_dirs}->{_tmp};
       }
       ($output,$stderr)=$destFH->cmd("chmod 777 ${tdr}transfer".
@@ -18161,7 +18214,7 @@ print "WHAT IS THE SHORTCUT HERE=$shortcut\n";sleep 6;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
       }
-      ($output,$stderr)=$destFH->cmd("rm $d_fdr/transfer".
+      ($output,$stderr)=$destFH->cmd("rm -f $d_fdr/transfer".
           "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
       &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
    }
@@ -19211,25 +19264,25 @@ sub clean_process_files
       &Net::FullAuto::FA_Core::handle_error($die);
    }
    #($output,$stderr)=$localhost->cmd(
-   #                   "rm ${trandir}out${pid_ts}.txt");
+   #                   "rm -f ${trandir}out${pid_ts}.txt");
    if (0 && $^O ne 'cygwin') {
 print "WHAT THE HECK IS LOCALDIR=",$localhost->cmd("pwd"),"\n";
       ($output,$stderr)=$localhost->cmd(
-         "rm out${pid_ts}.txt"); 
+         "rm -f out${pid_ts}.txt"); 
       if ($stderr) {
          push @FA_Core::pid_ts, $pid_ts;
          my $die="$stderr\n\n       From Command -> "
-             ."\"rm out${pid_ts}.txt\"";
+             ."\"rm -f out${pid_ts}.txt\"";
          &Net::FullAuto::FA_Core::handle_error($die);
       }
    #($output,$stderr)=$localhost->cmd(
-   #                   "rm ${trandir}err${pid_ts}.txt");
+   #                   "rm -f ${trandir}err${pid_ts}.txt");
       ($output,$stderr)=$localhost->cmd(
-         "rm err${pid_ts}.txt");
+         "rm -f err${pid_ts}.txt");
       if ($stderr) {
          push @FA_Core::pid_ts, $pid_ts;
          my $die="$stderr\n\n       From Command -> "
-             ."\"rm err${pid_ts}.txt\"";
+             ."\"rm -f err${pid_ts}.txt\"";
          &Net::FullAuto::FA_Core::handle_error($die);
       }
    }
@@ -19378,13 +19431,13 @@ sub build_mirror_hashes
          my $skip=0;my $deploy=0;
          foreach my $file (sort keys %{${$baseFH->{_bhash}}{$key}[1]}) {
 
-if ($key=~/yglasa/) {
-   print "DEST_DIR_STATUS=$dest_dir_status and KEY=$key\n";
-   print "FILE=$file and BASEHASH=",
-         @{${$baseFH->{_bhash}}{$key}[1]{$file}},"\n";
-   print "DESTHASH=",${$destFH->{_dhash}}{$key}[1]{$file},"\n" if exists
-      ${$destFH->{_dhash}}{$key}[1]{$file};<STDIN>;
-}
+#if ($key=~/yglasa/) {
+   #print "DEST_DIR_STATUS=$dest_dir_status and KEY=$key\n";
+   #print "FILE=$file and BASEHASH=",
+   #      @{${$baseFH->{_bhash}}{$key}[1]{$file}},"<==\n";
+   #print "DESTHASH=",${$destFH->{_dhash}}{$key}[1]{$file},"\n" if exists
+   #   ${$destFH->{_dhash}}{$key}[1]{$file};<STDIN>;
+#}
 
             if (${$baseFH->{_bhash}}{$key}[1]{$file}[0] eq 'EXCLUDE') {
                print "mirror() SKIP1=> KEY=$key and FILE=$file\n"
@@ -19778,6 +19831,7 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
       if (unpack('a10',$@) eq 'The System') {
          return '','','','',$@;
       } else {
+print "XXXXXXXXXXXXXX\n";
          my $die="The System $hostlabel Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
@@ -19798,7 +19852,7 @@ sub build_base_dest_hashes
 {
 #print "BBDH CALLER=",caller,"\n";
    my $modifiers='';my $mod_dirs_flag='';
-   my $mod_files_flag='';my $s=0;my $hostname='';
+   my $mod_files_flag='';my $s=0;
    my $num_of_included=0;my $num_of_excluded=0;
    my @modifiers=();
    my $base_or_dest_folder=$_[0];
@@ -19806,10 +19860,11 @@ sub build_base_dest_hashes
    my $ms_domain=$_[5];$ms_domain||='';
    my $cygwin = (-1<index lc($_[6]),'cygwin') ? 1 : 0;
    my $cmd_handle=$_[7];$cmd_handle||='';
-   my $base_dest=$_[8];my $bd='';
+   my $base_dest=$_[8];
+   my $lsgnu=$_[9];my $bd='';
    $bd=($base_dest eq 'BASE')?'b':'d';
    my ($stdout,$stderr)=('','');
-   my %navhash=();my $lsgnu=0;
+   my %navhash=();
    eval {
       if ($_[2]) { # If we have Directives
          my @directives=@{$_[2]};my @delim=();
@@ -20375,7 +20430,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
 #}
                if (!$cygwin && ($fchar eq '-' || $fchar eq 'l')) {
                   my $up=unpack('x10 a*',$line);
-                  $up=~s/^\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
+                  $up=~s/^[.+ ]\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
                   ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
                   my $yr='';
                   if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
@@ -20466,27 +20521,35 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                            } else {
                               if (!$ms_share && !$ms_domain && !$cygwin) {
                                  my $up=unpack('x10 a*',$line);
-                                 $up=~s/^\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
+                                 my $rx=qr/\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)/;
+                                 $up=~s/^[.+ ]$rx$/$1/;
                                  ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
-                                 $mn=$Net::FullAuto::FA_Core::month{$mn} if length $mn==3;
+                                 $mn=$Net::FullAuto::FA_Core::month{$mn}
+                                    if length $mn==3;
                                  $fileyr=0;my $hr=0;my $mt='';
                                  if (length $tm==4) {
-                                   $fileyr=$tm;$hr=12;$mt='00';
+                                    $fileyr=$tm;$hr=12;$mt='00';
                                  } else {
                                     ($hr,$mt)=unpack('a2 @3 a2',$tm);
-                                    my $yr=unpack('x1 a2',$Net::FullAuto::FA_Core::thisyear);
+                                    my $yr=unpack('x1 a2',
+                                       $Net::FullAuto::FA_Core::thisyear);
                                     $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                                    if ($Net::FullAuto::FA_Core::thismonth<$mn-1) {
+                                    if ($Net::FullAuto::FA_Core::thismonth <
+                                          $mn-1) {
                                        --$yr;
                                        $yr="0$yr" if 1==length $yr;
-                                       $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                                    } elsif ($Net::FullAuto::FA_Core::thismonth==$mn-1) {
+                                       $fileyr=
+                                          $Net::FullAuto::FA_Core::curcen.$yr;
+                                    } elsif ($Net::FullAuto::FA_Core::thismonth
+                                          ==$mn-1) {
                                        my $filetime=timelocal(
                                           0,$mt,$hr,$dy,$mn-1,$fileyr);
                                        if (time()<$filetime) {
                                           --$yr;
                                           $yr="0$yr" if 1==length $yr;
-                                          $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
+                                          $fileyr=
+                                             $Net::FullAuto::FA_Core::curcen
+                                             .$yr;
                                        }
                                     }
                                  }
@@ -20496,11 +20559,13 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                                  $size=~s/^\s*//;
                                  my $testyr=100+$yr;
                                  $fileyr=$Net::FullAuto::FA_Core::curyear;
-                                 if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
+                                 if ($testyr <
+                                       $Net::FullAuto::FA_Core::thisyear) {
                                     #$hr=12;$mt='00';
                                     $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
                                  } #elsif ($hr<13) {
-                                    $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
+                                    $hr=$Net::FullAuto::FA_Core::hours{
+                                       $hr.lc($pm)};
                                  #}
                               } $chmod=" $chmod" if $chmod;
                               my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
@@ -20540,7 +20605,7 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                   my $fileyr=0;
                   if (!$cygwin) {
                      my $up=unpack('x10 a*',"$line");
-                     $up=~s/^\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
+                     $up=~s/^[.+ ]\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
                      ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
                      my $yr='';$fileyr='';
                      if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
@@ -20600,18 +20665,20 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
       }
    };
    if ($@) {
-print "DO WE HAVE AN ERROR AND WHAT IS IT=$@\n";<STDIN>;
+#print "DO WE HAVE AN ERROR AND WHAT IS IT=$@\n";<STDIN>;
       return '','redo ls' if unpack('a7',$@) eq 'redo ls';
       if (unpack('a10',$@) eq 'The System') {
          return '',$@;
       } else {
-#print "IS THIS REALLY WHERE WE ARE DYINGJJJJJJJJJ<==\n";<STDIN>;
-         my $die="The System $hostname Returned"
+         my $hostlabel='localhost' if ${$cmd_handle->{_hostlabel}}[0]
+               eq "__Master_${$}__";
+         my $die="FATAL ERROR! - The System $hostlabel Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
                 ."line ".(caller(0))[2]." :\n\n       ".$@;
          print $Net::FullAuto::FA_Core::MRLOG $die
-            if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          return '', $die;
       }
    } ${$cmd_handle->{"_${bd}hash"}}{"___%EXCluD%E--NUMOFFILES"}=$num_of_included;
@@ -22067,9 +22134,9 @@ sub ftpcmd
 #else { $Net::FullAuto::FA_Core::log=1 }
    my @topcaller=caller;
    print "\nINFO: Rem_Command::ftpcmd() (((((((CALLER))))))):\n       ",
-      (join ' ',@topcaller),"\n\n"
-      if !$Net::FullAuto::FA_Core::cron &&
-      $Net::FullAuto::FA_Core::debug;
+      (join ' ',@topcaller),"\n\n";
+      #if !$Net::FullAuto::FA_Core::cron &&
+      #$Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG
       "\nRem_Command::ftpcmd() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
@@ -22180,8 +22247,9 @@ sub ftpcmd
       $handle->{_ftp_handle}->print($cmd);
    };
    if ($@) {
-      &Net::FullAuto::FA_Core::handle_error("$@\n       and COMMAND=$cmd and GPFILE=$gpfile"
-                           ."and FTP_HANDLE=$handle->{_ftp_handle}\n",'-4');
+      &Net::FullAuto::FA_Core::handle_error(
+         "$@\n       and COMMAND=$cmd and GPFILE=$gpfile".
+         "and FTP_HANDLE=$handle->{_ftp_handle}\n",'-4');
    }
    &Net::FullAuto::FA_Core::handle_error($handle->{_ftp_handle}->errmsg)
       if $handle->{_ftp_handle}->errmsg;
