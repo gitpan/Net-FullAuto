@@ -12900,7 +12900,8 @@ print "HOW ABOUT AN SMB UNAME???===$uname<===\n";<STDIN>;
                   $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
                   $owner,$group,$fttimeout,$transfer_dir,$rcm_chain,
                   $rcm_map,$p_uname,$ping)
-                  =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label($hostlabel);
+                  =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
+                  $hostlabel);
                if ($Net::FullAuto::FA_Core::cltimeout ne 'X') {
                   $fttimeout=$Net::FullAuto::FA_Core::cltimeout;
                } elsif (!$fttimeout) {
@@ -12957,7 +12958,8 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST2222=$host\n"
                            {'ftm_su_'.++$Net::FullAuto::FA_Core::pcnt}=
                            [ $fpx_handle,$fpx_pid,'','' ];
                      } else {
-                        $Net::FullAuto::FA_Core::Processes{$hostlabel}{$login_id}
+                        $Net::FullAuto::FA_Core::Processes{
+                           $hostlabel}{$login_id}
                            {'ftm_id_'.++$Net::FullAuto::FA_Core::pcnt}=
                            [ $fpx_handle,$fpx_pid,'','' ];
                      }
@@ -15455,7 +15457,10 @@ sub mirror
    my $caller='';my $cline='';my $mirror_output='';
    my $debug_info='';$deploy_info='';my $dir='';
    my $mirror_debug='';my $excluded='';
+   my $base_unzip_path='';my $dest_unzip_path='';
    my ($output,$stdout,$stderr)=('','','');
+   $args{ZipBDir}||='';
+   $args{ZipDDir}||='';
    ($caller,$cline)=(caller)[1,2];
    if (ref $args{DestHost} eq 'ARRAY') {
       @dhostlabels=@{$args{DestHost}};
@@ -15726,42 +15731,44 @@ print "BASE3\n";
       }
       if (!exists $base_shortcut_info{$baseFH} ||
                $base_shortcut_info{$baseFH} ne $dir) {
-         my $ls_path='';
-         if ($baseFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
-               exists $Hosts{"__Master_${$}__"}{'ls'}) {
-            $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
-            $ls_path.='/' if $ls_path!~/\/$/;
-         }
-         ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls --version");
-         if (-1<index $base_output,'GNU') {
-            $lsgnu=1;
+         if (exists $args{BaseZip} && -f $dir.'/'.$args{BaseZip}) {
+            if (-e '/usr/bin/unzip') {
+               $base_unzip_path='/usr/bin/';
+            } elsif (-e '/bin/unzip') {
+               $base_unzip_path='/bin/';
+            } elsif (-e '/usr/local/bin/unzip') {
+               $base_unzip_path='/usr/local/bin/';
+            }
             ($base_output,$stderr)=$baseFH->cmd(
-               "${ls_path}ls -lRFs --block-size=1 \'$dir\'");
+               "${base_unzip_path}unzip -l $dir/$args{BaseZip}");
             $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
                if $stderr;
+            if ($args{ZipBDir}) {
+               my $bo='';
+               foreach my $ln (split "\n", $base_output) {
+                  next if -1<index $ln,'Archive:';
+                  next unless -1<index $ln,$args{ZipBDir};
+                  $bo.=$ln."\n"; 
+               } chop $bo;
+               $base_output=$bo;
+            }
          } else {
-            ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls -lRFs \'$dir\'");
-            $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
-               if $stderr;
-         }
-         if ($stderr) {
-            my $die=$stderr;
-            if (wantarray) {
-               return '',$die;
-            } else { &Net::FullAuto::FA_Core::handle_error($die) }
-         } elsif (unpack('x2a1',$base_output) eq 'l' ||
-                     unpack('x4a1',$base_output) eq 'l') {
-            $dir=substr($base_output,(index $base_output,'-> .')+4);
-            $dir=~s/\/?$//;
-            $base_fdr=$dir;
-            if ($lsgnu) {
+            my $ls_path='';
+            if ($baseFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
+                  exists $Hosts{"__Master_${$}__"}{'ls'}) {
+               $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+               $ls_path.='/' if $ls_path!~/\/$/;
+            }
+            ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls --version");
+            if (-1<index $base_output,'GNU') {
+               $lsgnu=1;
                ($base_output,$stderr)=$baseFH->cmd(
                   "${ls_path}ls -lRFs --block-size=1 \'$dir\'");
                $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
                   if $stderr;
             } else {
-               ($base_output,$stderr)=$baseFH->cmd(
-                  "${ls_path}ls -lRFs \'$dir\'");
+               ($base_output,$stderr)=
+                  $baseFH->cmd("${ls_path}ls -lRFs \'$dir\'");
                $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
                   if $stderr;
             }
@@ -15770,6 +15777,28 @@ print "BASE3\n";
                if (wantarray) {
                   return '',$die;
                } else { &Net::FullAuto::FA_Core::handle_error($die) }
+            } elsif (unpack('x2a1',$base_output) eq 'l' ||
+                        unpack('x4a1',$base_output) eq 'l') {
+               $dir=substr($base_output,(index $base_output,'-> .')+4);
+               $dir=~s/\/?$//;
+               $base_fdr=$dir;
+               if ($lsgnu) {
+                  ($base_output,$stderr)=$baseFH->cmd(
+                     "${ls_path}ls -lRFs --block-size=1 \'$dir\'");
+                  $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__
+                         ."\n" if $stderr;
+               } else {
+                  ($base_output,$stderr)=$baseFH->cmd(
+                     "${ls_path}ls -lRFs \'$dir\'");
+                  $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__
+                         ."\n" if $stderr;
+               }
+               if ($stderr) {
+                  my $die=$stderr;
+                  if (wantarray) {
+                     return '',$die;
+                  } else { &Net::FullAuto::FA_Core::handle_error($die) }
+               }
             }
          }
          $base_shortcut_info{$baseFH}=$dir;
@@ -15810,7 +15839,6 @@ print "BASE3\n";
          $ls_path.='/' if $ls_path!~/\/$/;
       }
       ($base_output,$stderr)=$baseFH->cmd("${ls_path}ls --version");
-print "LSGNU=$base_output<==\n";sleep 5;
       if (-1<index $base_output,'GNU') {
          $lsgnu=1;
          ($base_output,$stderr)=$baseFH->cmd(
@@ -15873,7 +15901,6 @@ print "LSGNU=$base_output<==\n";sleep 5;
             return '',$stderr;
          } else { &Net::FullAuto::FA_Core::handle_error($stderr) }
       } else {
-print "HOWDYDUDE\n";
          my $die="The System $bhostlabel Returned\n       "
                 ."       the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]
@@ -15897,7 +15924,7 @@ print "HOWDYDUDE\n";
          ($ignore,$stderr)=&build_base_dest_hashes(
                $base_fdr,\$base_output,$args{Directives},
                $bhost,$bms_share,$bms_domain,
-               $baseFH->{_uname},$baseFH,'BASE',$lsgnu);
+               $baseFH->{_uname},$baseFH,'BASE',$lsgnu,$args{ZipBDir});
          if ($stderr) {
             if ($stderr eq 'redo ls') {
                while (1) {
@@ -15920,7 +15947,7 @@ print "HOWDYDUDE\n";
                   ($ignore,$stderr)=&build_base_dest_hashes(
                      $base_fdr,\$base_output,$args{Directives},
                      $bhost,$bms_share,$bms_domain,
-                     $baseFH->{_uname},$baseFH,'BASE',$lsgnu);
+                     $baseFH->{_uname},$baseFH,'BASE',$lsgnu,$args{ZipBDir});
                   next if $stderr eq 'redo ls';
                   last;
                }
@@ -16117,7 +16144,7 @@ print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
          ($ignore,$stderr)=&build_base_dest_hashes(
                $dest_fdr,\$dest_output,$args{Directives},
                $dhost,$dms_share,$dms_domain,
-               $destFH->{_uname},$destFH,'DEST',$lsgnu);
+               $destFH->{_uname},$destFH,'DEST',$lsgnu,$args{ZipDDir});
          if ($stderr) {
             if ($stderr eq 'redo ls' ||
                   $stderr=~/does not exist/s) {
@@ -16140,7 +16167,7 @@ print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
                   ($ignore,$stderr)=&build_base_dest_hashes(
                      $dest_fdr,\$dest_output,$args{Directives},
                      $dhost,$dms_share,$dms_domain,
-                     $destFH->{_uname},$destFH,'DEST',$lsgnu);
+                     $destFH->{_uname},$destFH,'DEST',$lsgnu,$args{ZipDDir});
                   next if $stderr eq 'redo ls';
                   last;
                }
@@ -16617,7 +16644,7 @@ print "BE SURE TO ADD NEW CODE TO CHANGE BACK TO ",
                                {$file}[0]) ne 'SAME') {
                            push @files, $file;
                         }
-                     } my $tar_cmd='';my $save_dir='';
+                     } my $tar_cmd='';my $save_dir='';my $zdir_flag=0;
                      foreach my $file (sort @files) {
 print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         $activity=1;
@@ -16685,7 +16712,34 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                               $tmp_dir=$bcurdir;
                            } next
                         } else { $base___dir=$base__dir }
-                        if ($gnu_tar_input_file_flag) {
+                        if ($_diff) {
+print "WE ARE HERE\n";<STDIN>;
+                           if ($args{BaseZip}) {
+print "HELLO\n";
+                              if ($args{DestZip}) {
+                              
+                              } else {
+                                 #unless ($zdir_flag) {
+                                 #   ($output,$stderr)=
+                                 #      $baseFH->cmd(
+                                 #         'mkdir -p ./FA_Diff_Report_Zip');
+                                 #      &Net::FullAuto::FA_Core::handle_error(
+                                 #      $stderr,'-1') if $stderr;
+                                 #}
+print "ZIP=$args{BaseDir}/$args{BaseZip} and FILEEEE=$args{ZipBDir}/$dir$file<== and THIS=$baseFH->{_cwd}\n";
+                                 ($output,$stderr)=$baseFH->cmd(
+                                    "$base_unzip_path/unzip -d ".
+                                    "FA_Diff_Report_Zip ".
+                                    "$args{BaseDir}/$args{BaseZip} ".
+                                    "\"$args{ZipBDir}/$dir$file\"");
+                                 $shortcut=1;
+                              }
+                           } elsif ($args{DESTZIP}) {
+
+                           } else {
+
+                           }
+                        } elsif ($gnu_tar_input_file_flag) {
                            $gnu_tar_input_file1=
                               $baseFH->tmp('tarlist1.txt')
                               if !$gnu_tar_input_file1;
@@ -16855,7 +16909,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log
                ($ignore,$stderr)=&build_base_dest_hashes(
                      $dest_fdr,\$dest_output,$args{Directives},
                      $dhost,$dms_share,$dms_domain,
-                     $destFH->{_uname},$destFH,'DEST',$lsgnu);
+                     $destFH->{_uname},$destFH,'DEST',$lsgnu,$args{ZipDDir});
                ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
                      =&build_mirror_hashes($baseFH,$destFH,
                      $bhostlabel,$dhostlabel,$verbose);
@@ -19861,7 +19915,9 @@ sub build_base_dest_hashes
    my $cygwin = (-1<index lc($_[6]),'cygwin') ? 1 : 0;
    my $cmd_handle=$_[7];$cmd_handle||='';
    my $base_dest=$_[8];
-   my $lsgnu=$_[9];my $bd='';
+   my $lsgnu=$_[9];
+   my $zipdir=$_[10]||'';
+   my $bd='';
    $bd=($base_dest eq 'BASE')?'b':'d';
    my ($stdout,$stderr)=('','');
    my %navhash=();
@@ -19970,8 +20026,12 @@ sub build_base_dest_hashes
             $sub;
          }
       }
-      my $len_dir='';
-      if (!$ms_share && !$ms_domain && !$cygwin) {
+      my $len_dir='';my $archive_flag=0;
+      if ($zipdir) {
+         my $ln=substr(${$_[1]},0,(index ${$_[1]},"\n"));
+         $zipdir=~s/\/+$//;
+         $len_dir=length " xx-xx-xx 00:00    $zipdir";
+      } elsif (!$ms_share && !$ms_domain && !$cygwin) {
          $len_dir=(length $base_or_dest_folder)+2;
       } elsif ($base_or_dest_folder=~/$cmd_handle->{_cygdrive_regex}/) {
          my $tmp_basedest=$base_or_dest_folder;
@@ -20039,6 +20099,7 @@ sub build_base_dest_hashes
       FL: foreach my $line (split /^/, ${$_[1]}) {
          my $parse=1;my $trak=0;
          if ($savekey) {
+print "SAVEKEY=$savekey and LINE=$line<==\n";<STDIN>;
             $key=$savekey;
             $total=$savetotal;
             $dofiles=0;
@@ -20111,7 +20172,7 @@ sub build_base_dest_hashes
                if ($file eq '' && $mn ne ' D') { next }
             } else { # Else Base is UNIX
 #if ($line=~/entry_flash.swf/s && !$cygwin) {
-#print "UNIX_LINE=$line<-- and KEY=$key\n";#<STDIN>;
+#print "UNIX_LINE=$line<-- and KEY=$key and ZIPDIR=$zipdir\n";<STDIN>;
 #}
                $fchar='';$u='';$g='';$o='';$chmod='';
                chomp($line);
@@ -20125,7 +20186,7 @@ sub build_base_dest_hashes
                }
                my $endofline=substr($line,-2);
                if ($line=~s/^\s*([0-9]+)\s//) {
-                  print "LS OUTPUT LINE=$line<==\n",
+                  print "LS OUTPUT LINE=$line<==\n"
                      if !$Net::FullAuto::FA_Core::cron &&
                      $Net::FullAuto::FA_Core::debug;
                   print $Net::FullAuto::FA_Core::MRLOG
@@ -20133,7 +20194,11 @@ sub build_base_dest_hashes
                      if $Net::FullAuto::FA_Core::log &&
                      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   $bytesize=$1;
-                  ($fchar,$u,$g,$o)=unpack('a1 a3 a3 a3',$line);
+                  unless ($zipdir) {
+                     ($fchar,$u,$g,$o)=unpack('a1 a3 a3 a3',$line);
+                  } elsif ($bytesize==0) {
+                     $fchar='/';
+                  }
                   print "ADDING BYTES TO TOTAL ==>$bytesize<==\n",
                      if !$Net::FullAuto::FA_Core::cron &&
                      $Net::FullAuto::FA_Core::debug;
@@ -20154,7 +20219,7 @@ sub build_base_dest_hashes
                } else {
                   ($fchar,$u,$g,$o)=unpack('a1 a3 a3 a3',$line);
                   if ($fchar eq 't') {
-#print "TOTAL=$total and ADDBYTES=$addbytes and PREVKEY=$prevkey\n";
+print "TOTAL=$total and ADDBYTES=$addbytes and PREVKEY=$prevkey\n";
 #print $Net::FullAuto::FA_Core::MRLOG "TOTAL=$total and ADDBYTES=$addbytes and "
 #                     "PREVKEY=$prevkey\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      if ($dofiles && $total!=$addbytes) {
@@ -20168,11 +20233,11 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                         die 'redo ls' if $key eq '/';
                         $addbytes=0;
                         my $ls_path='';
-                           if ($cmd_handle->{_hostlabel}->[0] eq
-                                 "__Master_${$}__" &&
-                                 exists $Hosts{"__Master_${$}__"}{'ls'}) {
-                              $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
-                              $ls_path.='/' if $ls_path!~/\/$/;
+                        if ($cmd_handle->{_hostlabel}->[0] eq
+                              "__Master_${$}__" &&
+                              exists $Hosts{"__Master_${$}__"}{'ls'}) {
+                           $ls_path=$Hosts{"__Master_${$}__"}{'ls'};
+                           $ls_path.='/' if $ls_path!~/\/$/;
                         }
                         while (1) {
 print "LOOPING IN WHILE TO CORRECT LS -> KEY=$key\n";
@@ -20195,7 +20260,6 @@ print "LS LOOPING STDOUT=$stdout\n";
                               next if $line eq '';
                               if ($line=~/^total /) {
                                  $total+=unpack('x6 a*',$line);
-print "TOTAL=$total and LINE=$line\n";
                                  next;
                               }
                               my $lchar=substr($line,-1);
@@ -20207,7 +20271,6 @@ print "TOTAL=$total and LINE=$line\n";
                                  } chop $line;
                               }
                               my $endofline=substr($line,-2);
-print "NOW LINE=$line\n";
                               if ($line=~s/^\s*([0-9]+)\s//) {
                                  my $bytesize=$1;
                                  next if $bytesize!~/\d+/;
@@ -20221,7 +20284,9 @@ print "NOW LINE=$line\n";
                            $total=0;
                         } next WH;
                      } else {
+print "ARE WE HERE AND LINE=$line<==\n";
                         $total=unpack('x6 a*',$line);
+print "TOTAL BYTES FINAL TALLY==>$total<==\n";
                         print "TOTAL BYTES FINAL TALLY==>$total<==\n",
                            if !$Net::FullAuto::FA_Core::cron &&
                            $Net::FullAuto::FA_Core::debug;
@@ -20407,6 +20472,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
 #}
                      ${$cmd_handle->{"_${bd}hash"}}{$key}[0]='SOME';
                   }
+print "WHAT IS THE LEN_DIR=$len_dir and LINE=$line<==\n";
                   if ($len_dir<length $line) {
                      # Get New Directory Key
                      $prevkey=$key;
@@ -20422,11 +20488,11 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                   ${$cmd_handle->{"_${bd}hash"}}{$key}=[ 'ALL', {},
                      'DEPLOY_SOMEFILES_OF_CURDIR' ];
                }
-            } elsif ((!$cygwin && $fchar eq '-') ||
+            } elsif ((!$cygwin && $fchar eq '-' || $zipdir) ||
                   ($cygwin && $mn ne ' D' && unpack('a5',$size) ne '<DIR>')) {
                $file_count++;
 #if ($key eq '/') {
-#print "UNIXXXYYLINE=$line and CYGWINNNN=$cygwin and MN=$mn and SIZE=$size and FILE=$file and KEY=$key\n";<STDIN>;
+#print "UNIXXXYYLINE=$line and CYGWINNNN=$cygwin and MN=$mn and SIZE=$size and FILE=$file and KEY=$key and ZIPDIR=$zipdir\n";<STDIN>;
 #}
                if (!$cygwin && ($fchar eq '-' || $fchar eq 'l')) {
                   my $up=unpack('x10 a*',$line);
@@ -20480,6 +20546,32 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                      }
                   }
                   $file=s/ -> .*$// if -1<index $file,' -> ';
+               } elsif ($zipdir) {
+                  $line=~s/^\s//;
+                  my $fullfile='';
+                  ($dy,$tm,$fullfile)=split / +/, $line;
+                  ($mn,$dy,$yr)=split '-', $dy;
+                  ($hr,$mt)=split ':', $tm;
+                  $file=substr($fullfile,(rindex $fullfile,'/')+1);
+                  if ($fullfile ne $zipdir.'/'.$key.'/'.$file) {
+                     my @kdirs=($key);
+                     if (-1<index $key,'/') {
+                        @kdirs=split '/',$key;
+                     }
+                     if ($#kdirs==0) {
+                        $key='/';
+                     } else {
+                        while (pop @kdirs) {
+                           my $di=join '/', @kdirs;
+                           if ($fullfile eq $zipdir.'/'.$di.'/'.$file) {
+                              $key=$di;
+                              last;
+                           }
+                        }
+                     }
+                  }
+                  $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
+                  $size=$bytesize;
                }
 #if ($key eq '/') {
 #print "CYGWINNNNN\n" if $cygwin;
@@ -20604,17 +20696,27 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                } else {
                   my $fileyr=0;
                   if (!$cygwin) {
-                     my $up=unpack('x10 a*',"$line");
-                     $up=~s/^[.+ ]\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
-                     ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
-                     my $yr='';$fileyr='';
-                     if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
-                        $fileyr=$1;
-                        $file=$tm;
-                        $tm=$dy;
-                        $mn=$2;$dy=$3;
+                     if ($zipdir) {
+                        $line=~s/^\s//;
+                        ($dy,$tm,$file)=split / +/, $line;
+                        ($mn,$dy,$yr)=split '-', $dy;
+                        ($hr,$mt)=split ':', $tm;
+                        $file=substr($file,(rindex $file,'/')+1);
+print "DY=$dy and MON=$mn and YR=$yr and HR=$hr and MT=$mt and FILE=$file<==\n";;
+                     } else {
+                        my $up=unpack('x10 a*',"$line");
+                        $up=~s/^[.+ ]\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
+                        ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
+                        my $yr='';$fileyr='';
+                        if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
+                           $fileyr=$1;
+                           $file=$tm;
+                           $tm=$dy;
+                           $mn=$2;$dy=$3;
+                        }
                      }
-                     $mn=$Net::FullAuto::FA_Core::month{$mn} if length $mn==3;
+                     $mn=$Net::FullAuto::FA_Core::month{$mn}
+                        if length $mn==3;
                      my ($hr,$mt)='';
                      if (length $tm==4) {
                         $fileyr=$tm;$hr=12;$mt='00';
@@ -25267,7 +25369,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LINE TO STRIP TIMEINFO=$line\n"
    } else {
       $fileyr=$mt;$mt=0;
    }
-print $Net::FullAuto::FA_Core::MRLOG "TIMEINFO=> MT=$mt HR=$hr DY=$dy MN=$mn FY=$fileyr\n"
+print $Net::FullAuto::FA_Core::MRLOG "TIMEINFO=> MT=$mt HR=$hr DYX=$dy MN=$mn FY=$fileyr\n"
       if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #$Net::FullAuto::FA_Core::log=0 if $logreset;
    $timestamp=&Net::FullAuto::FA_Core::timelocal(
