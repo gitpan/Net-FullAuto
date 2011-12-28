@@ -4995,6 +4995,7 @@ sub master_transfer_dir
             if ($testd eq 'WRITE') {
                $work_dirs->{_cwd_mswin}=$work_dirs->{_tmp_mswin}=$cdr.'\\\\';
                $work_dirs->{_cwd}=$work_dirs->{_tmp}=$curdir;
+print "WE HAVE A CURDIR=$curdir<==\n";<STDIN>;
                return $work_dirs;
             } elsif ($testd eq 'READ' || $testd eq 'NOFILE') {
                last;
@@ -5171,6 +5172,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING CURDIR FOR TRANSFER=",cwd(),"\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       $master_transfer_dir=$curdir;
    }
+print "YEPPERSSSSSS\n";<STDIN>;
    $localhost->{_cwd}{_cwd}=Cwd::getcwd();
    return $master_transfer_dir;
 
@@ -10456,7 +10458,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
       }
    }
    #if ($su_id eq 'root') {
-      $fh->print("su - $su_id");
+      $fh->print("su $su_id");
    #} else {
    #   $fh->print("login $su_id");
    #}
@@ -10502,7 +10504,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
 
    if ($id ne $su_id && $id ne 'root') {
 
-      $fh->print("su - $su_id");
+      $fh->print("su $su_id");
 
       return '',$fh->errmsg if $fh->errmsg;
 
@@ -15058,7 +15060,6 @@ sub cwd
       } 
    }
 #print "TARGET_DIR=$target_dir\n";
-#print "SELFSTUFF=$self->{_work_dirs}->{_cwd}\n";
    my $hostlabel=$self->{_hostlabel}->[0]||$self->{_hostlabel}->[1];
    my ($ip,$hostname,$use,$ms_share,$ms_domain,
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
@@ -15234,8 +15235,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                unpack('a1',$target_dir) ne '\\' &&
                unpack('x1 a1',$target_dir) ne ':') {
 eval{
-print "WHAT IS REF=",ref $self->{_cmd_handle}," and $self->{_cmd_handle}\n";
-print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REF=",ref $self->{_cmd_handle},"\n"
+print "WHAT IS REF=",ref $self->{_cmd_handle},"\n"
       if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 print "WHAT IS EXISTS=",exists $self->{_cmd_handle}->{_work_dirs},"\n";
 print $Net::FullAuto::FA_Core::MRLOG "WHAT IS EXISTS=",exists $self->{_cmd_handle}->{_work_dirs},"\n" if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -15458,6 +15458,7 @@ sub mirror
    my $debug_info='';$deploy_info='';my $dir='';
    my $mirror_debug='';my $excluded='';
    my $base_unzip_path='';my $dest_unzip_path='';
+   my $base_zip_path='';
    my ($output,$stdout,$stderr)=('','','');
    $args{ZipBDir}||='';
    $args{ZipDDir}||='';
@@ -15738,6 +15739,13 @@ print "BASE3\n";
                $base_unzip_path='/bin/';
             } elsif (-e '/usr/local/bin/unzip') {
                $base_unzip_path='/usr/local/bin/';
+            }
+            if (-e '/usr/bin/zip') {
+               $base_zip_path='/usr/bin/';
+            } elsif (-e '/bin/zip') {
+               $base_zip_path='/bin/';
+            } elsif (-e '/usr/local/bin/zip') {
+               $base_zip_path='/usr/local/bin/';
             }
             ($base_output,$stderr)=$baseFH->cmd(
                "${base_unzip_path}unzip -l $dir/$args{BaseZip}");
@@ -16633,6 +16641,7 @@ print "BE SURE TO ADD NEW CODE TO CHANGE BACK TO ",
                         $gnu_tar_input_file_flag=1; 
                      }
                   }
+                  my $cppath='';my $diffpath='';
                   while (my $key=shift @basekeys) {
                      my @files=();
                      foreach my $file
@@ -16713,26 +16722,83 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            } next
                         } else { $base___dir=$base__dir }
                         if ($_diff) {
-print "WE ARE HERE\n";<STDIN>;
                            if ($args{BaseZip}) {
-print "HELLO\n";
                               if ($args{DestZip}) {
                               
                               } else {
-                                 #unless ($zdir_flag) {
-                                 #   ($output,$stderr)=
-                                 #      $baseFH->cmd(
-                                 #         'mkdir -p ./FA_Diff_Report_Zip');
-                                 #      &Net::FullAuto::FA_Core::handle_error(
-                                 #      $stderr,'-1') if $stderr;
-                                 #}
-print "ZIP=$args{BaseDir}/$args{BaseZip} and FILEEEE=$args{ZipBDir}/$dir$file<== and THIS=$baseFH->{_cwd}\n";
+#print "ZIP=$args{BaseDir}/$args{BaseZip} and FILEEEE=$args{ZipBDir}/$dir$file<== and THIS=$baseFH->{_cwd}\n";
+#my $env=$baseFH->cmd('env');
+#print "WHAT IS ID=$env<== and $ENV{HOME}\n";<STDIN>;
                                  ($output,$stderr)=$baseFH->cmd(
-                                    "$base_unzip_path/unzip -d ".
-                                    "FA_Diff_Report_Zip ".
+                                    "$base_unzip_path/unzip -o -d ".
+                                    "$baseFH->{_cwd}FA_Diff_Report_Zip ".
                                     "$args{BaseDir}/$args{BaseZip} ".
                                     "\"$args{ZipBDir}/$dir$file\"");
-                                 $shortcut=1;
+                                 if ($stderr) {
+                                    &Net::FullAuto::FA_Core::handle_error(
+                                       $stderr,'-1');
+                                 }
+                                 if ($same_host_as_Master{$destFH->{_ip}}) {
+                                    unless ($cppath) {
+                                       if (-e '/usr/bin/cp') {
+                                          $cppath='/usr/bin/';
+                                       } elsif (-e '/bin/cp') {
+                                          $cppath='/bin/';
+                                       } elsif (-e '/usr/local/bin/cp') {
+                                          $cppath='/usr/local/bin/';
+                                       }
+                                    }
+                                    unless ($diffpath) {
+                                       if (-e '/usr/bin/diff') {
+                                          $diffpath='/usr/bin/';
+                                       } elsif (-e '/bin/diff') {
+                                          $diffpath='/bin/';
+                                       } elsif (-e '/usr/local/bin/diff') {
+                                          $diffpath='/usr/local/bin/';
+                                       }
+                                    }
+                                    ($output,$stderr)=
+                                       $baseFH->cmd("${cppath}cp -fp ".
+                                       "$args{DestDir}/$dir$file ".
+                                       $baseFH->{_cwd}. 
+                                       "FA_Diff_Report_Zip/$args{ZipBDir}".
+                                       "/$dir/$file.dest");
+                                    if ($stderr) {
+                                       &Net::FullAuto::FA_Core::handle_error(
+                                          $stderr,'-1');
+                                    }
+                                    ($output,$stderr)=
+                                       $baseFH->cmd("${diffpath}diff ".
+                                       $baseFH->{_cwd}.
+                                       "FA_Diff_Report_Zip/$args{ZipBDir}".
+                                       "/$dir/$file ".$baseFH->{_cwd}.
+                                       "FA_Diff_Report_Zip/$args{ZipBDir}".
+                                       "/$dir/$file.dest > ".$baseFH->{_cwd}.
+                                       "FA_Diff_Report_Zip/$args{ZipBDir}".
+                                       "/$dir/$file.diff");
+                                    if ($stderr) {
+                                       &Net::FullAuto::FA_Core::handle_error(
+                                          $stderr,'-1');
+                                    }
+                                    ($output,$stderr)=
+                                       $baseFH->cmd("rm -rf ".
+                                       $baseFH->{_cwd}.
+                                       "FA_Diff_Report_Zip/$args{ZipBDir}".
+                                       "/$dir/$file.dest");
+                                    if ($stderr) {
+                                       &Net::FullAuto::FA_Core::handle_error(
+                                          $stderr,'-1');
+                                    }
+                                    ($output,$stderr)=
+                                       $baseFH->cmd("rm -rf ".
+                                       $baseFH->{_cwd}.
+                                       "FA_Diff_Report_Zip/$args{ZipBDir}".
+                                       "/$dir/$file");
+                                    if ($stderr) {
+                                       &Net::FullAuto::FA_Core::handle_error(
+                                          $stderr,'-1');
+                                    }
+                                 }
                               }
                            } elsif ($args{DESTZIP}) {
 
@@ -16799,91 +16865,130 @@ print "ZIP=$args{BaseDir}/$args{BaseZip} and FILEEEE=$args{ZipBDir}/$dir$file<==
                   $Net::FullAuto::FA_Core::tranback=1;$activity=0;
                } else { $activity=0 }
             }
-            if ($activity) {
-               if ($gnu_tar_input_list1) {
-                  chomp $gnu_tar_input_list1;
-                  my @files=split /^/, $gnu_tar_input_list1;
-                  my $filearg='';my $farg='';
-                  foreach my $fil (@files) {
-                     $fil=~s/%/\\%/g;
-                     $farg.=$fil;
-                     if (1601 <
-                           length "echo \"$farg\" >> \$gnu_tar_input_file1") {
+            if ($_diff) {
+               my $curdir=$baseFH->{_cwd};
+               ($output,$stderr)=$baseFH->cwd(
+                  "$baseFH->{_cwd}FA_Diff_Report_Zip");
+               if ($stderr) {
+                  &Net::FullAuto::FA_Core::handle_error(
+                     $stderr,'-1');
+               }
+               ($output,$stderr)=$baseFH->cmd(
+                  "$base_zip_path/zip -r ".
+                  "fa_diff_report *");
+               if ($stderr) {
+                  &Net::FullAuto::FA_Core::handle_error(
+                     $stderr,'-1');
+               }
+               ($output,$stderr)=$baseFH->cmd(
+                   "mv fa_diff_report.zip ..");
+               if ($stderr) {
+                  &Net::FullAuto::FA_Core::handle_error(
+                     $stderr,'-1');
+               }
+               #($output,$stderr)=$baseFH->cwd($curdir);
+               #if ($stderr) {
+               #   &Net::FullAuto::FA_Core::handle_error(
+               #      $stderr,'-1');
+               #}
+               ($output,$stderr)=$baseFH->cmd(
+                   "rm -rf $curdir/FA_Diff_Report_Zip");
+               if ($stderr) {
+                  &Net::FullAuto::FA_Core::handle_error(
+                     $stderr,'-1');
+               }
+               ($output,$stderr)=$baseFH->cmd(
+                   "chown $username $curdir/fa_diff_report.zip");
+               if ($stderr) {
+                  &Net::FullAuto::FA_Core::handle_error(
+                     $stderr,'-1');
+               }
+            } else {
+               if ($activity) {
+                  if ($gnu_tar_input_list1) {
+                     chomp $gnu_tar_input_list1;
+                     my @files=split /^/, $gnu_tar_input_list1;
+                     my $filearg='';my $farg='';
+                     foreach my $fil (@files) {
+                        $fil=~s/%/\\%/g;
+                        $farg.=$fil;
+                        if (1601 < length
+                              "echo \"$farg\" >> \$gnu_tar_input_file1") {
+                           chomp $filearg;
+                           ($output,$stderr)=$baseFH->cmd(
+                              "echo \"$filearg\" >> $gnu_tar_input_file1");
+                           &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                              if $stderr;
+                           $farg=$fil;
+                        } $filearg=$farg;
+                     }
+                     if ($filearg) {
                         chomp $filearg;
                         ($output,$stderr)=$baseFH->cmd(
                            "echo \"$filearg\" >> $gnu_tar_input_file1");
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                            if $stderr;
-                        $farg=$fil;
-                     } $filearg=$farg;
-                  }
-                  if ($filearg) {
-                     chomp $filearg;
-                     ($output,$stderr)=$baseFH->cmd(
-                        "echo \"$filearg\" >> $gnu_tar_input_file1");
+                     }
+                     my $tar_cmd=
+                        "tar cvf $bcurdir/transfer".
+                        "$Net::FullAuto::FA_Core::tran[3].tar ";
+                     $tar_cmd.="-C \"$base__dir\" -T \"$gnu_tar_input_file1\"";
+                     ($output,$stderr)=$baseFH->cmd($tar_cmd,'__display__');
                      &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                         if $stderr;
                   }
-                  my $tar_cmd=
-                     "tar cvf $bcurdir/transfer".
-                     "$Net::FullAuto::FA_Core::tran[3].tar ";
-                  $tar_cmd.="-C \"$base__dir\" -T \"$gnu_tar_input_file1\"";
-                  ($output,$stderr)=$baseFH->cmd($tar_cmd,'__display__');
-                  &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
-                     if $stderr;
-               }
-               if ($gnu_tar_input_list2) {
-                  chomp $gnu_tar_input_list2;
-                  my @files=split /^/, $gnu_tar_input_list2;
-                  my $filearg='';my $farg='';
-                  foreach my $fil (@files) {
-                     $fil=~s/%/\\%/g;
-                     $farg.=$fil;
-                     if (1601 <
-                           length "echo \"$farg\" >> \$gnu_tar_input_file2") {
+                  if ($gnu_tar_input_list2) {
+                     chomp $gnu_tar_input_list2;
+                     my @files=split /^/, $gnu_tar_input_list2;
+                     my $filearg='';my $farg='';
+                     foreach my $fil (@files) {
+                        $fil=~s/%/\\%/g;
+                        $farg.=$fil;
+                        if (1601 < length
+                               "echo \"$farg\" >> \$gnu_tar_input_file2") {
+                           chomp $filearg;
+                           ($output,$stderr)=$baseFH->cmd(
+                              "echo \"$filearg\" >> $gnu_tar_input_file2");
+                           &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                              if $stderr;
+                           $farg=$fil;
+                        } $filearg=$farg;
+                     }
+                     if ($filearg) {
                         chomp $filearg;
                         ($output,$stderr)=$baseFH->cmd(
                            "echo \"$filearg\" >> $gnu_tar_input_file2");
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                            if $stderr;
-                        $farg=$fil;
-                     } $filearg=$farg;
-                  }
-                  if ($filearg) {
-                     chomp $filearg;
-                     ($output,$stderr)=$baseFH->cmd(
-                        "echo \"$filearg\" >> $gnu_tar_input_file2");
+                     }
+                     my $tar_cmd=
+                        "tar rvf $bcurdir/transfer".
+                        "$Net::FullAuto::FA_Core::tran[3].tar ";
+                     $tar_cmd.="-C \"$tmp_dir\" -T \"$gnu_tar_input_file2\"";
+                     ($output,$stderr)=$baseFH->cmd($tar_cmd);
                      &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                         if $stderr;
+                     foreach my $dirt (@dirt) {
+                        my $cmd="rm -rf \"$tmp_dir/$dirt\"";
+                        ($output,$stderr)=$baseFH->cmd($cmd);
+                        $Net::FullAuto::FA_Core::savetran=1 if $stderr;
+                        &Net::FullAuto::FA_Core::handle_error($stderr,'-2')
+                           if $stderr;
+                     }
+                  } elsif ($aix_tar_input_variable1) {
+   
+                  } elsif ($solaris_tar_input_variable1) {
+   
                   }
-                  my $tar_cmd=
-                     "tar rvf $bcurdir/transfer".
-                     "$Net::FullAuto::FA_Core::tran[3].tar ";
-                  $tar_cmd.="-C \"$tmp_dir\" -T \"$gnu_tar_input_file2\"";
-                  ($output,$stderr)=$baseFH->cmd($tar_cmd);
-                  &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
-                     if $stderr;
-                  foreach my $dirt (@dirt) {
-                     my $cmd="rm -rf \"$tmp_dir/$dirt\"";
-                     ($output,$stderr)=$baseFH->cmd($cmd);
-                     $Net::FullAuto::FA_Core::savetran=1 if $stderr;
+print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                  if (!$shortcut) {
+                     ($output,$stderr)=$baseFH->cmd(
+                        "chmod 777 $bcurdir/transfer".
+                        "$Net::FullAuto::FA_Core::tran[3].tar");
                      &Net::FullAuto::FA_Core::handle_error($stderr,'-2')
                         if $stderr;
                   }
-               } elsif ($aix_tar_input_variable1) {
-
-               } elsif ($solaris_tar_input_variable1) {
-
-               }
-print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               if (!$shortcut) {
-                  ($output,$stderr)=$baseFH->cmd(
-                     "chmod 777 $bcurdir/transfer".
-                     "$Net::FullAuto::FA_Core::tran[3].tar");
-                  &Net::FullAuto::FA_Core::handle_error($stderr,'-2')
-                     if $stderr;
-               }
-               &move_tarfile($baseFH,$btransfer_dir,$destFH,$shortcut);
+                  &move_tarfile($baseFH,$btransfer_dir,$destFH,$shortcut);
 #print "BASEFH=$baseFH\n";
 #print "DESTFH=$destFH\n";
 #print "BMS_SHARE=$bms_share\n";
@@ -16892,162 +16997,163 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log
 #print "TRANTAR=$trantar\n";
 #print "BHOSTLABEL=$bhostlabel\n";
 #print "DHOSTLABEL=$dhostlabel\n";
-               if ($destFH->{_uname} eq 'cygwin' && 
-                     $dest_fdr=~/^[\/|\\][\/|\\]/ &&
-                     $dms_share && $#{$destFH->{_hostlabel}}) {
-                  $trantar=move_files($baseFH,'/','',
-                           $dest_fdr,
-                           $destFH,$bms_share,
-                           $dms_share,'DEPLOY_ALL',
-                           $local_transfer_dir,'',
-                           $bhostlabel,$dhostlabel,
-                           '',$shortcut);
+                  if ($destFH->{_uname} eq 'cygwin' && 
+                        $dest_fdr=~/^[\/|\\][\/|\\]/ &&
+                        $dms_share && $#{$destFH->{_hostlabel}}) {
+                     $trantar=move_files($baseFH,'/','',
+                              $dest_fdr,
+                              $destFH,$bms_share,
+                              $dms_share,'DEPLOY_ALL',
+                              $local_transfer_dir,'',
+                              $bhostlabel,$dhostlabel,
+                              '',$shortcut);
+                  }
+                  ($dest_output,$dest_dir,$err)=get_dest_ls_output(
+                        $destFH,$dest_fdr,$dms_share,$dhost,$die);
+                  my $ignore='';
+                  ($ignore,$stderr)=&build_base_dest_hashes(
+                        $dest_fdr,\$dest_output,$args{Directives},
+                        $dhost,$dms_share,$dms_domain,
+                        $destFH->{_uname},$destFH,'DEST',$lsgnu,$args{ZipDDir});
+                  ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
+                        =&build_mirror_hashes($baseFH,$destFH,
+                        $bhostlabel,$dhostlabel,$verbose);
+                  my @basekeys=sort keys %{$baseFH->{_bhash}};
+                  while (my $key=shift @basekeys) {
+                     my @files=();
+                     foreach my $file
+                           (keys %{${$baseFH->{_bhash}}{$key}[1]}) {
+                        if (-1<index ${$baseFH->{_bhash}}{$key}[1]{$file}[0],
+                              'DIFF_TIME') {
+                           my $ts=${$baseFH->{_bhash}}{$key}[1]{$file}[1];
+                           $ts=unpack('x12 a4',$ts).unpack('a2',$ts).
+                               unpack('x3 a2',$ts).unpack('x6 a2',$ts).
+                               unpack('x9 a2',$ts);
+                           my $key_dir=($key ne '/') ? "/$key/" : '/';
+                           ($stdout,$stderr)=$destFH->cmd(
+                              "touch -t $ts \"$dest_fdr$key_dir$file\""); 
+                           &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                              if $stderr;
+                        }
+                     }
+                  }
                }
-               ($dest_output,$dest_dir,$err)=get_dest_ls_output(
-                     $destFH,$dest_fdr,$dms_share,$dhost,$die);
-               my $ignore='';
-               ($ignore,$stderr)=&build_base_dest_hashes(
-                     $dest_fdr,\$dest_output,$args{Directives},
-                     $dhost,$dms_share,$dms_domain,
-                     $destFH->{_uname},$destFH,'DEST',$lsgnu,$args{ZipDDir});
-               ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
-                     =&build_mirror_hashes($baseFH,$destFH,
-                     $bhostlabel,$dhostlabel,$verbose);
-               my @basekeys=sort keys %{$baseFH->{_bhash}};
-               while (my $key=shift @basekeys) {
-                  my @files=();
-                  foreach my $file
-                        (keys %{${$baseFH->{_bhash}}{$key}[1]}) {
-                     if (-1<index ${$baseFH->{_bhash}}{$key}[1]{$file}[0],
-                           'DIFF_TIME') {
-                        my $ts=${$baseFH->{_bhash}}{$key}[1]{$file}[1];
-                        $ts=unpack('x12 a4',$ts).unpack('a2',$ts).
-                            unpack('x3 a2',$ts).unpack('x6 a2',$ts).
-                            unpack('x9 a2',$ts);
-                        my $key_dir=($key ne '/') ? "/$key/" : '/';
-                        ($stdout,$stderr)=$destFH->cmd(
-                           "touch -t $ts \"$dest_fdr$key_dir$file\""); 
+               foreach my $key (keys %{$destFH->{_dhash}}) {
+                  if ($Net::FullAuto::FA_Core::d_sub) {
+                     my $return=0;my $returned_modif='';
+                     ($return,$returned_modif)=
+                        &$Net::FullAuto::FA_Core::d_sub($key);
+                     next if $return && -1<index $returned_modif,'e';
+                  } $excluded=0;
+                  if (exists ${$baseFH->{_bhash}}{$key}) {
+                     foreach my $file (keys %{${$destFH->{_dhash}}{$key}[1]}) {
+                        my $return=0;my $returned_modif='';
+                        ($return,$returned_modif)=
+                           &$Net::FullAuto::FA_Core::f_sub($file,$key)
+                           if $Net::FullAuto::FA_Core::f_sub;
+                        next if $return && -1<index $returned_modif,'e';
+                        if ((exists $args{DeleteOnDest} &&
+                              $args{DeleteOnDest}) && (!exists
+                              ${$baseFH->{_unaltered_basehash}}
+                              {$key}[1]{$file})) {
+${$baseFH->{_unaltered_basehash}}{$key}[1]{$file}||='';
+print "SHORTCUT=$shortcut and THISSS=",
+   ${$baseFH->{_unaltered_basehash}}{$key}[1]{$file},"<== and KEY=$key and FILE=$file\n";#<STDIN>;
+                           if ($key eq '/') {
+                              $activity=1;
+                              $mirror_output.="DELETEDa File ==> $file\n";
+                              $mirror_debug.="DELETED File ==> $file\n";
+                              print "DELETINGa File ==> $file\n"
+                                 if !$Net::FullAuto::FA_Core::cron
+                                 || $Net::FullAuto::FA_Core::debug;
+                              if (!$destFH->{_work_dirs}->{_cwd} &&
+                                    $destFH->{_work_dirs}->{_cwd_mswin}) {
+                                 my $fil=$file;
+                                 $fil=$destFH->{_work_dirs}->{_cwd_mswin}
+                                     .$fil;
+                                 my ($output,$stderr)=
+                                    $destFH->cmd("rm -f \"$fil\"");
+                                 &Net::FullAuto::FA_Core::handle_error(
+                                    $stderr,'-1') if $stderr;
+                              } else {
+                                 my ($output,$stderr)=
+                                    $destFH->cmd("rm -f \"$file\"");
+                                 &Net::FullAuto::FA_Core::handle_error(
+                                    $stderr,'-1') if $stderr;
+                              }
+                           } else {
+print $Net::FullAuto::FA_Core::MRLOG "DELETEFILE1b=$file\n"
+   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                              $activity=1;
+                              $mirror_output.="DELETEDb File ==> $key/$file\n";
+                              $mirror_debug.="DELETED File ==> $key/$file\n";
+                              print "DELETINGb File ==> $key/$file\n";
+                              if (!$destFH->{_work_dirs}->{_cwd} &&
+                                    $destFH->{_work_dirs}->{_cwd_mswin}) {
+                                 my $fil="$key/$file";
+                                 $fil=~s/\//\\/g;
+                                 $fil=$destFH->{_work_dirs}->{_cwd_mswin}
+                                      .$fil;
+                                 my ($output,$stderr)=
+                                    $destFH->cmd("rm -f \"$fil\"");
+                                 &Net::FullAuto::FA_Core::handle_error(
+                                    $stderr,'-1') if $stderr;
+                              } else {
+                                 my ($output,$stderr)=
+                                    $destFH->cmd("rm -f \"$key/$file\"");
+                                 &Net::FullAuto::FA_Core::handle_error(
+                                    $stderr,'-1') if $stderr;
+                              }
+                           }
+                        }
+                     }
+                  } elsif ((exists $args{DeleteOnDest} &&
+                        $args{DeleteOnDest}) &&
+                        (!$shortcut || !exists
+                        ${$baseFH->{_unaltered_basehash}}{$key})) {
+                     $activity=1;
+                     $key="$dest_fdr/." if $key eq '/';
+                     $mirror_output.="DELETEDc Directory ==> $key\n";
+                     $mirror_debug.="DELETED Directory ==> $key\n";
+                     print "DELETINGc Directory ==> $key\n"
+                        if !$Net::FullAuto::FA_Core::cron
+                        || $Net::FullAuto::FA_Core::debug;
+                     if (!$destFH->{_work_dirs}->{_cwd} &&
+                           $destFH->{_work_dirs}->{_cwd_mswin}) {
+                        my $dir=$key;
+                        $dir=~s/\//\\/g;
+                        $dir=$destFH->{_work_dirs}->{_cwd_mswin}
+                             .$dir;
+                        my ($output,$stderr)=
+                           $destFH->cmd("rm -rf \"$dir\"");
+                        &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                           if $stderr;
+                     } else {
+                        my ($output,$stderr)=
+                           $destFH->cmd("rm -rf \"$key\"");
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                            if $stderr;
                      }
                   }
                }
-            }
-            foreach my $key (keys %{$destFH->{_dhash}}) {
-               if ($Net::FullAuto::FA_Core::d_sub) {
-                  my $return=0;my $returned_modif='';
-                  ($return,$returned_modif)=
-                     &$Net::FullAuto::FA_Core::d_sub($key);
-                  next if $return && -1<index $returned_modif,'e';
-               } $excluded=0;
-               if (exists ${$baseFH->{_bhash}}{$key}) {
-                  foreach my $file (keys %{${$destFH->{_dhash}}{$key}[1]}) {
-                     my $return=0;my $returned_modif='';
-                     ($return,$returned_modif)=
-                        &$Net::FullAuto::FA_Core::f_sub($file,$key)
-                        if $Net::FullAuto::FA_Core::f_sub;
-                     next if $return && -1<index $returned_modif,'e';
-                     if ((exists $args{DeleteOnDest} &&
-                           $args{DeleteOnDest}) && (!exists
-                           ${$baseFH->{_unaltered_basehash}}
-                           {$key}[1]{$file})) {
-${$baseFH->{_unaltered_basehash}}{$key}[1]{$file}||='';
-print "SHORTCUT=$shortcut and THISSS=",
-   ${$baseFH->{_unaltered_basehash}}{$key}[1]{$file},"<== and KEY=$key and FILE=$file\n";#<STDIN>;
-                        if ($key eq '/') {
-                           $activity=1;
-                           $mirror_output.="DELETEDa File ==> $file\n";
-                           $mirror_debug.="DELETED File ==> $file\n";
-                           print "DELETINGa File ==> $file\n"
-                              if !$Net::FullAuto::FA_Core::cron
-                              || $Net::FullAuto::FA_Core::debug;
-                           if (!$destFH->{_work_dirs}->{_cwd} &&
-                                 $destFH->{_work_dirs}->{_cwd_mswin}) {
-                              my $fil=$file;
-                              $fil=$destFH->{_work_dirs}->{_cwd_mswin}
-                                  .$fil;
-                              my ($output,$stderr)=
-                                 $destFH->cmd("rm -f \"$fil\"");
-                              &Net::FullAuto::FA_Core::handle_error(
-                                 $stderr,'-1') if $stderr;
-                           } else {
-                              my ($output,$stderr)=
-                                 $destFH->cmd("rm -f \"$file\"");
-                              &Net::FullAuto::FA_Core::handle_error(
-                                 $stderr,'-1') if $stderr;
-                           }
-                        } else {
-print $Net::FullAuto::FA_Core::MRLOG "DELETEFILE1b=$file\n"
-   if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                           $activity=1;
-                           $mirror_output.="DELETEDb File ==> $key/$file\n";
-                           $mirror_debug.="DELETED File ==> $key/$file\n";
-                           print "DELETINGb File ==> $key/$file\n";
-                           if (!$destFH->{_work_dirs}->{_cwd} &&
-                                 $destFH->{_work_dirs}->{_cwd_mswin}) {
-                              my $fil="$key/$file";
-                              $fil=~s/\//\\/g;
-                              $fil=$destFH->{_work_dirs}->{_cwd_mswin}
-                                   .$fil;
-                              my ($output,$stderr)=
-                                 $destFH->cmd("rm -f \"$fil\"");
-                              &Net::FullAuto::FA_Core::handle_error(
-                                 $stderr,'-1') if $stderr;
-                           } else {
-                              my ($output,$stderr)=
-                                 $destFH->cmd("rm -f \"$key/$file\"");
-                              &Net::FullAuto::FA_Core::handle_error(
-                                 $stderr,'-1') if $stderr;
-                           }
-                        }
+               foreach my $key (keys %{$baseFH->{_bhash}}) {
+                  if (defined ${$baseFH->{_bhash}}{$key}[3]
+                        && ${$baseFH->{_bhash}}{$key}[3] eq 'NOT_ON_DEST') {
+                     if (exists $destFH->{_smb}) {
+                        my $tdir=$key;
+                        $tdir=~tr/\//\\/;
+                        $tdir="\\\\$dhost\\$dms_share\\$tdir";
+                        ($output,$stderr)=$destFH->cmd("cmd /c mkdir $tdir",
+                           '__live__');
+                        &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                           if $stderr;
+                     } else {
+                        ($output,$stderr)=$destFH->cmd("mkdir -p $key");
+                        &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                           if $stderr;
                      }
+                     $activity=1;
                   }
-               } elsif ((exists $args{DeleteOnDest} &&
-                     $args{DeleteOnDest}) &&
-                     (!$shortcut || !exists
-                     ${$baseFH->{_unaltered_basehash}}{$key})) {
-                  $activity=1;
-                  $key="$dest_fdr/." if $key eq '/';
-                  $mirror_output.="DELETEDc Directory ==> $key\n";
-                  $mirror_debug.="DELETED Directory ==> $key\n";
-                  print "DELETINGc Directory ==> $key\n"
-                     if !$Net::FullAuto::FA_Core::cron
-                     || $Net::FullAuto::FA_Core::debug;
-                  if (!$destFH->{_work_dirs}->{_cwd} &&
-                        $destFH->{_work_dirs}->{_cwd_mswin}) {
-                     my $dir=$key;
-                     $dir=~s/\//\\/g;
-                     $dir=$destFH->{_work_dirs}->{_cwd_mswin}
-                          .$dir;
-                     my ($output,$stderr)=
-                        $destFH->cmd("rm -rf \"$dir\"");
-                     &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
-                        if $stderr;
-                  } else {
-                     my ($output,$stderr)=
-                        $destFH->cmd("rm -rf \"$key\"");
-                     &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
-                        if $stderr;
-                  }
-               }
-            }
-            foreach my $key (keys %{$baseFH->{_bhash}}) {
-               if (defined ${$baseFH->{_bhash}}{$key}[3]
-                     && ${$baseFH->{_bhash}}{$key}[3] eq 'NOT_ON_DEST') {
-                  if (exists $destFH->{_smb}) {
-                     my $tdir=$key;
-                     $tdir=~tr/\//\\/;
-                     $tdir="\\\\$dhost\\$dms_share\\$tdir";
-                     ($output,$stderr)=$destFH->cmd("cmd /c mkdir $tdir",
-                        '__live__');
-                     &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
-                        if $stderr;
-                  } else {
-                     ($output,$stderr)=$destFH->cmd("mkdir -p $key");
-                     &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
-                        if $stderr;
-                  }
-                  $activity=1;
                }
             }
             my $nodif="\n       THERE ARE NO DIFFERENCES "
@@ -17605,7 +17711,6 @@ print "BLECKKK\n";
          }
       } else {
          $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin};
-print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
       } my $cnt=0;
       while (1) {
          ($dest_output,$stderr)=$destFH->cmd(
@@ -17682,8 +17787,8 @@ print "WHAT IS DEST PRE=$destFH->{_work_dirs}->{_pre_mswin}\n";<STDIN>;
 sub move_tarfile
 {
    my @topcaller=caller;
-   print "move_tarfile() CALLER=",(join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_Core::debug;
+   print "move_tarfile() CALLER=",(join ' ',@topcaller),"\n";
+      #if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "move_tarfile() CALLER=",
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
