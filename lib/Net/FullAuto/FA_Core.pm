@@ -252,45 +252,53 @@ BEGIN {
    our $fa_conf='';
    if (defined $Term::Menus::fa_conf) {
       $fa_conf=$Term::Menus::fa_conf;
-      eval {
-         require $fa_conf->[0];
-         my $mod=substr($fa_conf->[0],(rindex $fa_conf->[0],'/')+1,-3);
-         import $mod;
-         $fa_conf=$mod.'.pm';
-      };
+      if (defined $fa_conf->[0]) {
+         eval {
+            require $fa_conf->[0];
+            my $mod=substr($fa_conf->[0],(rindex $fa_conf->[0],'/')+1,-3);
+            import $mod;
+            $fa_conf=$mod.'.pm';
+         };
+      }
    }
 
    our $fa_host='';
    if (defined $Term::Menus::fa_host) {
       $fa_host=$Term::Menus::fa_host;
-      eval {
-         require $fa_host->[0];
-         my $mod=substr($fa_host->[0],(rindex $fa_host->[0],'/')+1,-3);
-         import $mod;
-         $fa_host=$mod.'.pm';
-      };
+      if (defined $fa_host->[0]) {
+         eval {
+            require $fa_host->[0];
+            my $mod=substr($fa_host->[0],(rindex $fa_host->[0],'/')+1,-3);
+            import $mod;
+            $fa_host=$mod.'.pm';
+         };
+      }
    }
 
    our $fa_maps='';
    if (defined $Term::Menus::fa_maps) {
       $fa_maps=$Term::Menus::fa_maps;
-      eval {
-         require $fa_maps->[0];
-         my $mod=substr($fa_maps->[0],(rindex $fa_maps->[0],'/')+1,-3);
-         import $mod;
-         $fa_maps=$mod.'.pm';
-      };
+      if (defined $fa_maps->[0]) {
+         eval {
+            require $fa_maps->[0];
+            my $mod=substr($fa_maps->[0],(rindex $fa_maps->[0],'/')+1,-3);
+            import $mod;
+            $fa_maps=$mod.'.pm';
+         };
+      }
    }
 
    our $fa_menu='';
    if (defined $Term::Menus::fa_menu) {
       $fa_menu=$Term::Menus::fa_menu;
-      eval {
-         require $fa_menu->[0];
-         my $mod=substr($fa_menu->[0],(rindex $fa_menu->[0],'/')+1,-3);
-         import $mod;
-         $fa_menu=$mod.'.pm';
-      };
+      if (defined $fa_menu->[0]) {
+         eval {
+            require $fa_menu->[0];
+            my $mod=substr($fa_menu->[0],(rindex $fa_menu->[0],'/')+1,-3);
+            import $mod;
+            $fa_menu=$mod.'.pm';
+         };
+      }
    }
 
    our $bashpath='';
@@ -3124,7 +3132,11 @@ sub check_Hosts
       &get_master_info;
    my $chk_hostname='';my $chk_ip='';my $trandir_flag='';
    my $name=substr($_[0],0,-3);
-   my @Hosts=eval "\@${name}::Hosts";
+   my @Hosts=();
+   {
+      no warnings;
+      @Hosts=eval "\@${name}::Hosts";
+   }
    my @Cycle=@Hosts;
    my $username=getlogin || getpwuid($<);
    HOST: foreach my $h (@Cycle) {
@@ -3291,10 +3303,11 @@ my %msproxies=();my %uxproxies=();my %labels=();
 my %DeploySMB_Proxy=();my %DeployFTM_Proxy=();
 my %DeployRCM_Proxy=();my $msflag='';my $uxflag='';
 foreach my $host (@Hosts) {
+   $host->{'Label'}||='';
    if (exists $labels{$host->{'Label'}} && 
          ($host->{'Label'} ne "__Master_${$}__")) {
       &handle_error("DUPLICATE LABEL DETECTED - $host->{'Label'}");
-   } $labels{${$host}{'Label'}}='';
+   } $labels{${$host}{'Label'}}='' if $host->{'Label'};
    if (exists ${$host}{'SMB_Proxy'}) {
       if (exists $msproxies{${$host}{'SMB_Proxy'}} &&
             ${$msproxies{${$host}{'SMB_Proxy'}}}[0] eq ${$host}{'SMB_Proxy'}
@@ -4384,45 +4397,45 @@ sub pty_do_cmd
          }
       } else { last }
    }
-   return $pty,$child if $child;
-   POSIX::setsid or &handle_error("setsid failed: ".($!));
-   my $tty = $pty->slave;
+   return $pty,$child if $child; # Save Pound Sign
+   POSIX::setsid or &handle_error("setsid failed: ".($!)); # Save Pound Sign
+   my $tty = $pty->slave; # Save Pound Sign
    $pty->make_slave_controlling_terminal
-      if ($^O eq 'cygwin') || ($doslave eq '_slave_');
-   CORE::close $pty;
+      if ($^O eq 'cygwin') || ($doslave eq '_slave_'); # Save Pound Sign
+   CORE::close $pty; # Save Pound Sign
 
-   STDIN->fdopen($tty,"<")  or &handle_error("STDIN: ".($!));
-   STDOUT->fdopen($tty,">") or &handle_error("STDOUT: ".($!));
-   STDERR->fdopen($tty,">") or &handle_error("STDERR: ".($!));
-   CORE::close $tty;
-   $| = 1;
-   #my $flag='';
+   STDIN->fdopen($tty,"<")  or &handle_error("STDIN: ".($!)); # Save Pound Sign
+   STDOUT->fdopen($tty,">") or &handle_error("STDOUT: ".($!)); # Save Pound Sign
+   STDERR->fdopen($tty,">") or &handle_error("STDERR: ".($!)); # Save Pound Sign
+   CORE::close $tty; # Save Pound Sign
+   $| = 1; # Save Pound Sign
+   #my $flag=''; # Save Pound Sign
    #if (!$flag || lc($flag) ne '__use_parent_env__') {
    if ($^O ne 'cygwin' && $Net::FullAuto::FA_Core::specialperms eq 'setgid') {
-      $ENV{PATH} = '';
-      $ENV{ENV}  = '';
+      $ENV{PATH} = ''; # Save Pound Sign
+      $ENV{ENV}  = ''; # Save Pound Sign
    } else {
-      $ENV{PATH}=~/^(.*)$/;
-      $ENV{PATH}=$1;
-      $ENV{ENV}||='';
-      $ENV{ENV}=~/^(.*)$/;
-      $ENV{ENV}=$1;
+      $ENV{PATH}=~/^(.*)$/; # Save Pound Sign
+      $ENV{PATH}=$1; # Save Pound Sign
+      $ENV{ENV}||=''; # Save Pound Sign
+      $ENV{ENV}=~/^(.*)$/; # Save Pound Sign
+      $ENV{ENV}=$1; # Save Pound Sign
    }
-   $ENV{DISPLAY}='';
-   print "\n";
+   $ENV{DISPLAY}=''; # Save Pound Sign
+   print "\n"; # Save Pound Sign
 
    if ($four) {
       exec $one, $two, $three, $four ||
-         &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+         &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
    } elsif ($three) {
       exec $one, $two, $three ||
-         &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+         &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
    } elsif ($two) {
       exec $one, $two ||
-         &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+         &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
    } else {
       exec $one ||
-         &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+         &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
    }
 
 }
@@ -4995,7 +5008,6 @@ sub master_transfer_dir
             if ($testd eq 'WRITE') {
                $work_dirs->{_cwd_mswin}=$work_dirs->{_tmp_mswin}=$cdr.'\\\\';
                $work_dirs->{_cwd}=$work_dirs->{_tmp}=$curdir;
-print "WE HAVE A CURDIR=$curdir<==\n";<STDIN>;
                return $work_dirs;
             } elsif ($testd eq 'READ' || $testd eq 'NOFILE') {
                last;
@@ -11018,28 +11030,28 @@ sub setuid_cmd
       }
       if ($eight) {
          exec $one, $two, $three, $four, $five, $six, $seven, $eight ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } elsif ($seven) {
          exec $one, $two, $three, $four, $five, $six, $seven ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } elsif ($six) {
          exec $one, $two, $three, $four, $five, $six ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } elsif ($five) {
          exec $one, $two, $three, $four, $five ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } elsif ($four) {
          exec $one, $two, $three, $four ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } elsif ($three) {
          exec $one, $two, $three ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } elsif ($two) {
          exec $one, $two ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } elsif ($one) {
          exec $one ||
-            &handle_error("Couldn't exec: $cmd_err".($!),'-1');
+            &handle_error("Couldn't exec: $cmd_err".($!),'-1'); # Save Pound Sign
       } else { alarm(0);return }
    }
    if ($regex && $output!~/$regex/s) {
@@ -20128,7 +20140,7 @@ sub build_base_dest_hashes
                   $result=1 if $string=~m#${$ex}[0]#;
                } return $result,${$ex}[2]||'';
             };
-            $sub;
+            $sub; # Save Pound Sign
          }
       }
       my $len_dir='';my $archive_flag=0;

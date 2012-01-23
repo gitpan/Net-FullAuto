@@ -648,7 +648,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9991';
+version         '0.9992';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -2624,7 +2624,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 2.04;
+requires        'Term::Menus'               => 2.08;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
