@@ -648,7 +648,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9992';
+version         '0.9993';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1859,7 +1859,8 @@ if (-e "/bin/grep") {
 my $get_BerkeleyDB=0;
 eval { require BerkeleyDB };
 $get_BerkeleyDB=1 if $@;
-if ($get_BerkeleyDB) {
+#if ($get_BerkeleyDB) {
+if ($get_BerkeleyDB && $^O ne 'cygwin') {
    # Let's find if Berkeley DB is already on the system
    my $findpath='';
    if (-e "/bin/find") {
@@ -2302,6 +2303,13 @@ if ($get_BerkeleyDB) {
          }
       }
    }
+} elsif ($^O eq 'cygwin') {
+   $ENV{'BERKELEYDB_INCLUDE'}='/usr/include';
+   $ENV{'BERKELEYDB_LIB'}='/usr/lib';
+   $ENV{'BERKELEYDB_NAME'}='-ldb-4.5';
+   $ENV{'DB_FILE_INCLUDE'}='/usr/include';
+   $ENV{'DB_FILE_LIB'}='/usr/lib';
+   $ENV{'DB_FILE_NAME'}='-ldb-4.5';
 }
 
 chdir $main::curdir;
@@ -2624,7 +2632,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 2.08;
+requires        'Term::Menus'               => 2.10;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

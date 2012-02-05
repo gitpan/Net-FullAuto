@@ -23,6 +23,7 @@ lib/Net/FullAuto/Distro/fa_maps.pm
 lib/Net/FullAuto/Distro/fa_menu.pm
 lib/Net/FullAuto/Distro/fa_menu_demo.pm
 lib/Net/FullAuto/Distro/fa_code_demo.pm
+lib/Net/FullAuto/Distro/fullautologo.jpg
 lib/Net/FullAuto/FA_Core.pm
 LICENSE
 Makefile.PL

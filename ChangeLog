@@ -19,6 +19,15 @@
 ################################################################
 
 
+2012-02-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9993 released.
+
+        * Forcing Cygwin version to use Cygwin supplied
+          BerkeleyDB 4.5 because of problems building BerkeleyDB
+          5.3 from source.
+
+
 2012-01-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9992 released.
