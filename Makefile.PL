@@ -26,6 +26,7 @@
 
 BEGIN {
 
+$main::VERSION='0.9995';
 my $fa_banner=<<END;
 
 
@@ -648,7 +649,8 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9994';
+#version         '0.9994';
+version         $main::VERSION;
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1369,7 +1371,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
-                      'REEDFISH/Net-FullAuto-0.9993.tar.gz"');
+                      "REEDFISH/Net-FullAuto-$main::VERSION.tar.gz\"");
             } else {
                my $build_dir='SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
@@ -1540,7 +1542,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
-                      'REEDFISH/Net-FullAuto-0.9993.tar.gz"');
+                      "REEDFISH/Net-FullAuto-$main::VERSION.tar.gz\"");
             }
          }
          my $rmdir_out=rmdir $main::curdir.'/inc/.author'; 

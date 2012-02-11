@@ -18,6 +18,12 @@
 #
 ################################################################
 
+2012-02-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9995 released.
+
+        * Fixed Makefile.PL $main::VERSION.
+
 
 2012-02-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
