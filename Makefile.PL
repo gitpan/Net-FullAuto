@@ -648,7 +648,7 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-version         '0.9993';
+version         '0.9994';
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
@@ -1104,7 +1104,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '"/usr/bin/ssh-host-config -y '.
                       '-u \"'.$sshd_account.'\" -w \"'.
                       $sshd_password[0].'\" '.
-                      '-c \"tty ntsec\"'.$privl.'"');
+                      '-c \"ntsec\"'.$privl.'"');
                print "\n   FullAuto Install continues . . . \n\n";
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
@@ -1146,7 +1146,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '"/usr/bin/ssh-host-config -y '.
                       '-u \"'.$sshd_account.'\" -w \"'
                       .$sshd_password[0].'\" '.
-                      '-c \"tty ntsec\"'.$privl.'"');
+                      '-c \"ntsec\"'.$privl.'"');
                print "\n   FullAuto Install continues . . . \n\n";
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
@@ -1196,7 +1196,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '"/usr/bin/ssh-host-config -y '.
                          '-u \"'.$sshd_account.'\" -w \"'.
                          $sshd_password[0].'\" '.
-                         '-c \"tty ntsec\"'.$privl.'"');
+                         '-c \"ntsec\"'.$privl.'"');
                   print "\n   FullAuto Install continues . . . \n\n";
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
@@ -1237,7 +1237,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '"/usr/bin/ssh-host-config -y '.
                          '-u \"'.$sshd_account.'\" -w \"'.
                          $sshd_password[0].'\" '.
-                         '-c \"tty ntsec\"'.$privl.'"');
+                         '-c \"ntsec\"'.$privl.'"');
                   print "\n   FullAuto Install continues . . . \n\n";
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
@@ -1367,7 +1367,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
-                      '/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
+                      #'/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
+                      '/usr/bin/echo y|/usr/bin/cpan -i '.
+                      'REEDFISH/Net-FullAuto-0.9993.tar.gz"');
             } else {
                my $build_dir='SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
@@ -1536,7 +1538,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
-                      '/usr/bin/cpan -i Net::FullAuto"');
+                      #'/usr/bin/cpan -i Net::FullAuto"');
+                      '/usr/bin/echo y|/usr/bin/cpan -i '.
+                      'REEDFISH/Net-FullAuto-0.9993.tar.gz"');
             }
          }
          my $rmdir_out=rmdir $main::curdir.'/inc/.author'; 

@@ -33,7 +33,7 @@ package Net::FullAuto::FA_Core;
 #
 ## For creating gpg secret key for use with cpansign -s
 #
-#  gpg --key-gen (then follow onscreen instructions)
+#  gpg --gen-key (then follow onscreen instructions)
 #
 #  http://irtfweb.ifa.hawaii.edu/~lockhart/gpg/gpg-cs.html (gpg cheatsheet)
 #
@@ -1721,7 +1721,7 @@ sub edit {
    require Term::Menus;
    if (defined $Term::Menus::fa_conf) {
       $fa_conf=$Term::Menus::fa_conf;
-      if (-d 'Net/FullAuto/Custom/'.$username) {
+      if (-d $tpath.'Net/FullAuto/Custom/'.$username) {
          eval {
             require 'Net/FullAuto/Custom/'.$username.'/Conf/'.$fa_conf;
             my $mod=substr($fa_conf,(rindex $fa_conf,'/')+1,-3);
@@ -1769,7 +1769,7 @@ sub edit {
       }
    }
 
-   my $savdir=cwd();
+   my $savdir=Cwd::cwd();
    if ($_[0]=~/ho*s*t*|^fa_host$/i) {
       $cpath.='Host';
       system("cd $cpath;\"$editor\" ".
@@ -10942,6 +10942,7 @@ sub cwd
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $stdout='';my $stderr='';
+print "WHAT IS CALLER=",caller,"<==\n";
    if (!defined $_[1]) {
       return Cwd::getcwd();
    } else { 

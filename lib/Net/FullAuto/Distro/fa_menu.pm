@@ -1,4 +1,4 @@
-package fa_menu;
+package fa_menu_demo;
 
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
@@ -22,9 +22,6 @@ package fa_menu;
 
 use strict;
 use warnings;
-require Exporter;
-our @ISA = qw(Exporter);
-our $VERSION = 1.00;
 
 #################################################################
 ##  Do NOT alter code ABOVE this block.
@@ -33,40 +30,31 @@ our $VERSION = 1.00;
 ##  ADD CUSTOM MENU BLOCKS HERE:
 ##  -------------------------------------------------------------
 
-our @EXPORT = qw(%Menu_1 %Menu_2 %Menu_5 %Menu_15 %Menu_30);
-
-my @PortalApps=(
-   'Member-Employer-Framework','Provider (Physician)',
-   'Broker','Broker-Employer','Broker Rate Tool',
-);
-
-my @StaticAppDestinations=('ProdWeb01','ProdWeb02','ProdWeb03','ProdWeb04',
-                           'ProdWeb05','ProdWeb06','ProdWeb07','ProdWeb08',
-                           'ProdWeb09','ProdWeb10');
-
 our %Menu_1=(
 
    Label  => 'Menu_1',
    Item_1 => {
 
-      Text   => "Deploy (Non-Secure Static) Build",
-      Convey => "Non-Secure",
-      Result => \%Menu_2
+      Text   => "HELLO WORLD TEST",
+      Result => "&hello_world()",
 
    },
    Item_2 => {
 
-      Text   => "Deploy Web Build",
-      Convey => "Web",
-      Result => \%Menu_5
+      Text   => "HOWDY WORLD TEST",
+      Result => "&howdy_world()",
 
    },
-
    Item_3 => {
 
-      Text   => "Deploy Hospital (Facility) Build",
-      Convey => "Hospital (Facility)",
-      Result => \%Menu_30
+      Text   => "Image Magick",
+      Result => "&image_magick()",
+
+   },
+   Item_4 => {
+
+      Text   => "Menu Demo",
+      Result => "&menu_demo()",
 
    },
 
@@ -75,72 +63,6 @@ our %Menu_1=(
 );
 
 our $start_menu_ref=\%Menu_1;
-
-our %Menu_2=(
-   
-   Label  => 'Menu_2',
-   Item_1 => {
-
-      Text   => "Deploy ]P[ FROM ]Convey[",
-      Convey => [ 'Teamsite','Clearcase' ],
-      Result => \%Menu_15
-
-   },
-   Select => 'One',
-   Banner => "\n   Choose a Task to Perform :"
-);
-
-our %Menu_30=(
-
-   Label  => 'Menu_30',
-   Item_1 => {
-
-      Text   => "Deploy ]P[ FROM Development",
-      Convey => "Development",
-      Result => \%Menu_31
-
-   },
-   Item_2 => {
-
-      Text   => "Deploy ]P[ FROM SOURCE CONTROL",
-      Convey => ["SOURCE CONTROL"],
-      Result => \%Menu_32
-
-   },
-   Select => 'One',
-   Banner => "\n   Choose a Task to Perform :"
-);
-
-our %Menu_5=(
-
-   Label  => 'Menu_5',
-   Item_1 => {
-
-      Text   => "Deploy Web TO ]Convey[",
-      Convey => \@StaticAppDestinations,
-      Result => "&DeployStaticApp(\"]S[\",'Web')"
-
-   },
-   Select => 'One',
-   Display => 7,
-   Banner => "\n   Choose a Task to Perform :"
-);
-
-our %Menu_15=(
-
-   Label  => 'Menu_15',
-   Item_1 => {
-
-      Text   => "Deploy Non-Secure FROM ]P[ TO \"]C[\"",
-      Convey => \@StaticAppDestinations,
-      Result => "&hello_world(\"]S[\",'Non-Secure')"
-      #Result => "&DeployStaticApp(\"]S[\",'Non-Secure')"
-
-   },
-   Select => 'One',
-   Display => 7,
-   Banner => "\n   Choose the Host to Deploy MicroSite TO :"
-);
 
 ########### END OF MENUS ########################
 ## Important! The '1' at the Bottom is NEEDED!

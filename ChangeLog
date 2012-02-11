@@ -19,6 +19,15 @@
 ################################################################
 
 
+2012-02-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9994 released.
+
+        * Fix for --edit.
+
+        * Makefile.PL fix.
+
+
 2012-02-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9993 released.
