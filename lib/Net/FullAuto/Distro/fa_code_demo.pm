@@ -153,10 +153,10 @@ sub image_magick {
       }
    }
    print "\n\n   PATH=$path\n";
-   my $image_fax_viewer='cmd /c C:\\WINDOWS\\System32\\rundll32.exe '.
-         'C:\\WINDOWS\\System32\\shimgvw.dll.ImageView_Fullscreen '.
-         'C:\\cygwin\\fullauto\\FullAuto\\lib\\Net\\FullAuto\\Distro\\'.
-         'fullautologo.jpg &';
+   my $image_fax_viewer='cmd /c C:\\\\WINDOWS\\\\System32\\\\rundll32.exe '.
+         'C:\\\\WINDOWS\\\\System32\\\\shimgvw.dll,ImageView_Fullscreen '.
+         'C:\\\\cygwin\\\\fullauto\\\\FullAuto\\\\lib\\\\Net\\\\FullAuto'.
+         '\\\\Distro\\\\fullautologo.jpg &';
    `$image_fax_viewer`;
 
 }

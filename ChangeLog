@@ -1,7 +1,7 @@
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2011  Brian M. Kelly 
+#    Copyright (C) 2011, 2012  Brian M. Kelly 
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,16 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ################################################################
+
+
+2012-02-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9996 released.
+
+        * Added Domain User check for Makefile.PL.
+
+        * Modified image_magick in fa_code_demo.pm in Distro.
+
 
 2012-02-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 

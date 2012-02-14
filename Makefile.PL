@@ -1,7 +1,7 @@
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2011  Brian M. Kelly
+#    Copyright (C) 2011, 2012  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9995';
+$main::VERSION='0.9996';
 my $fa_banner=<<END;
 
 
@@ -47,7 +47,7 @@ my $fa_banner=<<END;
 
 
 
-   Copyright (C) 2011  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
+   Copyright (C) 2011, 2012  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
 
 
 END
@@ -216,7 +216,7 @@ END
          },
          Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
             "      Net::FullAuto INSTALLATION PROGRAM\n\n".
-            "      Copyright (C) 2011  Brian M. Kelly\n\n".
+            "      Copyright (C) 2011, 2012  Brian M. Kelly\n\n".
             "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
             "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
             "   select  2.  This is free software, and you are welcome to\n".
@@ -621,6 +621,79 @@ END
    print $stdout if $stdout;
 };
 
+sub ws_info {
+   if ($_[0]) {
+      print "\nRunning command: net user /domain ->".
+            " This may take a couple of minutes\n\n";
+   }
+   my $found_dotted=0;
+   my $domain='';
+   $domain=' /domain' if $_[0];
+   my $server='';
+   foreach my $line (split "\n", `net user$domain`) {
+      unless ($found_dotted) {
+         if (-1<index $line,'-------') {
+            $found_dotted=1;
+         } elsif (-1<index $line,' for domain ') {
+            ($domain=$line)=~s/^.* for domain (.*)[.]\s*$/$1/s;
+         } elsif (-1<index $line,' accounts for ') {
+            ($server=$line)=~s/^.* accounts for\s+(.*)\s*$/$1/s;
+         }
+         next;
+      }
+      push @output, $line;
+   }
+   my $limit=9;
+   $limit=$#output if $#output<9;
+   my @test=@output[0..$limit];
+   my %testone=();
+   my %testtwo=();
+   while (my $line=shift @test) {
+      chomp($line=~tr/\0-\11\13-\37\177-\377//d);
+      $line=~s/\s*$//s;
+      my $ln2=rindex $line, ' ';
+      $testtwo{$ln2}++;
+      substr($line,$ln2)='';
+      $line=~s/\s*$//s;
+      my $ln1=rindex $line, ' ';
+      $testone{$ln1}++;
+   }
+   my $two=0;
+   foreach my $key (keys %testtwo) {
+      $two=$key if $two<$key;
+   }
+   my $one=0;
+   foreach my $key (keys %testone) {
+      $one=$key if $one<$key;
+   }
+   $one++;
+   my $mid=$two-$one+1;
+   my @users=();
+   foreach my $line (@output) {
+      my ($on,$tw,$th)=unpack("a$one a$mid a$two",$line);
+      $on=~s/\s*$//;$tw=~s/\s*$//;$th=~s/\s*$//;
+      last if -1<index $on,'The command compl';
+      push @users, $on if $on;
+      push @users, $tw if $tw;
+      push @users, $th if $th;
+
+   }
+
+   my $dom=(defined $_[0] && $_[0])?$_[0]:'Local';
+   my %_users=(
+
+      Label => '_users',
+      Item_1 =>  {
+                     Text   => "]C[",
+                     Convey => \@users,
+                 },
+      Banner=> "   Select the $dom User to Run the sshd Service",
+   );
+   my $selection=Menu(\%_users);
+   return $selection;
+
+}
+
 sub clean_mswin {
    my $rmdir_out=rmdir $main::curdir.'/inc/.author';
    print "ERROR $main::curdir/inc/.author: $!\n" unless $rmdir_out;
@@ -745,7 +818,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       $selection=Term::Menus::Menu(\%Menu_win_to_cyg);
    }
    exit if $selection eq ']quit[';
-   if ($selection!~/NOT/s) {
+   if ($selection!~/will END/s) {
       if ($selection!~/MINIMAL/s) {
          my @editors=('vim     ( ViIMproved - enhanced vi editor )',
                       "emacs   ( The extensible, customizable,\n           ".
@@ -950,7 +1023,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'-s http://cygwin.mirrors.pair.com';
          } else {
             $setup_cmd="cd \"$main::root_dir\" & "
-                      .'setup.exe -P openssh -X -A -q '
+                      .'setup.exe -P openssh,ncurses,procps -X -A -q '
                       ."-r $main::root_dir ".'-s '
                       .'http://cygwin.mirrors.pair.com';
          }
@@ -961,6 +1034,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          my $sshd_account='cyg_server';
          my $privl='';
          if ($wver!~/95|98|ME/) {
+            my $check_for_domain=`net config workstation`;
+            $check_for_domain=~/^.*Workstation domain\s+(.+)\s*$/m;
+            $check_for_domain=$1||'';
+            chomp($check_for_domain=~tr/\0-\37\177-\377//d);
             if ($wver=~/XP|2000|NT/) {
                my $banner="   For $wver, you have a choice of using\n"
                          ."   either the LocalSystem account for the\n"
@@ -991,6 +1068,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $account_type=Term::Menus::Menu(\%Menu_select_account_type);
                $privl=' --privileged' if -1<index $account_type,'separate';
             }
+            #my $youser=&ws_info($check_for_domain);
             if ((-1<index $account_type,'separate') &&
                      (&test_windows_user($sshd_account))) {
                my $banner="   OpenSsh's sshd service running via Cygwin is ".
