@@ -62,6 +62,7 @@ our @Hosts = (
        {
           'IP'             => '10.0.2.2',
           'Label'          => 'Solaris',
+          'Su'             => 'root',
           'LoginID'        => 'opens',
           'sshport'        => '2223',
           'LogFile'        => "/tmp/FAlog${$}d".

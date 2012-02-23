@@ -11008,26 +11008,27 @@ sub setuid_cmd
    }
    $regex||='';my $pid='';my $output='';
    my $stdout='';my $stderr='';
-   &handle_error("Can't fork: $!") unless defined($pid=open(KID, "-|"));
+   &handle_error("Can't fork: $!")
+      unless defined($pid=open(KID, "-|")); # Save Pound Sign
    if ($pid) { # parent
       while (my $line=<KID>) {
-         $output.=$line;
+         $output.=$line; # Save Pound Sign
       }
-      CORE::close(KID);
+      CORE::close(KID); # Save Pound Sign
    } else { # child
-      my @temp     = ($EUID, $EGID);
-      my $orig_uid = $UID;
-      my $orig_gid = $GID;
-      $EUID = $UID;
-      $EGID = $GID;
+      my @temp     = ($EUID, $EGID); # Save Pound Sign
+      my $orig_uid = $UID; # Save Pound Sign
+      my $orig_gid = $GID; # Save Pound Sign
+      $EUID = $UID; # Save Pound Sign
+      $EGID = $GID; # Save Pound Sign
       # Drop privileges
-      $UID  = $orig_uid;
-      $GID  = $orig_gid;
+      $UID  = $orig_uid; # Save Pound Sign
+      $GID  = $orig_gid; # Save Pound Sign
       # Make sure privs are really gone
-      ($EUID, $EGID) = @temp;
+      ($EUID, $EGID) = @temp; # Save Pound Sign
       if (!$flag || lc($flag) ne '__use_parent_env__') {
-         $ENV{PATH} = '';
-         $ENV{ENV}  = '';
+         $ENV{PATH} = ''; # Save Pound Sign
+         $ENV{ENV}  = ''; # Save Pound Sign
       }
       if ($eight) {
          exec $one, $two, $three, $four, $five, $six, $seven, $eight ||
@@ -22354,9 +22355,9 @@ sub ftpcmd
 #else { $Net::FullAuto::FA_Core::log=1 }
    my @topcaller=caller;
    print "\nINFO: Rem_Command::ftpcmd() (((((((CALLER))))))):\n       ",
-      (join ' ',@topcaller),"\n\n";
-      #if !$Net::FullAuto::FA_Core::cron &&
-      #$Net::FullAuto::FA_Core::debug;
+      (join ' ',@topcaller),"\n\n"
+      if !$Net::FullAuto::FA_Core::cron &&
+      $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG
       "\nRem_Command::ftpcmd() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
