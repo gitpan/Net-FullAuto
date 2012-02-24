@@ -19,6 +19,16 @@
 ################################################################
 
 
+2012-02-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9998 released.
+
+        * Added 1/50th second sleep to test_dir.
+
+        * Other misc bug fixes found while testing on MSWin
+          2008 Server.
+
+
 2012-02-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9997 released.

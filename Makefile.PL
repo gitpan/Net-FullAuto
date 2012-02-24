@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9997';
+$main::VERSION='0.9998';
 my $fa_banner=<<END;
 
 

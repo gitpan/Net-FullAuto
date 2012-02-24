@@ -1086,6 +1086,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT EVEN FARTHER HERE\n"
                                  || $line=~/logout/
                                  || $line=~/cleanup/
                                  || $line=~/Exitstatus(0|-1)/
+                                 || $line=~/exit\s*$/s
                                  || $line=~/[$|%|>|#|-|:]$/) {
                               $cmd_fh->close;last;
                            }
@@ -4506,15 +4507,21 @@ sub test_dir
                   $leave=1;
                   $l='';
                }
+               select(undef,undef,undef,0.02);
+               # sleep for 1/50th second;
                $cmd_handle->print();
                next;
             }
             if ($l=~/_funkyPrompt_$/s) {
                last TD;
             } else {
+               select(undef,undef,undef,0.02);
+               # sleep for 1/50th second;
                $cmd_handle->print;
             }
          } last if $leave;
+         select(undef,undef,undef,0.02);
+         # sleep for 1/50th second;
          $cmd_handle->print;
       } last if $leave;
       my $cfh_ignore='';my $cfh_error='';
@@ -8995,6 +9002,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                                   "      practice!)."
                      );
                      $pselection=&Menu(\%askaboutpass);
+                     cleanup() if $pselection eq ']quit[';
                   }
                } 
             }
@@ -24230,6 +24238,9 @@ print $Net::FullAuto::FA_Core::MRLOG "PPPPPPPPPPPPPPPPPPPPPPPPPPPTOU=$tou and FE
                               $fetchflag=1;
                               next FETCH;
                            } last FETCH;
+                        } elsif (-1<index $output,'Connection reset by peer') {
+                           $fullerror.=$output;
+                           last FETCH;
                         } elsif ($output=~/^\s?$/) {
                            next FETCH;
                         } elsif ($output=~/^(stdout: .*)$cmd_prompt$/) {
@@ -24344,21 +24355,30 @@ print $Net::FullAuto::FA_Core::MRLOG "GROWOUTPUT2=$growoutput\n"
                               if ($testgrow eq $stripped_live_command) {
                                  $growoutput=$thisout;
                               }
-                              last FETCH if !$growoutput && $live_command=~/^cd /;
+                              last FETCH if !$growoutput &&
+                                 $live_command=~/^cd /;
                               next FETCH if !$growoutput;
                               if (-1<index $growoutput,'stdout: /') {
-                                 my $stub=substr($growoutput,0,(index $growoutput,'stdout: /'));
-                                 if (substr($live_command,0,(length $stub)) eq $stub) {
+                                 my $stub=substr($growoutput,0,
+                                       (index $growoutput,'stdout: /'));
+                                 if (substr($live_command,0,(length $stub))
+                                       eq $stub) {
                                     my $go=$growoutput;
                                     $growoutput=substr($go,(length $stub));
                                  }
                               } elsif ((-1<index $live_command, $growoutput) &&
-                                    (substr($live_command,0,(length $growoutput))
-                                       eq $growoutput)) {
+                                    (substr($live_command,0,
+                                    (length $growoutput)) eq $growoutput)) {
                                  $growoutput='';next FETCH;
                               }
-                              next FETCH if $growoutput &&
-                                 $growoutput!~/$cmd_prompt$/;
+                              if ($growoutput) {
+                                 if ($growoutput=~/^\s*$cmd_prompt$/s) {
+                                    $growoutput='';
+                                    last FETCH; 
+                                 } elsif ($growoutput!~/$cmd_prompt$/) {
+                                    next FETCH;
+                                 }
+                              }
 print "CLEANEDGROWOUT=$growoutput\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug && $loop_count<$loop_max;
 print $Net::FullAuto::FA_Core::MRLOG "CLEANEDGROWOUT=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*') && $loop_count<$loop_max;
