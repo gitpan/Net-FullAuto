@@ -19,6 +19,17 @@
 ################################################################
 
 
+2012-03-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999 released.
+
+        * Changed the C code for parameters in fullauto.c.
+
+        * Added passwd file dup cleanup to Makefile.PL.
+
+        * Fixed package line in Distro/fa_menu.pl.
+
+
 2012-02-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9998 released.

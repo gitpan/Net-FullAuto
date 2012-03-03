@@ -1,4 +1,4 @@
-package fa_menu_demo;
+package fa_menu;
 
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9998';
+$main::VERSION='0.9999';
 my $fa_banner=<<END;
 
 
@@ -66,6 +66,7 @@ END
          $main::PARdir=substr($incdir,0,-4);
       }
    }
+   chdir $main::PARdir;
    $INC{'Module/Install.pm'}=$main::PARdir.'/Module/Install.pm';
    unless (exists $ENV{FA_EDITOR}) {
       print $fa_banner;
@@ -626,6 +627,89 @@ sub ws_info {
       print "\nRunning command: net user /domain ->".
             " This may take a couple of minutes\n\n";
    }
+   # Do we have Cygwin?
+   my $cygwin_loc=get_cygwin_location();
+   my $clo=$cygwin_loc;
+   $clo=~s/\\/\\\\/g;
+   my %userlist=();my %passlins=();
+   my @newpassw=();my $modflag=0;
+   if (-e $cygwin_loc) {
+      my $pasen='SET CYGWIN=nodosfilewarning & '.
+                "cmd /c $cygwin_loc\\bin\\bash -lc ".
+                '"cat /etc/passwd"';
+      my $passe=`$pasen`;my $cnt=0;my %passlins=();
+      foreach my $en (split "\n",$passe) {
+         chomp($en);
+         push @{$passlins{$en}},$cnt++;
+         push @newpassw,$en;
+      }
+      foreach my $lin (keys %passlins) {
+         my $linn=$lin;
+         my @pl=@{$passlins{$linn}};
+         if (0<$#{$linn}) {
+            my %asklin=(
+               Label => asklin,
+               Item_1 => {
+                  Text => "]C[",
+                  Convey => sub {
+
+                     my @ret=();
+                     foreach my $p (@pl) {
+                        push @ret, "\n                $linn\n".
+                                   "\n                Line: $p\n\n";
+                     }
+                     return @ret;
+
+                  },
+               },
+               Item_2 => {
+                  Text => "Skip this operation",
+               },
+               Banner => "   Duplicate Lines in /etc/passwd found!\n\n".
+                         "   The following lines are all duplicates, ".
+                         "the only one being utilized is\n   the first ".
+                         "one found. It is recommended that the ".
+                         "others be removed.\n\n".
+                         "   Select the one you wish to keep, or choose ".
+                         "'Skip this operation' and\n   FullAuto Setup ".
+                         "will continue.\n\n",
+            );
+            my $selection=Menu(\%asklin);
+            my $s=0;
+            ($s=$selection)=~s/^.*\n\s+Line: (\d+).*$/$1/s;
+            $s--;my $adjust=0;
+            foreach my $i (@pl) {
+               my $ii=$i;
+               my $n=0;
+               ($n=$ii)=~s/^.*\n\s+Line: (\d+).*$/$1/s;
+               next if $s eq $n;
+               $n-=$adjust;
+               splice(@newpassw,$n,1);
+               $modflag=1;
+               $adjust++;
+            }
+         }
+      }
+      if ($modflag) {
+         my $npass=join "\n",@newpassw;
+         `echo \"$npass\" > /etc/passwd`;
+      }
+      my $users='SET CYGWIN=nodosfilewarning & '.
+                "cmd /c $cygwin_loc\\bin\\bash -lc ".
+                '"cat /etc/passwd |grep '.
+                '\\"/bin/bash\\" |grep '.
+                '\\"[5-9][0-9][0-9]\\" |cut -d: -f1"';
+      my $userlist=`$users`;
+      foreach my $us (split "\n",$userlist) {
+         chomp($us);
+         if (exists $userlist{$us}) {
+            print "\nDUPLICATE USER ENTRY in $cygwin_loc/etc/passwd:\n",
+                  "$us\n\nPlease resolve - FullAuto Setup will exit.";<STDIN>;
+            exit;
+         }
+         $userlist{$us}='';
+      }
+   }
    my $found_dotted=0;
    my $domain='';
    $domain=' /domain' if $_[0];
@@ -668,28 +752,96 @@ sub ws_info {
    }
    $one++;
    my $mid=$two-$one+1;
-   my @users=();
+   my @users=();my $cyg_id='';
    foreach my $line (@output) {
       my ($on,$tw,$th)=unpack("a$one a$mid a$two",$line);
       $on=~s/\s*$//;$tw=~s/\s*$//;$th=~s/\s*$//;
       last if -1<index $on,'The command compl';
       push @users, $on if $on;
+      $cyg_id='cyg_server' if $on eq 'cyg_server';
       push @users, $tw if $tw;
+      $cyg_id='cyg_server' if $tw eq 'cyg_server';
       push @users, $th if $th;
+      $cyg_id='cyg_server' if $th eq 'cyg_server';
 
    }
 
    my $dom=(defined $_[0] && $_[0])?$_[0]:'Local';
-   my %_users=(
+   my $hostname=`hostname`;
+   chomp($hostname);
 
-      Label => '_users',
-      Item_1 =>  {
+   if ($dom ne 'Local') {
+      my $selection='';
+      if ($cyg_id eq 'cyg_server') {
+         my $o=`net user cyg_server`;
+         if (-1==index $o,'user name could not be found') {
+            my %_cygserv=(
+   
+               Label => '_cygserv',
+               Item_1 =>  {
                      Text   => "]C[",
-                     Convey => \@users,
-                 },
-      Banner=> "   Select the $dom User to Run the sshd Service",
-   );
-   my $selection=Menu(\%_users);
+                     Convey => [ 'Use Domain ID \'cyg_server\'',
+                                 'Select ID from All Domain ID\'s',
+                                 'Use a Local account' ],
+               },
+               Banner=> "   The Domain User 'cyg_server' has been located,\n".
+                        "   do you wish to use it, or would you rather\n".
+                        "   select from all Domain Users, or use a Local\n".
+                        "   account for the sshd service?\n\n".
+                        "   (If you wish to use a Domain User ID, please\n".
+                        "   *make sure it exists* in the current Domain: $dom".
+                        "\n   before".
+                        " running FullAuto Setup. If you wish to use\n".
+                        "   a Local account, FullAuto can use an existing\n".
+                        "   one, or create a new one.)",
+            );
+            $selection=Menu(\%_cygserv);
+            exit if $selection eq ']quit[';
+         } else {
+         
+         }         
+      } else {
+         my %_cygserv=(
+
+            Label => '_cygserv',
+            Item_1 =>  {
+                  Text   => "]C[",
+                  Convey => [ 'Select ID from All Domain ID\'s',
+                              'Use a Local account' ],
+            },
+            Banner=> "   'cyg_server' has *NOT* been located in the $dom Domain.\n".
+                     "   If you wish to use the 'cyg_server' id as a Domain ID\n".
+                     "   for the OpenSSH sshd service on this host: ".$hostname."\n".
+                     "   type 'quit', exit FullAuto Setup, create the\n".
+                     "   'cyg_server' User in the $dom Domain, and *then*\n".
+                     "   run FullAuto Setup again.\n\n",
+                     "   Or, would you rather select from all Domain Users,".
+                     "   or use a Local account for the sshd service?\n\n".
+                     "   (If you wish to use a Local account, FullAuto\n".
+                     "    can use an existing one, or create a new one.)",
+         );
+         $selection=Menu(\%_cygserv);
+         exit if $selection eq ']quit[';
+      }
+      if (-1<index $selection, 'All Domain' || !$cyg_id) {
+         my %_users=(
+
+            Label => '_users',
+            Item_1 =>  {
+                           Text   => "]C[",
+                           Convey => \@users,
+                       },
+            Banner=> "   Select the $dom User to Run the sshd Service\n\n".
+                     "   Hit <ENTER> or user ARROW keys to scroll\n\n".
+                     "   List can be searched by typing  /[string]\n".
+                     "   (forward slash key followed by text to search for).", 
+         );
+         $selection=Menu(\%_users);
+         exit if $selection eq ']quit[';
+      } elsif (-1<index $selection, 'Use Domain') {
+         $selection='cyg_server'; 
+      }
+   }
    return $selection;
 
 }
@@ -1068,7 +1220,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $account_type=Term::Menus::Menu(\%Menu_select_account_type);
                $privl=' --privileged' if -1<index $account_type,'separate';
             }
-            #my $youser=&ws_info($check_for_domain);
+            my $youser=&ws_info($check_for_domain);
             if ((-1<index $account_type,'separate') &&
                      (&test_windows_user($sshd_account))) {
                my $banner="   OpenSsh's sshd service running via Cygwin is ".
@@ -2808,8 +2960,7 @@ print FH '/* program: fullauto'."\n".
 '*/'."\n".
 "\n".
 '#define REAL_PL '.'"'.$Config{installsitebin}."/fullauto.pl\"\n".
-"main(argc, argv)\n".
-"char **argv;\n".
+"main(int argc, char *argv[])\n".
 '{'."\n".
 "\tsetuid(0);\n".
 "\tseteuid(0);\n".
