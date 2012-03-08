@@ -11267,6 +11267,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
          } else { push @errlines, $line }
       } $stdout=join '', @outlines;$stderr=join '',@errlines;
    }
+   $stderr=~s/^\s*$//s;
    if (wantarray) {
       return $stdout,$stderr;
    } elsif ($stderr) {

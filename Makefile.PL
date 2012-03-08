@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999';
+$main::VERSION='0.999901';
 my $fa_banner=<<END;
 
 
@@ -51,6 +51,16 @@ my $fa_banner=<<END;
 
 
 END
+
+   sub get_cygwin_location {
+      my $cygwin_query=`REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup`;
+      if (-1<index $cygwin_query,'REG_SZ') {
+         $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
+         $cygwin_query=~s/^\s*//s;
+         $cygwin_query=~s/\s*$//s;
+         return $cygwin_query;
+      } return 0
+   }
 
    use Cwd qw/cwd/;
    use lib '.';
@@ -234,67 +244,112 @@ END
                "\n\n   Press ANY key to exit.\n\n";<STDIN>;
          exit;
       }
-      my $drv='';
-      foreach my $d (Win32::DriveInfo::DrivesInUse()) {
-         my $dt=Win32::DriveInfo::DriveType($d);
-         next if $dt == 5 || $dt == 4 || !$dt;
-         my $FileSystemName=(Win32::DriveInfo::VolumeInfo($d))[3];
-         next if $FileSystemName ne 'NTFS';
-         my $file_size = (Win32::DriveInfo::DriveSpace("$d:"))[6];
-         my $one_gb=1024*1024*1024;
-         if ($one_gb<$file_size) {
-            $drv=$d;
-            if ($dt == 3) {
-               push @drive_options, "Drive $d NTFS Fixed Disk ".
-                                     &size_fmt($file_size)." Free Space";
-            } elsif ($dt == 2) {
-               push @drive_options, "Drive $d NTFS Removeable Disk ".
-                                     &size_fmt($file_size)." Free Space";
-            } else {
-               push @drive_options, "Drive $d NTFS Volume ".
-                                     &size_fmt($file_size)." Free Space";
-            }
-         }
-      }
-      if (-1<$#drive_options) {
-         if (0==$#drive_options) {
-            $main::root_dir="$drv:\\cygwin";
-         } else{
-            my $banner="\n\n   Please select the Drive/Volume where you would".
-                       " like\n   Cygwin and FullAuto Installed.\n\n   ".
-                       "( If you don't see the Drive/Volume you desire,\n".
-                       "     it is probably because the Drive/Volume lacks\n".
-                       "     sufficient disk space. At least One Gigabyte\n".
-                       "     of free space is needed for a Windows based\n".
-                       "     Cygwin/FullAuto Installation. )\n\n";
-            my %menu_drives=(
+      my $cygwin_loc=get_cygwin_location();
+      if ($cygwin_loc) {
+         my $drv=substr($cygwin_loc,0,1);
+         my $dt=Win32::DriveInfo::DriveType($drv);
+         my $FileSystemName=(Win32::DriveInfo::VolumeInfo($drv))[3];
+         my $file_size = (Win32::DriveInfo::DriveSpace("$drv:"))[6];
+         my $banner="\n".
+                    "    ___                     _            _     _ \n".
+                    "   |_ _|_ __  _ __  ___ _ _| |_ __ _ _ _| |_  | |\n".
+                    "    | || '  \\| '_ \\/ _ \\ '_|  _/ _` | ' \\  _| |_|\n".
+                    "   |___|_|_|_| .__/\\___/_|  \\__\\__,_|_||_\\__| (_)\n".
+                    "             |_|\n".
+                    "\n".
+                    "   FullAuto Setup has detected a Cygwin installation\n".
+                    "   at $cygwin_loc. Setup has also determined that\n".
+                    "   there is ".&size_fmt($file_size)." Free Space on".
+                    " the Drive $drv Volume.\n".
+                    "   It is IMPORTANT TO NOTE that FullAuto Setup will\n".
+                    "   update  **ALL**  Cygwin components that have updates\n".
+                    "   available. If this is undesirable, then select\n".
+                    "   choice '2' and FullAuto Setup will EXIT.\n".
+                    "   You will need to install or update FullAuto with\n".
+                    "   the cpan utility bundled with your Cygwin installation."
+                    ."\n   If you're sure you wish to proceed with your\n".
+                    "   $cygwin_loc setup, then select choice '1' and\n".
+                    "   FullAuto Setup will continue ...";
+         my %cygchoice=(
 
-               Label => 'menu_drives',
+               Label => 'cygchoice',
                Item_1 => {
-
-                  Text => "]C[",
-                  Convey => \@drive_options,
-
+                  Text => 'Continue with FullAuto Setup',
+               },
+               Item_2 => {
+                  Text => 'CANCEL FullAuto Setup and EXIT',
                },
                Banner => $banner,
-
-            );
-            my $selection=Menu(\%menu_drives);
-            chomp($selection);
-            $selection=~s/^\s*Drive\s+([A-Z])\s+NTFS.*$/$1/s;
-            $main::root_dir="$selection:\\cygwin";
-         }
+         );
+         my $selection=Menu(\%cygchoice);
+         chomp($selection);
+         exit if $selection eq ']quit[';
+         exit if $selection eq 'CANCEL FullAuto Setup and EXIT';
+         $main::root_dir=$cygwin_loc;
       } else {
-         print "\n\n   Fatal Error!: Insufficient Disk Space.\n".
-               "                 At least One Gigabyte (1.0 GB) of\n".
-               "                 Free Disk Space is needed to install\n".
-               "                 Cygwin and FullAuto on this Windows\n".
-               "                 host.".
-               "\n\n   Please report any bugs and send any",
-               "\n   questions, thoughts or feedback to:",
-               "\n\n      Brian.Kelly\@fullautosoftware.net.",
-               "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-         exit;
+         my $drv='';
+         foreach my $d (Win32::DriveInfo::DrivesInUse()) {
+            my $dt=Win32::DriveInfo::DriveType($d);
+            next if $dt == 5 || $dt == 4 || !$dt;
+            my $FileSystemName=(Win32::DriveInfo::VolumeInfo($d))[3];
+            next if $FileSystemName ne 'NTFS';
+            my $file_size = (Win32::DriveInfo::DriveSpace("$d:"))[6];
+            my $one_gb=1024*1024*1024;
+            if ($one_gb<$file_size) {
+               $drv=$d;
+               if ($dt == 3) {
+                  push @drive_options, "Drive $d NTFS Fixed Disk ".
+                                        &size_fmt($file_size)." Free Space";
+               } elsif ($dt == 2) {
+                  push @drive_options, "Drive $d NTFS Removeable Disk ".
+                                        &size_fmt($file_size)." Free Space";
+               } else {
+                  push @drive_options, "Drive $d NTFS Volume ".
+                                        &size_fmt($file_size)." Free Space";
+               }
+            }
+         }
+         if (-1<$#drive_options) {
+            if (0==$#drive_options) {
+               $main::root_dir="$drv:\\cygwin";
+            } else{
+               my $banner="\n\n   Please select the Drive/Volume where you ".
+                          "would like\n   Cygwin and FullAuto Installed.\n".
+                          "\n   ( If you don't see the Drive/Volume you ".
+                          "desire,\n     it is probably because the Drive/".
+                          "Volume lacks\n     sufficient disk space. At ".
+                          "least One Gigabyte\n     of free space is needed ".
+                          "for a Windows based\n     Cygwin/FullAuto ".
+                          "Installation. )\n\n";
+               my %menu_drives=(
+
+                  Label => 'menu_drives',
+                  Item_1 => {
+
+                     Text => "]C[",
+                     Convey => \@drive_options,
+
+                  },
+                  Banner => $banner,
+
+               );
+               my $selection=Menu(\%menu_drives);
+               chomp($selection);
+               $selection=~s/^\s*Drive\s+([A-Z])\s+NTFS.*$/$1/s;
+               $main::root_dir="$selection:\\cygwin";
+            }
+         } else {
+            print "\n\n   Fatal Error!: Insufficient Disk Space.\n".
+                  "                 At least One Gigabyte (1.0 GB) of\n".
+                  "                 Free Disk Space is needed to install\n".
+                  "                 Cygwin and FullAuto on this Windows\n".
+                  "                 host.".
+                  "\n\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+            exit;
+         }
       }
    }
    if ($incflag && ($main::PARdir ne $main::curdir)) {
@@ -698,17 +753,49 @@ sub ws_info {
                 "cmd /c $cygwin_loc\\bin\\bash -lc ".
                 '"cat /etc/passwd |grep '.
                 '\\"/bin/bash\\" |grep '.
-                '\\"[5-9][0-9][0-9]\\" |cut -d: -f1"';
+                '\\"[5-9][0-9][0-9]\\""';
       my $userlist=`$users`;
+      my %ulist=();my $cyguser='';
       foreach my $us (split "\n",$userlist) {
          chomp($us);
-         if (exists $userlist{$us}) {
-            print "\nDUPLICATE USER ENTRY in $cygwin_loc/etc/passwd:\n",
-                  "$us\n\nPlease resolve - FullAuto Setup will exit.";<STDIN>;
-            exit;
-         }
-         $userlist{$us}='';
+         $cyguser=substr($us,0,(index $us,':'));
+         next if $cyguser ne 'cyg_server';
+         push @{$ulist{$cyguser}}, $us;
       }
+      my @u=@{$ulist{cyg_server}};
+      my @list=();my @retrn=();
+      my $domain_id_flag=0;
+      my $local_id_flag=0;
+      foreach my $e (@u) {
+         my @it=split ':',$e;
+         my $info=(split ',',$it[4])[1];
+         my $d='';my $i='';
+         if (-1<index $info,'\\') {
+            ($d,$i)=split /\\/,$info;
+            $d=~s/^.*-(.*)$/$1/;
+            $d="DOMAIN: $d";
+            $domain_id_flag=1;
+         } else {
+            $d="LOCAL: $hostname";
+            $local_id_flag=1;
+         }
+         push @retrn,"cyg_server -> $d";
+      }
+      my %askcyg=(
+
+         Label => 'askcyg',
+         Item_1 => {
+
+            Text => "]C[",
+            Convey => \@retrn,
+
+         },
+         Banner => "   HELLO",
+
+      );
+      my $selection=Menu(\%askcyg);
+      print "SELECTION=$selection\n";
+
    }
    my $found_dotted=0;
    my $domain='';
@@ -929,7 +1016,56 @@ $PREFIX='' if $PREFIX='/usr';
 my $editor='';my $selection='';my $berkeleydb='';
 if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 
-   my %Menu_win_to_cyg=(
+   my $cygwin_loc=get_cygwin_location();
+
+   if ($cygwin_loc) {
+
+      my %Menu_update_cyg=(
+
+         Label  => 'Menu_update_cyg',
+         Item_1 => {
+
+            Text => "Update Cygwin Linux ".
+                    "Emulation Layer for Windows at $cygwin_loc\n".
+                    "                and ".
+                    "INSTALL FullAuto:\n\n                ( FullAuto ".
+                    "Install will download and utilize a number of ".
+                    "\n                  development utilities including the".
+                    " gcc compiler ).\n\n\n",
+                    #"                -------------------------------".
+                    #"---------------------------\n",
+
+         },
+         Item_2 => {
+
+            Text => "Update Cygwin Linux ".
+                    "Emulation Layer for Windows at $cygwin_loc\n            ".
+                    "    and Install OpenSSH *ONLY*:\n\n              ".
+                    "  ( This will update and configure Base Cygwin and ".
+                    "OpenSSH only\n                  so that remote FullAuto ".
+                    "processes can connect and interact\n                  ".
+                    "with this host; but FullAuto itself will NOT be ".
+                    "installed ).\n\n\n",
+
+         },
+         Item_3 => {
+
+            Text    => "DO *NOT* Update Cygwin ( FullAuto Install will END )".
+                       ".\n\n",
+            #Default => "*",
+
+         },
+         Banner => "   There are two types of installations available:\n\n",
+
+      );
+      if ($install_cygwin_without_asking) {
+         $selection='Install';
+      } else {
+         $selection=Term::Menus::Menu(\%Menu_update_cyg);
+      }
+   } else {
+
+      my %Menu_win_to_cyg=(
 
          Label  => 'Menu_win_to_cyg',
          Item_1 => {
@@ -939,35 +1075,37 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                     "INSTALL FullAuto:\n\n                ( FullAuto ".
                     "Install will download and utilize a number of ".
                     "\n                  development utilities including the".
-                    " gcc compiler ).\n".
-                    "                -------------------------------".
-                    "---------------------------\n",
+                    " gcc compiler ).\n\n\n",
+                    #"                -------------------------------".
+                    #"---------------------------\n",
 
          },
          Item_2 => {
 
-            Text => "Install or Update a *MINIMAL* Cygwin Linux ".
+            Text => "Install a *MINIMAL* Cygwin Linux ".
                     "Emulation Layer\n                for Windows and ".
-                    "DO *NOT* Install FullAuto:\n\n                ( This ".
-                    "will install and configure Base Cygwin OpenSSH only".
-                    "\n                  so that remote FullAuto processes ".
-                    "can connect and interact\n                  ".
-                    "with this host, but not actually be installed on it ).\n\n",
+                    "  DO *NOT*   Install FullAuto:\n\n                ( This ".
+                    "will install and configure Base Cygwin and OpenSSH only".
+                    "\n                  so that remote FullAuto ".
+                    "processes can connect and interact\n                  ".
+                    "with this host; but FullAuto itself will NOT be ".
+                    "installed ).\n\n\n",
 
          },
          Item_3 => {
 
             Text    => "DO *NOT* Install Cygwin ( FullAuto Install will END ).",
-            Default => "*",
+            #Default => "*",
 
          },
-         Banner => "   Would you like to install Cygwin?",
+         Banner => "   There are two types of installations available:",
 
-   );
-   if ($install_cygwin_without_asking) {
-      $selection='Install';
-   } else {
-      $selection=Term::Menus::Menu(\%Menu_win_to_cyg);
+      );
+      if ($install_cygwin_without_asking) {
+         $selection='Install';
+      } else {
+         $selection=Term::Menus::Menu(\%Menu_win_to_cyg);
+      }
    }
    exit if $selection eq ']quit[';
    if ($selection!~/will END/s) {
@@ -991,7 +1129,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             push @editors, 'TextPad (The Text Editor for Windows)';
          }
 
-         my $banner="   In order is use the integrated edit features\n".
+         my $banner="   In order to use the integrated edit features\n".
                     "   you will need to choose an editor.";
          my %Menu_select_editor=();
          if (-e ${ENV}{SystemDrive}.
@@ -1159,22 +1297,23 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          chmod 0755, "$main::root_dir\\setup.exe";
          
          my $setup_cmd='';
+         my $drlet=substr($main::root_dir,0,2);
          if ($selection!~/[Ww]ordpad|MINIMAL/s) {
-            $setup_cmd="cd \"$main::root_dir\" & "
+            $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps,'
                       .$selection.' -X -A -q '."-r $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
-            $setup_cmd="cd \"$main::root_dir\" & "
+            $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps'
                       .' -X -A -q '."-r $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } else {
-            $setup_cmd="cd \"$main::root_dir\" & "
+            $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P openssh,ncurses,procps -X -A -q '
                       ."-r $main::root_dir ".'-s '
                       .'http://cygwin.mirrors.pair.com';
@@ -2622,15 +2761,15 @@ if ($@) {
    die $die;
 }
 
-sub get_cygwin_location {
-   my $cygwin_query=`REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup`;
-   if (-1<index $cygwin_query,'REG_SZ') {
-      $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
-      $cygwin_query=~s/^\s*//s;
-      $cygwin_query=~s/\s*$//s;
-      return $cygwin_query;
-   } return 0
-}
+#sub get_cygwin_location {
+#   my $cygwin_query=`REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup`;
+#   if (-1<index $cygwin_query,'REG_SZ') {
+#      $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
+#      $cygwin_query=~s/^\s*//s;
+#      $cygwin_query=~s/\s*$//s;
+#      return $cygwin_query;
+#   } return 0
+#}
 
 sub remove_sshd {
    my $sshd_account=$_[0];

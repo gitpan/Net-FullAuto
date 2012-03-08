@@ -19,6 +19,16 @@
 ################################################################
 
 
+2012-03-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999901 released.
+
+        * Added fix to remove new line from $stderr variable
+          during compilation phase.
+
+        * Added Domain logic to Makefile.PL.
+
+
 2012-03-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999 released.
