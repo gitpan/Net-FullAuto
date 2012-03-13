@@ -1136,7 +1136,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          #$localhost->{_cmd_handle}->print("\003");
          my $cfh_ignore='';my $cfh_error='';
          ($cfh_ignore,$cfh_error)=&clean_filehandle($localhost->{_cmd_handle});
-         &handle_error("CLEANUP ERROR -> $cfh_error",'-1') if $cfh_error;
+         &handle_error("CLEANUP ERROR -> $cfh_error",'-1') if $cfh_error
+            && (-1==index $cfh_error,'Connection to localhost closed');
          ($stdout,$stderr)=$localhost->cmd("cd $master_transfer_dir");
          &handle_error("CLEANUP ERROR -> $stderr",'-1') if $stderr;
          ($stdout,$stderr)=

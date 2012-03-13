@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999901';
+$main::VERSION='0.999902';
 my $fa_banner=<<END;
 
 
@@ -58,6 +58,26 @@ END
          $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
          $cygwin_query=~s/^\s*//s;
          $cygwin_query=~s/\s*$//s;
+         unless (-W $cygwin_query) {
+            print "\n\n   Fatal Error! - Write Access to $cygwin_query\n".
+                  "   is needed in order to install FullAuto or OpenSSH.\n\n".
+                  "   Please contact your Windows System Administrator\n".
+                  "   to resolve.\n\n   PRESS ANY KEY to Exit Setup\n\n";
+            <STDIN>;
+            exit 1;
+         }
+         my $loc=$cygwin_query;
+         $loc=~s/\\/\//g;
+         my $groups=`$loc/bin/bash -lc "id"`;
+         unless (-1<index $groups,"(Administrators)") {
+            print "\n\n   Fatal Error! - The User $ENV{'USERNAME'} needs to\n".
+                  "   be a member of the Administrator's group in order\n".
+                  "   to install FullAuto or OpenSSH.\n\n".
+                  "   Please contact your Windows System Administrator\n".
+                  "   to resolve.\n\n    PRESS ANY KEY to Exit Setup\n\n";
+            <STDIN>;
+            exit 1;
+         }
          return $cygwin_query;
       } return 0
    }
@@ -766,20 +786,32 @@ sub ws_info {
       my @list=();my @retrn=();
       my $domain_id_flag=0;
       my $local_id_flag=0;
-      foreach my $e (@u) {
-         my @it=split ':',$e;
-         my $info=(split ',',$it[4])[1];
-         my $d='';my $i='';
-         if (-1<index $info,'\\') {
-            ($d,$i)=split /\\/,$info;
-            $d=~s/^.*-(.*)$/$1/;
-            $d="DOMAIN: $d";
-            $domain_id_flag=1;
-         } else {
-            $d="LOCAL: $hostname";
-            $local_id_flag=1;
+      if (-1<$#u) {
+         foreach my $e (@u) {
+            my @it=split ':',$e;
+            my $info=(split ',',$it[4])[1];
+            my $d='';my $i='';
+            if (-1<index $info,'\\') {
+               ($d,$i)=split /\\/,$info;
+               $d=~s/^.*-(.*)$/$1/;
+               $d="DOMAIN: $d";
+               $domain_id_flag=1;
+            } else {
+               $d="LOCAL: $hostname";
+               $local_id_flag=1;
+            }
+            push @retrn,"cyg_server -> $d";
          }
-         push @retrn,"cyg_server -> $d";
+      }
+      if (0==$#retrn) {
+         my $rights=`$cygwin_location\\bin\\editrights -u cyg_server -l`;
+         if (-1<index $retrn[0],'DOMAIN') {
+                    
+
+         } else {
+
+
+         }
       }
       my %askcyg=(
 
@@ -1359,7 +1391,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $account_type=Term::Menus::Menu(\%Menu_select_account_type);
                $privl=' --privileged' if -1<index $account_type,'separate';
             }
-            my $youser=&ws_info($check_for_domain);
+            my $youser=&ws_info($check_for_domain) unless $wver=~/XP|2000|NT/;
             if ((-1<index $account_type,'separate') &&
                      (&test_windows_user($sshd_account))) {
                my $banner="   OpenSsh's sshd service running via Cygwin is ".
@@ -2829,6 +2861,22 @@ sub test_windows_user {
    }
    # Is Cygwin installed?
    my $cygwin_location=get_cygwin_location();
+
+   # Adjust memory quotas for a process             (SeIncreaseQuotaPrivilege)
+   # Create a token object                          (SeCreateTokenPrivilege)
+   # Log on as a service                            (SeServiceLogonRight)
+   # Replace a process level token
+   #                                           (SeAssignPrimaryTokenPrivilege)
+
+   # Act as part of the operating system            (SeTcbPrivilege)
+
+   # > 	And for security.....
+
+   # Deny log on locally                         (SeDenyInteractiveLogonRight)
+   # Deny access to this computer from the network   (SeDenyNetworkLogonRight)
+   # Deny log on through Terminal Services 
+   #                                       (SeDenyRemoteInteractiveLogonRight)
+
    if ($cygwin_location) {
       my $rights=`$cygwin_location\\bin\\editrights -u $sshd_account -l`;
       print "RIGHTS for $sshd_account ======>\n$rights\n<=======\n";

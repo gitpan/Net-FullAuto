@@ -19,6 +19,14 @@
 ################################################################
 
 
+2012-03-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999902 released.
+
+        * Added conditional to avoid connection closed message
+          when such a condition occurs during cleanup.
+
+
 2012-03-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999901 released.
