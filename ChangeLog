@@ -19,6 +19,14 @@
 ################################################################
 
 
+2012-03-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999903 released.
+
+        * Fixed cwd() error when using combined handle.
+          _ftp_handle was not getting it's directory changed.
+
+
 2012-03-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999902 released.

@@ -1749,6 +1749,7 @@ sub edit {
    }
 
    my $editor='';
+   $fa_conf::editor||='';
    unless ($editor=$fa_conf::editor) {
       if ($^O eq 'cygwin') {
          my $mount=`/bin/mount -p`;
@@ -15218,6 +15219,16 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
             if (wantarray) { return '',$die }
             else { &Net::FullAuto::FA_Core::handle_error($die,'-12') }
          }
+         if ($self->{_ftm_type}=~/s*ftp/) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(
+                { _ftp_handle=>$self->{_ftp_handle},
+                  _ftm_type  =>$self->{_ftm_type} },
+                "cd \"$target_dir\"",$hostlabel);
+            if ($stderr) {
+               if (wantarray) { return '',$stderr }
+               else { &Net::FullAuto::FA_Core::handle_error($stderr,'-3') }
+            }
+         }
          $self->{_work_dirs}->{_pre_mswin}=
             $self->{_work_dirs}->{_cwd_mswin};
          $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
@@ -15234,6 +15245,16 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                &Net::FullAuto::FA_Core::handle_error($stderr);
             }
          }
+         if ($self->{_ftm_type}=~/s*ftp/) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(
+                { _ftp_handle=>$self->{_ftp_handle},
+                  _ftm_type  =>$self->{_ftm_type} },
+                "cd \"$tar_dir\"",$hostlabel);
+            if ($stderr) {
+               if (wantarray) { return '',$stderr }
+               else { &Net::FullAuto::FA_Core::handle_error($stderr,'-3') }
+            }
+         }
          $self->{_work_dirs}->{_pre}=$self->{_work_dirs}->{_cwd};
          $self->{_work_dirs}->{_pre_mswin}=
             $self->{_work_dirs}->{_cwd_mswin};
@@ -15242,8 +15263,9 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
       } else {
          if (1<$len_tdir && unpack('a2',$target_dir) eq '..') {
             if ($self->{_ftm_type}=~/s*ftp/) {
-               ($output,$stderr)=&ftpcmd(
-                   { _ftp_handle=>$self->{_ftp_handle} },
+               ($output,$stderr)=&Rem_Command::ftpcmd(
+                   { _ftp_handle=>$self->{_ftp_handle},
+                     _ftm_type  =>$self->{_ftm_type} },
                    'cd \'..\'',$hostlabel);
                if ($stderr) {
                   if (wantarray) { return '',$stderr }

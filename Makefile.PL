@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999902';
+$main::VERSION='0.999903';
 my $fa_banner=<<END;
 
 
@@ -768,7 +768,7 @@ sub ws_info {
       if ($modflag) {
          my $npass=join "\n",@newpassw;
          `echo \"$npass\" > /etc/passwd`;
-      }
+      } $modflag=0;
       my $users='SET CYGWIN=nodosfilewarning & '.
                 "cmd /c $cygwin_loc\\bin\\bash -lc ".
                 '"cat /etc/passwd |grep '.
@@ -786,6 +786,7 @@ sub ws_info {
       my @list=();my @retrn=();
       my $domain_id_flag=0;
       my $local_id_flag=0;
+      my %cygsrvs=();
       if (-1<$#u) {
          foreach my $e (@u) {
             my @it=split ':',$e;
@@ -801,33 +802,143 @@ sub ws_info {
                $local_id_flag=1;
             }
             push @retrn,"cyg_server -> $d";
+            $cygsrvs{"cyg_server -> $d"}=$e;
          }
       }
-      if (0==$#retrn) {
+      if (0<$#retrn) {
+         my %askcyg=(
+
+            Label => 'askcyg',
+            Item_1 => {
+
+               Text => "]C[",
+               Convey => \@retrn,
+
+            },
+            Banner => "   More than one instance of the user 'cyg_server'\n" .
+                      "   have been located in the /etc/passwd file. However,\n".
+                      "   only one can be used. Please choose one:\n",
+         );
+         my $selection=Menu(\%askcyg);
+         chomp($selection);
+         delete $cygsrvs{$selection};
+         my $pasen='SET CYGWIN=nodosfilewarning & '.
+                   "cmd /c $cygwin_loc\\bin\\bash -lc ".
+                   '"cat /etc/passwd"';
+         my $passe=`$pasen`;my $cnt=0;my %passlins=();
+         foreach my $en (split "\n",$passe) {
+            chomp($en);
+            push @{$passlins{$en}},$cnt++;
+            push @newpassw,$en;
+         }
+         my $ct=0;my $n=0;my $modflag=0;
+         foreach my $lin (keys %passlins) {
+            my $linn=$lin;
+            $lin=~s/\s*$//;
+            foreach my $i (values %cygsrvs) {
+               my $ii=$i;
+               $ii=~s/\s*$//;
+               if ($lin eq $ii) {
+                  splice(@newpassw,$n,1);
+                  $ct++;
+                  $modflag=1;
+                  next;
+               }
+               $ct++;$n++;
+            }
+         }
+
+
+         if ($modflag) {
+            my $npass=join "\n",@newpassw;
+            `echo \"$npass\" > /etc/passwd`;
+         }
+
+
          my $rights=`$cygwin_location\\bin\\editrights -u cyg_server -l`;
-         if (-1<index $retrn[0],'DOMAIN') {
-                    
-
-         } else {
-
-
+         if ((-1==index $rights,'SeServiceLogonRight') ||
+               (-1==index $rights,'SeTcbPrivilege') ||
+               (-1==index $rights,'SeCreateTokenPrivilege') ||
+               (-1==index $rights,'SeAssignPrimaryTokenPrivilege')) {
+            my $die='DYING';
+            if (-1==index $rights,'SeTcbPrivilege') {
+               unless (`/bin/editrights -a SeTcbPrivilege -u cyg_server`) {
+                  print $die;
+                  exit;
+               }
+            }
+            if (-1==index $rights,'SeCreateTokenPrivilege') {
+               my $prv='SeCreateTokenPrivilege';
+               unless (`/bin/editrights -a $prv -u cyg_server`) {
+                  print $die;
+                  exit;
+               }
+            }
+            if (-1==index $rights,'SeAssignPrimaryTokenPrivilege') {
+               my $prv='SeAssignPrimaryTokenPrivilege';
+               unless (`/bin/editrights -a $prv -u cyg_server`) {
+                  print $die;
+                  exit;
+               }
+            }
+            if (-1==index $rights,'SeServiceLogonRight') {
+               my $prv='SeServiceLogonRight';
+               unless (`/bin/editrights -a $prv -u cyg_server`) {
+                  print $die;
+                  exit;
+               }
+            }
+            my $gpout=`gpupdate 2>&1`;
+            if (-1<index $gpout,'completed successfully') {
+print "GPUPDATE=$gpupdate\n";<STDIN>;
+               my $die="DIE Global Policy removed privileges\n";
+               my $rights=`$cygwin_location\\bin\\editrights -u cyg_server -l`;
+               if (-1==index $rights,'SeTcbPrivilege') {
+                  unless (`/bin/editrights -a SeTcbPrivilege -u cyg_server`) {
+                     print $die;
+                     exit;
+                  }
+               }
+               if (-1==index $rights,'SeCreateTokenPrivilege') {
+                  my $prv='SeCreateTokenPrivilege';
+                  unless (`/bin/editrights -a $prv -u cyg_server`) {
+                     print $die;
+                     exit;
+                  }
+               }
+               if (-1==index $rights,'SeAssignPrimaryTokenPrivilege') {
+                  my $prv='SeAssignPrimaryTokenPrivilege';
+                  unless (`/bin/editrights -a $prv -u cyg_server`) {
+                     print $die;
+                     exit;
+                  }
+               }
+               if (-1==index $rights,'SeServiceLogonRight') {
+                  my $prv='SeServiceLogonRight';
+                  unless (`/bin/editrights -a $prv -u cyg_server`) {
+                     print $die;
+                     exit;
+                  }
+               }
+            }
          }
+      } else {
+         my %askcyg=(
+
+            Label => 'askcyg',
+            Item_1 => {
+
+               Text => "]C[",
+               Convey => \@retrn,
+
+            },
+            Banner => "   Two instances of the user 'cyg_server' have\n" .
+                      "   been located in the /etc/passwd file. However,\n".
+                      "   only one actually be used. Please choose one:\n",
+         );
+         my $selection=Menu(\%askcyg);
+         print "SELECTION=$selection\n";
       }
-      my %askcyg=(
-
-         Label => 'askcyg',
-         Item_1 => {
-
-            Text => "]C[",
-            Convey => \@retrn,
-
-         },
-         Banner => "   HELLO",
-
-      );
-      my $selection=Menu(\%askcyg);
-      print "SELECTION=$selection\n";
-
    }
    my $found_dotted=0;
    my $domain='';
