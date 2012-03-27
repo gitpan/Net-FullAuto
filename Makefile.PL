@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999903';
+$main::VERSION='0.999904';
 my $fa_banner=<<END;
 
 
@@ -66,9 +66,26 @@ END
             <STDIN>;
             exit 1;
          }
-         my $loc=$cygwin_query;
-         $loc=~s/\\/\//g;
-         my $groups=`$loc/bin/bash -lc "id"`;
+         my $getver='SET CYGWIN=nodosfilewarning & '.
+                "cmd /c $cygwin_query\\bin\\bash -lc ".
+                '"cygcheck -c cygwin"';
+         my $cygver=`$getver`;
+         if ($cygver=~/(1.7.11-1)/) {
+            print "\n\n   Fatal Error! - The current Cygwin version: $1\n".
+                  "   (Base Cygwin cygwin1.dll) is incompatible with\n".
+                  "   FullAuto. Please update to either a newer or older\n".
+                  "   version of Base Cygwin before again attempting to\n".
+                  "   to install FullAuto.\n\n".
+                  "   You may need to contact your Windows System\n".
+                  "   Administrator to resolve.\n\n".
+                  "   PRESS ANY KEY to Exit Setup\n\n";
+            <STDIN>;
+            exit 1;
+         }
+         my $getid='SET CYGWIN=nodosfilewarning & '.
+                "cmd /c $cygwin_query\\bin\\bash -lc ".
+                '"id"';
+         my $groups=`$getid`;
          unless (-1<index $groups,"(Administrators)") {
             print "\n\n   Fatal Error! - The User $ENV{'USERNAME'} needs to\n".
                   "   be a member of the Administrator's group in order\n".
@@ -282,12 +299,12 @@ END
                     "   there is ".&size_fmt($file_size)." Free Space on".
                     " the Drive $drv Volume.\n".
                     "   It is IMPORTANT TO NOTE that FullAuto Setup will\n".
-                    "   update  **ALL**  Cygwin components that have updates\n".
-                    "   available. If this is undesirable, then select\n".
-                    "   choice '2' and FullAuto Setup will EXIT.\n".
-                    "   You will need to install or update FullAuto with\n".
-                    "   the cpan utility bundled with your Cygwin installation."
-                    ."\n   If you're sure you wish to proceed with your\n".
+                    "   attempt to use this installation. If this is\n".
+                    "   undesirable, then select choice '2' and FullAuto\n".
+                    "   Setup will EXIT. It is recommended that you use the\n".
+                    "   cpan utility to install or update FullAuto, if there\n".
+                    "   is more than one Cygwin installation on your system.\n".
+                    "\n   If you're sure you wish to proceed with your\n".
                     "   $cygwin_loc setup, then select choice '1' and\n".
                     "   FullAuto Setup will continue ...";
          my %cygchoice=(
@@ -359,7 +376,7 @@ END
                $main::root_dir="$selection:\\cygwin";
             }
          } else {
-            print "\n\n   Fatal Error!: Insufficient Disk Space.\n".
+            print "\n\n   Fatal Error! - Insufficient Disk Space.\n".
                   "                 At least One Gigabyte (1.0 GB) of\n".
                   "                 Free Disk Space is needed to install\n".
                   "                 Cygwin and FullAuto on this Windows\n".
@@ -698,6 +715,7 @@ END
 };
 
 sub ws_info {
+   my $selection='';
    if ($_[0]) {
       print "\nRunning command: net user /domain ->".
             " This may take a couple of minutes\n\n";
@@ -749,9 +767,9 @@ sub ws_info {
                          "'Skip this operation' and\n   FullAuto Setup ".
                          "will continue.\n\n",
             );
-            my $selection=Menu(\%asklin);
+            my $select=Menu(\%asklin);
             my $s=0;
-            ($s=$selection)=~s/^.*\n\s+Line: (\d+).*$/$1/s;
+            ($s=$select)=~s/^.*\n\s+Line: (\d+).*$/$1/s;
             $s--;my $adjust=0;
             foreach my $i (@pl) {
                my $ii=$i;
@@ -816,12 +834,12 @@ sub ws_info {
 
             },
             Banner => "   More than one instance of the user 'cyg_server'\n" .
-                      "   have been located in the /etc/passwd file. However,\n".
-                      "   only one can be used. Please choose one:\n",
+                      "   have been located in the /etc/passwd file. However".
+                      ",\n   only one can be used. Please choose one:\n",
          );
-         my $selection=Menu(\%askcyg);
-         chomp($selection);
-         delete $cygsrvs{$selection};
+         my $select=Menu(\%askcyg);
+         chomp($select);
+         delete $cygsrvs{$select};
          my $pasen='SET CYGWIN=nodosfilewarning & '.
                    "cmd /c $cygwin_loc\\bin\\bash -lc ".
                    '"cat /etc/passwd"';
@@ -854,91 +872,8 @@ sub ws_info {
             `echo \"$npass\" > /etc/passwd`;
          }
 
-
-         my $rights=`$cygwin_location\\bin\\editrights -u cyg_server -l`;
-         if ((-1==index $rights,'SeServiceLogonRight') ||
-               (-1==index $rights,'SeTcbPrivilege') ||
-               (-1==index $rights,'SeCreateTokenPrivilege') ||
-               (-1==index $rights,'SeAssignPrimaryTokenPrivilege')) {
-            my $die='DYING';
-            if (-1==index $rights,'SeTcbPrivilege') {
-               unless (`/bin/editrights -a SeTcbPrivilege -u cyg_server`) {
-                  print $die;
-                  exit;
-               }
-            }
-            if (-1==index $rights,'SeCreateTokenPrivilege') {
-               my $prv='SeCreateTokenPrivilege';
-               unless (`/bin/editrights -a $prv -u cyg_server`) {
-                  print $die;
-                  exit;
-               }
-            }
-            if (-1==index $rights,'SeAssignPrimaryTokenPrivilege') {
-               my $prv='SeAssignPrimaryTokenPrivilege';
-               unless (`/bin/editrights -a $prv -u cyg_server`) {
-                  print $die;
-                  exit;
-               }
-            }
-            if (-1==index $rights,'SeServiceLogonRight') {
-               my $prv='SeServiceLogonRight';
-               unless (`/bin/editrights -a $prv -u cyg_server`) {
-                  print $die;
-                  exit;
-               }
-            }
-            my $gpout=`gpupdate 2>&1`;
-            if (-1<index $gpout,'completed successfully') {
-print "GPUPDATE=$gpupdate\n";<STDIN>;
-               my $die="DIE Global Policy removed privileges\n";
-               my $rights=`$cygwin_location\\bin\\editrights -u cyg_server -l`;
-               if (-1==index $rights,'SeTcbPrivilege') {
-                  unless (`/bin/editrights -a SeTcbPrivilege -u cyg_server`) {
-                     print $die;
-                     exit;
-                  }
-               }
-               if (-1==index $rights,'SeCreateTokenPrivilege') {
-                  my $prv='SeCreateTokenPrivilege';
-                  unless (`/bin/editrights -a $prv -u cyg_server`) {
-                     print $die;
-                     exit;
-                  }
-               }
-               if (-1==index $rights,'SeAssignPrimaryTokenPrivilege') {
-                  my $prv='SeAssignPrimaryTokenPrivilege';
-                  unless (`/bin/editrights -a $prv -u cyg_server`) {
-                     print $die;
-                     exit;
-                  }
-               }
-               if (-1==index $rights,'SeServiceLogonRight') {
-                  my $prv='SeServiceLogonRight';
-                  unless (`/bin/editrights -a $prv -u cyg_server`) {
-                     print $die;
-                     exit;
-                  }
-               }
-            }
-         }
-      } else {
-         my %askcyg=(
-
-            Label => 'askcyg',
-            Item_1 => {
-
-               Text => "]C[",
-               Convey => \@retrn,
-
-            },
-            Banner => "   Two instances of the user 'cyg_server' have\n" .
-                      "   been located in the /etc/passwd file. However,\n".
-                      "   only one actually be used. Please choose one:\n",
-         );
-         my $selection=Menu(\%askcyg);
-         print "SELECTION=$selection\n";
-      }
+         test_windows_user_rights('cyg_server');
+      } 
    }
    my $found_dotted=0;
    my $domain='';
@@ -1001,7 +936,6 @@ print "GPUPDATE=$gpupdate\n";<STDIN>;
    chomp($hostname);
 
    if ($dom ne 'Local') {
-      my $selection='';
       if ($cyg_id eq 'cyg_server') {
          my $o=`net user cyg_server`;
          if (-1==index $o,'user name could not be found') {
@@ -1028,7 +962,7 @@ print "GPUPDATE=$gpupdate\n";<STDIN>;
             $selection=Menu(\%_cygserv);
             exit if $selection eq ']quit[';
          } else {
-         
+            $selection='cyg_server'; 
          }         
       } else {
          my %_cygserv=(
@@ -1039,9 +973,12 @@ print "GPUPDATE=$gpupdate\n";<STDIN>;
                   Convey => [ 'Select ID from All Domain ID\'s',
                               'Use a Local account' ],
             },
-            Banner=> "   'cyg_server' has *NOT* been located in the $dom Domain.\n".
-                     "   If you wish to use the 'cyg_server' id as a Domain ID\n".
-                     "   for the OpenSSH sshd service on this host: ".$hostname."\n".
+            Banner=> "   'cyg_server' has *NOT* been located in the $dom ".
+                     "Domain.\n".
+                     "   If you wish to use the 'cyg_server' id as a Domain".
+                     " ID\n".
+                     "   for the OpenSSH sshd service on this host: ".
+                     $hostname."\n".
                      "   type 'quit', exit FullAuto Setup, create the\n".
                      "   'cyg_server' User in the $dom Domain, and *then*\n".
                      "   run FullAuto Setup again.\n\n",
@@ -1067,11 +1004,13 @@ print "GPUPDATE=$gpupdate\n";<STDIN>;
                      "   (forward slash key followed by text to search for).", 
          );
          $selection=Menu(\%_users);
+         test_windows_user_rights($selection);
          exit if $selection eq ']quit[';
       } elsif (-1<index $selection, 'Use Domain') {
          $selection='cyg_server'; 
       }
    }
+print "WHAT IS SELECTION=$selection\n";
    return $selection;
 
 }
@@ -1398,6 +1337,31 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             open(CP,">$main::root_dir\\setup.exe") || die $!;
             binmode(CP);
             print CP $res->content;
+            my $cyghome=$Ua->get('http://www.cygwin.com');
+            if ($^O ne 'cygwin' && $cyghome->is_success) {
+               my $content=$cyghome->content;
+               print "CONTENT=$content\n";
+               my $cygver='';
+               ($cygver=$content)=~
+                  s/^.*of the Cygwin DLL is ([\d|.|-]). In.*$/$1/s;
+               if ($cygver=~/(1.7.11-1)/) {
+                  print "\n\n   Fatal Error! - The current Cygwin version: $1".
+                        "\n   (Base Cygwin cygwin1.dll) at cygwin.com is\n".
+                        "   incompatible with FullAuto. Please manually\n".
+                        "   download the setup utility from www.cygwin.com,\n".
+                        "   and install an\n   older version of Base Cygwin.\n".
+                        "   Only then can\n   successfully install FullAuto.\n".
+                        "   Optionally, you\n   can also manually install\n".
+                        "   Perl when setting up\n   a compatible version of\n".
+                        "   Cygwin, and afterwards\n   use the bundled cpan\n".
+                        "   utility to install FullAuto\n   You may need to\n".
+                        "   contact your Windows System\n   Administrator to\n".
+                        "   resolve.\n\n".
+                        "   PRESS ANY KEY to Exit Setup\n\n";
+                  <STDIN>;
+                  exit 1;
+               }
+            } 
          } elsif ($res->status_line=~/403/) {
             $url='http://www.fullautosoftware.net/download/setup.exe'; 
             $req = HTTP::Request->new(GET => $url);
@@ -2058,24 +2022,26 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
          }
          my $rmdir_out=rmdir $main::curdir.'/inc/.author'; 
-         print "ERROR $main::curdir/inc/.author: $!\n" unless $rmdir_out;
+         #print "ERROR $main::curdir/inc/.author: $!\n" unless $rmdir_out;
          my $un_out=unlink $main::curdir.'/inc/Module/Install/Base.pm';
-         print "ERROR $main::curdir/inc/Module/Install/Base.pm: $!\n"
-            unless $un_out;
+         #print "ERROR $main::curdir/inc/Module/Install/Base.pm: $!\n"
+         #   unless $un_out;
          $un_out=unlink $main::curdir.'/inc/Module/Install/Metadata.pm';
-         print "ERROR $main::curdir/inc/Module/Install.pm: $!\n" unless $un_out;
+         #print "ERROR $main::curdir/inc/Module/Install.pm: $!\n"
+         #   unless $un_out;
          $un_out=unlink $main::curdir.'/inc/Module/Install.pm';
-         print "ERROR $main::curdir/inc/Module/Install.pm: $!\n" unless $un_out;
+         #print "ERROR $main::curdir/inc/Module/Install.pm: $!\n"
+         #   unless $un_out;
          $rmdir_out=rmdir $main::curdir.'/inc/Module/Install';
-         print "ERROR /inc/Module/Install: $!\n" unless $rmdir_out;
+         #print "ERROR /inc/Module/Install: $!\n" unless $rmdir_out;
          $rmdir_out=rmdir $main::curdir.'/inc/Module';
-         print "ERROR $main::curdir/inc/Module: $!\n" unless $rmdir_out;
+         #print "ERROR $main::curdir/inc/Module: $!\n" unless $rmdir_out;
          unless ((exists $ENV{PARdir} && (-f $ENV{PARdir}.'/inc_exists.txt'))) {
             $rmdir_out=rmdir $main::curdir.'/inc';
-            print "ERROR $main::curdir/inc: $!\n" unless $rmdir_out;
+            #print "ERROR $main::curdir/inc: $!\n" unless $rmdir_out;
          } else {
             $un_out=unlink $ENV{PARdir}.'/inc_exists.txt';
-            print "ERROR $ENV{PARdir}/inc_exists.txt: $!\n" unless $un_out;
+            #print "ERROR $ENV{PARdir}/inc_exists.txt: $!\n" unless $un_out;
          }
          opendir(CD,$main::curdir)
             or die "Cannot open ".$main::curdir.": $!\n";
@@ -2904,16 +2870,6 @@ if ($@) {
    die $die;
 }
 
-#sub get_cygwin_location {
-#   my $cygwin_query=`REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup`;
-#   if (-1<index $cygwin_query,'REG_SZ') {
-#      $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
-#      $cygwin_query=~s/^\s*//s;
-#      $cygwin_query=~s/\s*$//s;
-#      return $cygwin_query;
-#   } return 0
-#}
-
 sub remove_sshd {
    my $sshd_account=$_[0];
    my $cygwin_loc=get_cygwin_location();
@@ -2961,6 +2917,105 @@ sub remove_sshd {
       }
    }
    return 1;
+}
+
+sub test_windows_user_rights {
+
+   my $user=$_[0];
+
+   # Is Cygwin installed?
+   my $cygwin_location=get_cygwin_location();
+
+   # Adjust memory quotas for a process             (SeIncreaseQuotaPrivilege)
+   # Create a token object                          (SeCreateTokenPrivilege)
+   # Log on as a service                            (SeServiceLogonRight)
+   # Replace a process level token
+   #                                           (SeAssignPrimaryTokenPrivilege)
+
+   # Act as part of the operating system            (SeTcbPrivilege)
+
+   # >  And for security.....
+
+   # Deny log on locally                         (SeDenyInteractiveLogonRight)
+   # Deny access to this computer from the network   (SeDenyNetworkLogonRight)
+   # Deny log on through Terminal Services
+   #                                       (SeDenyRemoteInteractiveLogonRight)
+
+   my $rights=`$cygwin_location\\bin\\editrights -u $user -l`;
+   my $output='';
+   if ((-1==index $rights,'SeServiceLogonRight') ||
+         (-1==index $rights,'SeTcbPrivilege') ||
+         (-1==index $rights,'SeCreateTokenPrivilege') ||
+         (-1==index $rights,'SeAssignPrimaryTokenPrivilege') || 1) {
+      my $die='DYING';
+      my @missing_rights=();
+      if (-1==index $rights,'SeTcbPrivilege') {
+         unless ($output=
+               `/bin/editrights -a SeTcbPrivilege -u $user`) {
+            push @missing_rights, 'SeTcbPrivilege';
+         }
+      }
+      if (-1==index $rights,'SeCreateTokenPrivilege') {
+         my $prv='SeCreateTokenPrivilege';
+         unless (`/bin/editrights -a $prv -u $user`) {
+            push @missing_rights, 'SeCreateTokenPrivilege';
+         }
+      }
+      if (-1==index $rights,'SeAssignPrimaryTokenPrivilege') {
+         my $prv='SeAssignPrimaryTokenPrivilege';
+         unless (`/bin/editrights -a $prv -u $user`) {
+            push @missing_rights, 'SeAssignPrimaryTokenPrivilege';
+         }
+      }
+      if (-1==index $rights,'SeServiceLogonRight') {
+         my $prv='SeServiceLogonRight';
+         unless (`/bin/editrights -a $prv -u $user`) {
+            push @missing_rights, 'SeServiceLogonRight';
+         }
+      }
+      if (-1<$#missing_rights) {
+         my $mis=join "\n",map { "               $_" } @missing_rights;
+         my $die="   Fatal Error! - The following priviliges are\n   ".
+                 "               missing from the ID '".$user."':\n\n".
+                 $mis."\n\n   An attempt was made to add these rights,\n".
+                 "   but was not successul. Please contact your\n".
+                 "   your Domain and Server Administrators for\n".
+                 "   assistance.\n\n   PRESS ANY KEY to EXIT FullAuto".
+                 " Setup.\n\n";
+         print $die;<STDIN>;
+         exit;
+      }
+      my $gpout=`gpupdate 2>&1`;
+      if (-1<index $gpout,'completed successfully') {
+         @missing_rights=();
+         if (-1==index $rights,'SeTcbPrivilege') {
+            push @missing_rights, 'SeTcbPrivilege';
+         }
+         if (-1==index $rights,'SeCreateTokenPrivilege') {
+            push @missing_rights, 'SeCreateTokenPrivilege';
+         }
+         if (-1==index $rights,'SeAssignPrimaryTokenPrivilege') {
+            push @missing_rights, 'SeAssignPrimaryTokenPrivilege';
+         }
+         if (-1==index $rights,'SeServiceLogonRight') {
+            push @missing_rights, 'SeServiceLogonRight';
+         }
+         if (-1<$#missing_rights) {
+            my $mis=join "\n",map { "               $_" } @missing_rights;
+            my $die="   Fatal Error! - The following priviliges were\n".
+                    "                  added to the ID '".$user."':\n\n".
+                    $mis."\n\n   However, these priviliges were\n".
+                    "   subsequently removed by a Domain Global\n".
+                    "   Policy Update. Please contact your Windows\n".
+                    "   Domain and Server Administrators to have the\n".
+                    "   Global Domain Policy changed for this ID.\n\n".
+                    "   PRESS ANY KEY to EXIT FullAuto".
+                    " Setup.\n\n";
+            print $die;<STDIN>;
+            exit;
+         }
+      }
+   }
 }
 
 sub test_windows_user {
@@ -3166,7 +3221,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 2.13;
+requires        'Term::Menus'               => 2.14;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
@@ -3485,7 +3540,7 @@ sub MY::constants {
    $inherited =~ 
       s/(PERM_RWX = \d+)/$1\nPERM_S_X = 4511\nPERM_G_X = 2551/m;
    $inherited =~
-      s/(PERM_G_X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 500/m;
+      s/(PERM_G_X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 511/m;
    $inherited =~
       s/(PERM_R_X = \d+)/$1\nPERM_D-X = 750\nPERM_D_X = 700\nPERM_WRX = 755/m;
 
