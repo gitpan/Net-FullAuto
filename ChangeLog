@@ -19,6 +19,19 @@
 ################################################################
 
 
+2012-04-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999905 released.
+
+        * Changed permission for setuid for fullauto.pl from
+          511 to 555 for Cygwin installations.
+
+        * Changed permission for setuid for fullauto.pl from
+          4511 to 4555 for Cygwin installations.
+
+        * Modified Makefile.PL to fix domain id installations.
+
+
 2012-03-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999904 released.

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999904';
+$main::VERSION='0.999905';
 my $fa_banner=<<END;
 
 
@@ -53,7 +53,8 @@ my $fa_banner=<<END;
 END
 
    sub get_cygwin_location {
-      my $cygwin_query=`REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup`;
+      my $cygwin_query=
+            `REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup 2>&1`;
       if (-1<index $cygwin_query,'REG_SZ') {
          $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
          $cygwin_query=~s/^\s*//s;
@@ -105,6 +106,7 @@ END
    my $mycpantest=0; 
    $main::curdir=&cwd;
    $main::PARdir=$main::curdir;
+   $main::domain_gr_flag=0;
    foreach my $dir (@INC) {
       my $incdir=$dir;
       $mycpantest=1 if -e $incdir."/CPAN/MyConfig.pm";
@@ -1010,7 +1012,6 @@ sub ws_info {
          $selection='cyg_server'; 
       }
    }
-print "WHAT IS SELECTION=$selection\n";
    return $selection;
 
 }
@@ -1340,7 +1341,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             my $cyghome=$Ua->get('http://www.cygwin.com');
             if ($^O ne 'cygwin' && $cyghome->is_success) {
                my $content=$cyghome->content;
-               print "CONTENT=$content\n";
                my $cygver='';
                ($cygver=$content)=~
                   s/^.*of the Cygwin DLL is ([\d|.|-]). In.*$/$1/s;
@@ -1410,19 +1410,19 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps,'
-                      .$selection.' -X -A -q '."-r $main::root_dir "
+                      .$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
                       .'libdb4.5-devel,ncurses,cron,procps'
-                      .' -X -A -q '."-r $main::root_dir "
+                      .' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } else {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P openssh,ncurses,procps -X -A -q '
-                      ."-r $main::root_dir ".'-s '
+                      ."-R $main::root_dir ".'-s '
                       .'http://cygwin.mirrors.pair.com';
          }
          
@@ -1431,11 +1431,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          my @sshd_password=();
          my $sshd_account='cyg_server';
          my $privl='';
+         my $domain_user='';my $domain='';
          if ($wver!~/95|98|ME/) {
-            my $check_for_domain=`net config workstation`;
-            $check_for_domain=~/^.*Workstation domain\s+(.+)\s*$/m;
-            $check_for_domain=$1||'';
-            chomp($check_for_domain=~tr/\0-\37\177-\377//d);
+            my $domain=`net config workstation`;
+            $domain=~/^.*Workstation domain\s+(.+)\s*$/m;
+            $domain=$1||'';
+            chomp($domain=~tr/\0-\37\177-\377//d);
             if ($wver=~/XP|2000|NT/) {
                my $banner="   For $wver, you have a choice of using\n"
                          ."   either the LocalSystem account for the\n"
@@ -1466,8 +1467,60 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $account_type=Term::Menus::Menu(\%Menu_select_account_type);
                $privl=' --privileged' if -1<index $account_type,'separate';
             }
-            my $youser=&ws_info($check_for_domain) unless $wver=~/XP|2000|NT/;
-            if ((-1<index $account_type,'separate') &&
+            $domain_user=&ws_info($domain) unless $wver=~/XP|2000|NT/;
+            if ($domain_user) {
+               print "\n\n\n   Please enter the Password for the $domain ",
+                     "account $domain_user,\n   and take steps to insure ".
+                     "it's security and recoverability\n   ",
+                     "(i.e. - store a copy in a SAFE ",
+                     "place where you can find\n   it if necessary.)\n\n\n",
+                     "   Please TYPE the Password\n   for ",
+                     "$domain domain account \'$domain_user\': ";
+               Term::ReadKey::ReadMode(2);
+               my $pas=<STDIN>;
+               $pas=~/^(.*)$/;
+               $sshd_password[0]=$1;
+               Term::ReadKey::ReadMode(0);
+               chomp($sshd_password[0]);
+               print "\n\n   Please verify the $domain_user Password: ";
+               Term::ReadKey::ReadMode(2);
+               $pas=<STDIN>;
+               $pas=~/^(.*)$/;
+               $sshd_password[1]=$1;
+               Term::ReadKey::ReadMode(0);
+               chomp($sshd_password[1]);
+               if ($sshd_password[0] ne $sshd_password[1]) {
+                  @sshd_password=();
+                  my $cc=2;
+                  while ($cc--) {
+                     print "\n\n";
+                     print "   Your Password entries do NOT match!\n\n",
+                           "   Please carefully type the\n",
+                           "   $domain_user Password: ";
+                     Term::ReadKey::ReadMode(2);
+                     $pas=<STDIN>;
+                     $pas=~/^(.*)$/;
+                     $sshd_password[0]=$1;
+                     Term::ReadKey::ReadMode(0);
+                     chomp($sshd_password[0]);
+                     print "\n\n   Please verify the $domain_user Password: ";
+                     Term::ReadKey::ReadMode(2);
+                     $pas=<STDIN>;
+                     $pas=~/^(.*)$/;
+                     $sshd_password[1]=$1;
+                     Term::ReadKey::ReadMode(0);
+                     chomp($sshd_password[1]);
+                     last if $sshd_password[0] eq $sshd_password[1];
+                  }
+               }
+               if ($sshd_password[0] ne $sshd_password[1]) {
+                  print "\n\n";
+                  print "Fatal Error: Unable to verify Password entries!\n\n";
+                  print "Press any key to exit FullAuto Setup.\n";
+                  <STDIN>;exit;
+               }
+               print "\n";
+            } elsif ((-1<index $account_type,'separate') &&
                      (&test_windows_user($sshd_account))) {
                my $banner="   OpenSsh's sshd service running via Cygwin is ".
                   "*REQUIRED* for\n   FullAuto to run on MS Windows. Two ".
@@ -1577,6 +1630,19 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                        '"/usr/bin/cygrunsrv -L"';
             my $cygsrvs=`$srvcmd 2>&1`;
             if (-1==index $cygsrvs,'sshd') {
+               if ($domain_user) {
+                  system('export CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                         '"/usr/bin/mkpasswd -u \"'.$domain_user.'\" '.
+                         '-d \"'.$domain.'\" >> /etc/passwd"');
+                  system('export CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                         '"/usr/bin/mkgroup -d \"'.$domain.'\" '.
+                         '-g  \"Domain Users\" '.
+                         '>> /etc/group"');
+                  $main::domain_gr_flag=1;
+                  $sshd_account=$domain_user;
+               }
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/ssh-host-config -y '.
@@ -1619,6 +1685,21 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                        '"/usr/bin/cygrunsrv -L"';
             my $cygsrvs=`$srvcmd 2>&1`;
             if (-1==index $cygsrvs,'sshd') {
+               if ($domain_user) {
+                  system('export CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                         '"/usr/bin/mkpasswd -u \"'.$domain_user.'\" '.
+                         '-d \"'.$domain.'\" >> /etc/passwd"');
+                  unless ($main::domain_gr_flag) {
+                     system('export CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                         '"/usr/bin/mkgroup -d \"'.$domain.'\" '.
+                         '-g  \"Domain Users\" '.
+                         '>> /etc/group"');
+                     $main::domain_gr_flag=1;
+                  }
+                  $sshd_account=$domain_user;
+               }
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/ssh-host-config -y '.
@@ -1669,6 +1750,20 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                     "cmd /c $clo\\\\bin\\\\bash -lc ".
                     '"/usr/bin/cygrunsrv -R sshd 2>&1"';
                   my $rmout=`$netrm`;
+                  if ($domain_user) {
+                     system('export CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                         '"/usr/bin/mkpasswd -u \"'.$domain_user.'\" '.
+                         '-d \"'.$domain.'\" >> /etc/passwd"');
+                     unless ($main::domain_gr_flag) {
+                        system('export CYGWIN=nodosfilewarning & '.
+                            "cmd /c $clo\\\\bin\\\\bash -lc ".
+                            '"/usr/bin/mkgroup -d \"'.$domain.'\" '.
+                            '-g  \"Domain Users\" '.
+                            '>> /etc/group"');
+                        $main::domain_gr_flag=1;
+                     }
+                  }
                   system('SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $cygwin_loc\\bin\\bash -lc ".
                          '"/usr/bin/ssh-host-config -y '.
@@ -3540,7 +3635,9 @@ sub MY::constants {
    $inherited =~ 
       s/(PERM_RWX = \d+)/$1\nPERM_S_X = 4511\nPERM_G_X = 2551/m;
    $inherited =~
-      s/(PERM_G_X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 511/m;
+      s/(PERM_G_X = \d+)/$1\nPERM_S+X = 4555\n/m;
+   $inherited =~
+      s/(PERM_S+X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 511/m;
    $inherited =~
       s/(PERM_R_X = \d+)/$1\nPERM_D-X = 750\nPERM_D_X = 700\nPERM_WRX = 755/m;
 
@@ -3592,14 +3689,29 @@ sub MY::install {
 
    } 
 
-   $inherited .= "\nsetuid_permissions ::\n".
-      "\t\$(NOECHO) \$(ECHO) \"Applying Setuid Permissions\"\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_S_X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_D_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
-      $link;
+   if ($^O eq 'cygwin') {
+
+      $inherited .= "\nsetuid_permissions ::\n".
+         "\t\$(NOECHO) \$(ECHO) \"Applying Setuid Permissions\"\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_S+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_D_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
+         $link;
+
+   } else {
+
+      $inherited .= "\nsetuid_permissions ::\n".
+         "\t\$(NOECHO) \$(ECHO) \"Applying Setuid Permissions\"\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_S_X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_D_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
+         "\t\$(NOECHO) \$(CHMOD) \$(PERM_R_X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
+         $link;
+
+   }
    $inherited .= "\nsetgid_permissions ::\n".
       "\t\$(NOECHO) \$(ECHO) \"Applying Setgid Permissions\"\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_G_X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
