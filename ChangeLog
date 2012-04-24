@@ -19,6 +19,13 @@
 ################################################################
 
 
+2012-04-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999906 released.
+
+        * Modified Makefile.PL to fix regex that broker permissions.
+
+
 2012-04-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999905 released.

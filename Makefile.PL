@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999905';
+$main::VERSION='0.999906';
 my $fa_banner=<<END;
 
 
@@ -55,7 +55,10 @@ END
    sub get_cygwin_location {
       my $cygwin_query=
             `REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup 2>&1`;
+      my $showcq=$cygwin_query;
+      $showcq=~s/^/   /mg;chomp $showcq;
       if (-1<index $cygwin_query,'REG_SZ') {
+         print "\n   REG QUERY RESULT:\n\n   $showcq";
          $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
          $cygwin_query=~s/^\s*//s;
          $cygwin_query=~s/\s*$//s;
@@ -155,6 +158,7 @@ END
       $incflag=1 if -e './inc';
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Win32::DriveInfo";
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Term::Menus";
+
       my %read_license=(
 
          Label => 'read_license',
@@ -946,7 +950,9 @@ sub ws_info {
                Label => '_cygserv',
                Item_1 =>  {
                      Text   => "]C[",
-                     Convey => [ 'Use Domain ID \'cyg_server\'',
+                     Convey => [ "Use Domain ID \'cyg_server\'\n".
+                                 '                '.
+                                 '( You need to know the password! )',
                                  'Select ID from All Domain ID\'s',
                                  'Use a Local account' ],
                },
@@ -3637,7 +3643,7 @@ sub MY::constants {
    $inherited =~
       s/(PERM_G_X = \d+)/$1\nPERM_S+X = 4555\n/m;
    $inherited =~
-      s/(PERM_S+X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 511/m;
+      s/(PERM_S[+]X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 511/m;
    $inherited =~
       s/(PERM_R_X = \d+)/$1\nPERM_D-X = 750\nPERM_D_X = 700\nPERM_WRX = 755/m;
 
