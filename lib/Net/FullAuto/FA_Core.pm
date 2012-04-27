@@ -5016,7 +5016,7 @@ sub master_transfer_dir
                   $Net::FullAuto::FA_Core::debug;
             if ($testd eq 'WRITE') {
                $work_dirs->{_cwd_mswin}=$work_dirs->{_tmp_mswin}=$cdr.'\\\\';
-               $work_dirs->{_cwd}=$work_dirs->{_tmp}=$curdir;
+               $work_dirs->{_cwd}=$work_dirs->{_tmp}=$curdir.'/';
                return $work_dirs;
             } elsif ($testd eq 'READ' || $testd eq 'NOFILE') {
                last;
@@ -10952,7 +10952,6 @@ sub cwd
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $stdout='';my $stderr='';
-print "WHAT IS CALLER=",caller,"<==\n";
    if (!defined $_[1]) {
       return Cwd::getcwd();
    } else { 
@@ -15576,7 +15575,16 @@ sub mirror
             return '',$stderr;
          } else { &Net::FullAuto::FA_Core::handle_error($stderr,'-4') }
       } 
-      $local_transfer_dir=unpack('x20 a*',$output);
+      unless ($output) {
+         ($output,$stderr)=&Rem_Command::ftpcmd($baseFH,'!pwd');
+         if ($stderr) {
+            if (wantarray) {
+               return '',$stderr;
+            } else { &Net::FullAuto::FA_Core::handle_error($stderr,'-4') }
+         }
+      } else {
+         $local_transfer_dir=unpack('x20 a*',$output);
+      }
       $local_transfer_dir.='/';
       ($output,$stderr)=$baseFH->cwd($base_fdr) if $base_fdr;
       if ($stderr && (-1==index $stderr,'command success')) {
@@ -16672,8 +16680,7 @@ print "BE SURE TO ADD NEW CODE TO CHANGE BACK TO ",
                   my @basekeys=sort keys %{$baseFH->{_bhash}};
 #print "WHAT ARE THE BASEKEYS=@basekeys<==\n";
                   my $f_cnt=0;
-                  ($output,$stderr)=$baseFH->cmd(
-                     "${Net::FullAuto::FA_Core::tarpath}tar --help");
+                  ($output,$stderr)=$baseFH->cmd("tar --help");
                   if ($stderr) {
                      if (-1<index $stderr,'-LInputList') {
                         $aix_tar_input_variable_flag=1;
@@ -16876,14 +16883,14 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            print "mirror() TAR CMD =>$tar_cmd<==",
                                     " and BASE DIR=$base_fdr AND ATTRIBUTES=",
                                     ${${$baseFH->{_bhash}}{$key}[1]{$file}}[0],
-                                    " AND KEY=$key AND FILE=$file\n"
+                                    "AND DIRECTORY=$key AND FILE=$file\n"
                                     if (!$Net::FullAuto::FA_Core::cron &&
                                     $Net::FullAuto::FA_Core::debug) || $verbose;
                            print $Net::FullAuto::FA_Core::MRLOG
                                     "mirror() TAR CMD =>$tar_cmd<==",
                                     " and BASE DIR=$base_fdr AND ATTRIBUTES=",
                                     ${${$baseFH->{_bhash}}{$key}[1]{$file}}[0],
-                                    " AND KEY=$key AND FILE=$file\n"
+                                    "AND DIRECTORY=$key AND FILE=$file\n"
                                     if $Net::FullAuto::FA_Core::log &&
                                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            ($output,$stderr)=$baseFH->cmd($tar_cmd,500);
@@ -17833,8 +17840,8 @@ print "BLECKKK\n";
 sub move_tarfile
 {
    my @topcaller=caller;
-   print "move_tarfile() CALLER=",(join ' ',@topcaller),"\n";
-      #if $Net::FullAuto::FA_Core::debug;
+   print "move_tarfile() CALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "move_tarfile() CALLER=",
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -17855,6 +17862,7 @@ sub move_tarfile
                "lcd \"$destFH->{_work_dirs}->{_tmp}\"");
             &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr &&
                (-1==index $stderr,'command success');
+            $destFH->{_ftp_handle}||=''; 
             $d_fdr=$Net::FullAuto::FA_Core::ftpcwd{$destFH->{_ftp_handle}}{lcd}=
                $destFH->{_work_dirs}->{_tmp};
          } else {
@@ -19661,22 +19669,22 @@ sub build_mirror_hashes
             } my $dchmod='';my $dtime='';my $dyear='';my $dsize='';
             my $dtime1='';my $dtime2='';my $dtime3='';
             if (exists ${$destFH->{_dhash}}{$key}[1]{$file}) {
-               print "mirror() STRING_DEST=",
+               print "mirror() DEST_FILE_DATA_STRING=",
                         ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],
-                        " and FILE=$file AND KEY=$key\n"
+                        " and FILE=$file AND DIRECTORY=$key\n"
                         if (!$Net::FullAuto::FA_Core::cron &&
                         $Net::FullAuto::FA_Core::debug) || $verbose;
                print $Net::FullAuto::FA_Core::MRLOG
-                        "mirror() STRING_DEST=",
+                        "mirror() DEST_FILE_DATA_STRING=",
                         ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],
-                        " and FILE=$file AND KEY=$key\n"
+                        " and FILE=$file AND DIRECTORY=$key\n"
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                my $y=qr(\d\d\d\d);
                ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]=~
                   /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
-               $dtime1=$1;$dtime2=$2;$dtime3=$3;
-               $dyear=$4;$dsize=$5;$dchmod=$6;
+               $dtime1=$1||0;$dtime2=$2||0;$dtime3=$3||0;
+               $dyear=$4||0;$dsize=$5||0;$dchmod=$6||0;
                $dtime2="0$dtime2" if length $dtime2==1;
                $dtime=$dtime1.$dtime2.$dtime3;
                $dchmod||='';
@@ -19695,19 +19703,20 @@ sub build_mirror_hashes
                   $base_windows_daylight_savings=1 if $st!=$stdout;
                }
             }
-            print "mirror() STRING_BASE=",
+            print "mirror() BASE_FILE_DATA_STRING=",
                      ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1],
-                     " and FILE=$file AND KEY=$key\n"
+                     " and FILE=$file AND DIRECTORY=$key\n"
                      if (!$Net::FullAuto::FA_Core::cron &&
                      $Net::FullAuto::FA_Core::debug) || $verbose;
             print $Net::FullAuto::FA_Core::MRLOG
-                     "mirror() STRING_BASE=",
+                     "mirror() BASE_FILE_DATA_STRING=",
                      ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1],
-                     " and FILE=$file AND KEY=$key\n"
+                     " and FILE=$file AND DIRECTORY=$key\n"
                      if $Net::FullAuto::FA_Core::log &&
                      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            my $btime1=$1;my $btime2=$2;my $btime3=$3;
-            my $byear=$4;my $bsize=$5;my $bchmod=$6;
+            my $btime1=$1||0;my $btime2=$2||0;
+            my $btime3=$3||0;
+            my $byear=$4||0;my $bsize=$5||0;my $bchmod=$6||0;
             $btime2="0$btime2" if length $btime2==1;
             my $btime=$btime1.$btime2.$btime3;
             $bchmod||='';
@@ -20370,7 +20379,7 @@ print "SAVEKEY=$savekey and LINE=$line<==\n";<STDIN>;
                } else {
                   ($fchar,$u,$g,$o)=unpack('a1 a3 a3 a3',$line);
                   if ($fchar eq 't') {
-print "TOTAL=$total and ADDBYTES=$addbytes and PREVKEY=$prevkey\n";
+#print "TOTAL=$total and ADDBYTES=$addbytes and PREVKEY=$prevkey\n";
 #print $Net::FullAuto::FA_Core::MRLOG "TOTAL=$total and ADDBYTES=$addbytes and "
 #                     "PREVKEY=$prevkey\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      if ($dofiles && $total!=$addbytes) {
@@ -20435,9 +20444,9 @@ print "LS LOOPING STDOUT=$stdout\n";
                            $total=0;
                         } next WH;
                      } else {
-print "ARE WE HERE AND LINE=$line<==\n";
+#print "ARE WE HERE AND LINE=$line<==\n";
                         $total=unpack('x6 a*',$line);
-print "TOTAL BYTES FINAL TALLY==>$total<==\n";
+#print "TOTAL BYTES FINAL TALLY==>$total<==\n";
                         print "TOTAL BYTES FINAL TALLY==>$total<==\n",
                            if !$Net::FullAuto::FA_Core::cron &&
                            $Net::FullAuto::FA_Core::debug;
@@ -20483,7 +20492,7 @@ print "TOTAL BYTES FINAL TALLY==>$total<==\n";
                      $bit=0;
                   }
                   $chmod=$bit.$Net::FullAuto::FA_Core::perms{$u};
-                  $chmod.=$Net::FullAuto::FA_Core::perms{$g}.
+		  $chmod.=$Net::FullAuto::FA_Core::perms{$g}.
                           $Net::FullAuto::FA_Core::perms{$o};
                }
             }
@@ -20623,7 +20632,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
 #}
                      ${$cmd_handle->{"_${bd}hash"}}{$key}[0]='SOME';
                   }
-print "WHAT IS THE LEN_DIR=$len_dir and LINE=$line<==\n";
+#print "WHAT IS THE LEN_DIR=$len_dir and LINE=$line<==\n";
                   if ($len_dir<length $line) {
                      # Get New Directory Key
                      $prevkey=$key;
@@ -20658,18 +20667,31 @@ print "WHAT IS THE LEN_DIR=$len_dir and LINE=$line<==\n";
                         $mn) {
                      ($file=$up)=~s/^.*\d+\s+\w\w\w\s+\d+\s+
                         (?:\d\d:\d\d\s+|\d\d\d\d\s+)+(.*)$/$1/x;
-                     ($stdout,$stderr)=$cmd_handle->cmd("ls -l $file");
-                     &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
-                     my $lchar=substr($stdout,-1);
-                     if ($lchar eq '*' || $lchar eq '/'
-                            || $lchar eq ':') {
-                        if ($lchar eq ':' && !$lchar_flag) {
-                           $len_dir--;
-                           $lchar_flag=1;
-                        } chop $line;
+                     if ((-1==index $up,' Jan ') && (-1==index $up,' Feb ') &&
+                           (-1==index $up,' Mar ') && (-1==index $up,' Apr ') &&
+                           (-1==index $up,' May ') && (-1==index $up,' Jun ') &&
+                           (-1==index $up,' Jul ') && (-1==index $up,' Aug ') &&
+                           (-1==index $up,' Sep ') && (-1==index $up,' Oct ') &&
+                           (-1==index $up,' Nov ') && (-1==index $up,' Dec ')) {
+                        ($stdout,$stderr)=$cmd_handle->cmd(
+                           "ls -l \"$file\"");
+                        &Net::FullAuto::FA_Core::handle_error($stderr)
+                           if $stderr;
+                        my $lchar=substr($stdout,-1);
+                        if ($lchar eq '*' || $lchar eq '/'
+                               || $lchar eq ':') {
+                           if ($lchar eq ':' && !$lchar_flag) {
+                              $len_dir--;
+                              $lchar_flag=1;
+                           } chop $line;
+                        }
+                        push @sublines, $stdout;
+                        next WH;
+                     } else {
+                        substr($up,-(length $file))='';
+                        $up=~/\s+(\d+)\s+(\w\w\w)\s+(\d+)\s+(\d+:?\d+).*$/;
+                        $size=$1;$mn=$2;$dy=$3;$tm=$4;
                      }
-                     push @sublines, $stdout;
-                     next WH;
                   }
                   $mn=$Net::FullAuto::FA_Core::month{$mn} if length $mn==3;
                   $fileyr=0;$hr=0;$mt=0;
@@ -20844,6 +20866,11 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                         }
                      }
                   }
+               } elsif ($hr=~/^\d\d$/) {
+                  $chmod=" $chmod" if $chmod;
+                  ${$cmd_handle->{"_${bd}hash"}}{$key}[1]{$file}=
+                     [ '',"$mn $dy $hr $mt $fileyr $size$chmod" ];
+                  $num_of_included++;
                } else {
                   my $fileyr=0;
                   if (!$cygwin) {
@@ -20853,7 +20880,6 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                         ($mn,$dy,$yr)=split '-', $dy;
                         ($hr,$mt)=split ':', $tm;
                         $file=substr($file,(rindex $file,'/')+1);
-print "DY=$dy and MON=$mn and YR=$yr and HR=$hr and MT=$mt and FILE=$file<==\n";;
                      } else {
                         my $up=unpack('x10 a*',"$line");
                         $up=~s/^[.+ ]\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
@@ -20923,8 +20949,10 @@ print "DY=$dy and MON=$mn and YR=$yr and HR=$hr and MT=$mt and FILE=$file<==\n";
       if (unpack('a10',$@) eq 'The System') {
          return '',$@;
       } else {
-         my $hostlabel='localhost' if ${$cmd_handle->{_hostlabel}}[0]
-               eq "__Master_${$}__";
+         my $hostlabel='localhost';
+         if ($cmd_handle->{_hostlabel}->[0] ne "__Master_${$}__") {
+            $hostlabel=$cmd_handle->{_hostlabel}->[0];
+         }
          my $die="FATAL ERROR! - The System $hostlabel Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "

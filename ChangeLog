@@ -19,6 +19,14 @@
 ################################################################
 
 
+2012-04-26  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999907 released.
+
+        * Fixed mirror() to work with remote Base Redhat Linux
+          and local Dest Cygwin.
+
+
 2012-04-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999906 released.
