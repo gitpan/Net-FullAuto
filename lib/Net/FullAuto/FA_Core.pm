@@ -3071,6 +3071,7 @@ sub testpid
    } elsif ($stdout) {
       return $stdout;
    } elsif ($stderr!~/^s*$/) {
+print "WHAT IS STDERR=>$stderr<==\n";
       &Net::FullAuto::FA_Core::handle_error($stderr);
    } else { return $stdout }
 }
@@ -15304,7 +15305,8 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
             $tdir="\\\\$host\\$ms_share\\$tdir";
             my $t_dir=$tdir;
             $t_dir=~s/\\/\\\\/g;
-            if (&Net::FullAuto::FA_Core::test_dir($self->{_cmd_handle},$t_dir)) {
+            if (&Net::FullAuto::FA_Core::test_dir(
+                  $self->{_cmd_handle},$t_dir)) {
                if (exists $self->{_work_dirs}->{_pre_mswin}) {
                   $self->{_work_dirs}->{_pre_mswin}
                      =$self->{_work_dirs}->{_cwd_mswin};
@@ -15340,6 +15342,13 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
                ($self->{_connect} eq 'connect_ssh') ||
                ($self->{_connect} eq 'connect_telnet') ||
                ($self->{_connect} eq 'connect_telnet_ssh')) {
+            my $cfh_ignore='';my $cfh_error='';
+            ($cfh_ignore,$cfh_error)=
+               &Net::FullAuto::FA_Core::clean_filehandle(
+               $self->{_cmd_handle});
+            if ($cfh_error) {
+               &Net::FullAuto::FA_Core::handle_error($cfh_error,'-3');
+            }
             ($output,$stderr)=$self->cmd("cd \'$target_dir\'");
             if ($stderr) {
                if (wantarray) {
@@ -16203,7 +16212,6 @@ print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
       my $hostlabel='';
       eval {
          my $ignore='';
-print "DESTOUT=$dest_output<==\n";
          ($ignore,$stderr)=&build_base_dest_hashes(
                $dest_fdr,\$dest_output,$args{Directives},
                $dhost,$dms_share,$dms_domain,
@@ -16584,11 +16592,9 @@ print "SETTING SHORTCUT TO ZERO 6\n";sleep 6;
                      }
                      $fil_=$file;
                      if (1500 < length "cp -fpv $farg\'$tdir\'") {
-print "HERE IS THE COMMANDXXX==>","cp -fpv $filearg\'$tdir\'","<==\n";
                         ($output,$stderr)=$destFH->cmd(
                            "cp -fpv $filearg\'$tdir\'",
                            '__display__','__notrap__');
-print "CMDXXXOUTPUT=$output<== and STDERR=$stderr<==\n";
                         if ($stderr) {
                            &clean_process_files($destFH);
                            if (-1<index $stderr,': Permission denied') {
@@ -16881,17 +16887,19 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                  "$Net::FullAuto::FA_Core::tran[3].tar ";
                            }
                            $tar_cmd.="-C \"$base___dir\" \"$dir$file\"";
+                           ${${$baseFH->{_bhash}}{$key}[1]{$file}}[0]
+                              =~s/\s*$//;
                            print "mirror() TAR CMD =>$tar_cmd<==",
                                     " and BASE DIR=$base_fdr AND ATTRIBUTES=",
                                     ${${$baseFH->{_bhash}}{$key}[1]{$file}}[0],
-                                    "AND DIRECTORY=$key AND FILE=$file\n"
+                                    " AND DIRECTORY=$key AND FILE=$file\n"
                                     if (!$Net::FullAuto::FA_Core::cron &&
                                     $Net::FullAuto::FA_Core::debug) || $verbose;
                            print $Net::FullAuto::FA_Core::MRLOG
                                     "mirror() TAR CMD =>$tar_cmd<==",
                                     " and BASE DIR=$base_fdr AND ATTRIBUTES=",
                                     ${${$baseFH->{_bhash}}{$key}[1]{$file}}[0],
-                                    "AND DIRECTORY=$key AND FILE=$file\n"
+                                    " AND DIRECTORY=$key AND FILE=$file\n"
                                     if $Net::FullAuto::FA_Core::log &&
                                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            ($output,$stderr)=$baseFH->cmd($tar_cmd,500);
@@ -19698,7 +19706,7 @@ sub build_mirror_hashes
                $base_uname=$baseFH->{_uname};
                if ($base_uname eq 'cygwin') {
                   my $key_dir=($key ne '/')?"$key/":'/';
-                  ($stdout,$stderr)=$baseFH->cmd("stat \".$key$file\"");
+                  ($stdout,$stderr)=$baseFH->cmd("stat \"$key$file\"");
                   my $isto=(index $stdout,'Modify: ')+19;
                   $stdout=unpack("x$isto a2",$stdout);
                   my $st=unpack('x6 a2',
@@ -19845,7 +19853,7 @@ sub build_mirror_hashes
                      if ($dest_uname eq 'cygwin') {
                         my $key_dir=($key ne '/')?"$key/":'/';
                         ($stdout,$stderr)=$destFH->cmd(
-                           "stat \".$key_dir$file\"");
+                           "stat \"$key_dir$file\"");
                         my $isto=(index $stdout,'Modify: ')+19;
                         $stdout=unpack("x$isto a2",$stdout);
                         my $st=unpack('x6 a2',
@@ -19880,12 +19888,13 @@ sub build_mirror_hashes
                      $bbhr='0'.$bbhr if length $bbhr==1;
                      substr($testbhr,6,2)=$bbhr;
                   }
+#print "DESTDLS=$dest_windows_daylight_savings and TESTBHR=$testbhr and DTIME=$dtime<==\n";sleep 2;
                   if ((!($base_windows_daylight_savings &&
                         $dest_windows_daylight_savings)) &&
                         (($base_windows_daylight_savings &&
                         ($testbhr eq $dtime)) ||
                         ($dest_windows_daylight_savings &&
-                        ($testdhr eq $btime)))) {
+                        ($testbhr eq $dtime)))) {
                      delete ${$destFH->{_dhash}}{$key}[1]{$file}
                         if $dest_dir_status ne 'DIR_NOT_ON_DEST';
                      $skip=1;
@@ -20262,7 +20271,7 @@ sub build_base_dest_hashes
 #CORE::close BK;
 #}
       my @sublines=();my $lenflag=0;my $bs=0;my $bl=0;
-print "OUTPUT==>${$_[1]}<==\n";
+#print "OUTPUT==>${$_[1]}<==\n";
       FL: foreach my $line (split /^/, ${$_[1]}) {
          my $parse=1;my $trak=0;
          if ($savekey) {
@@ -20300,12 +20309,18 @@ print "SAVEKEY=$savekey and LINE=$line<==\n";<STDIN>;
                          unpack('a2 x1 a2 x3 a2 x2 a2 x1 a2 a1 @23 a14 @38 a*'
                               ,$line);
                         $nt5=1;
+                        $fileyr=$curcen.$yr;
+                        $size=~s/^\s*//;
+                        $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
                      } else {
                         $line=~s/\s+PM/PM/;
                         $line=~s/\s+AM/AM/;
                         ($mn,$dy,$yr,$hr,$mt,$pm,$size,$file)=
                          unpack('a2 x1 a2 x1 a2 x2 a2 x1 a2 a1 @23 a14 @38 a*'
                                ,$line);
+                        $fileyr=$curcen.$yr;
+                        $size=~s/^\s*//;
+                        $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
                      }
                   } else {
                      if (unpack('x6 a4',$line)=~/^\d\d\d\d$/) {
@@ -20315,18 +20330,24 @@ print "SAVEKEY=$savekey and LINE=$line<==\n";<STDIN>;
                          unpack('a2 x1 a2 x3 a2 x2 a2 x1 a2 a1 @24 a14 @39 a*'
                               ,$line);
                         $nt5=1;
+                        $fileyr=$curcen.$yr;
+                        $size=~s/^\s*//;
+                        $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
                      } else {
                         $line=~s/\s+PM/PM/;
                         $line=~s/\s+AM/AM/;
                         ($mn,$dy,$yr,$hr,$mt,$pm,$size,$file)=
                          unpack('a2 x1 a2 x1 a2 x2 a2 x1 a2 a1 @24 a14 @39 a*'
                                ,$line);
+                        $fileyr=$curcen.$yr;
+                        $size=~s/^\s*//;
+                        $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
                      }
                   }
                } else { $mn=unpack('a2',$line) }
-#if ($key=~/careers/) {
-#print "MSWin_LINE=$line and KEY=$key and MN=$mn and file=$file and MT=$mt and SIZE=$size\n";
-#}
+if ($key=~/bcbsa_assets/) {
+#print "MSWin_LINE=$line and KEY=$key and MN=$mn and file=$file and MT=$mt and SIZE=$size\n";sleep 2;
+}
                next if $mn eq '' || $mn eq '  '
                               || unpack('a1',$size) eq '<';
                foreach my $pid_ts (@FA_Core::pid_ts) {
@@ -20339,7 +20360,7 @@ print "SAVEKEY=$savekey and LINE=$line<==\n";<STDIN>;
                if ($file eq '' && $mn ne ' D') { next }
             } else { # Else Base is UNIX
 #if ($line=~/entry_flash.swf/s && !$cygwin) {
-print "UNIX_LINE=$line<-- and KEY=$key and ZIPDIR=$zipdir\n";
+#print "UNIX_LINE=$line<-- and KEY=$key and ZIPDIR=$zipdir\n";
 #}
                $fchar='';$u='';$g='';$o='';$chmod='';
                chomp($line);
@@ -20620,7 +20641,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
 #print "KEYYYYYYYYYYYYYY=$key and LINE=$line and LENDIR=$len_dir\n";sleep 2;
 #print "KEYHERERERERER2222222 and LINE=$line\n" if $key eq 'member/my_health/calculators/bmicalculator/images';
 #<STDIN> if $key eq 'member/my_health/calculators/bmicalculator/images';
-                           if ($ms_share || $ms_domain) {
+                           if ($ms_share || $ms_domain || $cygwin) {
                               $key=~tr/\\/\//;
                            }
                            $file_count=0;
@@ -20646,7 +20667,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                      $key=unpack("x$len_dir a*",$line);
 #print "KEYHERERERERER33333 and LINE=$line and len_dir=$len_dir and KEY=$key<==\n";sleep 5;# if $key eq 'member/my_health/calculators/bmicalculator/images';
 #<STDIN> if $key eq 'member/my_health/calculators/bmicalculator/images';
-                     if ($ms_share || $ms_domain) {
+                     if ($ms_share || $ms_domain || $cygwin) {
                         $key=~tr/\\/\//;
                      }
                      $file_count=0;
@@ -20670,6 +20691,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                      $file=$tm;
                      $tm=$dy;
                      $yr=$1;$mn=$2;$dy=$3;
+                     $dy='0'.$dy if $dy=~/^\d$/;
                   } elsif (-1==index 'JanFebMarAprMayJunJulAugSepOctNovDec',
                         $mn) {
                      ($file=$up)=~s/^.*\d+\s+\w\w\w\s+\d+\s+
@@ -20698,6 +20720,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                         substr($up,-(length $file))='';
                         $up=~/\s+(\d+)\s+(\w\w\w)\s+(\d+)\s+(\d+:?\d+).*$/;
                         $size=$1;$mn=$2;$dy=$3;$tm=$4;
+                        $dy='0'.$dy if $dy=~/^\d$/;
                      }
                   }
                   $mn=$Net::FullAuto::FA_Core::month{$mn} if length $mn==3;
@@ -20827,17 +20850,17 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                                  }
                                  $file=~s/\s*$//g;
                                  next if !$file;
-                              } else {
-                                 $size=~s/^\s*//;
-                                 my $testyr=100+$yr;
-                                 $fileyr=$Net::FullAuto::FA_Core::curyear;
-                                 if ($testyr <
-                                       $Net::FullAuto::FA_Core::thisyear) {
+                              #} else {
+                                 #$size=~s/^\s*//;
+                                 #my $testyr=100+$yr;
+                                 #$fileyr=$Net::FullAuto::FA_Core::curyear;
+                                 #if ($testyr <
+                                 #      $Net::FullAuto::FA_Core::thisyear) {
                                     #$hr=12;$mt='00';
-                                    $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                                 } #elsif ($hr<13) {
-                                    $hr=$Net::FullAuto::FA_Core::hours{
-                                       $hr.lc($pm)};
+                                 #  $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
+                                 #} #elsif ($hr<13) {
+                                 #   $hr=$Net::FullAuto::FA_Core::hours{
+                                 #      $hr.lc($pm)};
                                  #}
                               } $chmod=" $chmod" if $chmod;
                               my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
@@ -20875,6 +20898,7 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                   }
                } elsif ($hr=~/^\d\d$/) {
                   $chmod=" $chmod" if $chmod;
+#print "ALL GOING==>$mn $dy $hr $mt $fileyr $size$chmod<== and FILE=$file and FILEYR=$fileyr<--\n";
                   ${$cmd_handle->{"_${bd}hash"}}{$key}[1]{$file}=
                      [ '',"$mn $dy $hr $mt $fileyr $size$chmod" ];
                   $num_of_included++;
@@ -20924,15 +20948,16 @@ print "HERE WE ARE and KEY=$key\n";<STDIN>;
                      }
                      $file=~s/\s*$//g;
                      $file=s/ -> .*$// if -1<index $file,' -> ';
-                  } else {
-                     $size=~s/^\s*//;
-                     my $testyr="1$yr";
-                     $fileyr=$Net::FullAuto::FA_Core::curyear;
-                     if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
-                        #$hr=12;$mt='00';
-                        $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                     } #elsif ($hr<13) {
-                        $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
+                  #} else {
+                  #   $size=~s/^\s*//;
+                  #   my $testyr="1$yr";
+                  #   $fileyr=$Net::FullAuto::FA_Core::curyear;
+                  #   if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
+                  #      #$hr=12;$mt='00';
+                  #      $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
+                  #   } #elsif ($hr<13) {
+                  #      $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
+#print "DO WE HAVE PM HERE????=$pm<==\n";<STDIN>;
                      #}
                   } $chmod=" $chmod" if $chmod;
                   my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
@@ -24442,6 +24467,9 @@ print $Net::FullAuto::FA_Core::MRLOG "GROWOUTPUT2=$growoutput\n"
 print "CLEANEDGROWOUT=$growoutput\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug && $loop_count<$loop_max;
 print $Net::FullAuto::FA_Core::MRLOG "CLEANEDGROWOUT=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*') && $loop_count<$loop_max;
+                           } elsif ((-1<index $growoutput,$live_command) &&
+                                 (-1<index $growoutput,'[C[C[K1')) {
+                              $growoutput=~s/\[A(\[C)+\[K1//s;
                            }
                         } elsif (!$lastline) {
                            my $tmp_grow=$growoutput;
@@ -24551,7 +24579,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FIRST_FifTEENe and GO=$growoutput\n"
                            #}
                         }
                      }
-#print "DONE TRIMMING GROWOUTPUT=$growoutput\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
+print "DONE TRIMMING GROWOUTPUT=$growoutput\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
 #print $Net::FullAuto::FA_Core::MRLOG "DONE TRIMMING GROWOUTPUT=$growoutput<==\n".
 #      "and FULLOUT=$fulloutput<==\n"
 #      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
