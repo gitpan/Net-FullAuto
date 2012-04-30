@@ -903,7 +903,7 @@ print "WHAT IS THE LINE_2 EVALERROR=$@<====\n" if $Net::FullAuto::FA_Core::debug
                      CC: while (defined fileno $cmd_fh) {
                         $cmd_fh->print($Net::FullAuto::FA_Core::printfpath.
                                        "printf $funkyprompt");
-                        while (my $line=$cmd_fh->get) {
+                        while (my $line=$cmd_fh->get(timeout=>2)) {
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -3070,7 +3070,7 @@ sub testpid
       return $stdout, $stderr;
    } elsif ($stdout) {
       return $stdout;
-   } elsif ($stderr) {
+   } elsif ($stderr!~/^s*$/) {
       &Net::FullAuto::FA_Core::handle_error($stderr);
    } else { return $stdout }
 }
@@ -16203,6 +16203,7 @@ print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
       my $hostlabel='';
       eval {
          my $ignore='';
+print "DESTOUT=$dest_output<==\n";
          ($ignore,$stderr)=&build_base_dest_hashes(
                $dest_fdr,\$dest_output,$args{Directives},
                $dhost,$dms_share,$dms_domain,
@@ -19631,12 +19632,14 @@ sub build_mirror_hashes
                   "mirror() ERROR: WHAT IS THE BAD KEY==>$key<==\n"
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#print "HERE1=$key\n";
                ${$baseFH->{_bhash}}{$key}[3]='NOT_ON_DEST';
                $dest_dir_status='DIR_NOT_ON_DEST';
                $deploy_info.="DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
                $debug_info.="DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
                $deploy_empty_dir=$deploy_needed=1;
             } else {
+#print "HERE2=$key\n";
                ${$baseFH->{_bhash}}{$key}[3]='DIR_ON_DEST';
                $dest_dir_status='DIR_ON_DEST';
             }
@@ -19744,6 +19747,8 @@ sub build_mirror_hashes
                         "$key/$file";
                   }
                }
+#print "HERE3=$key\n";
+#print "DESTKEYS=",keys %{$destFH->{_dhash}},"\n";<STDIN>;
                ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                   ="NOT_ON_DEST $bsize $dsize";
                ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
@@ -19977,6 +19982,7 @@ sub build_mirror_hashes
                   $skip=1;next;
                }
             } else {
+print "HERE4=$key\n";
                ${$baseFH->{_bhash}}{$key}[1]{$file}[0]='NOT_ON_DEST';
                ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
                if ($key eq '/') {
@@ -20256,6 +20262,7 @@ sub build_base_dest_hashes
 #CORE::close BK;
 #}
       my @sublines=();my $lenflag=0;my $bs=0;my $bl=0;
+print "OUTPUT==>${$_[1]}<==\n";
       FL: foreach my $line (split /^/, ${$_[1]}) {
          my $parse=1;my $trak=0;
          if ($savekey) {
@@ -20332,7 +20339,7 @@ print "SAVEKEY=$savekey and LINE=$line<==\n";<STDIN>;
                if ($file eq '' && $mn ne ' D') { next }
             } else { # Else Base is UNIX
 #if ($line=~/entry_flash.swf/s && !$cygwin) {
-#print "UNIX_LINE=$line<-- and KEY=$key and ZIPDIR=$zipdir\n";<STDIN>;
+print "UNIX_LINE=$line<-- and KEY=$key and ZIPDIR=$zipdir\n";
 #}
                $fchar='';$u='';$g='';$o='';$chmod='';
                chomp($line);
@@ -20380,8 +20387,8 @@ print "SAVEKEY=$savekey and LINE=$line<==\n";<STDIN>;
                   ($fchar,$u,$g,$o)=unpack('a1 a3 a3 a3',$line);
                   if ($fchar eq 't') {
 #print "TOTAL=$total and ADDBYTES=$addbytes and PREVKEY=$prevkey\n";
-#print $Net::FullAuto::FA_Core::MRLOG "TOTAL=$total and ADDBYTES=$addbytes and "
-#                     "PREVKEY=$prevkey\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print $Net::FullAuto::FA_Core::MRLOG "TOTAL=$total and ADDBYTES=$addbytes and ",
+                     "PREVKEY=$prevkey\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      if ($dofiles && $total!=$addbytes) {
 print "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey<--\n";
 print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey<--\n"
@@ -24232,6 +24239,7 @@ print "OUTPUT ***After First-Line Loop***=$output<== and COMSTROUT=$command_stri
    if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug && $loop_count<$loop_max;
 print $Net::FullAuto::FA_Core::MRLOG "OUTPUTNOWWWWWWWWWWW=$output<== and STRIPPED=$command_stripped_from_output\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#print "OUTPUTNOWWWWWWWWWWW=$output<== and STRIPPED=$command_stripped_from_output\n";
                   if ($command_stripped_from_output) {
 print $Net::FullAuto::FA_Core::MRLOG "GOT STRIPPED_COMMAND_FLAG AND GROWOUTPUT=$growoutput<==\n"
    if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*') && $loop_count<$loop_max;
@@ -24551,6 +24559,8 @@ print $Net::FullAuto::FA_Core::MRLOG "FIRST_FifTEENe and GO=$growoutput\n"
                         if ($wantarray) {
                            my @strings=split /^/, $growoutput;
                            my $str_cnt=$#strings;
+#print "CLEARING FULLOUTPUT\n";<STDIN>;
+                           $fulloutput='';
                            foreach my $line (@strings) {
 print "LETS LOOK AT LINE=$line<== and LASTLINE=$lastline<==\n"
    if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug && $loop_count<$loop_max;
