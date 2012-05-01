@@ -19,6 +19,22 @@
 ################################################################
 
 
+2012-05-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999911 released.
+
+        * Changed Oracle url for berkeleydb download.
+
+
+2012-04-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999910 released.
+
+        * Updated Error message to include command.
+
+        * Updated Term::Menus dependency to 2.15.
+
+
 2012-04-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999909 released.

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999909';
+$main::VERSION='0.999911';
 my $fa_banner=<<END;
 
 
@@ -2535,7 +2535,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
       } else {
          my $url=
             'http://www.oracle.com/technetwork/'.
-            'database/berkeleydb/downloads/index.html';
+            'products/berkeleydb/downloads/index.html';
          if ($CPAN::META->has_usable('LWP')) {
             FA::LWP::UserAgent->config;
             print "Fetching with LWP:\n  $url\n";
@@ -2870,7 +2870,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
             $CPAN::Frontend->mywarn("  LWP not available\n");
          }
          unless (exists $ENV{'BERKELEYDB_INCLUDE'} && $ENV{'BERKELEYDB_INCLUDE'}) {
-            my $BerkDownload='http://www.oracle.com/technetwork/database/'.
+            my $BerkDownload='http://www.oracle.com/technetwork/products/'.
                              'berkeleydb/downloads/index.html';
             my $PackManagers='http://en.wikipedia.org/wiki/'.
                              'List_of_software_package_management_systems';
@@ -2965,7 +2965,7 @@ if ($@) {
            "under the Category 'Database' ).";
    } else {
       $die.="\n(Hint: goto ->  http://www.oracle.com/technetwork/".
-           "database/berkeleydb/downloads/index.html ).";
+           "products/berkeleydb/downloads/index.html ).";
    }
    $die.="\n\n";
    die $die;
@@ -3322,7 +3322,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 2.14;
+requires        'Term::Menus'               => 2.15;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

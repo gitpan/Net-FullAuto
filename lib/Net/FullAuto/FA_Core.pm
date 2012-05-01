@@ -17777,6 +17777,10 @@ print "BLECKKK\n";
       while (1) {
          ($dest_output,$stderr)=$destFH->cmd(
             "cmd /c dir /s /-C /A- \"$dest_dir\"");
+         &Net::FullAuto::FA_Core::handle_error($stderr.
+            " when attempting command:\n\n".
+            "       cmd /c dir /s /-C /A- \"$dest_dir\"",
+            '-1') if $stderr;
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
          if ($dest_output!~/bytes free\s*/s) {
             $dest_output='';next unless $cnt++;
