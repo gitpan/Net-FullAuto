@@ -9249,6 +9249,8 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
             ($output=$line)=~s/login:.*//s;
             if ($^O eq 'cygwin') {
                my $pass_test=$dcipher->decrypt($passetts->[0]);
+               $pass_test=~s/[(]/\\(/g;
+               $pass_test=~s/[)]/\\)/g;
                if ($line=~/^$pass_test\n/) {
                   undef $pass_test;
                   $local_host->print("\032");

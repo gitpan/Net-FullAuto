@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999911';
+$main::VERSION='0.999912';
 my $fa_banner=<<END;
 
 
@@ -1341,6 +1341,15 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             print " + request successful.\n"
                if $CPAN::DEBUG;
             mkpath($main::root_dir,1) unless -d $main::root_dir;
+            unless (-w $main::root_dir) {
+               print "\n\n   Fatal Error! - The current Cygwin directory: ".
+                        "\n\n      ".$main::root_dir."\n\n".
+                        "   is not writable. Please change the permissions\n".
+                        "   to writable before installing FullAuto.\n";
+               print "\n   PRESS ANY KEY TO EXIT SETUP\n\n";
+               <STDIN>;
+               exit;
+            }
             open(CP,">$main::root_dir\\setup.exe") || die $!;
             binmode(CP);
             print CP $res->content;
@@ -3322,7 +3331,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 2.15;
+requires        'Term::Menus'               => 2.16;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

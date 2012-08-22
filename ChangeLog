@@ -19,6 +19,13 @@
 ################################################################
 
 
+2012-08-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999912 released.
+
+        * Fixed for passwords with parentesis.
+
+
 2012-05-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999911 released.

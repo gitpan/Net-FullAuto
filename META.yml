@@ -15,7 +15,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.999911
+    version: 0.999912
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -41,7 +41,7 @@ recommends:
 requires:
   Module::Build: .3601
   Module::Load::Conditional: 0
-  Term::Menus: 2.15
+  Term::Menus: 2.16
   Tie::Cache: 0
   Sort::Versions: 0
   Crypt::CBC: 0
@@ -64,6 +64,7 @@ requires:
   String::Random: 0
   Data::Password::Check: 0
   BerkeleyDB: 0
+  YAML: 0
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
 version: 0.999911
