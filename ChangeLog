@@ -19,6 +19,13 @@
 ################################################################
 
 
+2012-08-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999913 released.
+
+        * Fixed telnet functionality to work with mozrepl.
+
+
 2012-08-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999912 released.

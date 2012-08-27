@@ -9087,11 +9087,23 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $telnetpath=$Hosts{"__Master_${$}__"}{'telnet'};
                   $telnetpath.='/' if $telnetpath!~/\/$/;
                }
-               ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                  ["${telnetpath}telnet",'localhost'])
-                  or (&release_semaphore(6543) &&
-                      &Net::FullAuto::FA_Core::handle_error(
-                      "couldn't launch telnet subprocess"));
+               my $telnetport='';
+               if (exists $Hosts{"__Master_${$}__"}{'telnetport'}) {
+                  $telnetport=$Hosts{"__Master_${$}__"}{'telnetport'};
+               }
+               if ($telnetport) {
+                  ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                     ["${telnetpath}telnet",'localhost'])
+                     or (&release_semaphore(6543) &&
+                        &Net::FullAuto::FA_Core::handle_error(
+                        "couldn't launch telnet subprocess"));
+               } else {
+                  ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                     ["${telnetpath}telnet",'localhost'],$telnetport)
+                     or (&release_semaphore(6543) &&
+                        &Net::FullAuto::FA_Core::handle_error(
+                        "couldn't launch telnet subprocess"));
+               } 
 #print "CMD_PID=$cmd_pid<======\n";
                $localhost->{_cmd_pid}=$cmd_pid;
                $localhost->{_cmd_type}=$cmd_type;
@@ -21306,7 +21318,11 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
    #&Net::FullAuto::FA_Core::acquire_semaphore(1234,,1);
    $host=($use eq 'ip')?$ip:$hostname;
    $host='localhost' if exists $same_host_as_Master{$host};
-   if ($host eq 'localhost' &&
+   if ($host eq 'localhost' && exists $Hosts{$hostlabel}
+         && $Hosts{$hostlabel}->{'Label'} ne 'localhost'
+         && $_connect eq 'connect_telnet') {
+      @connect_method=('telnet');
+   } elsif ($host eq 'localhost' &&
          exists $Hosts{"__Master_${$}__"}{'Local'}) {
       my $loc=$Hosts{"__Master_${$}__"}{'Local'};
       unless ($loc eq 'connect_ssh'
@@ -21377,11 +21393,23 @@ my $w2loop=0;
                            $telnetpath=$Hosts{"__Master_${$}__"}{'telnet'};
                            $telnetpath.='/' if $telnetpath!~/\/$/;
                         }
-                        ($cmd_handle,$cmd_pid)=
-                           &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${telnetpath}telnet",$host])
-                           or &Net::FullAuto::FA_Core::handle_error(
-                           "couldn't launch telnet subprocess");
+                        my $telnetport='';
+                        if (exists $Hosts{$hostlabel}->{'telnetport'}) {
+                           $telnetport=$Hosts{$hostlabel}->{'telnetport'};
+                        }
+                        if ($telnetport) {
+                           ($cmd_handle,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              ["${telnetpath}telnet",$host,$telnetport])
+                              or &Net::FullAuto::FA_Core::handle_error(
+                              "couldn't launch telnet subprocess");
+                        } else {
+                           ($cmd_handle,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              ["${telnetpath}telnet",$host])
+                              or &Net::FullAuto::FA_Core::handle_error(
+                              "couldn't launch telnet subprocess");
+                        }
 #print "CMD_PIDTELNETNNNNNNN=$cmd_pid<====\n";
                         $cmd_handle=Net::Telnet->new(Fhopen => $cmd_handle,
                            Timeout => $cdtimeout);
@@ -21480,6 +21508,11 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         }
                         last if $line=~
                            /(?<!Last )login[: ]+$|username[: ]+$/i;
+                        if ($line=~/repl>\s*$/s) {
+                           return $cmd_handle,$work_dirs,$uname,
+                           $cmd_type,$ftm_type,$smb,$die,$ip,$hostname,
+                           $cmd_pid,$shell_pid,$cygdrive,$shell;
+                        }
                      }
                      if ($cmd_errmsg &&
                            (-1==index $cmd_errmsg,'Cannot su to')) {
