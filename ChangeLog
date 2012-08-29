@@ -19,6 +19,13 @@
 ################################################################
 
 
+2012-08-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999914 released.
+
+        * Connection handle to mozrepl now has repl method.
+
+
 2012-08-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999913 released.

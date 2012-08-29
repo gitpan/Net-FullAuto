@@ -3730,7 +3730,7 @@ sub connect_host
          if $Net::FullAuto::FA_Core::log &&
           -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       print $die if (!$Net::FullAuto::FA_Core::cron
-                   || $Net::FullAuto::FA_Core::debug)
+                   && $Net::FullAuto::FA_Core::debug)
                    && !$Net::FullAuto::FA_Core::quiet;
       &handle_error($die,'__cleanup__');
    }
@@ -21451,7 +21451,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         $showline=~s/^\12//s;
                         $showline=~s/login.*$//s;
                         print $showline if !$Net::FullAuto::FA_Core::cron
-                                        || $Net::FullAuto::FA_Core::debug;
+                                        && $Net::FullAuto::FA_Core::debug;
                         print $Net::FullAuto::FA_Core::MRLOG $showline
                            if $Net::FullAuto::FA_Core::log &&
                               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -23344,6 +23344,30 @@ print "COPIED and GETFILE222=$getfile<==\n";#<STDIN>;
       } else { return $stdout }
    }
 
+}
+
+sub repl
+{
+   my @topcaller=caller;
+   print "\nINFO: Rem_Command::repl() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if !$Net::FullAuto::FA_Core::cron &&
+      $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG
+      "\nRem_Command::repl() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   my $self=$_[0];
+   my $command=$_[1];$command||='';my $output='';
+   $self->{_cmd_handle}->print($command);
+   while (my $line=$self->{_cmd_handle}->get(Timeout=>10000)) {
+      $output.=$line;
+      last if $output=~s/\n*repl>\s*$//;
+   }
+   substr($output,0,(length $command))='';
+   $output=~s/^\s*//s;
+   return $output;
 }
 
 sub cmd
