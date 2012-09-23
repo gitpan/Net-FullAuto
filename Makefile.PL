@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999917';
+$main::VERSION='0.999918';
 my $fa_banner=<<END;
 
 
@@ -126,7 +126,6 @@ END
    }
    use CPAN;
    use File::Path;
-   use YAML;
 
    $main::root_dir=$main::curdir;
 
@@ -577,6 +576,7 @@ END
    &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
    ($stdout,$stderr)=&fa_install_module('YAML','install','Makefile');
    print $stdout if $stdout;
+   require YAML;
    &fa_err_exit($stderr,'YAML') if $stderr;
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
@@ -725,8 +725,10 @@ END
    print $stdout if $stdout;
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
+print "GOING TO INSTALL TERMMENUSSSSSSSSSSSSSSSS\n";
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
+print "DONE INSTALLING TERMMENUSSSSSSSSSSSSSSSS\n";
    print $stdout if $stdout;
 };
 
@@ -1074,7 +1076,6 @@ use File::stat;
 CPAN::HandleConfig->load;
 use POSIX qw/strftime/;
 
-require Data::Dump::Streamer;
 require Term::Menus;
 require Term::ReadKey;
 require Term::RawInput;
@@ -1963,7 +1964,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { '.
                       'require Term::Menus;1 }'.
-                      ' or do {require CPAN and '.
+                      ' or do {require Data::Dump::Streamer and '.
+                      'require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
                my $par_dir='export CYGWIN=nodosfilewarning & '.
@@ -2099,7 +2101,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"cd \"'.$sdir.'\";./Build install;"');
                }
-               eval { require Data::Dump::Streamer;1 };
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { require Win32::API;1 }'.
@@ -2141,7 +2142,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { '.
                       'require Term::Menus;1 }'.
-                      ' or do {require CPAN and '.
+                      ' or do {require Data::Dump::Streamer and '.
+                      'require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
                my $par_dir='SET CYGWIN=nodosfilewarning & '.
@@ -3359,7 +3361,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.16;
+requires        'Term::Menus'               => 2.16;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
