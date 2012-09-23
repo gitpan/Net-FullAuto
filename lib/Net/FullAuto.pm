@@ -21,7 +21,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.999914';
+our $VERSION='0.999915';
 
 
 use 5.005;
@@ -135,11 +135,9 @@ Automation Utility
 
 =head1 NOTE TO USERS
 
-This is a BETA RELEASE of Net::FullAuto. I have
-attemped to provide just enough documentation so that users and testers can
-"hopefully" get it up and running for VERY basic operations. Your
-help in this effort is NEEDED and will be GREATLY APPRECIATED. Please
-contact me at my email address -
+This is a BETA RELEASE of Net::FullAuto.
+
+Please contact me at my email address -
 
 =over 4 
 
@@ -153,44 +151,21 @@ and let me know of ANY and ALL bugs, issues, problems, questions
 as well as suggestions for improvements to both the documentation
 and module itself. I will make every effort to get back to you quickly.
 
-Update the module from CPAN *often* - as I anticipate adding documentation
-and fixing bugs and making improvements almost daily for the immediate
-future.
+Update the module from CPAN *often* - as I anticipate adding
+documentation and fixing bugs and making improvements often. 
 
-THANKS - and GOOD LUCK with your Net::FullAuto project!
+THANKS - and GOOD LUCK with your Net::FullAuto project(s)!
 
-Brian Kelly, September 6, 2007
+Brian Kelly, August 31, 2012
 
-=head1 BETA Notice
+=head1 DISCLAIMER
 
- WARNING:  THIS IS A ***BETA*** RELEASE OF Net::FullAuto
-
- Net::FullAuto is powerful network process automation
- software that has been in un-released development for
- more than seven years. For this reason, you may find
- it to be useful for many process automation projects.
- Because it has been worked on for so long, it may appear
- to be stable, and pass a number of non-intensive tests.
-
- DO NOT - REPEAT - DO !!NOT!! USE IN A PRODUCTION
- ENVIRONMENT! This is newly released software that has
- *NOT* had the benefit of wide exposure - and the presence
- of here-to-now undetected bugs and design flaws is a
- virtual certainty. DO NOT USE IN IN/FOR A PROCESS WHERE
- DATA LOSS IS UNRECOVERABLE. DO NOT USE IN/FOR A PROCESS
- WHERE DATA INTEGRITY IS CRITICAL. DO NOT USE IN/FOR A
- PROCESS THAT IS TIME SENSITIVE, UNMONITORED, OR
- PERSISTENCE CRITICAL. DO NOT USE THIS SOFTWARE WITHOUT
- ANOTHER METHOD FOR EXECUTING THE PROCESS YOU WISH TO
- AUTOMATE WITH Net::FullAuto. DO NOT USE IN/FOR A PROCESS
- WHERE FAILURE OF "ANY KIND" IS UNACCEPTABLE.
-
- Beware that it is provided "as is", and comes with
- absolutely no warranty of any kind, either express or
- implied.  If you use the contents of this distribution,
- you do so at your own risk, and you agree to free the
- author(s) of any consequences arising from such use,
- either intended or otherwise.
+ Beware that this software is provided "as is", and comes
+ with no warranty of any kind, either express or implied.
+ If you use the contents of this distribution, you do so
+ at your own risk, and you agree to free the author(s) of
+ any consequences arising from such use, either intended
+ or otherwise.
 
 =head1 SYNOPSIS
 
@@ -295,7 +270,7 @@ the remote computer (This will suffice for all following examples):
                              "${FA_Core::invoked[3]}.txt",
        },
 
-S<   >In the fileS<  >C<usr_code.pm>S<  >add the *process* subroutine code:
+S<   >In the fileS<  >C<fa_code.pm>S<  >add the *process* subroutine code:
 
        sub ps_one {
 
@@ -321,7 +296,7 @@ Run script using S<  >C<Net::FullAuto>S<  >(B<Hint>: the --<...>-- line are inst
 
 --< 1 >-<Type Command and <B<C<ENTER>>> >---------------------------
 
-       fullauto  --usr_code  ps_one
+       fullauto  --code  ps_one
 
 --< The user sees: >------------------------------------------
 
@@ -435,7 +410,7 @@ Run script usingS<  >C<Net::FullAuto>S<  >(B<Hint>: the --< # >-- line are instr
 
 --< 1 >-<Type Command and <B<C<ENTER>>> >---------------------------
 
-       fullautoS<  >--usr_codeS<  >get_file_from_one
+       fullautoS<  >--codeS<  >get_file_from_one
 
 --< The user sees: >------------------------------------------
 
@@ -536,20 +511,28 @@ C<Net::FullAuto>S<  >requires a local installation of perl5. To test forS<  >C<p
 C<Net::FullAuto>S<  >is easiest to set up with a working CPAN utility. To test forS<  >C<cpan>,S<  >typeS<  >C<cpan -v>S<  >at the UNIX/Linux command prompt:
 
   $ cpan -v
-  /usr/bin/cpan script version 1.9, CPAN.pm version 1.9102
+  /usr/bin/cpan script version 1.9, CPAN.pm version 1.9402
 
 If you don't have a working C<cpan>, then perhaps you can find some assitance here:
 
-  http://sial.org/howto/perl/life-with-cpan/
+  http://www.thegeekstuff.com/2008/09/how-to-install-perl-modules-manually-and-using-cpan-command/
 
-Otherwise, you will have to manually install the additional modules from the CPAN ( Comprehensive Perl Archive Network - http://www.cpan.org ) that are required byS<  >C<Net::FullAuto>. Note also that at least one required module -S<  >C<IO::Pty>, will require the use of a C compiler on your local host. The following CPAN modules are required byS<  >C<Net::FullAuto>S< >:
+Otherwise, you will have to manually install the additional modules from the CPAN ( Comprehensive Perl Archive Network - http://www.cpan.org ) that are required byS<  >C<Net::FullAuto>. Note also that a number of required modules -S<  >C<IO::Pty>, will require the use of a C compiler on your local host. The following CPAN modules are required byS<  >C<Net::FullAuto>S< >:
 
+   -  Module::Build
+   -  Module::Load::Conditional
    -  Sort::Versions 
    -  Crypt::CBC
    -  Crypt::DES
+   -  Digest::MD5
+   -  Digest::SHA
    -  Getopt::Long
    -  HTTP::Date
    -  IO::Pty
+   -  IO::Capture::Stderr
+   -  IO::CaptureOutput
+   -  Capture::Tiny
+   -  Test::Deep
    -  LWP
    -  Mail::Internet
    -  Mail::Sender
@@ -558,8 +541,16 @@ Otherwise, you will have to manually install the additional modules from the CPA
    -  MLDBM::Sync
    -  MLDBM::Sync::SDBM_File
    -  Net::Telnet
-   -  Term::Menus >= Version 1.24
+   -  Term::ReadKey
+   -  Term::RawInput
+   -  Term::Menus >= Version 2.16
    -  Tie::Cache
+   -  Email::Sender
+   -  MIME::Entity
+   -  String::Random
+   -  Data::Password::Check
+   -  BerkeleyDB
+   -  YAML
    -  URI
 
 =item 3. Check for a working C compiler
@@ -571,10 +562,10 @@ Otherwise, you will have to manually install the additional modules from the CPA
 C<Net::Fullauto>S<  >requires S<  >C<IO::Pty>, and this module needs to be compiled locally with a C compiler. Check for an installation ofS<  >C<cc>S<  >orS<  >C<gcc>S<  >.
 
    $ gcc --version
-   gcc (GCC) 3.4.2 20041017 (Red Hat 3.4.2-6.fc3)
-   * Copyright (C) 2004 Free Software Foundation, Inc.
-   * This is free software; see the source for copying conditions.  There is NO
-   * warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+   gcc (GCC) 4.5.3
+   Copyright (C) 2010 Free Software Foundation, Inc.
+   This is free software; see the source for copying conditions.  There is NO
+   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =item 4. ViaS<  >C<cpan>,S<  >installS<  >C<Net::FullAuto>.
 
@@ -583,11 +574,9 @@ C<Net::Fullauto>S<  >requires S<  >C<IO::Pty>, and this module needs to be compi
 =end html
 
    $ cpan
-   CPAN: File::HomeDir loaded ok (v0.65)
 
-   cpan shell -- CPAN exploration and modules installation (v1.9102)
-   ReadLine support enabled
-
+   cpan shell -- CPAN exploration and modules installation (v1.9402)
+   Enter 'h' for help.
 
    cpan[1]> install Net::FullAuto
 
@@ -605,7 +594,7 @@ See theS<  >C<fa_hosts.pm>S<  > B<Setup and Location> section below.
 
 =end html
 
-See theS<  >C<usr_code.pm>S<  > B<Setup and Location> section below.
+See theS<  >C<fa_code.pm>S<  > B<Setup and Location> section below.
 
 =back
 
@@ -613,7 +602,7 @@ See theS<  >C<usr_code.pm>S<  > B<Setup and Location> section below.
 
 =over 4
 
-=item * Setup for Windows OS's (like XP and Vista)
+=item * Setup for Windows OS's (like XP and Higher)
 
 =back
 
@@ -635,7 +624,7 @@ In order to manage connection configuration information in the easiest way possi
 
 =over 4
 
-=item * C<usr_code.pm>S<  >Setup and Location
+=item * C<fa_code.pm>S<  >Setup and Location
 
 =back
 
@@ -643,7 +632,7 @@ In order to manage connection configuration information in the easiest way possi
 
 =item
 
-In order to create the most flexibility, power and convencience,S<  >C<Net::FullAuto>S<  >requires the use of aS<  >C<usr_code.pm>S<  >module file. This file can be located in one of two places. There is a defaultS<  >C<usr_code.pm>S<  >file included with the distribution, and you can locate it whereverS<  >C<Net::FullAuto>S<  >was installed. Usually this is in theS<  >C</lib>S<  >directory underS<  >C</usr>S<  >orS<  >C</usr/local/>. A typical location would beS<  >C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Custom subroutinesS<  >I<can>S<  >be added directly to this file (provided that file is given write permissions: i.e.S<  >C<chmod u+w usr_code.pm>)
+In order to create the most flexibility, power and convencience,S<  >C<Net::FullAuto>S<  >requires the use of aS<  >C<fa_code.pm>S<  >module file. This file can be located in one of two places. There is a defaultS<  >C<fa_code.pm>S<  >file included with the distribution, and you can locate it whereverS<  >C<Net::FullAuto>S<  >was installed. Usually this is in theS<  >C</lib>S<  >directory underS<  >C</usr>S<  >orS<  >C</usr/local/>. A typical location would beS<  >C</usr/local/lib/perl5/site_perl/5.8/Net/FullAuto/fa_hosts.pm>. Custom subroutinesS<  >I<can>S<  >be added directly to this file (provided that file is given write permissions: i.e.S<  >C<chmod u+w fa_code.pm>)
 
 =back
 
@@ -669,7 +658,7 @@ B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. I
 
 =over 4 
 
-=item * Setting the C<$usr_code> location variable
+=item * Setting the C<$fa_code> location variable
 
 =back
 
@@ -677,8 +666,8 @@ B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. I
 
 =item
 
-You can (and should) define where you wish to store custom C<usr_code.pm> files
-with the C<$usr_code> variable.
+You can (and should) define where you wish to store custom C<fa_code.pm> files
+with the C<$fa_code> variable.
 
 B<IMPORTANT!> - Be sure that this variable is defined in your invoking script. IT MUST BE PLACED IN A C<BEGIN {}> block B<I<BEFORE>> the C<use Net::FullAuto;> line:
 
@@ -756,7 +745,7 @@ S<The following is typical contents of a  C<fa_hosts.pm>
 
 =over 4
 
-=item * TypicalS<  C<usr_code.pm>  >File Contents
+=item * TypicalS<  C<fa_code.pm>  >File Contents
 
 =back
 
@@ -764,12 +753,12 @@ S<The following is typical contents of a  C<fa_hosts.pm>
 
 =item
 
-S<The following is typical contents of a  C<usr_code.pm>
+S<The following is typical contents of a  C<fa_code.pm>
  showing two simple subroutines:>
 
 =back
 
-        package usr_code;
+        package fa_code;
 
         require Exporter;
         use warnings;
@@ -1552,7 +1541,7 @@ Brian M. Kelly <Brian.Kelly@fullautosoftware.net>
 =head1 COPYRIGHT
 
 Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-              2008, 2009, 2010, 2011
+              2008, 2009, 2010, 2011, 2012
 
 by Brian M. Kelly.
 

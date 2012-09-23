@@ -41,6 +41,7 @@ recommends:
 requires:
   Module::Build: .3601
   Module::Load::Conditional: 0
+  Data::Dump::Streamer: 0
   Term::Menus: 2.16
   Tie::Cache: 0
   Sort::Versions: 0

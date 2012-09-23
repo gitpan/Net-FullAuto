@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999914';
+$main::VERSION='0.999915';
 my $fa_banner=<<END;
 
 
@@ -710,6 +710,9 @@ END
    my $cpanmvalue=$ENV{PERL5_CPANM_IS_RUNNING}||'';
    undef $ENV{PERL5_CPAN_IS_RUNNING};
    undef $ENV{PERL5_CPANM_IS_RUNNING};
+   ($stdout,$stderr)=&fa_install_module('JSON::XS','install','Makefile');
+   &fa_err_exit($stderr,'JSON::XS') if $stderr;
+   print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('JSON','install','Makefile');
    &fa_err_exit($stderr,'JSON') if $stderr;
    print $stdout if $stdout;
@@ -1065,6 +1068,7 @@ use File::stat;
 CPAN::HandleConfig->load;
 use POSIX qw/strftime/;
 
+require Data::Dump::Streamer;
 require Term::Menus;
 require Term::ReadKey;
 require Term::RawInput;
@@ -1421,22 +1425,27 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          my $setup_cmd='';
          my $drlet=substr($main::root_dir,0,2);
          if ($selection!~/[Ww]ordpad|MINIMAL/s) {
+            if ($selection eq 'vim') {
+               $selection='';
+            } else {
+               $selection=",$selection";
+            }
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron,procps,'
+                      .'libdb4.5-devel,ncurses,cron,procps,vim,unzip'
                       .$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron,procps'
+                      .'libdb4.5-devel,ncurses,cron,procps,vim,unzip'
                       .' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } else {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup.exe -P openssh,ncurses,procps -X -A -q '
+                      .'setup.exe -P openssh,ncurses,procps,vim -X -A -q '
                       ."-R $main::root_dir ".'-s '
                       .'http://cygwin.mirrors.pair.com';
          }
@@ -1921,6 +1930,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '\'Win32::DriveInfo\')}\""');
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
+                      '"/usr/bin/perl -e \"eval { require JSON::XS;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'JSON::XS\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { require JSON;1 }'.
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
@@ -2090,6 +2105,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Win32::DriveInfo\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      "cmd /c $cygwin_loc\\bin\\bash -lc ".
+                      '"/usr/bin/perl -e \"eval { require JSON::XS;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'JSON::XS\')}\""');
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { require JSON;1 }'.
