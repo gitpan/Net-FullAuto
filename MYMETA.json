@@ -45,7 +45,6 @@
             "Sort::Versions" : 0,
             "String::Random" : 0,
             "Task::Weaken" : 0,
-            "Term::Menus" : "2.16",
             "Term::RawInput" : 0,
             "Term::ReadKey" : 0,
             "Test::Deep" : 0,
@@ -66,7 +65,7 @@
       },
       "Net::FullAuto" : {
          "file" : "lib/Net/FullAuto.pm",
-         "version" : "0.999916"
+         "version" : "0.999917"
       },
       "Net::FullAuto::FA_Core" : {
          "file" : "lib/Net/FullAuto/FA_Core.pm",
@@ -115,5 +114,5 @@
          "http://opensource.org/licenses/gpl-3.0.html"
       ]
    },
-   "version" : "0.999916"
+   "version" : "0.999917"
 }

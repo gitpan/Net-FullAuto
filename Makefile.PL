@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999916';
+$main::VERSION='0.999917';
 my $fa_banner=<<END;
 
 
@@ -696,6 +696,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
+   eval { require Data::Dump::Streamer };
    ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
@@ -2098,6 +2099,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"cd \"'.$sdir.'\";./Build install;"');
                }
+               eval { require Data::Dump::Streamer;1 };
                system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { require Win32::API;1 }'.
@@ -3357,7 +3359,7 @@ requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-requires        'Term::Menus'               => 2.16;
+#requires        'Term::Menus'               => 2.16;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
