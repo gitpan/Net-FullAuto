@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999915';
+$main::VERSION='0.999916';
 my $fa_banner=<<END;
 
 
@@ -126,6 +126,7 @@ END
    }
    use CPAN;
    use File::Path;
+   use YAML;
 
    $main::root_dir=$main::curdir;
 
@@ -569,6 +570,11 @@ END
    }
 
    my $stdout='';my $stderr='';
+   ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::MakeMaker','install','Makefile');
+   print $stdout if $stdout;
+   require ExtUtils::MakeMaker;
+   &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
    ($stdout,$stderr)=&fa_install_module('YAML','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'YAML') if $stderr;
@@ -1053,7 +1059,6 @@ sub clean_mswin {
 use inc::Module::Install;
 
 # Define metadata
-#version         '0.9994';
 version         $main::VERSION;
 name            'Net-FullAuto';
 sign;
