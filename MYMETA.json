@@ -34,6 +34,7 @@
             "Digest::SHA" : 0,
             "Email::Sender" : 0,
             "ExtUtils::Depends" : 0,
+            "ExtUtils::MakeMaker" : 0,
             "HTTP::Date" : 0,
             "IO::Capture::Stderr" : 0,
             "IO::Pty" : 0,
@@ -66,7 +67,7 @@
       },
       "Net::FullAuto" : {
          "file" : "lib/Net/FullAuto.pm",
-         "version" : "0.999921"
+         "version" : "0.999922"
       },
       "Net::FullAuto::FA_Core" : {
          "file" : "lib/Net/FullAuto/FA_Core.pm",
@@ -115,5 +116,5 @@
          "http://opensource.org/licenses/gpl-3.0.html"
       ]
    },
-   "version" : "0.999921"
+   "version" : "0.999922"
 }

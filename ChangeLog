@@ -21,6 +21,13 @@
 
 2012-09-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999922 released.
+
+        * Added ExtUtils::MakeMaker to META.yml, removed YAML.
+
+
+2012-09-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999921 released.
 
         * Added inetutils to Cygwin install for all configurations.
