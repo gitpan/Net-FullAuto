@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999919';
+$main::VERSION='0.999920';
 my $fa_banner=<<END;
 
 
@@ -424,7 +424,6 @@ END
       $look='IO-Tty' if $look eq 'IO-Pty';
       $look='MailTools' if $look eq 'Mail-Internet';
       print "***** Looking for Most Recent \"$look Dir\" \n";
-      CPAN::HandleConfig->load;
       my $d = $CPAN::Config->{build_dir};
       if (!(defined $d) || !(-d $d)) {
          $d=(getpwuid $>)[7].'/.cpan/build';
@@ -1981,7 +1980,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                my $build_dir='SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e '.
-                      '\"require CPAN::Config and '.
+                      '\"require CPAN and CPAN::HandleConfig-^^^>load and '.
                       'print \$CPAN::Config-^^^>{build_dir}\" 2>&1"';
                my $bd=`$build_dir`;
                if ($bd=~/^\s*$|Can\'t locate/s) {
@@ -2063,7 +2062,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   my $streamdir='SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $clo\\\\bin\\\\bash -lc ".
                          '"/usr/bin/perl -e '.
-                         '\"require CPAN and CPAN::HandleConfig->load and '.
+                         '\"require CPAN and CPAN::HandleConfig-^^^>load and '.
                          'print \$CPAN::Config-^^^>{build_dir}\""';
                   my $stmout=`$streamdir`;
                   chomp($stmout);
