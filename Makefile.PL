@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999918';
+$main::VERSION='0.999919';
 my $fa_banner=<<END;
 
 
@@ -424,6 +424,7 @@ END
       $look='IO-Tty' if $look eq 'IO-Pty';
       $look='MailTools' if $look eq 'Mail-Internet';
       print "***** Looking for Most Recent \"$look Dir\" \n";
+      CPAN::HandleConfig->load;
       my $d = $CPAN::Config->{build_dir};
       if (!(defined $d) || !(-d $d)) {
          $d=(getpwuid $>)[7].'/.cpan/build';
@@ -576,7 +577,6 @@ END
    &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
    ($stdout,$stderr)=&fa_install_module('YAML','install','Makefile');
    print $stdout if $stdout;
-   require YAML;
    &fa_err_exit($stderr,'YAML') if $stderr;
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
@@ -696,7 +696,6 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   eval { require Data::Dump::Streamer };
    ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
@@ -725,10 +724,8 @@ END
    print $stdout if $stdout;
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
-print "GOING TO INSTALL TERMMENUSSSSSSSSSSSSSSSS\n";
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
-print "DONE INSTALLING TERMMENUSSSSSSSSSSSSSSSS\n";
    print $stdout if $stdout;
 };
 
@@ -1964,8 +1961,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { '.
                       'require Term::Menus;1 }'.
-                      ' or do {require Data::Dump::Streamer and '.
-                      'require CPAN and '.
+                      ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
                my $par_dir='export CYGWIN=nodosfilewarning & '.
@@ -2067,7 +2063,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   my $streamdir='SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $clo\\\\bin\\\\bash -lc ".
                          '"/usr/bin/perl -e '.
-                         '\"require CPAN::Config and '.
+                         '\"require CPAN and CPAN::HandleConfig->load and '.
                          'print \$CPAN::Config-^^^>{build_dir}\""';
                   my $stmout=`$streamdir`;
                   chomp($stmout);
@@ -2142,8 +2138,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { '.
                       'require Term::Menus;1 }'.
-                      ' or do {require Data::Dump::Streamer and '.
-                      'require CPAN and '.
+                      ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
                my $par_dir='SET CYGWIN=nodosfilewarning & '.
