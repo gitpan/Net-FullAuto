@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999920';
+$main::VERSION='0.999921';
 my $fa_banner=<<END;
 
 
@@ -137,8 +137,7 @@ END
             "\n                      on Windows - goto www.cygwin.com.".
             "\n\n           Be sure to install the following programs in ".
             "\n           addition to the base package:".
-            "\n\n           openssh [as provided by Cygwin]".
-            "\n           inetutils \(if telnet and/or ftp services are desired\)".
+            "\n\n           inetutils and openssh [as provided by Cygwin]".
             "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
             "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
             "\n           ncurses, cron, and procps [as provided by Cygwin]".
@@ -1436,20 +1435,20 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron,procps,vim,unzip'
+                      .'libdb4.5-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron,procps,vim,unzip'
+                      .'libdb4.5-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } else {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup.exe -P openssh,ncurses,procps,vim -X -A -q '
-                      ."-R $main::root_dir ".'-s '
+                      .'setup.exe -P openssh,ncurses,inetutils,procps,vim '
+                      .'-X -A -q '."-R $main::root_dir ".'-s '
                       .'http://cygwin.mirrors.pair.com';
          }
          
@@ -2230,8 +2229,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
            "\n                      on Windows - goto www.cygwin.com.".
            "\n\n           Be sure to install the following programs in ".
            "\n           addition to the base package:".
-           "\n\n           openssh [as provided by Cygwin]".
-           "\n           inetutils \(if telnet and/or ftp services are desired\)".
+           "\n\n           inetutils and openssh [as provided by Cygwin]".
            "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
            "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
            "\n           ncurses, cron, and procps [as provided by Cygwin]".
