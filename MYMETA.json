@@ -25,6 +25,7 @@
          },
          "requires" : {
             "B::Utils" : 0,
+            "Cache::Cache" : 0,
             "Capture::Tiny" : 0,
             "Crypt::CBC" : 0,
             "Crypt::DES" : 0,
@@ -34,7 +35,7 @@
             "Digest::SHA" : 0,
             "Email::Sender" : 0,
             "ExtUtils::Depends" : 0,
-            "ExtUtils::MakeMaker" : 0,
+            "ExtUtils::MakeMaker" : "6.59",
             "HTTP::Date" : 0,
             "IO::Capture::Stderr" : 0,
             "IO::Pty" : 0,
@@ -52,6 +53,7 @@
             "Test::Deep" : 0,
             "Tie::Cache" : 0,
             "URI" : 0,
+            "YAML" : 0,
             "perl" : "5.006"
          }
       }
@@ -67,7 +69,7 @@
       },
       "Net::FullAuto" : {
          "file" : "lib/Net/FullAuto.pm",
-         "version" : "0.999922"
+         "version" : "0.999923"
       },
       "Net::FullAuto::FA_Core" : {
          "file" : "lib/Net/FullAuto/FA_Core.pm",
@@ -116,5 +118,5 @@
          "http://opensource.org/licenses/gpl-3.0.html"
       ]
    },
-   "version" : "0.999922"
+   "version" : "0.999923"
 }

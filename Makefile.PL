@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999922';
+$main::VERSION='0.999923';
 my $fa_banner=<<END;
 
 
@@ -278,6 +278,8 @@ END
 
       );
       my $lic_sel=Menu(\%license_agree);
+      chomp($lic_sel);
+      exit if $lic_sel eq ']quit[';
       if (-1<index $lic_sel, 'NOT') {
          print "\n\n   You have elected *NOT* to install FullAuto.",
                "\n\n   Please report any bugs and send any",
@@ -377,6 +379,7 @@ END
                );
                my $selection=Menu(\%menu_drives);
                chomp($selection);
+               exit if $selection eq ']quit[';
                $selection=~s/^\s*Drive\s+([A-Z])\s+NTFS.*$/$1/s;
                $main::root_dir="$selection:\\cygwin";
             }
@@ -461,9 +464,18 @@ END
       my $task=$_[1];
       my $butil=$_[2]||'';
       my $force=$_[3]||'';
+      my $version=$_[4]||'';
       my $dir='';
       my $cpan_error='';
       eval "require $p;1";
+      unless ($@) {
+         if ($version) {
+            my $ttmp='$ver=$'.$p.'::VERSION';
+            eval $ttmp;
+            $ver=eval $ver;
+            $force=1 if $ver<$version;
+         } 
+      }
       if ($@ || $force) {
          if ($ENV{'AUTOMATED_TESTING'}) {
             print "Automated Testing Detected: FullAuto needs $p\n",
@@ -569,9 +581,8 @@ END
 
    my $stdout='';my $stderr='';
    ($stdout,$stderr)=&fa_install_module(
-      'ExtUtils::MakeMaker','install','Makefile');
+      'ExtUtils::MakeMaker','install','Makefile','','6.59');
    print $stdout if $stdout;
-   require ExtUtils::MakeMaker;
    &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
    ($stdout,$stderr)=&fa_install_module('YAML','install','Makefile');
    print $stdout if $stdout;
@@ -722,6 +733,18 @@ END
    print $stdout if $stdout;
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
+   #($stdout,$stderr)=&fa_install_module('IPC::ShareLite','install','Makefile');
+   #&fa_err_exit($stderr,'IPC::ShareLite') if $stderr;
+   #print $stdout if $stdout;
+   #($stdout,$stderr)=&fa_install_module('Digest::SHA1','install','Makefile');
+   #&fa_err_exit($stderr,'Digest::SHA1') if $stderr;
+   #print $stdout if $stdout;
+   #($stdout,$stderr)=&fa_install_module('Error','install','Makefile');
+   #&fa_err_exit($stderr,'Error') if $stderr;
+   #print $stdout if $stdout;
+   #($stdout,$stderr)=&fa_install_module('Cache::Cache','install','Makefile');
+   #&fa_err_exit($stderr,'Cache::Cache') if $stderr;
+   #print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
@@ -781,6 +804,8 @@ sub ws_info {
                          "will continue.\n\n",
             );
             my $select=Menu(\%asklin);
+            chomp($select);
+            exit if $select eq ']quit[';
             my $s=0;
             ($s=$select)=~s/^.*\n\s+Line: (\d+).*$/$1/s;
             $s--;my $adjust=0;
@@ -852,6 +877,7 @@ sub ws_info {
          );
          my $select=Menu(\%askcyg);
          chomp($select);
+         exit if $select eq ']quit[';
          delete $cygsrvs{$select};
          my $pasen='SET CYGWIN=nodosfilewarning & '.
                    "cmd /c $cygwin_loc\\bin\\bash -lc ".
@@ -975,6 +1001,7 @@ sub ws_info {
                         "   one, or create a new one.)",
             );
             $selection=Menu(\%_cygserv);
+            chomp $selection;
             exit if $selection eq ']quit[';
          } else {
             $selection='cyg_server'; 
@@ -1003,6 +1030,7 @@ sub ws_info {
                      "    can use an existing one, or create a new one.)",
          );
          $selection=Menu(\%_cygserv);
+         chomp($selection);
          exit if $selection eq ']quit[';
       }
       if (-1<index $selection, 'All Domain' || !$cyg_id) {
@@ -1019,8 +1047,9 @@ sub ws_info {
                      "   (forward slash key followed by text to search for).", 
          );
          $selection=Menu(\%_users);
-         test_windows_user_rights($selection);
+         chomp($selection);
          exit if $selection eq ']quit[';
+         test_windows_user_rights($selection);
       } elsif (-1<index $selection, 'Use Domain') {
          $selection='cyg_server'; 
       }
@@ -1157,6 +1186,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $selection='Install';
       } else {
          $selection=Term::Menus::Menu(\%Menu_update_cyg);
+         chomp($selection);
+         exit if $selection eq ']quit[';
       }
    } else {
 
@@ -1200,9 +1231,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          $selection='Install';
       } else {
          $selection=Term::Menus::Menu(\%Menu_win_to_cyg);
+         chomp($selection);
+         exit if $selection eq ']quit[';
       }
    }
-   exit if $selection eq ']quit[';
    if ($selection!~/will END/s) {
       if ($selection!~/MINIMAL/s) {
          my @editors=('vim     ( ViIMproved - enhanced vi editor )',
@@ -1282,6 +1314,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
          } elsif (0<$#editors) {
             $selection=Term::Menus::Menu(\%Menu_select_editor);
+            chomp($selection);
+            exit if $selection eq ']quit[';
          } elsif (0==$#editors) {
             $selection=$editors[0];
          }
@@ -1320,7 +1354,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $selection=$1;
             $editor='/bin/mc.exe';
          }
-         exit if $selection eq ']quit[';
       }
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
@@ -1491,6 +1524,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          
                );
                $account_type=Term::Menus::Menu(\%Menu_select_account_type);
+               chomp($account_type);
+               exit if $account_type eq ']quit[';
                $privl=' --privileged' if -1<index $account_type,'separate';
             }
             $domain_user=&ws_info($domain) unless $wver=~/XP|2000|NT/;
@@ -1578,14 +1613,14 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 
                );
                $selection=Term::Menus::Menu(\%Menu_select_account);
+               chomp($selection);
+               exit if $selection eq ']quit[';
                if (-1<index $selection,'different') {
                   print "\n       Please type the name of the $wver\n",
                         "        user account that will be used by the sshd\n",
                         "        service: ";
                   $sshd_account=<STDIN>;
                   print "\n";
-               } elsif (-1<index $selection,'quit') {
-                  exit;
                }
                print "\n\n\n   Now is the time to CAREFULLY select a ",
                      "password for the\n   $sshd_account account, and",
@@ -2314,6 +2349,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
 
                );
                $selection=Term::Menus::Menu(\%Menu_select_editor);
+               chomp($selection);
+               exit if $selection eq ']quit[';
             } else {
                %Menu_select_editor=(
 
@@ -2328,6 +2365,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
 
                );
                $selection=Term::Menus::Menu(\%Menu_select_editor);
+               chomp($selection);
+               exit if $selection eq ']quit[';
             }
             if ($selection=~/TextPad/) {
                if ($tp eq 'default') {
@@ -2351,6 +2390,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
             } elsif ($selection=~s/(mc)/$1/) {
                $editor='/bin/mc.exe';
             }
+            exit if $selection eq ']quit[';
          }
       } else {
          if (-e '/usr/bin/vi') {
@@ -2373,6 +2413,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
 
             );
             $selection=Term::Menus::Menu(\%Menu_select_editor);
+            chomp($selection);
+            exit if $selection eq ']quit[';
             if ($selection=~s/(vi)/$1/) {
                $editor='/usr/bin/vi';
             } elsif ($selection=~s/(emacs)/$1/) {
@@ -3349,7 +3391,7 @@ requires        'Module::Build'             => 0.3601;
 requires        'Module::Load::Conditional' => 0;
 requires        'Task::Weaken'              => 0;
 requires        'ExtUtils::Depends'         => 0;
-requires        'ExtUtils::MakeMaker'       => 0;
+requires        'ExtUtils::MakeMaker'       => 6.59;
 requires        'B::Utils'                  => 0;
 requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
@@ -3359,11 +3401,11 @@ requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
 requires        'Crypt::DES'                => 0;
+requires        'Cache::Cache'              => 0;
 requires        'HTTP::Date'                => 0;
 requires        'JSON'                      => 2.14;
 requires        'IO::Pty'                   => 0;
 requires        'IO::Capture::Stderr'       => 0;
-#requires        'IO::CaptureOutput'         => 0;
 requires        'Capture::Tiny'             => 0;
 requires        'Net::Telnet'               => 0;
 requires        'Term::RawInput'            => 0;
@@ -3374,6 +3416,7 @@ requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
 requires        'Data::Password::Check'     => 0;
 requires        'String::Random'            => 0;
+requires        'YAML'                      => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install();
@@ -3423,6 +3466,7 @@ if ($banner) {
                   #[ "Quit", sub {exit;} ],
                   ];
       $selection=&menu($menu1);
+      exit if $selection eq ']quit[';
       alarm 0;
    };
    if ($@) {

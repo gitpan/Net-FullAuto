@@ -15,7 +15,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.999922
+    version: 0.999923
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -65,7 +65,9 @@ requires:
   String::Random: 0
   Data::Password::Check: 0
   BerkeleyDB: 0
-  ExtUtils::MakeMaker: 0
+  Cache::Cache: 0
+  ExtUtils::MakeMaker: 6.59
+  YAML: 0
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
-version: 0.999922
+version: 0.999923

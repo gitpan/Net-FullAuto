@@ -21,6 +21,15 @@
 
 2012-09-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999923 released.
+
+        * Added version argument to fa_install_mod() in Makefile.PL.
+
+        * Added Cache::Cache as a prerequisite.
+
+
+2012-09-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999922 released.
 
         * Added ExtUtils::MakeMaker to META.yml, removed YAML.
