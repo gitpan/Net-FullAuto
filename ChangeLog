@@ -19,6 +19,13 @@
 ################################################################
 
 
+2012-09-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999924 released.
+
+        * Lots of fixes for mirror() functionality.
+
+
 2012-09-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999923 released.

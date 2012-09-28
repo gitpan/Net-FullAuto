@@ -3,7 +3,7 @@ package Net::FullAuto::FA_Core;
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2011  Brian M. Kelly
+#    Copyright (C) 2012  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -521,7 +521,7 @@ our $timeout=30;our $cltimeout='X';our $slave=0;our $dcipher='';
 our %email_defaults=();our $increment=0;our %tosspass=();
 our $email_defaults='';our %semaphores=();our $batch='';
 our $unattended='';our $fullauto='';our $service='';
-our %base_shortcut_info=();our @dhostlabels=();our %monthconv=();
+our @dhostlabels=();our %monthconv=();
 our %hourconv=();our @weekdays=();our %weekdaysconv=();
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
@@ -11785,7 +11785,7 @@ sub select_dir
                }
             } else {
                &Net::FullAuto::FA_Core::handle_error(
-                  "Target Directory - $dir CANNOT Be Located");
+                  "Target Directory (1) - $dir CANNOT Be Located");
             }
          } elsif ($test_chr1 eq '/' || $test_chr1 eq '\\') {
             if (($hostlabel eq "__Master_${$}__"
@@ -11804,7 +11804,7 @@ sub select_dir
             $dir=$test_chr1 . ':/';
          } else {
             &Net::FullAuto::FA_Core::handle_error(
-               "Target Directory - $dir CANNOT Be Located");
+               "Target Directory (2) - $dir CANNOT Be Located");
          } $dir=~tr/\\/\//;$dir=~tr/\//\\/;$dir=~s/\\/\\\\/g;my $cnt=0;
       } else {
          if (($hostlabel eq "__Master_${$}__"
@@ -12831,7 +12831,8 @@ sub ftm_login
    } elsif (!$fttimeout) {
       $fttimeout=$timeout if !$fttimeout;
    }
-   print $Net::FullAuto::FA_Core::MRLOG "NEWMASTER=$new_master<==\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   print $Net::FullAuto::FA_Core::MRLOG "NEWMASTER=$new_master<==\n"
+      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    if (!$new_master && ($hostlabel eq "__Master_${$}__"
           || exists $Net::FullAuto::FA_Core::same_host_as_Master{$hostlabel})) {
       return "__Master_${$}__",'','','','','','','','';
@@ -15557,6 +15558,10 @@ sub mirror
    my $dhostlabel=$dhostlabels[0];
    my $base_fdr=$args{BaseFileOrDir} || $args{BaseDir} || $args{BaseFile};
    my $verbose=(exists $args{Verbose} && $args{Verbose}) ? 1 : 0;
+   my $skip_empty_dirs=
+         (exists $args{SkipEmptyDirs} && $args{SkipEmptyDirs}) ? 1 : 0;
+   my $index_base_once=
+         (exists $args{IndexBaseOnce} && $args{IndexBaseOnce}) ? 1 : 0;
    $base_fdr||='';
    $base_fdr=~s/[\/|\\]*$//;
    if (unpack('a1',$base_fdr) eq '~') {
@@ -15642,6 +15647,7 @@ sub mirror
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-4');
                      }
                   } else { $stderr='' }
+                  $baseFH->{_ftp_handle}||='';
                   $Net::FullAuto::FA_Core::ftpcwd{
                      $baseFH->{_ftp_handle}}{cd}=$base_fdr;
                   $do_dest_tmp_cwd=0;
@@ -15701,7 +15707,7 @@ sub mirror
                $do_dest_tmp_cwd=0;
             } elsif ($test_chr1 ne '~') {
                &Net::FullAuto::FA_Core::handle_error(
-                  "Base Directory - $base_fdr CANNOT Be Located");
+                  "Base Directory (1) - $base_fdr CANNOT Be Located");
             }
          } elsif ($test_chr1 eq '/' || $test_chr1 eq '\\') {
             if ($baseFH->{_work_dirs}->{_cwd}=~
@@ -15719,15 +15725,15 @@ sub mirror
             $dir=$baseFH->{_cwd};
          } elsif ($test_chr1 ne '~') {
             &Net::FullAuto::FA_Core::handle_error(
-               "Base Directory - $base_fdr CANNOT Be Located");
+               "Base Directory (2) - $base_fdr CANNOT Be Located");
          } my $cnt=0;
       } else {
          $dir=$baseFH->{_work_dirs}->{_cwd};
-#print "WHAT IS THE DIRRRRRR=$dir<== and THIS=$baseFH->{_cwd}\n";<STDIN>;
       } my $cnt=0;
-      if (!exists $base_shortcut_info{$baseFH} ||
-            $base_shortcut_info{$baseFH} ne $dir ||
-            !(exists $args{ReUseAnalysis} && $args{ReUseAnalysis})) {
+      if (!defined %main::base_shortcut_info ||
+            !exists $main::base_shortcut_info{$baseFH} ||
+            $main::base_shortcut_info{$baseFH} ne $dir ||
+            !$index_base_once) {
          while (1) {
             ($base_output,$stderr)=$baseFH->cmd(
                "cmd /c dir /s /-C /A- \"$dir\"",'__delay__');
@@ -15737,10 +15743,31 @@ sub mirror
                   return '',$die;
                } else { &Net::FullAuto::FA_Core::handle_error($die) }
             }
-            $base_shortcut_info{$baseFH}=$dir;
+            $main::base_shortcut_info{$baseFH}=$dir if $index_base_once;
             if (exists $baseFH->{_unaltered_basehash} &&
                   $baseFH->{_unaltered_basehash}) {
+               foreach my $key (keys %{$baseFH->{_bhash}}) {
+                  my $elems=$#{${$baseFH->{_bhash}}{$key}}+1;
+                  while (-1<--$elems) {
+                     if (ref ${$baseFH->{_bhash}}{$key}[$elems] ne 'HASH') {
+                        undef ${$baseFH->{_bhash}}{$key}[$elems];
+                     } else {
+                        foreach my $key (
+                              keys %{${$baseFH->{_bhash}}{$key}[$elems]}) {
+                           if (${${$baseFH->{_bhash}}{$key}[$elems]}{$key}) {
+                              undef @{${${$baseFH->{_bhash}}{$key}[$elems]}{$key}};
+                           } delete ${${$baseFH->{_bhash}}{$key}[$elems]}{$key};
+                        } undef %{${$baseFH->{_bhash}}{$key}[$elems]};
+                        undef ${$baseFH->{_bhash}}{$key}[$elems];
+                     }
+                  } undef ${$baseFH->{_bhash}}{$key};
+                  delete ${$baseFH->{_bhash}}{$key};
+               } undef %{$baseFH->{_bhash}};undef $baseFH->{_bhash};
                foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
+                  if (ref $baseFH->{_unaltered_basehash}->{$key} ne 'ARRAY') {
+                     delete $baseFH->{_unaltered_basehash}->{$key};
+                     next;
+                  }
                   my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
                   while (-1<--$elems) {
                      if (ref ${$baseFH->{_unaltered_basehash}}{$key}[$elems]
@@ -15767,7 +15794,9 @@ sub mirror
                $baseFH->{_unaltered_basehash}='';
             }
             if (!$stderr && $base_output!~/bytes free\s*/s) {
-               delete $base_shortcut_info{$baseFH};
+               delete $main::base_shortcut_info{$baseFH} if
+                  defined %main::base_shortcut_info &&
+                  exists $main::base_shortcut_info{$baseFH};
                $base_output='';next unless $cnt++;
                my $die="Attempt to retrieve output from the command:\n"
                       ."\n       cmd /c dir /-C \"$dir\"\n\n       run"
@@ -15803,12 +15832,13 @@ sub mirror
       } elsif (unpack('a1',$base_fdr) eq '/') {
          $dir=$base_fdr;
       } else {
-print "BASE3\n";
          &Net::FullAuto::FA_Core::handle_error(
-            "Base Directory - $base_fdr CANNOT Be Located");
+            "Base Directory (3) - $base_fdr CANNOT Be Located");
       }
-      if (!exists $base_shortcut_info{$baseFH} ||
-               $base_shortcut_info{$baseFH} ne $dir) {
+      if (!defined %main::base_shortcut_info ||
+               !exists $main::base_shortcut_info{$baseFH} ||
+               $main::base_shortcut_info{$baseFH} ne $dir ||
+               !$index_base_once) {
          if (exists $args{BaseZip} && -f $dir.'/'.$args{BaseZip}) {
             if (-e '/usr/bin/unzip') {
                $base_unzip_path='/usr/bin/';
@@ -15886,7 +15916,7 @@ print "BASE3\n";
                }
             }
          }
-         $base_shortcut_info{$baseFH}=$dir;
+         $main::base_shortcut_info{$baseFH}=$dir if $index_base_once;
          if ($baseFH->{_unaltered_basehash}) {
             foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
                my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
@@ -15913,10 +15943,12 @@ print "BASE3\n";
             $baseFH->{_unaltered_basehash}='';
          }
       }
-   } elsif (!exists $base_shortcut_info{$baseFH} ||
-         $base_shortcut_info{$baseFH} ne $dir) {
+   } elsif (!defined %main::base_shortcut_info ||
+         !exists $main::base_shortcut_info{$baseFH} ||
+         $main::base_shortcut_info{$baseFH} ne $dir ||
+         !$index_base_once) {
       my $dir=$baseFH->{_work_dirs}->{_cwd};
-      $base_shortcut_info{$baseFH}=$dir;
+      $main::base_shortcut_info{$baseFH}=$dir if $index_base_once;
       my $ls_path='';
       if ($baseFH->{_hostlabel}->[0] eq "__Master_${$}__" &&
             exists $Hosts{"__Master_${$}__"}{'ls'}) {
@@ -16186,7 +16218,12 @@ print "BASE3\n";
             } undef ${$destFH->{_dhash}}{$key};
             delete ${$destFH->{_dhash}}{$key};
          } undef %{$destFH->{_dhash}};
+if (0) {
          foreach my $key (keys %{$baseFH->{_bhash}}) {
+            if (ref $baseFH->{_bhash}->{$key} ne 'ARRAY') {
+               delete $baseFH->{_bhash}->{$key};
+               next;
+            }
             my $elems=$#{${$baseFH->{_bhash}}{$key}}+1;
             while (-1<--$elems) {
                if (ref ${$baseFH->{_bhash}}{$key}[$elems] ne 'HASH') {
@@ -16201,27 +16238,29 @@ print "BASE3\n";
                   undef ${$baseFH->{_bhash}}{$key}[$elems];
                }
             } undef ${$baseFH->{_bhash}}{$key};
-print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
             delete ${$baseFH->{_bhash}}{$key};
          } undef %{$baseFH->{_bhash}};$baseFH->{_bhash}={};
-         foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
-            if (ref ${$baseFH->{_unaltered_basehash}}{$key} eq 'ARRAY') {
-               foreach my $elem (@{${$baseFH->{_unaltered_basehash}}{$key}}) {
-                  if (ref $elem ne 'HASH') {
-                     push @{${$baseFH->{_bhash}}{$key}}, $elem;
-                  } else {
-                     my %newelem=();
-                     foreach my $key (keys %{$elem}) {
-                        $newelem{$key}=[@{${$elem}{$key}}];
+         if ($baseFH->{_unaltered_basehash}) {
+            foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
+               if (ref ${$baseFH->{_unaltered_basehash}}{$key} eq 'ARRAY') {
+                  foreach my $elem (@{${$baseFH->{_unaltered_basehash}}{$key}}) {
+                     if (ref $elem ne 'HASH') {
+                        push @{${$baseFH->{_bhash}}{$key}}, $elem;
+                     } else {
+                        my %newelem=();
+                        foreach my $key (keys %{$elem}) {
+                           $newelem{$key}=[@{${$elem}{$key}}];
+                        }
+                        push @{${$baseFH->{_bhash}}{$key}}, \%newelem;
                      }
-                     push @{${$baseFH->{_bhash}}{$key}}, \%newelem;
                   }
+               } else {
+                  ${$baseFH->{_bhash}}{$key}=
+                     ${$baseFH->{_unaltered_basehash}}{$key};
                }
-            } else {
-               ${$baseFH->{_bhash}}{$key}=
-                  ${$baseFH->{_unaltered_basehash}}{$key};
             }
          }
+}
       }
       my $hostlabel='';
       eval {
@@ -16277,29 +16316,49 @@ print "WHY ARE WE DELETING THE KEY=$key<==\n";sleep 1;
          }
       }
       my $newborn_dest_first_hash_flag=0;
-      if (ref $dest_first_hash ne 'HASH') {
-      
-               ## BUILDING FIRST DEST HASH
-
-         $dest_first_hash={};$newborn_dest_first_hash_flag=1;
-         foreach my $key (keys %{$destFH->{_dhash}}) {
-            if (ref ${$destFH->{_dhash}}{$key} eq 'ARRAY') {
-               foreach my $elem (@{${$destFH->{_dhash}}{$key}}) {
-                  if (ref $elem ne 'HASH') {
-                     push @{${$dest_first_hash}{$key}}, $elem;
-                  } else {
-                     my %newelem=();
-                     foreach my $key (keys %{$elem}) {
-                        if (${${$elem}{$key}}[0] ne 'EXCLUDE') {
-                           $newelem{$key}=[@{${$elem}{$key}}];
-                        }
-                     }
-                     push @{${$dest_first_hash}{$key}}, \%newelem;
-                  }
-               }
-            } else {
-               ${$dest_first_hash}{$key}=${$destFH->{_dhash}}{$key};
+      if (ref $dest_first_hash eq 'HASH') {
+         foreach my $key (keys %{$dest_first_hash}) {
+            if (ref ${$dest_first_hash}{$key} ne 'ARRAY') {
+               undef ${$dest_first_hash}{$key};
+               next;
             }
+            my $elems=$#{${$dest_first_hash}{$key}}+1;
+            while (-1<--$elems) {
+               if (ref ${$dest_first_hash}{$key}[$elems] ne 'HASH') {
+                  undef ${$dest_first_hash}{$key}[$elems];
+               } else {
+                  foreach my $key (
+                        keys %{${$dest_first_hash}{$key}[$elems]}) {
+                     if (exists ${$dest_first_hash}{$key}[$elems]->{$key} &&
+                           ref ${$dest_first_hash}{$key}[$elems]->{$key} eq 'ARRAY') {
+                        undef @{${$dest_first_hash}{$key}[$elems]->{$key}};
+                     } delete ${$dest_first_hash}{$key}[$elems]->{$key};
+                  } undef %{${$dest_first_hash}{$key}[$elems]};
+                  undef ${$dest_first_hash}{$key}[$elems];
+               }
+            } undef ${$dest_first_hash}{$key};
+            delete ${$dest_first_hash}{$key};
+         } undef %{$dest_first_hash};
+      }
+      ## BUILDING FIRST DEST HASH
+      $dest_first_hash={};$newborn_dest_first_hash_flag=1;
+      foreach my $key (keys %{$destFH->{_dhash}}) {
+         if (ref ${$destFH->{_dhash}}{$key} eq 'ARRAY') {
+            foreach my $elem (@{${$destFH->{_dhash}}{$key}}) {
+               if (ref $elem ne 'HASH') {
+                  push @{${$dest_first_hash}{$key}}, $elem;
+               } else {
+                  my %newelem=();
+                  foreach my $key (keys %{$elem}) {
+                     if (${${$elem}{$key}}[0] ne 'EXCLUDE') {
+                        $newelem{$key}=[@{${$elem}{$key}}];
+                     }
+                  }
+                  push @{${$dest_first_hash}{$key}}, \%newelem;
+               }
+            }
+         } else {
+            ${$dest_first_hash}{$key}=${$destFH->{_dhash}}{$key};
          }
       }
 
@@ -16690,16 +16749,15 @@ print "BE SURE TO ADD NEW CODE TO CHANGE BACK TO ",
                   if (0<$#dhostlabels && !$newborn_dest_first_hash_flag
                         && !$Net::FullAuto::FA_Core::tranback && $activity) {
                      ($output,$stderr)=$baseFH->cmd(
-                        "cp $bcurdir/transfer".
+                        "cp ${bcurdir}transfer".
                         "$Net::FullAuto::FA_Core::tran[3].tar ".
-                        "$bcurdir/transfer".
+                        "${bcurdir}transfer".
                         "$Net::FullAuto::FA_Core::tran[3]_1.tar");
                      &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                         if $stderr;
                      $Net::FullAuto::FA_Core::tranback=2;
                   } $activity=0;
                   my @basekeys=sort keys %{$baseFH->{_bhash}};
-#print "WHAT ARE THE BASEKEYS=@basekeys<==\n";
                   my $f_cnt=0;
                   ($output,$stderr)=$baseFH->cmd("tar --help");
                   if ($stderr) {
@@ -16766,7 +16824,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                         if (exists $Net::FullAuto::FA_Core::file_rename{
                               "$dir$file"}) {
                            my $cmd="cp -Rpv \"$base__dir$dir$file\" "
-                              ."\"$bcurdir/"
+                              ."\"$bcurdir"
                               .$Net::FullAuto::FA_Core::file_rename{
                               "$dir$file"}."\"";
                            $file=$Net::FullAuto::FA_Core::file_rename{
@@ -16786,11 +16844,11 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                               $tmp_dir=$bcurdir;
                               push @dirt, $file;
                            } elsif ($aix_tar_input_variable_flag) {
-                              $aix_tar_input_variable2.="$bcurdir/$file\n";
+                              $aix_tar_input_variable2.="${bcurdir}$file\n";
                               push @dirt, $file;
                               $tmp_dir=$bcurdir;
                            } elsif ($solaris_tar_input_variable_flag) {
-                              $solaris_tar_input_variable2.="$bcurdir/$file\n";
+                              $solaris_tar_input_variable2.="${bcurdir}$file\n";
                               push @dirt, $file;
                               $tmp_dir=$bcurdir;
                            } next
@@ -16916,7 +16974,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                     " AND DIRECTORY=$key AND FILE=$file\n"
                                     if $Net::FullAuto::FA_Core::log &&
                                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                           ($output,$stderr)=$baseFH->cmd($tar_cmd,500);
+                           ($output,$stderr)=$baseFH->cmd(
+                              "${Net::FullAuto::FA_Core::tarpath}$tar_cmd",500);
                            &Net::FullAuto::FA_Core::handle_error(
                               $stderr,'-1') if $stderr &&
                               $stderr!~/\[A(?:\[C)+\[K1/;
@@ -16930,12 +16989,51 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            }
                         }
                      } @files=();
+                     if (!$activity && !$skip_empty_dirs && $key ne '/'
+                           && ${$baseFH->{_bhash}}{$key}[0] eq 'ALL') {
+                        # this block handles empty directories
+                        $activity=1;
+                        unless ($cppath) {
+                           if (-e '/usr/bin/cp') {
+                              $cppath='/usr/bin/';
+                           } elsif (-e '/bin/cp') {
+                              $cppath='/bin/';
+                           } elsif (-e '/usr/local/bin/cp') {
+                              $cppath='/usr/local/bin/';
+                           }
+                        }
+                        ($output,$stderr)=$baseFH->cmd(
+                           "${cppath}cp -Rfp $dir/$key $bcurdir");
+                        &Net::FullAuto::FA_Core::handle_error(
+                           $stderr,'-1') if $stderr;
+                        my $tar_cmd='';
+                        if (!$f_cnt) {
+                           $f_cnt++;
+                           $tar_cmd=
+                              "tar cvf ${bcurdir}transfer".
+                              "$Net::FullAuto::FA_Core::tran[3].tar ";
+                        } else {
+                           $tar_cmd=
+                              "tar rvf ${bcurdir}transfer".
+                              "$Net::FullAuto::FA_Core::tran[3].tar ";
+                        }
+                        $tar_cmd.="-C \"$bcurdir\" \"$key\"";
+                        ($output,$stderr)=$baseFH->cmd(
+                           "${Net::FullAuto::FA_Core::tarpath}$tar_cmd");
+                        &Net::FullAuto::FA_Core::handle_error(
+                           $stderr,'-1') if $stderr &&
+                           $stderr!~/\[A(?:\[C)+\[K1/;
+                        ($output,$stderr)=$baseFH->cmd(
+                           "rm -rf ${bcurdir}$key");
+                        &Net::FullAuto::FA_Core::handle_error(
+                           $stderr,'-1') if $stderr;
+                     }
                   }
                } elsif ($Net::FullAuto::FA_Core::tranback==2 && $activity) {
                   ($output,$stderr)=$baseFH->cmd(
-                     "cp $bcurdir/transfer".
+                     "cp ${bcurdir}transfer".
                      "$Net::FullAuto::FA_Core::tran[3]_1.tar ".
-                     "$bcurdir/transfer$Net::FullAuto::FA_Core::tran[3].tar");
+                     "${bcurdir}transfer$Net::FullAuto::FA_Core::tran[3].tar");
                   &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                      if $stderr;
                   $Net::FullAuto::FA_Core::tranback=1;$activity=0;
@@ -17006,7 +17104,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            if $stderr;
                      }
                      my $tar_cmd=
-                        "tar cvf $bcurdir/transfer".
+                        "tar cvf ${bcurdir}transfer".
                         "$Net::FullAuto::FA_Core::tran[3].tar ";
                      $tar_cmd.="-C \"$base__dir\" -T \"$gnu_tar_input_file1\"";
                      ($output,$stderr)=$baseFH->cmd($tar_cmd,'__display__');
@@ -17038,7 +17136,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            if $stderr;
                      }
                      my $tar_cmd=
-                        "tar rvf $bcurdir/transfer".
+                        "tar rvf ${bcurdir}transfer".
                         "$Net::FullAuto::FA_Core::tran[3].tar ";
                      $tar_cmd.="-C \"$tmp_dir\" -T \"$gnu_tar_input_file2\"";
                      ($output,$stderr)=$baseFH->cmd($tar_cmd);
@@ -17059,7 +17157,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
 print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   if (!$shortcut) {
                      ($output,$stderr)=$baseFH->cmd(
-                        "chmod 777 $bcurdir/transfer".
+                        "chmod 777 ${bcurdir}transfer".
                         "$Net::FullAuto::FA_Core::tran[3].tar");
                      &Net::FullAuto::FA_Core::handle_error($stderr,'-2')
                         if $stderr;
@@ -17596,7 +17694,6 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO TOUCH TIME=$time and FILE=$file\n
          }
       }
    }
-   %base_shortcut_info=();
    if (exists $destFH->{_work_dirs}->{_pre} && $destFH->{_work_dirs}->{_pre}
          && $destFH->{_work_dirs}->{_pre} ne $destFH->{_work_dirs}->{_cwd}
          && $destFH->{_work_dirs}->{_pre} ne $destFH->{_work_dirs}->{_tmp}) {
@@ -17759,7 +17856,7 @@ print "NAKED\n";<STDIN>;
                $dest_dir=$destFH->{_work_dirs}->{_cwd_mswin}.=$de_f;
                $destFH->{_work_dirs}->{_cwd_mswin}.='\\';
             } else {
-               my $die="Destination Directory - $dest_fdr"
+               my $die="Destination Directory (1) - $dest_fdr"
                       ." CANNOT Be Located";
                &Net::FullAuto::FA_Core::handle_error($die);
            }
@@ -17781,7 +17878,7 @@ print "WOOEEE\n";
 print "BLECKKK\n";
             $dest_dir=$test_chr1 . ':\\';
          } else {
-            my $die="Destination Directory - $dest_fdr"
+            my $die="Destination Directory (2) - $dest_fdr"
                    ." CANNOT Be Located";
             &Net::FullAuto::FA_Core::handle_error($die);
          }
@@ -19697,6 +19794,7 @@ sub build_mirror_hashes
                $skip=1;next;
             } my $dchmod='';my $dtime='';my $dyear='';my $dsize='';
             my $dtime1='';my $dtime2='';my $dtime3='';
+            my $y=qr(\d\d\d\d|0);
             if (exists ${$destFH->{_dhash}}{$key}[1]{$file}) {
                print "mirror() DEST_FILE_DATA_STRING=",
                         ${${$destFH->{_dhash}}{$key}[1]{$file}}[1],
@@ -19709,7 +19807,6 @@ sub build_mirror_hashes
                         " and FILE=$file AND DIRECTORY=$key\n"
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               my $y=qr(\d\d\d\d);
                ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]=~
                   /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
                $dtime1=$1||0;$dtime2=$2||0;$dtime3=$3||0;
@@ -19719,12 +19816,18 @@ sub build_mirror_hashes
                $dchmod||='';
             }
             ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]=~
-               /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+(\d\d\d\d)\s+(\d+)\s*(\d*)*\s*$/;
+               /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
+            my $btime1=$1||0;my $btime2=$2||0;
+            my $btime3=$3||0;
+            my $byear=$4||0;my $bsize=$5||0;my $bchmod=$6||0;
+            $btime2="0$btime2" if length $btime2==1;
+            my $btime=$btime1.$btime2.$btime3;
+            $bchmod||='';
             unless ($base_uname) {
                $base_uname=$baseFH->{_uname};
                if ($base_uname eq 'cygwin') {
-                  my $key_dir=($key ne '/')?"$key/":'/';
-                  ($stdout,$stderr)=$baseFH->cmd("stat \"$key$file\"");
+                  my $key_dir=($key ne '/')?"$key/":'';
+                  ($stdout,$stderr)=$baseFH->cmd("stat \"$key_dir$file\"");
                   my $isto=(index $stdout,'Modify: ')+19;
                   $stdout=unpack("x$isto a2",$stdout);
                   my $st=unpack('x6 a2',
@@ -19743,12 +19846,6 @@ sub build_mirror_hashes
                      " and FILE=$file AND DIRECTORY=$key\n"
                      if $Net::FullAuto::FA_Core::log &&
                      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-            my $btime1=$1||0;my $btime2=$2||0;
-            my $btime3=$3||0;
-            my $byear=$4||0;my $bsize=$5||0;my $bchmod=$6||0;
-            $btime2="0$btime2" if length $btime2==1;
-            my $btime=$btime1.$btime2.$btime3;
-            $bchmod||='';
             if ($dest_dir_status eq 'DIR_NOT_ON_DEST') {
                if ($key eq '/') {
                   $deploy_info.="DEPLOY FILE $file - DIR_NOT_ON_DEST\n";
@@ -19869,7 +19966,7 @@ sub build_mirror_hashes
                   unless ($dest_uname) {
                      $dest_uname=$destFH->{_uname};
                      if ($dest_uname eq 'cygwin') {
-                        my $key_dir=($key ne '/')?"$key/":'/';
+                        my $key_dir=($key ne '/')?"$key/":'';
                         ($stdout,$stderr)=$destFH->cmd(
                            "stat \"$key_dir$file\"");
                         my $isto=(index $stdout,'Modify: ')+19;
@@ -20009,7 +20106,7 @@ sub build_mirror_hashes
                   $skip=1;next;
                }
             } else {
-print "HERE4=$key\n";
+#print "HERE4=$key\n";
                ${$baseFH->{_bhash}}{$key}[1]{$file}[0]='NOT_ON_DEST';
                ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
                if ($key eq '/') {
@@ -20078,7 +20175,6 @@ print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timek
       if (unpack('a10',$@) eq 'The System') {
          return '','','','',$@;
       } else {
-print "XXXXXXXXXXXXXX\n";
          my $die="The System $hostlabel Returned"
                 ."\n              the Following Unrecoverable Error "
                 ."Condition\n              at ".(caller(0))[1]." "
@@ -20904,7 +21000,7 @@ print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                                  'DEPLOY_SOMEFILES_OF_CURDIR') {
                               if ($file_count==++$cur_dir_excluded) {
 #if ($key eq '/') {
-print "HERE WE ARE and KEY=$key\n";<STDIN>;
+#print "HERE WE ARE and KEY=$key\n";<STDIN>;
 #}
                                  ${$cmd_handle->{"_${bd}hash"}}{$key}[2]
                                     ='DEPLOY_NOFILES_OF_CURDIR'

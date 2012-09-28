@@ -20,7 +20,7 @@ provides:
     version: 0
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.999923
+    version: 0.999924
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
     version: 0
@@ -59,7 +59,6 @@ requires:
   Capture::Tiny: 0
   Crypt::CBC: 0
   Crypt::DES: 0
-  Data::Dump::Streamer: 0
   Data::Password::Check: 0
   Digest::MD5: 0
   Digest::SHA: 0
@@ -77,7 +76,6 @@ requires:
   Sort::Versions: 0
   String::Random: 0
   Task::Weaken: 0
-  Term::Menus: 2.16
   Term::RawInput: 0
   Term::ReadKey: 0
   Test::Deep: 0
@@ -87,4 +85,4 @@ requires:
   perl: 5.006
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
-version: 0.999923
+version: 0.999924
