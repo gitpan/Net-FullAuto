@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999924';
+$main::VERSION='0.999925';
 my $fa_banner=<<END;
 
 
@@ -3396,7 +3396,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.16;
+#requires        'Term::Menus'               => 2.17;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

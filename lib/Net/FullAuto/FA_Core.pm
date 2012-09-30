@@ -118,7 +118,8 @@ BEGIN {
       my $srvout=`/bin/cygrunsrv -Q cygserver 2>&1`;
       if (-1<index $srvout,'Stopped') {
          print "\nFatal Error: The Cygwin cygserver service is NOT",
-               " running:\n\n${srvout}To start type:  'net use cygserver'\n\n";
+               " running:\n\n${srvout}To start type:  ".
+               "'net start cygserver'\n\n";
          exit;
       } elsif (-1<index $srvout,'The specified service does not exist') {
          print "\nFatal Error: The Cygwin cygserver service is NOT",
@@ -129,7 +130,7 @@ BEGIN {
       $srvout=`/bin/cygrunsrv -Q sshd 2>&1`;
       if (-1<index $srvout,'Stopped') {
          print "\nFatal Error: The Cygwin sshd (Secure Shell) service is NOT",
-               " running:\n\n${srvout}To start type:  'net use sshd'\n\n";
+               " running:\n\n${srvout}To start type:  'net start sshd'\n\n";
          exit;
       } elsif (-1<index $srvout,'The specified service does not exist') {
          print "\nFatal Error: The Cygwin sshd (Secure Shell) service is NOT",
@@ -172,7 +173,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   %email_addresses @plans
                   %email_defaults $service
                   persist_get persist_put
-                  $berkeleydb);
+                  $berkeleydb %admin_menus);
 
 {
    no warnings;
@@ -482,6 +483,22 @@ BEGIN {
          $termwidth='';$termheight='';
       }
    }
+
+   our %admin_menus=(
+
+      'define_module_from_viewdef' => '',
+      'defaultsettings'            => '',
+      'viewdefaults'               => '',
+      'cacode'                     => '',
+      'cahost'                     => '',
+      'caconf'                     => '',
+      'camaps'                     => '',
+      'camenu'                     => '',
+      'cacomm'                     => '',
+      'admin'                      => '',
+      'plan'                       => '',
+
+   );
 
 }
 
@@ -1145,7 +1162,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          ($stdout,$stderr)=
             $localhost->cmd("rm -f transfer${tran[3]}*tar")
             if $stderr;
-         &handle_error("CLEANUP ERROR -> $stderr",'-1') if $stderr;
+         &handle_error("CLEANUP ERROR -> $stderr",'-1') if $stderr
+            && $stderr!~/^\[A(\[C)+\[K1\s*/s;
          if ($^O eq 'cygwin') {
             if ($clean_master==2) {
                $localhost->cmd('cd ..');
@@ -1938,401 +1956,394 @@ my $fulldays=sub { package fulldays;
                    }
                    return @n };
 
+my $track='';
+my %new_plan_options_menu=(
+
+      Label  => 'new_plan_options_menu',
+      Item_1 => {
+
+          Text => 'Set Optional Maximum Number of Invocations',
+
+      },
+      Item_2 => {
+
+          Text => 'Set Optional Expiration Date and/or Time',
+
+      },
+      Item_3 => {
+
+          Text => 'Set Authorized Users of this Plan',
+
+      },
+
+);
+
+my %select_min_for_invocation=(
+
+   Label => 'select_min_for_invocation',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $showmins,
+      Result => sub{ return 'select_min_for_invocation '.
+                ']P[{one_time_launch} '.
+                ']S[ | ]P[{choose_from_fullauto_plans}' }
+
+   },
+   Banner=> "   (The current time is ".&get_now_am_pm." ".
+                POSIX::strftime("%Z", localtime()).")\n\n".
+            "   Please Select a Job Invocation Time :",
+
+);
+
+my %select_hour_for_invocation=(
+
+   Label => 'select_hour_for_invocation',
+   Item_1=> {
+
+      Text => "Show Minutes",
+      Result => \%select_min_for_invocation,
+
+   },
+   Item_2=> {
+
+      Text => "]C[",
+      Convey => $hours,
+      Result => sub{ return 'select_hour_for_invocation '.
+                ']P[{one_time_launch} '.
+                ']S[ | ]P[{choose_from_fullauto_plans}' }
+
+   },
+   Banner=> "   (The current time is ".&get_now_am_pm." ".
+                POSIX::strftime("%Z", localtime()).")\n\n".
+            "   Please Select a Job Invocation Time for\n\n   ]P[ :",
+
+);
+
+my %select_cal_mins_for_plan=(
+
+   Label => 'select_cal_mins_for_plan',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $showmins,
+      Result => sub{ return 'select_cal_mins_for_plan '.
+                ']|[ ]P[{select_cal_months_for_plan} '.
+                ']|[ ]P[{select_cal_days_for_plan} '.
+                ']|[ ]P[{select_cal_hours_for_plan} ]|[ '.
+                ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
+
+   },
+   Banner=> "   (The current time is ".&get_now_am_pm." ".
+                POSIX::strftime("%Z", localtime()).")\n\n".
+            "   Please Select a Job Invocation Time :", 
+);
+
+my %select_cal_hours_for_plan=(
+
+   Label => 'select_cal_hours_for_plan',
+   Item_1=> {
+
+      Text => "Show Minutes",
+      Negate => [ 'Item_2' ],
+      Result => \%select_cal_mins_for_plan,
+
+   },
+   Item_2=> {
+
+      Text => "]C[",
+      Convey => $hours,
+      Negate => [ 'Item_1' ],
+      Result => sub{ return 'select_cal_hours_for_plan '.
+               ']|[ ]P[{select_cal_months_for_plan} '.
+               ']|[ ]P[{select_cal_days_for_plan} ]|[ '.
+               ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
+
+   },
+   Banner=> "   (The current time is ".&get_now_am_pm." ".
+                POSIX::strftime("%Z", localtime()).")\n\n".
+            "   Please Select a Job Invocation Time :",
+
+);
+
+my %select_cal_days_for_plan=(
+
+   Label => 'select_cal_days_for_plan',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $fulldays,
+      Result => \%select_cal_hours_for_plan,
+
+   },
+   Banner=> '   Please Select a Job cal_days Invocation Time :'
+);
+
+my %select_cal_months_for_plan=(
+
+   Label => 'select_cal_months_for_plan',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $cal_months,
+      Result => \%select_cal_days_for_plan,
+   },
+   Banner=> '   Please Select a Month :'
+);
+
+my %calendar_years_for_plan=(
+
+   Label => 'calendar_years_for_plan',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => [$curyear..$endyear],
+      Result => \%select_cal_months_for_plan,
+
+   },
+   Banner=> '   Please Select a Year :'
+);
+
+my %select_recurrent_minutes=(
+
+   Label => 'select_recurrent_minutes',
+   Item_1=> {
+
+      Text => "Minute  ]C[",
+      Convey => [0..59],
+      Result => sub{ return '][[ select_recurrent_minutes '.
+                ']|[ ]P[{select_recurrent_months} '.
+                ']|[ ]P[{select_recurrent_weekdays} '.
+                ']|[ ]P[{select_recurrent_days} '.
+                ']|[ ]P[{select_recurrent_hours} ]|[ '.
+                ']S[ ]|[ ]P[{choose_from_fullauto_plans} ]][' }
+
+   },
+   Select=> "Many",
+   Banner=> "   (The current time is ".&get_now_am_pm." ".
+                POSIX::strftime("%Z", localtime()).")\n\n".
+            "   Select the --MINUTE(S)-- of the Day Where\n\n   ".
+                "Plan -  ]P[{choose_from_fullauto_plans}".
+                "\n\n   Will be Run :",
+
+);
+
+my %select_recurrent_hours=(
+
+      Label  => 'select_recurrent_hours',
+      #Item_1=> {
+
+      #   Text => "Show Minutes",
+      #   Negate => [ 'Item_2' ],
+      #   Result => \%select_recurrent_minutes,
+
+      #},
+      Item_1 => {
+
+           Text => 'Hour  ]C[',
+           Convey => $hours,
+           Result => \%select_recurrent_minutes,
+           #Negate => [ 'Item_1' ],
+           #Result => sub{ return 'select_recurrent_hours '.
+           #          ']|[ ]P[{select_recurrent_months} '.
+           #          ']|[ ]P[{select_recurrent_days} ]|[ '.
+           #          ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
+
+      },
+      Select => 'Many',
+      Banner => "   Select the --HOUR(S)-- of the Day Where\n\n   ".
+                "Plan -  ]P[{choose_from_fullauto_plans}".
+                "\n\n   Will be Run :",
+
+);
+
+my %select_recurrent_days=(
+
+      Label  => 'select_recurrent_days',
+      Item_1 => {
+
+           Text => 'Day  ]C[',
+           Convey => [1..31],
+           Result => \%select_recurrent_hours,
+
+      },
+      Select => 'Many',
+      Banner => "   Select the --DAY(S)-- of the Month Where\n\n   ".
+                "Plan -  ]P[{choose_from_fullauto_plans}".
+                "\n\n   Will be Run :",
+
+);
+
+my %select_recurrent_weekdays=(
+
+      Label  => 'select_recurrent_weekdays',
+      Item_1 => {
+
+           Text => ']C[',
+           Convey => \@weekdays,
+           Result => \%select_recurrent_days,
+
+      },
+      Select => 'Many',
+      Banner => "   Select the --WEEKDAY(S)-- Where\n\n   ".
+                "Plan -  ]P[{choose_from_fullauto_plans}".
+                "\n\n   Will be Run :",
+
+);
+
+my %select_recurrent_months=(
+
+      Label  => 'select_recurrent_months',
+      Item_1 => {
+
+           Text => ']C[',
+           Convey => \@month,
+           Result => \%select_recurrent_weekdays,
+
+      },
+      Select => 'Many',
+      Banner => "   Select the --MONTH(S)-- where\n\n   ".
+                "Plan -  ]P[{choose_from_fullauto_plans}".
+                "\n\n   Will be Run :",
+
+);
+
+my %one_time_launch=(
+
+      Label  => 'one_time_launch',
+      Item_1 => {
+
+           Text => 'FULL CALENDAR',
+           Result => \%calendar_years_for_plan,
+
+      },
+      Item_2 => {
+
+           Text => "]C[", 
+           Convey => sub { return 'Today - '.&get_today() },
+           Result => \%select_hour_for_invocation,
+
+      },
+      Item_3 => {
+
+           Text => "]C[",
+           Convey => sub { return 'Tomorrow - '.&get_tomorrow() },
+           Result => \%select_hour_for_invocation,
+
+      },
+      Banner => "   Select Invocation Time for\n\n   ".
+                "Plan -  ]P[{choose_from_fullauto_plans}",
+
+);
+
+my %select_type_of_scheduled_plan=(
+
+      Label  => 'select_type_of_scheduled_plan',
+      Item_1 => {
+ 
+           Text => 'This Plan will Launch Recurrently',
+           Result => \%select_recurrent_months,
+
+      },
+      Item_2 => {
+
+           Text => 'This Plan will Launch One Time Only',
+           Result => \%one_time_launch,
+
+      },
+      Banner => "   Select Type of Scheduled Job for\n\n   Plan -  ]P["
+
+);
+
+my %choose_from_fullauto_plans=(
+
+      Label  => 'choose_from_fullauto_plans',
+      Item_1 => {
+
+           Text => "]C[",
+           Convey => sub { return @{&Net::FullAuto::FA_Core::getplans()} },
+           Result => \%select_type_of_scheduled_plan,
+
+      },
+      Banner => "   Select a Plan to Schedule:",
+  
+);
+ 
+my %setup_new_sched_job_menu=(
+
+      Label  => 'setup_new_sched_job_menu',
+      Item_1 => {
+
+           Text => 'Choose a FullAuto Plan to Schedule',
+           Result => \%choose_from_fullauto_plans,
+
+      },
+      Item_2 => {
+
+           Text => 'Choose a FullAuto Custom Code Block to Schedule',
+
+      },
+      Item_3 => {
+
+           Text => 'Set up a Non-FullAuto Task to Schedule',
+
+      },
+      Banner => '   Select a Task to Perform',
+
+);
+
+my %plan_menu=(
+
+      Label  => 'plan_menu',
+      Item_1 => {
+
+          Text => 'Accept Defaults and Create New Plan',
+          #Result => sub { return '' },
+
+      },
+      Item_2 => {
+
+          Text => 'Set Options for New Plan',
+          Result => \%new_plan_options_menu,
+
+      },
+      Item_3 => {
+
+          Text => 'Set Up a New Scheduled Job',
+          Result => \%setup_new_sched_job_menu,
+
+      },
+      Item_4 => {
+
+          Text => 'Work with Existing Plans',
+
+      },
+      Item_5 => {
+
+          Text => 'Work with Existing Scheduled Jobs',
+
+      },
+
+      Banner => "                 FullAuto Job Planning Menu\n\n".
+                "    \"Always plan ahead. It wasn\'t raining when Noah\n".
+                "     built the ark.\" -  Richard C. Cushing\n\n".
+                "    Plan:  Indicated by a Plan Number, A FullAuto \"Plan\"\n".
+                "           is a Complete Job Definition composed of recorded\n".
+                "           User interaction Menu choices and Input. FullAuto\n".
+                "           \"Plans\" allow otherwise manual/interactive processes\n".
+                "           to be run unattended when FullAuto is started with\n".
+                "           the --cron or --unattended or --fullauto options.\n\n".
+                "    Job:   A FullAuto \"Scheduled Job\" is a fully unattended\n".
+                "           invocation of a pre-created \"Plan\". Not all Plans\n".
+                "           are \"Scheduled Jobs\", but all \"Scheduled Jobs\" are\n".
+                "           directed by a \"Plan\". FullAuto uses external cron\n".
+                "           for it's scheduling engine.",
+
+);
+
 sub plan {
 
 print "PLANCALLER=",caller,"\n";
-
-   #my $bcmd="${Net::FullAuto::FA_Core::stringspath}strings ".
-   #         "$Net::FullAuto::FA_Core::berklib ".
-   #         "| ${Net::FullAuto::FA_Core::greppath}grep Release";
-   #my $bver=`$bcmd`;
-   #$bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
-
-   my $track='';
-   my %new_plan_options_menu=(
-
-         Label  => 'new_plan_options_menu',
-         Item_1 => {
-
-             Text => 'Set Optional Maximum Number of Invocations',
- 
-         },
-         Item_2 => {
-
-             Text => 'Set Optional Expiration Date and/or Time',
-
-         },
-         Item_3 => {
-
-             Text => 'Set Authorized Users of this Plan',
-
-         },
-
-   );
-
-   my %select_min_for_invocation=(
-
-      Label => 'select_min_for_invocation',
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => $showmins,
-         Result => sub{ return 'select_min_for_invocation '.
-                   ']P[{one_time_launch} '.
-                   ']S[ | ]P[{choose_from_fullauto_plans}' }
-
-      },
-      Banner=> "   (The current time is ".&get_now_am_pm." ".
-                   POSIX::strftime("%Z", localtime()).")\n\n".
-               "   Please Select a Job Invocation Time :",
-
-   );
-
-   my %select_hour_for_invocation=(
-
-      Label => 'select_hour_for_invocation',
-      Item_1=> {
-
-         Text => "Show Minutes",
-         Result => \%select_min_for_invocation,
-
-      },
-      Item_2=> {
-
-         Text => "]C[",
-         Convey => $hours,
-         Result => sub{ return 'select_hour_for_invocation '.
-                   ']P[{one_time_launch} '.
-                   ']S[ | ]P[{choose_from_fullauto_plans}' }
-
-      },
-      Banner=> "   (The current time is ".&get_now_am_pm." ".
-                   POSIX::strftime("%Z", localtime()).")\n\n".
-               "   Please Select a Job Invocation Time for\n\n   ]P[ :",
-
-   );
-
-   my %select_cal_mins_for_plan=(
-
-      Label => 'select_cal_mins_for_plan',
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => $showmins,
-         Result => sub{ return 'select_cal_mins_for_plan '.
-                   ']|[ ]P[{select_cal_months_for_plan} '.
-                   ']|[ ]P[{select_cal_days_for_plan} '.
-                   ']|[ ]P[{select_cal_hours_for_plan} ]|[ '.
-                   ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
-
-      },
-      Banner=> "   (The current time is ".&get_now_am_pm." ".
-                   POSIX::strftime("%Z", localtime()).")\n\n".
-               "   Please Select a Job Invocation Time :", 
-   );
-
-   my %select_cal_hours_for_plan=(
-
-      Label => 'select_cal_hours_for_plan',
-      Item_1=> {
-
-         Text => "Show Minutes",
-         Negate => [ 'Item_2' ],
-         Result => \%select_cal_mins_for_plan,
-
-      },
-      Item_2=> {
-
-         Text => "]C[",
-         Convey => $hours,
-         Negate => [ 'Item_1' ],
-         Result => sub{ return 'select_cal_hours_for_plan '.
-                   ']|[ ]P[{select_cal_months_for_plan} '.
-                   ']|[ ]P[{select_cal_days_for_plan} ]|[ '.
-                   ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
-
-      },
-      Banner=> "   (The current time is ".&get_now_am_pm." ".
-                   POSIX::strftime("%Z", localtime()).")\n\n".
-               "   Please Select a Job Invocation Time :",
-
-   );
-
-   my %select_cal_days_for_plan=(
-
-      Label => 'select_cal_days_for_plan',
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => $fulldays,
-         Result => \%select_cal_hours_for_plan,
-
-      },
-      Banner=> '   Please Select a Job cal_days Invocation Time :'
-   );
-
-   my %select_cal_months_for_plan=(
-
-      Label => 'select_cal_months_for_plan',
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => $cal_months,
-         Result => \%select_cal_days_for_plan,
-      },
-      Banner=> '   Please Select a Month :'
-   );
-
-   my %calendar_years_for_plan=(
-
-      Label => 'calendar_years_for_plan',
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => [$curyear..$endyear],
-         Result => \%select_cal_months_for_plan,
-
-      },
-      Banner=> '   Please Select a Year :'
-   );
-
-   my %select_recurrent_minutes=(
-
-      Label => 'select_recurrent_minutes',
-      Item_1=> {
-
-         Text => "Minute  ]C[",
-         #Convey => $showmins,
-         Convey => [0..59],
-         Result => sub{ return '][[ select_recurrent_minutes '.
-                   ']|[ ]P[{select_recurrent_months} '.
-                   ']|[ ]P[{select_recurrent_weekdays} '.
-                   ']|[ ]P[{select_recurrent_days} '.
-                   ']|[ ]P[{select_recurrent_hours} ]|[ '.
-                   ']S[ ]|[ ]P[{choose_from_fullauto_plans} ]][' }
-
-      },
-      Select=> "Many",
-      Banner=> "   (The current time is ".&get_now_am_pm." ".
-                   POSIX::strftime("%Z", localtime()).")\n\n".
-               "   Select the --MINUTE(S)-- of the Day Where\n\n   ".
-                   "Plan -  ]P[{choose_from_fullauto_plans}".
-                   "\n\n   Will be Run :",
-
-   );
-
-   my %select_recurrent_hours=(
-
-         Label  => 'select_recurrent_hours',
-         #Item_1=> {
-
-         #   Text => "Show Minutes",
-         #   Negate => [ 'Item_2' ],
-         #   Result => \%select_recurrent_minutes,
-
-         #},
-         Item_1 => {
-
-              Text => 'Hour  ]C[',
-              Convey => $hours,
-              Result => \%select_recurrent_minutes,
-              #Negate => [ 'Item_1' ],
-              #Result => sub{ return 'select_recurrent_hours '.
-              #          ']|[ ]P[{select_recurrent_months} '.
-              #          ']|[ ]P[{select_recurrent_days} ]|[ '.
-              #          ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
-
-         },
-         Select => 'Many',
-         Banner => "   Select the --HOUR(S)-- of the Day Where\n\n   ".
-                   "Plan -  ]P[{choose_from_fullauto_plans}".
-                   "\n\n   Will be Run :",
-
-   );
-
-   my %select_recurrent_days=(
-
-         Label  => 'select_recurrent_days',
-         Item_1 => {
-
-              Text => 'Day  ]C[',
-              Convey => [1..31],
-              Result => \%select_recurrent_hours,
-
-         },
-         Select => 'Many',
-         Banner => "   Select the --DAY(S)-- of the Month Where\n\n   ".
-                   "Plan -  ]P[{choose_from_fullauto_plans}".
-                   "\n\n   Will be Run :",
-
-   );
-
-   my %select_recurrent_weekdays=(
-
-         Label  => 'select_recurrent_weekdays',
-         Item_1 => {
-
-              Text => ']C[',
-              Convey => \@weekdays,
-              Result => \%select_recurrent_days,
-
-         },
-         Select => 'Many',
-         Banner => "   Select the --WEEKDAY(S)-- Where\n\n   ".
-                   "Plan -  ]P[{choose_from_fullauto_plans}".
-                   "\n\n   Will be Run :",
-
-   );
-
-   my %select_recurrent_months=(
-
-         Label  => 'select_recurrent_months',
-         Item_1 => {
-
-              Text => ']C[',
-              Convey => \@month,
-              Result => \%select_recurrent_weekdays,
-
-         },
-         Select => 'Many',
-         Banner => "   Select the --MONTH(S)-- where\n\n   ".
-                   "Plan -  ]P[{choose_from_fullauto_plans}".
-                   "\n\n   Will be Run :",
-
-   );
-
-   my %one_time_launch=(
-
-         Label  => 'one_time_launch',
-         Item_1 => {
-
-              Text => 'FULL CALENDAR',
-              Result => \%calendar_years_for_plan,
-
-         },
-         Item_2 => {
-
-              Text => "]C[", 
-              Convey => sub { return 'Today - '.&get_today() },
-              Result => \%select_hour_for_invocation,
-
-         },
-         Item_3 => {
-
-              Text => "]C[",
-              Convey => sub { return 'Tomorrow - '.&get_tomorrow() },
-              Result => \%select_hour_for_invocation,
-
-         },
-         Banner => "   Select Invocation Time for\n\n   ".
-                   "Plan -  ]P[{choose_from_fullauto_plans}",
-
-   );
-
-   my %select_type_of_scheduled_plan=(
-
-         Label  => 'select_type_of_scheduled_plan',
-         Item_1 => {
- 
-              Text => 'This Plan will Launch Recurrently',
-              Result => \%select_recurrent_months,
-
-         },
-         Item_2 => {
-
-              Text => 'This Plan will Launch One Time Only',
-              Result => \%one_time_launch,
-
-         },
-         Banner => "   Select Type of Scheduled Job for\n\n   Plan -  ]P["
-
-   );
-
-   my %choose_from_fullauto_plans=(
-
-         Label  => 'choose_from_fullauto_plans',
-         Item_1 => {
-
-              Text => "]C[",
-              Convey => sub { return @{&Net::FullAuto::FA_Core::getplans()} },
-              Result => \%select_type_of_scheduled_plan,
-
-         },
-         Banner => "   Select a Plan to Schedule:",
-  
-   );
- 
-   my %setup_new_sched_job_menu=(
-
-         Label  => 'setup_new_sched_job_menu',
-         Item_1 => {
-
-              Text => 'Choose a FullAuto Plan to Schedule',
-              Result => \%choose_from_fullauto_plans,
-
-         },
-         Item_2 => {
-
-              Text => 'Choose a FullAuto Custom Code Block to Schedule',
-
-         },
-         Item_3 => {
-
-              Text => 'Set up a Non-FullAuto Task to Schedule',
-
-         },
-         Banner => '   Select a Task to Perform',
-
-   );
-
-   my %plan_menu=(
-
-         Label  => 'plan_menu',
-         Item_1 => {
-
-             Text => 'Accept Defaults and Create New Plan',
-             #Result => sub { return '' },
-
-         },
-         Item_2 => {
-
-             Text => 'Set Options for New Plan',
-             Result => \%new_plan_options_menu,
-
-         },
-         Item_3 => {
-
-             Text => 'Set Up a New Scheduled Job',
-             Result => \%setup_new_sched_job_menu,
-
-         },
-         Item_4 => {
-
-             Text => 'Work with Existing Plans',
-
-         },
-         Item_5 => {
-
-             Text => 'Work with Existing Scheduled Jobs',
-
-         },
-
-         Banner => "                 FullAuto Job Planning Menu\n\n".
-                   "    \"Always plan ahead. It wasn\'t raining when Noah\n".
-                   "     built the ark.\" -  Richard C. Cushing\n\n".
-                   "    Plan:  Indicated by a Plan Number, A FullAuto \"Plan\"\n".
-                   "           is a Complete Job Definition composed of recorded\n".
-                   "           User interaction Menu choices and Input. FullAuto\n".
-                   "           \"Plans\" allow otherwise manual/interactive processes\n".
-                   "           to be run unattended when FullAuto is started with\n".
-                   "           the --cron or --unattended or --fullauto options.\n\n".
-                   "    Job:   A FullAuto \"Scheduled Job\" is a fully unattended\n".
-                   "           invocation of a pre-created \"Plan\". Not all Plans\n".
-                   "           are \"Scheduled Jobs\", but all \"Scheduled Jobs\" are\n".
-                   "           directed by a \"Plan\". FullAuto uses external cron\n".
-                   "           for it's scheduling engine.",
-
-   );
 
    my $output=&Menu(\%plan_menu);
    &cleanup() if $output=~/\]quit\[/i;
@@ -6315,69 +6326,117 @@ sub send_email
 
 }
 
-sub set_fa_modules
-{
-   my $type=$_[0];
-   my $default_modules=$_[1];
-   my $track=$_[2];
-   my $defallt=$default_modules->{"fa_$type"};
-   my @items=();
-   if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
-         "Custom/fa_$type.pm") {
-      push @items, "Custom/fa_$type.pm";
-   }
-   if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
-         "Distro/fa_${type}_demo.pm") {
-      push @items, "Distro/fa_${type}_demo.pm";
-   }
-   if (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
-         "Distro/fa_$type.pm") {
-      push @items, "Distro/fa_$type.pm";
-   }
-   my %uc=(
-      code => 'Code',
-      conf => 'Conf',
-      host => 'Host',
-      maps => 'Maps',
-      menu => 'Menu',
-   );
-   if (-d $Hosts{"__Master_${$}__"}{'FA_Core'}.
-         "Custom/$username/$uc{$type}") {
-      my $path=$Hosts{"__Master_${$}__"}{'FA_Core'}.
-               "Custom/$username/$uc{$type}";
-      opendir(my $dh, $path) ||
-         &handle_error("can't opendir $path: $!");
-      my @useri=();
-      while (my $file=readdir($dh)) {
-         chomp($file);
-         push @useri, "Custom/$username/$uc{$type}/$file"
-            if $file!~/^[.]|README$/   
+$main::get_default_modules=sub {
+
+   if ($Net::FullAuto::cpu) {
+      my $idle=(split ',', $Net::FullAuto::cpu)[3];
+      $idle=~s/^\s*//;
+      $idle=~s/%.*$//;
+      my $cpyou=100-$idle;
+      if ($idle<20) {
+         my $die="FATAL ERROR - CPU Usage is too high\n"
+                ."              to run FullAuto safely.\n"
+                ."   CPU are Starttime ==> ${cpyou}%\n";
+         &handle_error($die);
       }
-      close($dh);
-      unshift @items, @useri;
    }
+   unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm') {
+      my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm';
+      open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
+      print FD "package fa_defs;\n\n",
+         "### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######\n",
+         "#\n",
+         "#    Net::FullAuto - Powerful Network Process Automation Software\n",
+         "#    Copyright (C) 2011  Brian M. Kelly\n",
+         "#\n",
+         "#    This program is free software: you can redistribute it and/or modify\n",
+         "#    it under the terms of the GNU General Public License as published by\n",
+         "#    the Free Software Foundation, either version 3 of the License, or\n",
+         "#    any later version.\n",
+         "#\n",
+         "#    This program is distributed in the hope that it will be useful,\n",
+         "#    but **WITHOUT ANY WARRANTY**; without even the implied warranty of\n",
+         "#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n",
+         "#    GNU General Public License for more details.\n",
+         "#\n",
+         "#    You should have received a copy of the GNU General Public License\n",
+         "#    along with this program.  If not, see <http://www.gnu.org/licenses/>.\n",
+         "#\n",
+         "################################################################\n\n",
+         "use strict;\n",
+         "use warnings;\n\n",
+         "#################################################################\n",
+         "##  Do NOT alter code ABOVE this block.\n",
+         "#################################################################\n",
+         "##  -------------------------------------------------------------\n",
+         "##  ADD SETTINGS HERE:\n",
+         "##  -------------------------------------------------------------\n\n",
+         "our \$FA_Secure = \"",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\";\n\n",
+         "#################################################################\n",
+         "##  Do NOT alter code BELOW this block.\n",
+         "#################################################################\n",
+         "1;";
+      close(FD); 
+   } 
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
+      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
+      'Defaults');
+   }
+   $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
+      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
+      -Flags =>
+      DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+      "cannot open environment for DB: $BerkeleyDB::Error\n",'',
+      $track);
+   $Net::FullAuto::FA_Core::bdb_once = BerkeleyDB::Btree->new(
+      -Filename => ${Net::FullAuto::FA_Core::progname}.
+                   "_defaults.db",
+      -Flags    => DB_CREATE,
+      -Env      => $Net::FullAuto::FA_Core::dbenv_once
+   );
+   unless ($BerkeleyDB::Error=~/Successful/) {
+      $Net::FullAuto::FA_Core::bdb_once =
+            BerkeleyDB::Btree->new(
+         -Filename =>
+            "${Net::FullAuto::FA_Core::progname}_defaults.db",
+         -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+         -Env      => $Net::FullAuto::FA_Core::dbenv_once
+      );
+      unless ($BerkeleyDB::Error=~/Successful/) {
+         die "Cannot Open DB: ".
+             "${Net::FullAuto::FA_Core::progname}_defaults.db".
+             " $BerkeleyDB::Error\n";
+      }
+   }
+   &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n",
+      '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
+   my $default_modules='';
+   my $status=$Net::FullAuto::FA_Core::bdb_once->db_get(
+         $username,$default_modules);
+   $default_modules||='';
+   $default_modules=~s/\$HASH\d*\s*=\s*//s
+      if -1<index $default_modules,'$HASH';
+   $default_modules=eval $default_modules;
+   $default_modules||='';
    undef $Net::FullAuto::FA_Core::bdb_once;
    $Net::FullAuto::FA_Core::dbenv_once->close();
    undef $Net::FullAuto::FA_Core::dbenv_once;
-   my $def=$defallt;
-   substr($def,0,13)='';
-   my %show_default_type=(
-
-       Label  => 'show_default_type',
-       Item_1 => {
-
-          Text    => ']C[',
-          Convey  => \@items,
-          Default => $def,
-
-       },
-       Banner => "   Current FullAuto Default $uc{$type} for $username:\n\n".
-                 "      $def\n\n",
-   );
-   my $selection=Menu(\%show_default_type);
-   if ($selection ne $def && $selection ne ']quit[') {
+   if ((-1<index $status,
+         'DB_NOTFOUND: No matching key/data pair found')
+         || !($default_modules)
+         || !exists $default_modules->{fa_code}
+         || !exists $default_modules->{fa_conf}
+         || !exists $default_modules->{fa_host} 
+         || !exists $default_modules->{fa_maps}
+         || !exists $default_modules->{fa_menu}) {
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets') {
+         File::Path::make_path(
+            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets');
+      }
       $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
-         -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
+         -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets',
          -Flags =>
             DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
@@ -6385,7 +6444,7 @@ sub set_fa_modules
          $track);
       $Net::FullAuto::FA_Core::bdb_once = BerkeleyDB::Btree->new(
          -Filename => ${Net::FullAuto::FA_Core::progname}.
-                      "_defaults.db",
+                      "_sets.db",
          -Flags    => DB_CREATE,
          -Env      => $Net::FullAuto::FA_Core::dbenv_once
       );
@@ -6393,31 +6452,771 @@ sub set_fa_modules
          $Net::FullAuto::FA_Core::bdb_once =
                BerkeleyDB::Btree->new(
             -Filename =>
-               "${Net::FullAuto::FA_Core::progname}_defaults.db",
+               "${Net::FullAuto::FA_Core::progname}_sets.db",
             -Flags    => DB_CREATE|DB_RECOVER_FATAL,
             -Env      => $Net::FullAuto::FA_Core::dbenv_once
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
             die "Cannot Open DB: ".
-                "${Net::FullAuto::FA_Core::progname}_defaults.db".
+                "${Net::FullAuto::FA_Core::progname}_sets.db".
                 " $BerkeleyDB::Error\n";
          }
       }
-      &handle_error(
-         "cannot open Btree for DB: $BerkeleyDB::Error\n",
-         '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
-      $default_modules->{"fa_$type"}='Net/FullAuto/'.$selection;
-      my $defaultmodules=
-         Data::Dump::Streamer::Dump($default_modules)->Out();
-      my $status=$Net::FullAuto::FA_Core::bdb_once->db_put(
-                 $username,$defaultmodules);
+      my $sref={
+
+         fa_demo => {
+
+            Label       => 'fa_demo',
+            Description => 'FullAuto Demo Module Set',
+            fa_code     => 'Net/FullAuto/Distro/fa_code_demo.pm',
+            fa_conf     => 'Net/FullAuto/Distro/fa_conf.pm',
+            fa_host     => 'Net/FullAuto/Distro/fa_host.pm',
+            fa_maps     => 'Net/FullAuto/Distro/fa_maps.pm',
+            fa_menu     => 'Net/FullAuto/Distro/fa_menu_demo.pm',
+
+         },
+      };
+      my $put_sref=
+         Data::Dump::Streamer::Dump($sref)->Out();
+      $status=$Net::FullAuto::FA_Core::bdb_once->db_put(
+              $username,$put_sref);
+      $default_modules={
+         set     => 'none',
+         fa_code => 'Net/FullAuto/Distro/fa_code_demo.pm',
+         fa_conf => 'Net/FullAuto/Distro/fa_conf.pm',
+         fa_host => 'Net/FullAuto/Distro/fa_host.pm',
+         fa_maps => 'Net/FullAuto/Distro/fa_maps.pm',
+         fa_menu => 'Net/FullAuto/Distro/fa_menu_demo.pm',
+      };
       undef $Net::FullAuto::FA_Core::bdb_once;
       $Net::FullAuto::FA_Core::dbenv_once->close();
       undef $Net::FullAuto::FA_Core::dbenv_once;
    }
-   &release_semaphore(9361);
-   &cleanup();
-}
+   return $default_modules;
+};
+
+my $set_default_sub=sub {
+
+   package set_default_sub;
+   my $default_set=shift;
+   no strict "subs";
+   use BerkeleyDB;
+   use File::Path;
+   my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
+   my $progname=substr($0,(rindex $0,'/')+1,-3);
+   require "$loc/fa_defs.pm";
+   unless (-d $fa_defs::FA_Secure.'Sets') {
+      File::Path::make_path($fa_defs::FA_Secure.'Sets');
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $fa_defs::FA_Secure.'Sets',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or die(
+      "cannot open environment for DB: ".
+      $BerkeleyDB::Error."\n",'','');
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${progname}_sets.db",
+      -Flags    => DB_CREATE,
+      -Env      => $dbenv
+   );
+   unless ($BerkeleyDB::Error=~/Successful/) {
+      $bdb = BerkeleyDB::Btree->new(
+         -Filename => "${progname}_sets.db",
+         -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+         -Env      => $dbenv
+      );
+      unless ($BerkeleyDB::Error=~/Successful/) {
+         die "Cannot Open DB: ".
+             "${progname}_sets.db $BerkeleyDB::Error\n";
+      }
+   }
+   my $mysets='';
+   my $status=$bdb->db_get($username,$mysets);
+   $mysets=~s/\$HASH\d*\s*=\s*//s;
+   $mysets=eval $mysets; 
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+   my $desc='';
+   my @sets=();
+   foreach my $key (keys %{$mysets}) {
+      push @sets,"SET Label:   $key\n                ".
+                 "Description: ".$mysets->{$key}{'Description'}; 
+   }
+   return [ sort @sets ];
+};
+
+my $get_modules=sub {
+
+   use File::Path;
+   use File::Copy;
+   my $type=$_[0]||'';
+   unless ($type) {
+      $type=']P[';
+      my $ind=rindex $type,'fa_';
+      $type=substr($type,$ind+3,$ind+7);
+   }
+   my $username=getlogin || getpwuid($<);
+   my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
+   unless (-d "$fadir/Custom/$username/$type") {
+      File::Path::make_path(
+         "$fadir/Custom/$username/$type");
+      copy("$fadir/Custom/fa_".lc($type).".pm",
+         "$fadir/Custom/$username/$type")
+         || do{ die "copy failed: $!" };
+   }
+   opendir(DIR,"$fadir/Custom/$username/$type");
+   my @xfiles = readdir(DIR);
+   my @return=();
+   closedir(DIR);
+   foreach my $entry (@xfiles) {
+      next if $entry eq '.';
+      next if $entry eq '..';
+      next if -d $entry;
+      push @return, $entry;
+   }
+   return @return;
+};
+
+my $custmm=<<FIN;
+    __  __                __  __         _      _
+   |  \\/  |___ _ _ _  _  |  \\/  |___  __| |_  _| |___
+   | |\\/| / -_) ' \\ || | | |\\/| / _ \\/ _` | || | / -_)
+   |_|  |_\\___|_||_\\_,_| |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
+
+my $custpm=<<FIN;
+    __  __                __  __         _      _
+   |  \\/  |__ _ _ __ ___ |  \\/  |___  __| |_  _| |___
+   | |\\/| / _` | '_ (_-< | |\\/| / _ \\/ _` | || | / -_)
+   |_|  |_\\__,_| .__/__/ |_|  |_\\___/\\__,_|\\_,_|_\\___|
+               |_|
+
+FIN
+
+my $custhm=<<FIN;
+    _  _        _     __  __         _      _
+   | || |___ __| |_  |  \\/  |___  __| |_  _| |___
+   | __ / _ (_-<  _| | |\\/| / _ \\/ _` | || | / -_)
+   |_||_\\___/__/\\__| |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
+
+my $custfm=<<FIN;
+    ___           __   __  __         _      _
+   / __|___ _ _  / _| |  \\/  |___  __| |_  _| |___
+  | (__/ _ \\ ' \\|  _| | |\\/| / _ \\/ _` | || | / -_)
+   \\___\\___/_||_|_|   |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
+
+my $custcm=<<FIN;
+    ___         _       __  __         _      _
+   / __|___  __| |___  |  \\/  |___  __| |_  _| |___
+  | (__/ _ \\/ _` / -_) | |\\/| / _ \\/ _` | || | / -_)
+   \\___\\___/\\__,_\\___| |_|  |_\\___/\\__,_|\\_,_|_\\___|
+
+
+FIN
+
+my $fabann=sub {
+
+   my $default_modules=$_[0] || $main::get_default_modules->();
+   my $type=$_[1]||'';
+   unless ($type) {
+      $type=']P[';
+      my $ind=rindex $type,'fa_';
+      $type=substr($type,$ind+3,$ind+7);
+   }
+   my $caps='';
+   if ($type eq 'code') {
+      $caps=$custcm;
+   } elsif ($type eq 'conf') {
+      $caps=$custfm;
+   } elsif ($type eq 'host') {
+      $caps=$custhm;
+   } elsif ($type eq 'maps') {
+      $caps=$custpm;
+   } else {
+      $caps=$custmm;
+   }
+   my $set='';
+   if ($default_modules->{'set'} ne 'none') {
+      $set="   WARNING!: Set \'$default_modules->{'set'}\'".
+           " is currently the Default Set;\n             ".
+           "it will be changed to \'none\' if you proceed.\n".
+           "             Run  \'fa --set\'  to work with ".
+           "FullAuto Sets.\n\n";
+   }
+   return "   CURRENT MODULE DEFAULTS when Default Set".
+          " is \'none\':\n\n   Code  =>  ".
+          $default_modules->{'fa_code'}."\n".
+          "   Conf  =>  ".
+          $default_modules->{'fa_conf'}."\n".
+          "   Host  =>  ".
+          $default_modules->{'fa_host'}."\n".
+          "   Maps  =>  ".
+          $default_modules->{'fa_maps'}."\n".
+          "   Menu  =>  ".
+          $default_modules->{'fa_menu'}."\n\n".
+          "$caps$set   Please select the fa_".$type."[.*].pm ".
+          "module that will become the new\n   ".
+          ucfirst($type)." Module Default (run  \'fa --import\'".
+          "  to add more choices):";
+};
+
+my $fasetdef=sub {
+   package fasetdef;
+   use BerkeleyDB;
+   use File::Path;
+   no strict "subs";
+   my $username=getlogin || getpwuid($<);
+   my $loc=substr($INC{'Net/FullAuto.pm'},
+                  0,-3);
+   my $progname=substr($0,(rindex $0,'/')
+                       +1,-3);
+   require "$loc/fa_defs.pm";
+   unless (-d
+         $fa_defs::FA_Secure.'Defaults') {
+      File::Path::make_path(
+         $fa_defs::FA_Secure.'Defaults');
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $fa_defs::FA_Secure.
+                'Defaults',
+      -Flags =>
+                DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or die(
+      "cannot open environment for DB: ".
+      $BerkeleyDB::Error,"\n",'','');
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => $progname.
+                   "_defaults.db",
+      -Flags    => DB_CREATE,
+      -Env      => $dbenv
+   );
+   my $default_modules='';
+   my $status=$bdb->db_get(
+      $username,$default_modules);
+   $default_modules||='';
+   $default_modules=~s/\$HASH\d*\s*=\s*//s
+      if -1<index $default_modules,'$HASH';
+   $default_modules=eval $default_modules;
+   $default_modules||={};
+   $default_modules->{'set'}='none';
+   if (-1<index ']S[','code') {
+      $default_modules->{'fa_code'}=
+         "Net/FullAuto/Custom/$username/".
+         "Code/]S[";
+      unless (exists $default_modules->{'fa_conf'}) {
+         $default_modules->{'fa_conf'}=
+            'Net/FullAuto/Distro/fa_conf.pm';
+         $default_modules->{'fa_host'}=
+            'Net/FullAuto/Distro/fa_host.pm';
+         $default_modules->{'fa_conf'}=
+            'Net/FullAuto/Distro/fa_maps.pm';
+         $default_modules->{'fa_conf'}=
+            'Net/FullAuto/Distro/fa_menu_demo.pm';
+      }
+   } elsif (-1<index ']S[','conf') {
+       $default_modules->{'fa_conf'}=
+          "Net/FullAuto/Custom/$username/".
+          "Conf/]S[";
+       unless (exists $default_modules->{'fa_host'}) {
+          $default_modules->{'fa_code'}=
+             'Net/FullAuto/Distro/fa_code_demo.pm';
+          $default_modules->{'fa_host'}=
+             'Net/FullAuto/Distro/fa_host.pm';
+          $default_modules->{'fa_maps'}=
+             'Net/FullAuto/Distro/fa_maps.pm';
+          $default_modules->{'fa_menu'}=
+             'Net/FullAuto/Distro/fa_menu_demo.pm';
+       }
+    } elsif (-1<index ']S[','host') {
+       $default_modules->{'fa_host'}=
+          "Net/FullAuto/Custom/$username/".
+          "Host/]S[";
+       unless (exists $default_modules->{'fa_maps'}) {
+          $default_modules->{'fa_code'}=
+             'Net/FullAuto/Distro/fa_code_demo.pm';
+          $default_modules->{'fa_conf'}=
+             'Net/FullAuto/Distro/fa_conf.pm';
+          $default_modules->{'fa_maps'}=
+             'Net/FullAuto/Distro/fa_maps.pm';
+          $default_modules->{'fa_menu'}=
+             'Net/FullAuto/Distro/fa_menu_demo.pm';
+       }
+    } elsif (-1<index ']S[','maps') {
+       $default_modules->{'fa_maps'}=
+          "Net/FullAuto/Custom/$username/".
+          "Maps/]S[";
+       unless (exists $default_modules->{'fa_menu'}) {
+          $default_modules->{'fa_code'}=
+             'Net/FullAuto/Distro/fa_code_demo.pm';
+          $default_modules->{'fa_conf'}=
+             'Net/FullAuto/Distro/fa_conf.pm';
+          $default_modules->{'fa_host'}=
+             'Net/FullAuto/Distro/fa_host.pm';
+          $default_modules->{'fa_menu'}=
+             'Net/FullAuto/Distro/fa_menu_demo.pm';
+       }
+    } else {
+       $default_modules->{'fa_menu'}=
+          "Net/FullAuto/Custom/$username/".
+          "Menu/]S[";
+       unless (exists $default_modules->{'fa_menu'}) {
+          $default_modules->{'fa_code'}=
+             'Net/FullAuto/Distro/fa_code_demo.pm';
+          $default_modules->{'fa_conf'}=
+             'Net/FullAuto/Distro/fa_conf.pm';
+          $default_modules->{'fa_host'}=
+             'Net/FullAuto/Distro/fa_host.pm';
+          $default_modules->{'fa_maps'}=
+             'Net/FullAuto/Distro/fa_maps.pm';
+       }
+    }
+    my $put_dref=
+       Data::Dump::Streamer::Dump(
+       $default_modules)->Out();
+    $status=$bdb->db_put(
+       $username,$put_dref);
+    undef $bdb;
+    $dbenv->close();
+    undef $dbenv;
+    print "\n\n   New Default Modules ".
+          "now:\n\n   Code  =>  ".
+          $default_modules->{'fa_code'}.
+          "\n   Conf  =>  ".
+          $default_modules->{'fa_conf'}.
+          "\n   Host  =>  ".
+          $default_modules->{'fa_host'}.
+          "\n   Maps  =>  ".
+          $default_modules->{'fa_maps'}.
+          "\n   Menu  =>  ".
+          $default_modules->{'fa_menu'}.
+          "\n   Set   =>  \'none\'".
+          "\n\n";
+   return "Finished Default Module";
+};
+
+my $default_sets_banner_sub=sub {
+
+   package default_sets_banner;
+   no strict "subs";
+   use BerkeleyDB;
+   use File::Path;
+   use Data::Dump::Streamer;
+   my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
+   my $progname=substr($0,(rindex $0,'/')+1,-3);
+   require "$loc/fa_defs.pm";
+   unless (-d $fa_defs::FA_Secure.'Sets') {
+      File::Path::make_path($fa_defs::FA_Secure.'Sets');
+   }
+   my $sdbenv = BerkeleyDB::Env->new(
+         -Home  => $fa_defs::FA_Secure.'Sets',
+         -Flags =>
+             DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      ) or die(
+         "cannot open environment for DB: ".
+         $BerkeleyDB::Error,"\n",'','');
+   my $sbdb = BerkeleyDB::Btree->new(
+         -Filename => "${progname}_sets.db",
+         -Flags    => DB_CREATE,
+         -Env      => $sdbenv
+      );
+   unless ($BerkeleyDB::Error=~/Successful/) {
+      $sbdb = BerkeleyDB::Btree->new(
+         -Filename => $progname."_sets.db",
+         -Flags    =>
+            DB_CREATE|DB_RECOVER_FATAL,
+         -Env      => $sdbenv
+      );
+      unless ($BerkeleyDB::Error=~/Successful/) {
+         die "Cannot Open DB: ${progname}_sets.db ".
+             $BerkeleyDB::Error."\n";
+      }
+   }
+   my $mysets='';
+   my $status=$sbdb->db_get($username,$mysets);
+   $mysets=~s/\$HASH\d*\s*=\s*//s;
+   $mysets=eval $mysets;
+   undef $sbdb;
+   $sdbenv->close();
+   undef $sdbenv;
+   my $default_modules=$_[0] || $main::get_default_modules->();
+   my $set=$default_modules->{'set'};
+   my $spc=length $set;
+   $spc=pack("A$spc",'');
+   my $banner.="      ** DEFAULT SET -> $set **\n\n"
+          ."     \'$set\'  --> Code => "
+          .$mysets->{$set}->{'fa_code'}."\n"
+          ."      $spc       Conf => "
+          .$mysets->{$set}->{'fa_conf'}."\n"
+          ."      $spc       Host => "
+          .$mysets->{$set}->{'fa_host'}."\n"
+          ."      $spc       Maps => "
+          .$mysets->{$set}->{'fa_maps'}."\n"
+          ."      $spc       Menu => "
+          .$mysets->{$set}->{'fa_menu'}."\n"
+          ."      ${spc}Description => "
+          .$mysets->{$set}->{'Description'}."\n\n"
+          ."      NOTE: Any action in this Menu"
+          ." will change the Default Set to 'none'.\n"
+          ."            To work with FullAuto Sets, "
+          ."run  \'fa --set\'  instead.\n";
+   return $banner;
+};
+
+my $cacomm_sub=sub {
+
+   my %cacomm=(
+
+      Label => 'cacomm',
+      Item_1 => {
+         Text   => "YES",
+         Result  => sub {
+                           package del_sets;
+                           use BerkeleyDB;
+                           use File::Path;
+                           no strict "subs";
+                           my $username=getlogin || getpwuid($<);
+                           my $loc=substr($INC{'Net/FullAuto.pm'},
+                                          0,-3);
+                           my $progname=substr($0,(rindex $0,'/')
+                                               +1,-3);
+                           require "$loc/fa_defs.pm";
+                           unless (-d
+                                      $fa_defs::FA_Secure.'Defaults') {
+                                   File::Path::make_path(
+                                      $fa_defs::FA_Secure.'Defaults');
+                           }
+                           my $dbenv = BerkeleyDB::Env->new(
+                               -Home  => $fa_defs::FA_Secure.
+                                         'Defaults',
+                               -Flags =>
+                                         DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                           ) or die(
+                               "cannot open environment for DB: ".
+                                       $BerkeleyDB::Error,"\n",'','');
+                               my $bdb = BerkeleyDB::Btree->new(
+                                  -Filename => $progname.
+                                               "_defaults.db",
+                                  -Flags    => DB_CREATE,
+                                  -Env      => $dbenv
+                               );
+                               my $default_modules='';
+                               my $status=$bdb->db_get(
+                                  $username,$default_modules);
+                               $default_modules||='';
+                               $default_modules=~s/\$HASH\d*\s*=\s*//s
+                                  if -1<index $default_modules,'$HASH';
+                               $default_modules=eval $default_modules;
+                               $default_modules||={};
+                               $default_modules->{'set'}='none';
+                               $default_modules->{'fa_code'}=
+                                  "Net/FullAuto/Custom/$username/".
+                                  "Code/]P[{cacode}";
+                               $default_modules->{'fa_conf'}=
+                                  "Net/FullAuto/Custom/$username/".
+                                  "Conf/]P[{caconf}";
+                               $default_modules->{'fa_host'}=
+                                  "Net/FullAuto/Custom/$username/".
+                                  "Host/]P[{cahost}";
+                               $default_modules->{'fa_maps'}=
+                                  "Net/FullAuto/Custom/$username/".
+                                  "Maps/]P[{camaps}";
+                               $default_modules->{'fa_menu'}=
+                                  "Net/FullAuto/Custom/$username/".
+                                  "Menu/]P[{camenu}";
+                               my $put_dref=
+                                  Data::Dump::Streamer::Dump(
+                                  $default_modules)->Out();
+                               $status=$bdb->db_put(
+                                  $username,$put_dref);
+                               undef $bdb;
+                               $dbenv->close();
+                               undef $dbenv;
+                               print "\n\n   New Default Modules ".
+                                     "now:\n\n   Code  =>  ".
+                                     "Net/FullAuto/Custom/$username/".
+                                     "]P[{cacode}\n   Conf  =>  ".
+                                     "Net/FullAuto/Custom/$username/".
+                                     "]P[{caconf}\n   Host  =>  ".
+                                     "Net/FullAuto/Custom/$username/".
+                                     "]P[{cahost}\n   Maps  =>  ".
+                                     "Net/FullAuto/Custom/$username/".
+                                     "]P[{camaps}\n   Menu  =>  ".
+                                     "Net/FullAuto/Custom/$username/".
+                                     "]P[{camenu}\n   Set   =>  ".
+                                     "\'none\'\n\n";
+                               return "Finished Defining Defaults";
+                        }
+      },
+      Item_2 => {
+         Text => "No  ( FullAuto [fa --defaults] will EXIT )",
+      },
+      Banner => sub {
+my $custnd=<<FIN;
+    _  _              ___       __           _ _      
+   | \\| |_____ __ __ |   \\ ___ / _|__ _ _  _| | |_ ___
+   | .` / -_) V  V / | |) / -_)  _/ _` | || | |  _(_-< o
+   |_|\\_\\___|\\_/\\_/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/ o
+
+
+FIN
+         my $username=getlogin || getpwuid($<);
+         return "$custnd    Code  =>  ".
+                "Net/FullAuto/Custom/$username/".
+                "]P[{cacode}\n".
+                "    Conf  =>  Net/FullAuto/Custom/$username/".
+                "]P[{caconf}\n".
+                "    Host  =>  Net/FullAuto/Custom/$username/".
+                "]P[{cahost}\n".
+                "    Maps  =>  Net/FullAuto/Custom/$username/".
+                "]P[{camaps}\n".
+                "    Menu  =>  Net/FullAuto/Custom/$username/".
+                "]P[{camenu}\n    Set   =>  none\n\n   ".
+                "Would you like to COMMIT the New Defaults?:";
+      },
+   );
+   return \%cacomm;
+};
+
+my $camenu_sub=sub {
+
+   my %camenu=(
+
+      Label => 'camenu',
+      Item_1 => {
+         Text   => ']C[',
+         Convey => $get_modules->('Menu'),
+         Result => $cacomm_sub->(),
+      },
+      Banner => sub {
+         my $username=getlogin || getpwuid($<);
+         return "   Code  =>  Net/FullAuto/Custom/$username/".
+         "]P[{cacode}\n".
+         "   Conf  =>  Net/FullAuto/Custom/$username/".
+         "]P[{caconf}\n".
+         "   Host  =>  Net/FullAuto/Custom/$username/".
+         "]P[{cahost}\n".
+         "   Maps  =>  Net/FullAuto/Custom/$username/".
+         "]P[{camaps}\n\n".
+         "$custmm   Please select a fa_menu[.*].pm ".
+         "module:";
+      },
+
+   );
+   return \%camenu;
+};
+
+my $camaps_sub=sub {
+
+   my %camaps=(
+
+      Label => 'camaps',
+      Item_1 => {
+         Text   => ']C[',
+         Convey => $get_modules->('Maps'),
+         Result => $camenu_sub->(),
+      },
+      Banner => sub {
+         my $username=getlogin || getpwuid($<);
+         return "   Code  =>  Net/FullAuto/Custom/$username/".
+                "]P[{cacode}\n".
+                "   Conf  =>  Net/FullAuto/Custom/$username/".
+                "]P[{caconf}\n".
+                "   Host  =>  Net/FullAuto/Custom/$username/".
+                "]P[{cahost}\n\n".
+                "$custpm   Please select a fa_maps[.*].pm ".
+                "module:";
+      },
+
+   );
+   return \%camaps;
+
+};
+
+my $cahost_sub=sub {
+
+   my %cahost=(
+
+      Label => 'cahost',
+      Item_1 => {
+         Text   => ']C[',
+         Convey => $get_modules->('Host'),
+         Result => $camaps_sub->(),
+      },
+      Banner => sub {
+         my $username=getlogin || getpwuid($<);
+         return "   Code  =>  Net/FullAuto/Custom/$username/".
+                "]P[{cacode}\n".
+                "   Conf  =>  Net/FullAuto/Custom/$username/".
+                "]P[{caconf}\n\n".
+                "$custhm   Please select a fa_host[.*].pm ".
+                "module:";
+      },
+
+   );
+   return \%cahost;
+};
+
+my $caconf_sub=sub {
+
+   my %caconf=(
+
+      Label => 'caconf',
+      Item_1 => {
+         Text   => ']C[',
+         Convey => $get_modules->('Conf'),
+         Result => $cahost_sub->(),
+      },
+      Banner => sub {
+         my $username=getlogin || getpwuid($<);
+         return "   Code  =>  Net/FullAuto/Custom/$username/".
+                "]P[{cacode}\n\n".
+                "$custfm   Please select a fa_conf[.*].pm ".
+                "module:";
+      },
+
+   );
+   return \%caconf;
+};
+
+my $cacode_sub=sub {
+
+   my %cacode=(
+
+      Label => 'cacode',
+      Item_1 => {
+         Text   => ']C[',
+         Convey => $get_modules->('Code'),
+         Result => $caconf_sub->(),
+      },
+      Banner => "$custcm   Please select a fa_code[.*].pm ".
+                "module:",
+   );
+   return \%cacode;
+};
+
+my $define_module_from_viewdef_sub=sub {
+
+   my %define_module_from_viewdef=(
+      Label      => 'define_module_from_viewdef',
+      Item_1 => {
+         Text   => ']C[',
+         Convey => $get_modules,
+         Result => $fasetdef,
+      },
+      Banner => $fabann,
+   );
+   return \%define_module_from_viewdef;
+};
+
+my $vdbanner=sub {
+
+   my $dfbann=<<FIN;
+
+    ___     _ _   _       _          ___       __           _ _
+   | __|  _| | | /_\\ _  _| |_ ___   |   \\ ___ / _|__ _ _  _| | |_ ___
+   | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
+   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
+
+
+FIN
+   my $default_modules=$_[0] || $main::get_default_modules->();
+   my $banner=$dfbann;
+   if (!exists $default_modules->{'set'} ||
+       $default_modules->{'set'} eq 'none') {
+       $banner.="      ** NO DEFAULT SET DEFINED **\n\n";
+   }
+   $banner.="    Code  =>  "
+          .$default_modules->{'fa_code'}
+          ."\n    Conf  =>  "
+          .$default_modules->{'fa_conf'}
+          ."\n    Host  =>  "
+          .$default_modules->{'fa_host'}
+          ."\n    Maps  =>  "
+          .$default_modules->{'fa_maps'}
+          ."\n    Menu  =>  "
+          .$default_modules->{'fa_menu'}
+          ."\n";
+   return $banner;
+};
+
+my $viewdefaults_sub=sub {
+
+   my %viewdefaults=(
+
+      Label => 'viewdefaults',
+      Item_1 => {
+         Text   => "Change ALL Defaults",
+         Result => $cacode_sub->($_[0]),
+      },
+      Item_2 => {
+         Text   => "Change Default ]C[",
+         Convey => ['fa_code','fa_conf','fa_host',
+                    'fa_maps','fa_menu'],
+         Result => $define_module_from_viewdef_sub->($_[0]),
+      },
+      Banner => $vdbanner->($_[0]),
+  );
+  return \%viewdefaults;
+};
+
+my $defaultsettings_sub=sub {
+
+   my %defaultsettings=(
+
+      Label  => 'defaultsettings',
+      Item_1 => {
+         Text   =>
+         "View Defaults when Default Set equals \'none\'",
+         Result => $viewdefaults_sub->($_[0]),
+      },
+      Item_2 => {
+         Text   => "Change ALL Defaults",
+         Result => $cacode_sub->($_[0]),
+      },
+      Item_3 => {
+         Text   => "Change Default ]C[",
+         Convey => ['fa_code','fa_conf','fa_host',
+                    'fa_maps','fa_menu'],
+      },
+      Banner => $default_sets_banner_sub->($_[0]),
+
+   );
+   return \%defaultsettings;
+};
+
+my $defaults_sub=sub {
+
+   my $default_modules=$_[0] || $main::get_default_modules->(); 
+   if (!exists $default_modules->{'set'} ||
+         $default_modules->{'set'} eq 'none') {
+      my $selection=Menu($viewdefaults_sub->($default_modules));
+      if (($selection eq ']quit[') ||
+            (-1<index $selection,'will EXIT') ||
+            ($selection eq 'Finished Defining Defaults') ||
+            ($selection eq 'Finished Default Module')) {
+         &release_semaphore(9361);
+         &cleanup();
+      }
+   } else {
+      my $selection=Menu($defaultsettings_sub->($default_modules));
+      if (($selection eq ']quit[') ||
+            (-1<index $selection,'will EXIT') ||
+            ($selection eq 'Finished Defining Defaults')) {
+         &release_semaphore(9361);
+         &cleanup();
+      }
+   }
+};
+
 
 sub fa_login
 {
@@ -6972,478 +7771,18 @@ sub fa_login
                               || (defined $famaps && !$famaps)
                               || (defined $famenu && !$famenu)
                               || (defined $set && !$set)) {
-            if ($Net::FullAuto::cpu) {
-               my $idle=(split ',', $Net::FullAuto::cpu)[3];
-               $idle=~s/^\s*//;
-               $idle=~s/%.*$//;
-               my $cpyou=100-$idle;
-               if ($idle<20) {
-                  my $die="FATAL ERROR - CPU Usage is too high\n"
-                         ."              to run FullAuto safely.\n"
-                         ."   CPU are Starttime ==> ${cpyou}%\n";
-                  &handle_error($die);
-               }
-            }
-            unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm') {
-               my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm';
-               open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
-               print FD "package fa_defs;\n\n",
-                  "### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######\n",
-                  "#\n",
-                  "#    Net::FullAuto - Powerful Network Process Automation Software\n",
-                  "#    Copyright (C) 2011  Brian M. Kelly\n",
-                  "#\n",
-                  "#    This program is free software: you can redistribute it and/or modify\n",
-                  "#    it under the terms of the GNU General Public License as published by\n",
-                  "#    the Free Software Foundation, either version 3 of the License, or\n",
-                  "#    any later version.\n",
-                  "#\n",
-                  "#    This program is distributed in the hope that it will be useful,\n",
-                  "#    but **WITHOUT ANY WARRANTY**; without even the implied warranty of\n",
-                  "#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n",
-                  "#    GNU General Public License for more details.\n",
-                  "#\n",
-                  "#    You should have received a copy of the GNU General Public License\n",
-                  "#    along with this program.  If not, see <http://www.gnu.org/licenses/>.\n",
-                  "#\n",
-                  "################################################################\n\n",
-                  "use strict;\n",
-                  "use warnings;\n\n",
-                  "#################################################################\n",
-                  "##  Do NOT alter code ABOVE this block.\n",
-                  "#################################################################\n",
-                  "##  -------------------------------------------------------------\n",
-                  "##  ADD SETTINGS HERE:\n",
-                  "##  -------------------------------------------------------------\n\n",
-                  "our \$FA_Secure = \"",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\";\n\n",
-                  "#################################################################\n",
-                  "##  Do NOT alter code BELOW this block.\n",
-                  "#################################################################\n",
-                  "1;";
-               close(FD); 
-            } 
-            unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
-               File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-               'Defaults');
-            }
-            $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
-               -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
-               -Flags =>
-                  DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-            ) or &handle_error(
-               "cannot open environment for DB: $BerkeleyDB::Error\n",'',
-               $track);
-            $Net::FullAuto::FA_Core::bdb_once = BerkeleyDB::Btree->new(
-               -Filename => ${Net::FullAuto::FA_Core::progname}.
-                            "_defaults.db",
-               -Flags    => DB_CREATE,
-               -Env      => $Net::FullAuto::FA_Core::dbenv_once
-            );
-            unless ($BerkeleyDB::Error=~/Successful/) {
-               $Net::FullAuto::FA_Core::bdb_once =
-                     BerkeleyDB::Btree->new(
-                  -Filename =>
-                     "${Net::FullAuto::FA_Core::progname}_defaults.db",
-                  -Flags    => DB_CREATE|DB_RECOVER_FATAL,
-                  -Env      => $Net::FullAuto::FA_Core::dbenv_once
-               );
-               unless ($BerkeleyDB::Error=~/Successful/) {
-                  die "Cannot Open DB: ".
-                      "${Net::FullAuto::FA_Core::progname}_defaults.db".
-                      " $BerkeleyDB::Error\n";
-               }
-            }
-            &handle_error(
-               "cannot open Btree for DB: $BerkeleyDB::Error\n",
-               '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
-            my $default_modules='';
-            my $status=$Net::FullAuto::FA_Core::bdb_once->db_get(
-                  $username,$default_modules);
-            $default_modules||='';
-            $default_modules=~s/\$HASH\d*\s*=\s*//s
-               if -1<index $default_modules,'$HASH';
-            $default_modules=eval $default_modules;
-            $default_modules||='';
-            undef $Net::FullAuto::FA_Core::bdb_once;
-            $Net::FullAuto::FA_Core::dbenv_once->close();
-            undef $Net::FullAuto::FA_Core::dbenv_once;
-            if ((-1<index $status,
-                  'DB_NOTFOUND: No matching key/data pair found')
-                  || !($default_modules)
-                  || !exists $default_modules->{fa_code}
-                  || !exists $default_modules->{fa_conf}
-                  || !exists $default_modules->{fa_host} 
-                  || !exists $default_modules->{fa_maps}
-                  || !exists $default_modules->{fa_menu}) {
-               unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets') {
-                  File::Path::make_path(
-                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets');
-               }
-               $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
-                  -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets',
-                  -Flags =>
-                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-               ) or &handle_error(
-                  "cannot open environment for DB: $BerkeleyDB::Error\n",'',
-                  $track);
-               $Net::FullAuto::FA_Core::bdb_once = BerkeleyDB::Btree->new(
-                  -Filename => ${Net::FullAuto::FA_Core::progname}.
-                               "_sets.db",
-                  -Flags    => DB_CREATE,
-                  -Env      => $Net::FullAuto::FA_Core::dbenv_once
-               );
-               unless ($BerkeleyDB::Error=~/Successful/) {
-                  $Net::FullAuto::FA_Core::bdb_once =
-                        BerkeleyDB::Btree->new(
-                     -Filename =>
-                        "${Net::FullAuto::FA_Core::progname}_sets.db",
-                     -Flags    => DB_CREATE|DB_RECOVER_FATAL,
-                     -Env      => $Net::FullAuto::FA_Core::dbenv_once
-                  );
-                  unless ($BerkeleyDB::Error=~/Successful/) {
-                     die "Cannot Open DB: ".
-                         "${Net::FullAuto::FA_Core::progname}_sets.db".
-                         " $BerkeleyDB::Error\n";
-                  }
-               }
-               my $sref={
-
-                  fa_demo => {
-
-                     Label       => 'fa_demo',
-                     Description => 'FullAuto Demo Module Set',
-                     fa_code     => 'Net/FullAuto/Distro/fa_code_demo.pm',
-                     fa_conf     => 'Net/FullAuto/Distro/fa_conf.pm',
-                     fa_host     => 'Net/FullAuto/Distro/fa_host.pm',
-                     fa_maps     => 'Net/FullAuto/Distro/fa_maps.pm',
-                     fa_menu     => 'Net/FullAuto/Distro/fa_menu_demo.pm',
-
-                  },
-
-               };
-               my $put_sref=
-                  Data::Dump::Streamer::Dump($sref)->Out();
-               $status=$Net::FullAuto::FA_Core::bdb_once->db_put(
-                       $username,$put_sref);
-               $default_modules={
-                  set     => 'none',
-                  fa_code => 'Net/FullAuto/Distro/fa_code_demo.pm',
-                  fa_conf => 'Net/FullAuto/Distro/fa_conf.pm',
-                  fa_host => 'Net/FullAuto/Distro/fa_host.pm',
-                  fa_maps => 'Net/FullAuto/Distro/fa_maps.pm',
-                  fa_menu => 'Net/FullAuto/Distro/fa_menu_demo.pm',
-               };
-               undef $Net::FullAuto::FA_Core::bdb_once;
-               $Net::FullAuto::FA_Core::dbenv_once->close();
-               undef $Net::FullAuto::FA_Core::dbenv_once;
-            }
-            my $set_default_sub=sub { 
-               package set_default_sub;
-               my $default_set=shift;
-               no strict "subs";
-               use BerkeleyDB;
-               use File::Path;
-               my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
-               my $progname=substr($0,(rindex $0,'/')+1,-3);
-               require "$loc/fa_defs.pm";
-               unless (-d $fa_defs::FA_Secure.'Sets') {
-                  File::Path::make_path($fa_defs::FA_Secure.'Sets');
-               }
-               my $dbenv = BerkeleyDB::Env->new(
-                  -Home  => $fa_defs::FA_Secure.'Sets',
-                  -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-               ) or die(
-                  "cannot open environment for DB: ".
-                  $BerkeleyDB::Error."\n",'','');
-               my $bdb = BerkeleyDB::Btree->new(
-                  -Filename => "${progname}_sets.db",
-                  -Flags    => DB_CREATE,
-                  -Env      => $dbenv
-               );
-               unless ($BerkeleyDB::Error=~/Successful/) {
-                  $bdb = BerkeleyDB::Btree->new(
-                     -Filename => "${progname}_sets.db",
-                     -Flags    => DB_CREATE|DB_RECOVER_FATAL,
-                     -Env      => $dbenv
-                  );
-                  unless ($BerkeleyDB::Error=~/Successful/) {
-                     die "Cannot Open DB: ".
-                         "${progname}_sets.db $BerkeleyDB::Error\n";
-                  }
-               }
-               my $mysets='';
-               my $status=$bdb->db_get($username,$mysets);
-               $mysets=~s/\$HASH\d*\s*=\s*//s;
-               $mysets=eval $mysets; 
-               undef $bdb;
-               $dbenv->close();
-               undef $dbenv;
-               my $desc='';
-               my @sets=();
-               foreach my $key (keys %{$mysets}) {
-                  push @sets,"SET Label:   $key\n                ".
-                             "Description: ".$mysets->{$key}{'Description'}; 
-               }
-               return [ sort @sets ];
-
-            };
-            my $get_modules=sub {
-               use File::Path;
-               use File::Copy;
-               my $type=$_[0]||'';
-               unless ($type) {
-                  $type=']P[';
-                  my $ind=rindex $type,'fa_';
-                  $type=substr($type,$ind+3,$ind+7);
-               }
-               my $username=getlogin || getpwuid($<);
-               my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
-               unless (-d "$fadir/Custom/$username/$type") {
-                  File::Path::make_path(
-                     "$fadir/Custom/$username/$type");
-                  copy("$fadir/Custom/fa_".lc($type).".pm",
-                     "$fadir/Custom/$username/$type")
-                     || do{ die "copy failed: $!" };
-               }
-               opendir(DIR,"$fadir/Custom/$username/$type");
-               my @xfiles = readdir(DIR);
-               my @return=();
-               closedir(DIR);
-               foreach my $entry (@xfiles) {
-                  next if $entry eq '.';
-                  next if $entry eq '..';
-                  next if -d $entry;
-                  push @return, $entry;
-               }
-               return @return;
-            };
-my $custmm=<<FIN;
-    __  __                __  __         _      _
-   |  \\/  |___ _ _ _  _  |  \\/  |___  __| |_  _| |___
-   | |\\/| / -_) ' \\ || | | |\\/| / _ \\/ _` | || | / -_)
-   |_|  |_\\___|_||_\\_,_| |_|  |_\\___/\\__,_|\\_,_|_\\___|
-
-
-FIN
-my $custpm=<<FIN;
-    __  __                __  __         _      _
-   |  \\/  |__ _ _ __ ___ |  \\/  |___  __| |_  _| |___
-   | |\\/| / _` | '_ (_-< | |\\/| / _ \\/ _` | || | / -_)
-   |_|  |_\\__,_| .__/__/ |_|  |_\\___/\\__,_|\\_,_|_\\___|
-               |_|
-
-FIN
-my $custhm=<<FIN;
-    _  _        _     __  __         _      _
-   | || |___ __| |_  |  \\/  |___  __| |_  _| |___
-   | __ / _ (_-<  _| | |\\/| / _ \\/ _` | || | / -_)
-   |_||_\\___/__/\\__| |_|  |_\\___/\\__,_|\\_,_|_\\___|
-
-
-FIN
-my $custfm=<<FIN;
-    ___           __   __  __         _      _
-   / __|___ _ _  / _| |  \\/  |___  __| |_  _| |___
-  | (__/ _ \\ ' \\|  _| | |\\/| / _ \\/ _` | || | / -_)
-   \\___\\___/_||_|_|   |_|  |_\\___/\\__,_|\\_,_|_\\___|
-
-
-FIN
-my $custcm=<<FIN;
-    ___         _       __  __         _      _
-   / __|___  __| |___  |  \\/  |___  __| |_  _| |___
-  | (__/ _ \\/ _` / -_) | |\\/| / _ \\/ _` | || | / -_)
-   \\___\\___/\\__,_\\___| |_|  |_\\___/\\__,_|\\_,_|_\\___|
-
-
-FIN
-            my $fabann=sub {
-               my $type=$_[0]||'';
-               unless ($type) {
-                  $type=']P[';
-                  my $ind=rindex $type,'fa_';
-                  $type=substr($type,$ind+3,$ind+7);
-               }
-               my $caps='';
-               if ($type eq 'code') {
-                  $caps=$custcm;
-               } elsif ($type eq 'conf') {
-                  $caps=$custfm;
-               } elsif ($type eq 'host') {
-                  $caps=$custhm;
-               } elsif ($type eq 'maps') {
-                  $caps=$custpm;
-               } else {
-                  $caps=$custmm;
-               }
-               my $set='';
-               if ($default_modules->{'set'} ne 'none') {
-                  $set="   WARNING!: Set \'$default_modules->{'set'}\'".
-                       " is currently the Default Set;\n             ".
-                       "it will be changed to \'none\' if you proceed.\n".
-                       "             Run  \'fa --set\'  to work with ".
-                       "FullAuto Sets.\n\n";
-               }
-               return "   CURRENT MODULE DEFAULTS when Default Set".
-                      " is \'none\':\n\n   Code  =>  ".
-                      $default_modules->{'fa_code'}."\n".
-                      "   Conf  =>  ".
-                      $default_modules->{'fa_conf'}."\n".
-                      "   Host  =>  ".
-                      $default_modules->{'fa_host'}."\n".
-                      "   Maps  =>  ".
-                      $default_modules->{'fa_maps'}."\n".
-                      "   Menu  =>  ".
-                      $default_modules->{'fa_menu'}."\n\n".
-                      "$caps$set   Please select the fa_".$type."[.*].pm ".
-                      "module that will become the new\n   ".
-                      ucfirst($type)." Module Default (run  \'fa --import\'".
-                      "  to add more choices):";
-            };
-            my $fasetdef=sub {
-               package fasetdef;
-               use BerkeleyDB;
-               use File::Path;
-               no strict "subs";
-               my $username=getlogin || getpwuid($<);
-               my $loc=substr($INC{'Net/FullAuto.pm'},
-                          0,-3);
-               my $progname=substr($0,(rindex $0,'/')
-                          +1,-3);
-               require "$loc/fa_defs.pm";
-               unless (-d
-                     $fa_defs::FA_Secure.'Defaults') {
-                  File::Path::make_path(
-                     $fa_defs::FA_Secure.'Defaults');
-               }
-               my $dbenv = BerkeleyDB::Env->new(
-                  -Home  => $fa_defs::FA_Secure.
-                            'Defaults',
-                  -Flags =>
-                            DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-               ) or die(
-                  "cannot open environment for DB: ".
-                  $BerkeleyDB::Error,"\n",'','');
-               my $bdb = BerkeleyDB::Btree->new(
-                  -Filename => $progname.
-                               "_defaults.db",
-                  -Flags    => DB_CREATE,
-                  -Env      => $dbenv
-               );
-               my $default_modules='';
-               my $status=$bdb->db_get(
-                     $username,$default_modules);
-               $default_modules||='';
-               $default_modules=~s/\$HASH\d*\s*=\s*//s
-                  if -1<index $default_modules,'$HASH';
-               $default_modules=eval $default_modules;
-               $default_modules||={};
-               $default_modules->{'set'}='none';
-               if (-1<index ']S[','code') {
-                  $default_modules->{'fa_code'}=
-                     "Net/FullAuto/Custom/$username/".
-                     "Code/]S[";
-                  unless (exists $default_modules->{'fa_conf'}) {
-                     $default_modules->{'fa_conf'}=
-                        'Net/FullAuto/Distro/fa_conf.pm';
-                     $default_modules->{'fa_host'}=
-                        'Net/FullAuto/Distro/fa_host.pm';
-                     $default_modules->{'fa_conf'}=
-                        'Net/FullAuto/Distro/fa_maps.pm';
-                     $default_modules->{'fa_conf'}=
-                        'Net/FullAuto/Distro/fa_menu_demo.pm';
-                  }
-               } elsif (-1<index ']S[','conf') {
-                  $default_modules->{'fa_conf'}=
-                     "Net/FullAuto/Custom/$username/".
-                     "Conf/]S[";
-                  unless (exists $default_modules->{'fa_host'}) {
-                     $default_modules->{'fa_code'}=
-                        'Net/FullAuto/Distro/fa_code_demo.pm';
-                     $default_modules->{'fa_host'}=
-                        'Net/FullAuto/Distro/fa_host.pm';
-                     $default_modules->{'fa_maps'}=
-                        'Net/FullAuto/Distro/fa_maps.pm';
-                     $default_modules->{'fa_menu'}=
-                        'Net/FullAuto/Distro/fa_menu_demo.pm';
-                  }
-               } elsif (-1<index ']S[','host') {
-                  $default_modules->{'fa_host'}=
-                     "Net/FullAuto/Custom/$username/".
-                     "Host/]S[";
-                  unless (exists $default_modules->{'fa_maps'}) {
-                     $default_modules->{'fa_code'}=
-                        'Net/FullAuto/Distro/fa_code_demo.pm';
-                     $default_modules->{'fa_conf'}=
-                        'Net/FullAuto/Distro/fa_conf.pm';
-                     $default_modules->{'fa_maps'}=
-                        'Net/FullAuto/Distro/fa_maps.pm';
-                     $default_modules->{'fa_menu'}=
-                        'Net/FullAuto/Distro/fa_menu_demo.pm';
-                  }
-               } elsif (-1<index ']S[','maps') {
-                  $default_modules->{'fa_maps'}=
-                     "Net/FullAuto/Custom/$username/".
-                     "Maps/]S[";
-                  unless (exists $default_modules->{'fa_menu'}) {
-                     $default_modules->{'fa_code'}=
-                        'Net/FullAuto/Distro/fa_code_demo.pm';
-                     $default_modules->{'fa_conf'}=
-                        'Net/FullAuto/Distro/fa_conf.pm';
-                     $default_modules->{'fa_host'}=
-                        'Net/FullAuto/Distro/fa_host.pm';
-                     $default_modules->{'fa_menu'}=
-                        'Net/FullAuto/Distro/fa_menu_demo.pm';
-                  }
-               } else {
-                  $default_modules->{'fa_menu'}=
-                     "Net/FullAuto/Custom/$username/".
-                     "Menu/]S[";
-                  unless (exists $default_modules->{'fa_menu'}) {
-                     $default_modules->{'fa_code'}=
-                        'Net/FullAuto/Distro/fa_code_demo.pm';
-                     $default_modules->{'fa_conf'}=
-                        'Net/FullAuto/Distro/fa_conf.pm';
-                     $default_modules->{'fa_host'}=
-                        'Net/FullAuto/Distro/fa_host.pm';
-                     $default_modules->{'fa_maps'}=
-                        'Net/FullAuto/Distro/fa_maps.pm';
-                  }
-               }
-               my $put_dref=
-                  Data::Dump::Streamer::Dump(
-                  $default_modules)->Out();
-               $status=$bdb->db_put(
-                  $username,$put_dref);
-               undef $bdb;
-               $dbenv->close();
-               undef $dbenv;
-               print "\n\n   New Default Modules ".
-                     "now:\n\n   Code  =>  ".
-                     $default_modules->{'fa_code'}.
-                     "\n   Conf  =>  ".
-                     $default_modules->{'fa_conf'}.
-                     "\n   Host  =>  ".
-                     $default_modules->{'fa_host'}.
-                     "\n   Maps  =>  ".
-                     $default_modules->{'fa_maps'}.
-                     "\n   Menu  =>  ".
-                     $default_modules->{'fa_menu'}.
-                     "\n   Set   =>  \'none\'".
-                     "\n\n";
-               return "Finished Default Module";
-            };
+            my $default_modules=$main::get_default_modules->();
             if (defined $facode) {
-               my %define_module_fa_menu=(
-                  Label      => 'define_module_fa_menu',
+               my %define_module_fa_code=(
+                  Label      => 'define_module_fa_code',
                   Item_1 => {
                      Text   => ']C[',
                      Convey => $get_modules->('Code'),
                      Result => $fasetdef,
                   },
-                  Banner => $fabann->('Code'),
+                  Banner => $fabann->($default_modules,'Code'),
                );
-               my $selection=Menu(\%define_module_fa_menu);
+               my $selection=Menu(\%define_module_fa_code);
                &release_semaphore(9361);
                &cleanup();
             } elsif (defined $faconf) {
@@ -7454,7 +7793,7 @@ FIN
                      Convey => $get_modules->('Conf'),
                      Result => $fasetdef,
                   },
-                  Banner => $fabann->('Conf'),
+                  Banner => $fabann->($default_modules,'Conf'),
                );
                my $selection=Menu(\%define_module_fa_conf);
                &release_semaphore(9361);
@@ -7467,7 +7806,7 @@ FIN
                      Convey => $get_modules->('Host'),
                      Result => $fasetdef,
                   },
-                  Banner => $fabann->('Host'),
+                  Banner => $fabann->($default_modules,'Host'),
                );
                my $selection=Menu(\%define_module_fa_host);
                &release_semaphore(9361);
@@ -7480,7 +7819,7 @@ FIN
                      Convey => $get_modules->('Maps'),
                      Result => $fasetdef,
                   },
-                  Banner => $fabann->('Maps'),
+                  Banner => $fabann->($default_modules,'Maps'),
                );
                my $selection=Menu(\%define_module_fa_maps);
                &release_semaphore(9361);
@@ -7493,7 +7832,7 @@ FIN
                      Convey => $get_modules->('Menu'),
                      Result => $fasetdef,
                   },
-                  Banner => $fabann->('Menu'),
+                  Banner => $fabann->($default_modules,'Menu'),
                );
                my $selection=Menu(\%define_module_fa_menu);
                &release_semaphore(9361);
@@ -7501,13 +7840,6 @@ FIN
             } elsif (defined $set) {
                $default_modules->{'set'}||='none';
                my $current_default_set=$default_modules->{'set'};
-               my $dm_banner="   Please Select a Module Set Operation:\n\n";
-               if ($current_default_set eq 'none') {
-                  $dm_banner.="      ** NO DEFAULT SET DEFINED **\n";
-               } else {
-                  $dm_banner.=
-                     "      ** DEFAULT SET -> $current_default_set **\n";
-               }
                my %define_modules_commit=(
                   Label      => 'define_modules_commit',
                   Item_1 => {
@@ -8016,7 +8348,8 @@ FIN
                      ($selection eq 'Finished Deleting Set')) {
                   &release_semaphore(9361);
                   &cleanup();
-               } 
+               }
+               my $status='';
                unless (((-1<index $selection,'none') || 
                       (-1<index $selection,'Clear') ||
                       (-1<index $selection,'Keep'))) {
@@ -8139,251 +8472,10 @@ FIN
                   }
                   return @return;
                };
-               my %cacomm=(
-
-                     Label => 'cacomm',
-                     Item_1 => {
-                        Text   => "YES",
-                        Result  => sub {
-                                         package del_sets;
-                                         use BerkeleyDB;
-                                         use File::Path;
-                                         no strict "subs";
-                                         my $username=getlogin || getpwuid($<);
-                                         my $loc=substr($INC{'Net/FullAuto.pm'},
-                                                    0,-3);
-                                         my $progname=substr($0,(rindex $0,'/')
-                                                    +1,-3);
-                                         require "$loc/fa_defs.pm";
-                                         unless (-d
-                                               $fa_defs::FA_Secure.'Defaults') {
-                                            File::Path::make_path(
-                                               $fa_defs::FA_Secure.'Defaults');
-                                         }
-                                         my $dbenv = BerkeleyDB::Env->new(
-                                           -Home  => $fa_defs::FA_Secure.
-                                                     'Defaults',
-                                           -Flags =>
-                                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-                                         ) or die(
-                                         "cannot open environment for DB: ".
-                                            $BerkeleyDB::Error,"\n",'','');
-                                         my $bdb = BerkeleyDB::Btree->new(
-                                           -Filename => $progname.
-                                                        "_defaults.db",
-                                           -Flags    => DB_CREATE,
-                                           -Env      => $dbenv
-                                         );
-                                         my $default_modules='';
-                                         my $status=$bdb->db_get(
-                                               $username,$default_modules);
-                                         $default_modules||='';
-                                         $default_modules=~s/\$HASH\d*\s*=\s*//s
-                                           if -1<index $default_modules,'$HASH';
-                                         $default_modules=eval $default_modules;
-                                         $default_modules||={};
-                                         $default_modules->{'set'}='none';
-                                         $default_modules->{'fa_code'}=
-                                            "Net/FullAuto/Custom/$username/".
-                                            "Code/]P[{cacode}";
-                                         $default_modules->{'fa_conf'}=
-                                            "Net/FullAuto/Custom/$username/".
-                                            "Conf/]P[{caconf}";
-                                         $default_modules->{'fa_host'}=
-                                            "Net/FullAuto/Custom/$username/".
-                                            "Host/]P[{cahost}";
-                                         $default_modules->{'fa_maps'}=
-                                            "Net/FullAuto/Custom/$username/".
-                                            "Maps/]P[{camaps}";
-                                         $default_modules->{'fa_menu'}=
-                                            "Net/FullAuto/Custom/$username/".
-                                            "Menu/]P[{camenu}";
-                                         my $put_dref=
-                                            Data::Dump::Streamer::Dump(
-                                            $default_modules)->Out();
-                                         $status=$bdb->db_put(
-                                            $username,$put_dref);
-                                         undef $bdb;
-                                         $dbenv->close();
-                                         undef $dbenv;
-                                         print "\n\n   New Default Modules ".
-                                               "now:\n\n   Code  =>  ".
-                                               "Net/FullAuto/Custom/$username/".
-                                               "]P[{cacode}\n   Conf  =>  ".
-                                               "Net/FullAuto/Custom/$username/".
-                                               "]P[{caconf}\n   Host  =>  ".
-                                               "Net/FullAuto/Custom/$username/".
-                                               "]P[{cahost}\n   Maps  =>  ".
-                                               "Net/FullAuto/Custom/$username/".
-                                               "]P[{camaps}\n   Menu  =>  ".
-                                               "Net/FullAuto/Custom/$username/".
-                                               "]P[{camenu}\n   Set   =>  ".
-                                               "\'none\'\n\n";
-                                         return "Finished Defining Defaults";
-                                       },
-
-                     },
-                     Item_2 => {
-                        Text => "No  ( FullAuto [fa --defaults] will EXIT )",
-                     },
-                     Banner => sub {
-my $custnd=<<FIN;
-    _  _              ___       __           _ _      
-   | \\| |_____ __ __ |   \\ ___ / _|__ _ _  _| | |_ ___
-   | .` / -_) V  V / | |) / -_)  _/ _` | || | |  _(_-< o
-   |_|\\_\\___|\\_/\\_/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/ o
-
-
-FIN
-                        my $username=getlogin || getpwuid($<);
-                        return "$custnd    Code  =>  ".
-                               "Net/FullAuto/Custom/$username/".
-                               "]P[{cacode}\n".
-                               "    Conf  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{caconf}\n".
-                               "    Host  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{cahost}\n".
-                               "    Maps  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{camaps}\n".
-                               "    Menu  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{camenu}\n    Set   =>  none\n\n   ".
-                               "Would you like to COMMIT the New Defaults?:";
-                     },
-               );
-               my %camenu=(
-
-                     Label => 'camenu',
-                     Item_1 => {
-                        Text   => ']C[',
-                        Convey => $get_modules->('Menu'),
-                        Result => \%cacomm,
-                     },
-                     Banner => sub {
-                        my $username=getlogin || getpwuid($<);
-                        return "   Code  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{cacode}\n".
-                               "   Conf  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{caconf}\n".
-                               "   Host  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{cahost}\n".
-                               "   Maps  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{camaps}\n\n".
-                               "$custmm   Please select a fa_menu[.*].pm ".
-                               "module:";
-                     },
-
-               );
-               my %camaps=(
-
-                     Label => 'camaps',
-                     Item_1 => {
-                        Text   => ']C[',
-                        Convey => $get_modules->('Maps'),
-                        Result => \%camenu,
-
-                     },
-                     Banner => sub {
-                        my $username=getlogin || getpwuid($<);
-                        return "   Code  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{cacode}\n".
-                               "   Conf  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{caconf}\n".
-                               "   Host  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{cahost}\n\n".
-                               "$custpm   Please select a fa_maps[.*].pm ".
-                               "module:";
-                     },
-
-               );
-               my %cahost=(
-
-                     Label => 'cahost',
-                     Item_1 => {
-                        Text   => ']C[',
-                        Convey => $get_modules->('Host'),
-                        Result => \%camaps,
-
-                     },
-                     Banner => sub {
-                        my $username=getlogin || getpwuid($<);
-                        return "   Code  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{cacode}\n".
-                               "   Conf  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{caconf}\n\n".
-                               "$custhm   Please select a fa_host[.*].pm ".
-                               "module:";
-                     },
-
-               );
-               my %caconf=(
-
-                     Label => 'caconf',
-                     Item_1 => {
-                        Text   => ']C[',
-                        Convey => $get_modules->('Conf'),
-                        Result => \%cahost,
-                     },
-                     Banner => sub {
-                        my $username=getlogin || getpwuid($<);
-                        return "   Code  =>  Net/FullAuto/Custom/$username/".
-                               "]P[{cacode}\n\n".
-                               "$custfm   Please select a fa_conf[.*].pm ".
-                               "module:";
-                     },
-
-               );
-               my %cacode=(
-
-                     Label => 'cacode',
-                     Item_1 => {
-                        Text   => ']C[',
-                        Convey => $get_modules->('Code'),
-                        Result => \%caconf,
-
-                     },
-                     Banner => "$custcm   Please select a fa_code[.*].pm ".
-                               "module:",
-
-               );
-               my %define_module_from_viewdef=(
-                  Label      => 'define_module_from_viewdef',
-                  Item_1 => {
-                     Text   => ']C[',
-                     Convey => $get_modules,
-                     Result => $fasetdef,
-                  },
-                  Banner => $fabann,
-               );
-               my $vdbanner=$banner."    Code  =>  "
-                           .$default_modules->{'fa_code'}
-                           ."\n    Conf  =>  "
-                           .$default_modules->{'fa_conf'}
-                           ."\n    Host  =>  "
-                           .$default_modules->{'fa_host'}
-                           ."\n    Maps  =>  "
-                           .$default_modules->{'fa_maps'}
-                           ."\n    Menu  =>  "
-                           .$default_modules->{'fa_menu'}
-                           ."\n";
-               my %viewdefaults=(
-
-                     Label => 'viewdefaults',
-                     Item_1 => {
-                        Text   => "Change ALL Defaults",
-                        Result => \%cacode,
-                     },
-                     Item_2 => {
-                        Text   => "Change Default ]C[",
-                        Convey => ['fa_code','fa_conf','fa_host',
-                                   'fa_maps','fa_menu'],
-                        Result => \%define_module_from_viewdef,
-                     },
-                     Banner => $vdbanner,
-
-               );
+               $main::defaults_sub->($default_modules);
                if (!exists $default_modules->{'set'} ||
                      $default_modules->{'set'} eq 'none') {
-                  my $selection=Menu(\%viewdefaults);
+                  my $selection=Menu($viewdefaults_sub->());
                   if (($selection eq ']quit[') ||
                         (-1<index $selection,'will EXIT') ||
                         ($selection eq 'Finished Defining Defaults') ||
@@ -8393,78 +8485,7 @@ FIN
                   }
                   #print "SELECTION=$selection\n";sleep 5;
                } else {
-                  my $sdbenv = BerkeleyDB::Env->new(
-                       -Home  => $fa_defs::FA_Secure.'Sets',
-                       -Flags =>
-                           DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-                  ) or die(
-                      "cannot open environment for DB: ".
-                      $BerkeleyDB::Error,"\n",'','');
-                  my $sbdb = BerkeleyDB::Btree->new(
-                       -Filename => "${progname}_sets.db",
-                       -Flags    => DB_CREATE,
-                       -Env      => $sdbenv
-                  );
-                  unless ($BerkeleyDB::Error=~/Successful/) {
-                     $sbdb = BerkeleyDB::Btree->new(
-                         -Filename => $progname."_sets.db",
-                         -Flags    =>
-                            DB_CREATE|DB_RECOVER_FATAL,
-                         -Env      => $sdbenv
-                     );
-                     unless ($BerkeleyDB::Error=~/Successful/) {
-                        die "Cannot Open DB: ${progname}_sets.db ".
-                            $BerkeleyDB::Error."\n";
-                     }
-                  }
-                  my $mysets='';
-                  my $status=$sbdb->db_get($username,$mysets);
-                  $mysets=~s/\$HASH\d*\s*=\s*//s;
-                  $mysets=eval $mysets;
-                  undef $sbdb;
-                  $sdbenv->close();
-                  undef $sdbenv;
-                  my $set=$default_modules->{'set'};
-                  my $spc=length $set;
-                  $spc=pack("A$spc",'');
-                  $banner.="      ** DEFAULT SET -> $set **\n\n"
-                         ."     \'$set\'  --> Code => "
-                         .$mysets->{$set}->{'fa_code'}."\n"
-                         ."      $spc       Conf => "
-                         .$mysets->{$set}->{'fa_conf'}."\n"
-                         ."      $spc       Host => "
-                         .$mysets->{$set}->{'fa_host'}."\n"
-                         ."      $spc       Maps => "
-                         .$mysets->{$set}->{'fa_maps'}."\n"
-                         ."      $spc       Menu => "
-                         .$mysets->{$set}->{'fa_menu'}."\n"
-                         ."      ${spc}Description => "
-                         .$mysets->{$set}->{'Description'}."\n\n"
-                         ."      NOTE: Any action in this Menu"
-                         ." will change the Default Set to 'none'.\n"
-                         ."            To work with FullAuto Sets, "
-                         ."run  \'fa --set\'  instead.\n";
-                  my %defaultsettings=(
-
-                        Label  => 'defaultsettings',
-                        Item_1 => {
-                           Text   =>
-                              "View Defaults when Default Set equals \'none\'",
-                           Result => \%viewdefaults,
-                        },
-                        Item_2 => {
-                           Text   => "Change ALL Defaults",
-                           Result => \%cacode,
-                        },
-                        Item_3 => {
-                           Text   => "Change Default ]C[",
-                           Convey => ['fa_code','fa_conf','fa_host',
-                                      'fa_maps','fa_menu'],
-                        },
-                        Banner => $banner,
-
-                  );
-                  my $selection=Menu(\%defaultsettings);
+                  my $selection=Menu($defaultsettings_sub->());
                   if (($selection eq ']quit[') ||
                         (-1<index $selection,'will EXIT') ||
                         ($selection eq 'Finished Defining Defaults')) {
@@ -8990,19 +9011,19 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                                   "      yet expired. Please select how FullAuto\n".
                                   "      should proceed . . .\n\n".
                                   "   To avoid this screen when using a Saved\n".
-                                  "      Password (Saved Passwords are NEVER\n".
-                                  "      recommended and are ALWAYS an increased\n".
-                                  "      security risk - but are allowed for\n".
-                                  "      unattended mode and for making interactive\n".
-                                  "      use easier and more efficient - like\n".
-                                  "      during custom code development.)\n".
-                                  "      always be sure to start FullAuto with the\n".
-                                  "      --password argument (with *NO* password\n".
-                                  "      actually entered with the argument.\n".
-                                  "      FullAuto *DOES NOT* support command line\n".
-                                  "      argument passing of passwords. It is\n".
-                                  "      a VERY insecure and highly discouraged\n".
-                                  "      practice!)."
+                                  "      Password, always be sure to start FullAuto\n".
+                                  "      with the  --password  argument.\n\n".
+                                  "      (Saved Passwords are NEVER recommended\n".
+                                  "      and are ALWAYS an increased security risk\n".
+                                  "      - but are allowed for unattended mode and\n".
+                                  "      for making interactive use easier and\n".
+                                  "      more efficient - like during custom code\n".
+                                  "      development. Always use sparingly.)\n\n".
+                                  "      *NO* password should ever be typed after\n".
+                                  "      the --password argument. FullAuto DOES\n".
+                                  "      *NOT* support command line argument\n".
+                                  "      passing of passwords. It is a VERY\n".
+                                  "      insecure and highly discouraged practice!)."
                      );
                      $pselection=&Menu(\%askaboutpass);
                      cleanup() if $pselection eq ']quit[';
@@ -9874,6 +9895,36 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
    return $cust_subnam_in_fa_code_module_file, \@menu_args, $fatimeout;
 
 } ## END of &fa_login
+
+my $admin=sub {
+
+   my %admin=(
+
+      Label  => 'admin',
+      Item_1 => {
+
+          Text => 'FullAuto Default Settings Menu',
+          Result => $viewdefaults_sub->(),
+
+      },
+      Item_2 => {
+
+          Text => 'FullAuto Job Planning Menu',
+          Result => \%plan_menu,
+
+      },
+      Item_3 => {
+
+          Text => 'ITEM THREE',
+
+      },
+   );
+   return \%admin;
+};
+
+our $admin_menu=sub {
+   return $admin->();
+};
 
 sub choose_pass_expiration
 {
@@ -12832,7 +12883,8 @@ sub ftm_login
       $fttimeout=$timeout if !$fttimeout;
    }
    print $Net::FullAuto::FA_Core::MRLOG "NEWMASTER=$new_master<==\n"
-      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    if (!$new_master && ($hostlabel eq "__Master_${$}__"
           || exists $Net::FullAuto::FA_Core::same_host_as_Master{$hostlabel})) {
       return "__Master_${$}__",'','','','','','','','';
@@ -15755,7 +15807,8 @@ sub mirror
                         foreach my $key (
                               keys %{${$baseFH->{_bhash}}{$key}[$elems]}) {
                            if (${${$baseFH->{_bhash}}{$key}[$elems]}{$key}) {
-                              undef @{${${$baseFH->{_bhash}}{$key}[$elems]}{$key}};
+                              undef
+                                 @{${${$baseFH->{_bhash}}{$key}[$elems]}{$key}};
                            } delete ${${$baseFH->{_bhash}}{$key}[$elems]}{$key};
                         } undef %{${$baseFH->{_bhash}}{$key}[$elems]};
                         undef ${$baseFH->{_bhash}}{$key}[$elems];
@@ -16218,49 +16271,6 @@ sub mirror
             } undef ${$destFH->{_dhash}}{$key};
             delete ${$destFH->{_dhash}}{$key};
          } undef %{$destFH->{_dhash}};
-if (0) {
-         foreach my $key (keys %{$baseFH->{_bhash}}) {
-            if (ref $baseFH->{_bhash}->{$key} ne 'ARRAY') {
-               delete $baseFH->{_bhash}->{$key};
-               next;
-            }
-            my $elems=$#{${$baseFH->{_bhash}}{$key}}+1;
-            while (-1<--$elems) {
-               if (ref ${$baseFH->{_bhash}}{$key}[$elems] ne 'HASH') {
-                  undef ${$baseFH->{_bhash}}{$key}[$elems];
-               } else {
-                  foreach my $key (
-                        keys %{${$baseFH->{_bhash}}{$key}[$elems]}) {
-                     if (${${$baseFH->{_bhash}}{$key}[$elems]}{$key}) {
-                        undef @{${${$baseFH->{_bhash}}{$key}[$elems]}{$key}};
-                     } delete ${${$baseFH->{_bhash}}{$key}[$elems]}{$key};
-                  } undef %{${$baseFH->{_bhash}}{$key}[$elems]};
-                  undef ${$baseFH->{_bhash}}{$key}[$elems];
-               }
-            } undef ${$baseFH->{_bhash}}{$key};
-            delete ${$baseFH->{_bhash}}{$key};
-         } undef %{$baseFH->{_bhash}};$baseFH->{_bhash}={};
-         if ($baseFH->{_unaltered_basehash}) {
-            foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
-               if (ref ${$baseFH->{_unaltered_basehash}}{$key} eq 'ARRAY') {
-                  foreach my $elem (@{${$baseFH->{_unaltered_basehash}}{$key}}) {
-                     if (ref $elem ne 'HASH') {
-                        push @{${$baseFH->{_bhash}}{$key}}, $elem;
-                     } else {
-                        my %newelem=();
-                        foreach my $key (keys %{$elem}) {
-                           $newelem{$key}=[@{${$elem}{$key}}];
-                        }
-                        push @{${$baseFH->{_bhash}}{$key}}, \%newelem;
-                     }
-                  }
-               } else {
-                  ${$baseFH->{_bhash}}{$key}=
-                     ${$baseFH->{_unaltered_basehash}}{$key};
-               }
-            }
-         }
-}
       }
       my $hostlabel='';
       eval {
