@@ -65,7 +65,7 @@ package Net::FullAuto::FA_Core;
 #
 ## # ASCII BANNER Courtesy of (small font):
 #
-# http://www.network-science.de/ascii/
+#  http://www.network-science.de/ascii/
 #
 ## *************************************************************
 
@@ -118,7 +118,7 @@ BEGIN {
    }
 
    #use if ($^O eq 'cygwin'), 'Win32::Semaphore';
-   if ($^O eq 'cygwin') {
+   if ($^O eq 'cygwin' && $0 ne 'test.t') {
       my $srvout=`/bin/cygrunsrv -Q cygserver 2>&1`;
       if (-1<index $srvout,'Stopped') {
          print "\nFatal Error: The Cygwin cygserver service is NOT",
@@ -8529,7 +8529,7 @@ sub fa_login
                   }
                   return @return;
                };
-               $main::defaults_sub->($default_modules);
+               $defaults_sub->($default_modules);
                if (!exists $default_modules->{'set'} ||
                      $default_modules->{'set'} eq 'none') {
                   my $selection=Menu($viewdefaults_sub->());
@@ -9955,6 +9955,12 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
 
 my $admin=sub {
 
+   my $fam=<<FAM;
+      _      _       _        __  __              
+     /_\\  __| |_ __ (_)_ _   |  \\/  |___ _ _ _  _ 
+    / _ \\/ _` | '  \\| | ' \\  | |\\/| / -_) ' \\ || |
+   /_/ \\_\\__,_|_|_|_|_|_||_| |_|  |_\\___|_||_\\_,_|
+FAM
    my %admin=(
 
       Label  => 'admin',
@@ -9976,6 +9982,7 @@ my $admin=sub {
           Result => $set_menu_sub->(),
 
       },
+      Banner => $fam,
    );
    return \%admin;
 };
@@ -15840,8 +15847,7 @@ sub mirror
       } else {
          $dir=$baseFH->{_work_dirs}->{_cwd};
       } my $cnt=0;
-      if (!defined %main::base_shortcut_info ||
-            !exists $main::base_shortcut_info{$baseFH} ||
+      if (!exists $main::base_shortcut_info{$baseFH} ||
             $main::base_shortcut_info{$baseFH} ne $dir ||
             !$index_base_once) {
          while (1) {
@@ -15906,7 +15912,6 @@ sub mirror
             }
             if (!$stderr && $base_output!~/bytes free\s*/s) {
                delete $main::base_shortcut_info{$baseFH} if
-                  defined %main::base_shortcut_info &&
                   exists $main::base_shortcut_info{$baseFH};
                $base_output='';next unless $cnt++;
                my $die="Attempt to retrieve output from the command:\n"
@@ -15946,8 +15951,7 @@ sub mirror
          &Net::FullAuto::FA_Core::handle_error(
             "Base Directory (3) - $base_fdr CANNOT Be Located");
       }
-      if (!defined %main::base_shortcut_info ||
-               !exists $main::base_shortcut_info{$baseFH} ||
+      if (!exists $main::base_shortcut_info{$baseFH} ||
                $main::base_shortcut_info{$baseFH} ne $dir ||
                !$index_base_once) {
          if (exists $args{BaseZip} && -f $dir.'/'.$args{BaseZip}) {
@@ -16054,8 +16058,7 @@ sub mirror
             $baseFH->{_unaltered_basehash}='';
          }
       }
-   } elsif (!defined %main::base_shortcut_info ||
-         !exists $main::base_shortcut_info{$baseFH} ||
+   } elsif (!exists $main::base_shortcut_info{$baseFH} ||
          $main::base_shortcut_info{$baseFH} ne $dir ||
          !$index_base_once) {
       my $dir=$baseFH->{_work_dirs}->{_cwd};

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999926';
+$main::VERSION='0.999927';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1901,6 +1901,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             my $incpath=$INC[0];
             $incpath=~s/\\/\//g;
             if ($^O eq 'cygwin') {
+print "\n\n   GOING TO SET UP CPAN\n\n";<STDIN>;
+               system('export CYGWIN=nodosfilewarning & '.
+                      "cmd /c $clo\\\\bin\\\\bash -lc ".
+                      '"export PERL_MM_USE_DEFAULT=1;'.
+                      "/usr/bin/echo y|/usr/bin/cpan\"");
+print "\n\n   DONE SETTING UP CPAN\n\n";
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { require IO::Pty;1 }'.
@@ -3398,7 +3404,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.17;
+#requires        'Term::Menus'               => 2.18;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

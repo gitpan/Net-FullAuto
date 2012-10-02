@@ -21,6 +21,13 @@
 
 2012-10-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999927 released.
+
+        * Fixed more Makefile.PL issues with Cygwin.
+
+
+2012-10-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999926 released.
 
         * Added Set item to admin menu.
