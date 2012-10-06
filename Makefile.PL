@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999928';
+$main::VERSION='0.999929';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -59,7 +59,20 @@ END
             `REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup 2>&1`;
       my $showcq=$cygwin_query;
       $showcq=~s/^/   /mg;chomp $showcq;
+      my $cygwin_query_success=0;
       if (-1<index $cygwin_query,'REG_SZ') {
+         $cygwin_query_success=1;
+      } else {
+         my $rcmd='REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                  'Wow6432Node\\Cygwin\\setup 2>&1';
+         $cygwin_query=`$rcmd`;
+         $showcq=$cygwin_query;
+         $showcq=~s/^/   /mg;chomp $showcq;
+         if (-1<index $cygwin_query,'REG_SZ') {
+            $cygwin_query_success=1;
+         }
+      }
+      if ($cygwin_query_success) {
          print "\n   REG QUERY RESULT:\n\n   $showcq";
          $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
          $cygwin_query=~s/^\s*//s;
@@ -71,6 +84,20 @@ END
                   "   to resolve.\n\n   PRESS ANY KEY to Exit Setup\n\n";
             <STDIN>;
             exit 1;
+         } 
+         unless (-d $cygwin_query) {
+            # The cygwin directory indicated in the Registry does not
+            # exist - let's delete the Registry entry
+            if (-1<$cygwin_query,'Wow6432') {
+               my $rcmd='REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                        'Wow6432Node\\Cygwin /f 2>&1';
+               $regout=`$rcmd`;
+               return 0;
+            } else {
+               my $regout=
+                  `REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin /f 2>&1`;
+               return 0;
+            }
          }
          my $getver='SET CYGWIN=nodosfilewarning & '.
                 "cmd /c $cygwin_query\\bin\\bash -lc ".
@@ -153,7 +180,7 @@ END
             die $die;
          } else {
             print $die;
-            exit;
+            exit 1;
          }
       }
       $incflag=1 if -e './inc';
@@ -395,7 +422,7 @@ END
                   "\n   questions, thoughts or feedback to:",
                   "\n\n      Brian.Kelly\@fullautosoftware.net.",
                   "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-            exit;
+            exit 1;
          }
       }
    }
@@ -428,6 +455,7 @@ END
       $look='IO-Tty' if $look eq 'IO-Pty';
       $look='MailTools' if $look eq 'Mail-Internet';
       print "***** Looking for Most Recent \"$look Dir\" \n";
+      CPAN::HandleConfig->load;
       my $d = $CPAN::Config->{build_dir};
       if (!(defined $d) || !(-d $d)) {
          $d=(getpwuid $>)[7].'/.cpan/build';
@@ -484,7 +512,7 @@ END
                   "   to continue, but $p was not detected on this\n",
                   "   host.\n\n";
                   "FullAuto Install will EXIT.";
-            exit;
+            exit 1;
          }
          print "==> $p required."
          and print "*** Installing $p via CPAN\n"
@@ -1390,7 +1418,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                         "   to writable before installing FullAuto.\n";
                print "\n   PRESS ANY KEY TO EXIT SETUP\n\n";
                <STDIN>;
-               exit;
+               exit 1;
             }
             open(CP,">$main::root_dir\\setup.exe") || die $!;
             binmode(CP);
@@ -1513,14 +1541,14 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          
                    Label  => 'Menu_select_account_type',
                    Item_1 => {
-          
-                      Text => "Use separate user account for sshd service",
+        
+                      Text => "Use LocalSystem account for sshd service", 
                       Default => "*",
          
                    },
                    Item_2 => {
- 
-                     Text => "Use LocalSystem account for sshd service",
+
+                      Text => "Use separate user account for sshd service", 
          
                    },
                    Banner => $banner,
@@ -1581,7 +1609,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   print "\n\n";
                   print "Fatal Error: Unable to verify Password entries!\n\n";
                   print "Press any key to exit FullAuto Setup.\n";
-                  <STDIN>;exit;
+                  <STDIN>;exit 1;
                }
                print "\n";
             } elsif ((-1<index $account_type,'separate') &&
@@ -1673,7 +1701,55 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   print "\n\n";
                   print "Fatal Error: Unable to verify Password entries!\n\n";
                   print "Press any key to exit FullAuto Setup.\n";
-                  <STDIN>;exit;
+                  <STDIN>;exit 1;
+               }
+            }
+            # Let's see if Cygwin remnants remain that could mess
+            # up the installation
+            my $check_for_orphaned_sshd_service=`sc qc sshd 2&>1`;              
+            unless (-1<index $check_for_orphaned_sshd_service,'does not') {
+               my $cygpath=~s/^.*H_NAME\s+:\s+(.*exe).*$/$1/s;
+               $cygpath=~s/\\/\//g;
+               unless (-e $cygpath) {
+                  # cygrunsrv does not exist - let's see if its running?
+                  my $chkrun=`sc query sshd 2&>1`;
+                  if (-1<index $chkrun,'RUNNING') {
+                     # Its running - let's stop it
+                     my $stopout=`net stop sshd 2&>1`;
+                     unless (-1<index $stopout,'stopped suc') {
+                        print "FATAL ERROR - cannot stop sshd: $stopout\n";
+                        exit 1;
+                     } 
+                  }
+                  # Now let's delete sshd 
+                  my $sc_out=`sc delete sshd 2&>1`;
+                  unless (-1<$sc_out,'SUCCESS') {
+                     print "FATAL ERROR - cannot delete sshd: $sc_out\n";
+                     exit 1;
+                  }
+               }
+            }
+            my $check_for_orphaned_cygserver_service=`sc qc cygserver 2&>1`;
+            unless (-1<index $check_for_orphaned_cygserver_service,'does not') {
+               my $cygpath=~s/^.*H_NAME\s+:\s+(.*exe).*$/$1/s;
+               $cygpath=~s/\\/\//g;
+               unless (-e $cygpath) {
+                  # cygrunsrv does not exist - let's see if its running?
+                  my $chkrun=`sc query cygserver 2&>1`;
+                  if (-1<index $chkrun,'RUNNING') {
+                     # Its running - let's stop it
+                     my $stopout=`net stop cygserver 2&>1`;
+                     unless (-1<index $stopout,'stopped suc') {
+                        print "FATAL ERROR - cannot stop cygserver: $stopout\n";
+                        exit 1;
+                     }
+                  }
+                  # Now let's delete cygserver
+                  my $sc_out=`sc delete cygserver 2&>1`;
+                  unless (-1<$sc_out,'SUCCESS') {
+                     print "FATAL ERROR - cannot delete cygserver: $sc_out\n";
+                     exit 1;
+                  }
                }
             }
          }
@@ -2246,7 +2322,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                "\n   questions, thoughts or feedback to:",
                "\n\n      Brian.Kelly\@fullautosoftware.net.",
                "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-         exit;
+         exit 0;
       }
    } elsif ($process_id) {
       exit;
@@ -2486,7 +2562,7 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
    };
    if ($@) {
       # timed out
-      exit;
+      exit 1;
    } elsif ($a=~/^[Nn]$/s) {
       exit;
    }
@@ -2831,7 +2907,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         "\n   questions, thoughts or feedback to:",
                         "\n\n      Brian.Kelly\@fullautosoftware.net.",
                         "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                        exit;
+                        exit 1;
                   }
                }
                open(FH, $CPAN::Config->{gzip}." -d $filename|");
@@ -2851,7 +2927,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         "\n   questions, thoughts or feedback to:",
                         "\n\n      Brian.Kelly\@fullautosoftware.net.",
                         "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                        exit;
+                        exit 1;
                   }
                }
                $filename=~s/\.gz$//;
@@ -3145,7 +3221,7 @@ sub test_windows_user_rights {
                  "   assistance.\n\n   PRESS ANY KEY to EXIT FullAuto".
                  " Setup.\n\n";
          print $die;<STDIN>;
-         exit;
+         exit 1;
       }
       my $gpout=`gpupdate 2>&1`;
       if (-1<index $gpout,'completed successfully') {
@@ -3174,7 +3250,7 @@ sub test_windows_user_rights {
                     "   PRESS ANY KEY to EXIT FullAuto".
                     " Setup.\n\n";
             print $die;<STDIN>;
-            exit;
+            exit 1;
          }
       }
    }
@@ -3243,7 +3319,7 @@ sub test_windows_user {
                   "\n   questions, thoughts or feedback to:",
                   "\n\n      Brian.Kelly\@fullautosoftware.net.",
                   "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-            exit;
+            exit 1;
          }
       }
       unless (-e "$cygwin_location\\var\\empty") {
@@ -3266,7 +3342,7 @@ sub test_windows_user {
                   "\n   questions, thoughts or feedback to:",
                   "\n\n      Brian.Kelly\@fullautosoftware.net.",
                   "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-            exit;
+            exit 1;
          }
       }
       return 0;

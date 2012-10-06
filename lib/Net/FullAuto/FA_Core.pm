@@ -2775,14 +2775,15 @@ CHAR:    while (sysread($handle, my $nextbyte, 1)) {
 sub acquire_semaphore
 {
    my @topcaller=caller;
-   print "acquire_semaphore() CALLER=",(join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_Core::debug;
-   print $Net::FullAuto::FA_Core::MRLOG "acquire_semaphore() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
-      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $sem='';
    my $IPC_KEY=(defined $_[0] && $_[0])?$_[0]:'1234';
    my $process_description=$_[1]||'';
+   my $pd="$process_description " if $process_description;
+   print "acquire_semaphore() ${pd}CALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG "acquire_semaphore() ${pd}CALLER=",
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $semaphorecount=$_[2];
    my $semaphore_count;
    $semaphore_count=(defined $semaphorecount && 0<$semaphorecount) ? 
@@ -2800,7 +2801,8 @@ sub acquire_semaphore
          # wait for semaphore to be zero
          my $previous='';
          if ($semaphore_count<2) {
-            if ($process_description
+            my $time_since_start=time()-$Net::FullAuto::FA_Core::invoked[0];
+            if ($process_description && (15<$time_since_start)
                   && ((!$Net::FullAuto::FA_Core::cron
                   || $Net::FullAuto::FA_Core::debug)
                   && !$Net::FullAuto::FA_Core::quiet)) {
@@ -2845,7 +2847,8 @@ sub acquire_semaphore
       $sem = IPC::Semaphore->new($IPC_KEY,$semaphore_count,&S_IRWXU);
       if (defined $sem && $sem) {
          if ($semaphore_count<2) {
-            if ($process_description
+            my $time_since_start=time()-$Net::FullAuto::FA_Core::invoked[0];
+            if ($process_description && (15<$time_since_start)
                   && ((!$Net::FullAuto::FA_Core::cron
                   || $Net::FullAuto::FA_Core::debug)
                   && !$Net::FullAuto::FA_Core::quiet)) {

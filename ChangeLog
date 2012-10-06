@@ -19,16 +19,21 @@
 ################################################################
 
 
+2012-10-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999929 released.
+
+        * Added robust code to check sshd status during install.
+
+        * Added wait of 15 seconds before displaying semaphore
+          lock warning on FullAuto startup.
+
+
 2012-10-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999928 released.
 
         * "Finally" Fixed Makefile.PL hang condition in Windows.
-
-
-2012-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
-
-        * Version 0.999928 released.
 
         * Fixed Makefile.PL syntax error.
 
