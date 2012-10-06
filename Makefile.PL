@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999927';
+$main::VERSION='0.999928';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -695,18 +695,6 @@ END
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
-   eval { require Data::Dump::Streamer };
-   if ($@) {
-      ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Data::Dump::Streamer') if $stderr;
-      my $dir=&fa_find_latest('Data-Dump-Streamer');
-      system("cd \"$dir\";$^X Build.PL NODDS;");
-      system("cd \"$dir\";./Build install;");
-   }
    ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
@@ -747,7 +735,20 @@ END
    #($stdout,$stderr)=&fa_install_module('Cache::Cache','install','Makefile');
    #&fa_err_exit($stderr,'Cache::Cache') if $stderr;
    #print $stdout if $stdout;
-   ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile');
+   ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
+   eval { require Data::Dump::Streamer };
+   if ($@) {
+      ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Data::Dump::Streamer') if $stderr;
+      my $dir=&fa_find_latest('Data-Dump-Streamer');
+      system("cd \"$dir\";$^X Build.PL NODDS;");
+      system("cd \"$dir\";./Build install;");
+   }
+   ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
+      '','2.18');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
 };
@@ -1901,15 +1902,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             my $incpath=$INC[0];
             $incpath=~s/\\/\//g;
             if ($^O eq 'cygwin') {
-print "\n\n   GOING TO SET UP CPAN\n\n";<STDIN>;
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
-                      '"export PERL_MM_USE_DEFAULT=1;'.
-                      "/usr/bin/echo y|/usr/bin/cpan\"");
-print "\n\n   DONE SETTING UP CPAN\n\n";
-               system('export CYGWIN=nodosfilewarning & '.
-                      "cmd /c $clo\\\\bin\\\\bash -lc ".
-                      '"/usr/bin/perl -e \"eval { require IO::Pty;1 }'.
+                      '"echo y | /usr/bin/perl -e \"eval { require IO::Pty;1 }'.
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\',\'IO::Pty\')}\""');
                system('export CYGWIN=nodosfilewarning & '.
@@ -2021,8 +2016,8 @@ print "\n\n   DONE SETTING UP CPAN\n\n";
             } else {
                my $build_dir='SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
-                      '"/usr/bin/perl -e '.
-                      '\"require CPAN and CPAN::HandleConfig-^^^>load and '.
+                      '"echo y | /usr/bin/perl -e '.
+                      '\"require CPAN and CPAN::HandleConfig-^^^>load;'.
                       'print \$CPAN::Config-^^^>{build_dir}\" 2>&1"';
                my $bd=`$build_dir`;
                if ($bd=~/^\s*$|Can\'t locate/s) {
@@ -2198,26 +2193,15 @@ print "\n\n   DONE SETTING UP CPAN\n\n";
             }
          }
          my $rmdir_out=rmdir $main::curdir.'/inc/.author'; 
-         #print "ERROR $main::curdir/inc/.author: $!\n" unless $rmdir_out;
          my $un_out=unlink $main::curdir.'/inc/Module/Install/Base.pm';
-         #print "ERROR $main::curdir/inc/Module/Install/Base.pm: $!\n"
-         #   unless $un_out;
          $un_out=unlink $main::curdir.'/inc/Module/Install/Metadata.pm';
-         #print "ERROR $main::curdir/inc/Module/Install.pm: $!\n"
-         #   unless $un_out;
          $un_out=unlink $main::curdir.'/inc/Module/Install.pm';
-         #print "ERROR $main::curdir/inc/Module/Install.pm: $!\n"
-         #   unless $un_out;
          $rmdir_out=rmdir $main::curdir.'/inc/Module/Install';
-         #print "ERROR /inc/Module/Install: $!\n" unless $rmdir_out;
          $rmdir_out=rmdir $main::curdir.'/inc/Module';
-         #print "ERROR $main::curdir/inc/Module: $!\n" unless $rmdir_out;
          unless ((exists $ENV{PARdir} && (-f $ENV{PARdir}.'/inc_exists.txt'))) {
             $rmdir_out=rmdir $main::curdir.'/inc';
-            #print "ERROR $main::curdir/inc: $!\n" unless $rmdir_out;
          } else {
             $un_out=unlink $ENV{PARdir}.'/inc_exists.txt';
-            #print "ERROR $ENV{PARdir}/inc_exists.txt: $!\n" unless $un_out;
          }
          opendir(CD,$main::curdir)
             or die "Cannot open ".$main::curdir.": $!\n";
@@ -2981,10 +2965,6 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
 chdir $main::curdir;
 
 if ($get_BerkeleyDB) {
-
-   #($stdout,$stderr)=&fa_install_module('BerkeleyDB','install','Makefile');
-   #print $stdout if $stdout;
-   #&fa_err_exit($stderr,'BerkeleyDB') if $stderr;
 
    do {
       my $p='BerkeleyDB';
