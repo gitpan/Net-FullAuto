@@ -21,6 +21,16 @@
 
 2012-10-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999930 released.
+
+        * Fixed Data::Dump::Streamer install so it doesn't
+          stop to ask user for a shortcut in Makefile.PL.
+
+        * Fixed passwd file fixing code in Makefile.PL.
+
+
+2012-10-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999929 released.
 
         * Added robust code to check sshd status during install.

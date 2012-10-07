@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999929';
+$main::VERSION='0.999930';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -73,35 +73,48 @@ END
          }
       }
       if ($cygwin_query_success) {
-         print "\n   REG QUERY RESULT:\n\n   $showcq";
+         #print "\n   REG QUERY RESULT:\n\n   $showcq";
          $cygwin_query=~s/^.*REG_SZ\s+(.*)\s*$/$1/s;
          $cygwin_query=~s/^\s*//s;
          $cygwin_query=~s/\s*$//s;
          unless (-W $cygwin_query) {
-            print "\n\n   Fatal Error! - Write Access to $cygwin_query\n".
+            unless (-d $cygwin_query) {
+               # The cygwin directory indicated in the Registry does not
+               # exist - let's delete the Registry entry
+               if (-1<$cygwin_query,'Wow6432') {
+                  my $rcmd='REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                           'Wow6432Node\\Cygwin /f 2>&1';
+                  $regout=`$rcmd`;
+                  return 0;
+               } else {
+                  my $regout=
+                     `REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin /f 2>&1`;
+                  return 0;
+               }
+            }
+            if (-1<index $0,'Setup-FullAuto') {
+               my $name=substr($0,(rindex $0,'\\'));
+               print "\n\n".
+                  "   Fatal Error! - Write Access to $cygwin_query\n".
+                  "   is needed in order to install FullAuto or OpenSSH.\n\n".
+                  "   If you have Administrator Rights, be sure to Right\n".
+                  "   Click on the $name\n   icon and select ".
+                  "\"Run as administrator\"\n\n".
+                  "   Or, contact your Windows System Administrator\n".
+                  "   to resolve.\n\n   PRESS ANY KEY to Exit Setup\n\n";
+            } else {
+               print "\n\n".
+                  "   Fatal Error! - Write Access to $cygwin_query\n".
                   "   is needed in order to install FullAuto or OpenSSH.\n\n".
                   "   Please contact your Windows System Administrator\n".
                   "   to resolve.\n\n   PRESS ANY KEY to Exit Setup\n\n";
+            }
             <STDIN>;
             exit 1;
          } 
-         unless (-d $cygwin_query) {
-            # The cygwin directory indicated in the Registry does not
-            # exist - let's delete the Registry entry
-            if (-1<$cygwin_query,'Wow6432') {
-               my $rcmd='REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
-                        'Wow6432Node\\Cygwin /f 2>&1';
-               $regout=`$rcmd`;
-               return 0;
-            } else {
-               my $regout=
-                  `REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin /f 2>&1`;
-               return 0;
-            }
-         }
          my $getver='SET CYGWIN=nodosfilewarning & '.
                 "cmd /c $cygwin_query\\bin\\bash -lc ".
-                '"cygcheck -c cygwin"';
+                '"cygcheck -c cygwin" 2>&1';
          my $cygver=`$getver`;
          if ($cygver=~/(1.7.11-1)/) {
             print "\n\n   Fatal Error! - The current Cygwin version: $1\n".
@@ -115,18 +128,21 @@ END
             <STDIN>;
             exit 1;
          }
-         my $getid='SET CYGWIN=nodosfilewarning & '.
-                "cmd /c $cygwin_query\\bin\\bash -lc ".
-                '"id"';
-         my $groups=`$getid`;
-         unless (-1<index $groups,"(Administrators)") {
-            print "\n\n   Fatal Error! - The User $ENV{'USERNAME'} needs to\n".
-                  "   be a member of the Administrator's group in order\n".
-                  "   to install FullAuto or OpenSSH.\n\n".
-                  "   Please contact your Windows System Administrator\n".
-                  "   to resolve.\n\n    PRESS ANY KEY to Exit Setup\n\n";
-            <STDIN>;
-            exit 1;
+         if (-e "$cygwin_query/bin/bash.exe") {
+            my $getid='SET CYGWIN=nodosfilewarning & '.
+                   "cmd /c $cygwin_query\\bin\\bash -lc ".
+                   '"id"';
+            my $groups=`$getid`;
+            unless (-1<index $groups,"(Administrators)") {
+               print "\n\n".
+               print "   Fatal Error! - The User $ENV{'USERNAME'} needs to\n".
+                     "   be a member of the Administrator's group in order\n".
+                     "   to install FullAuto or OpenSSH.\n\n".
+                     "   Please contact your Windows System Administrator\n".
+                     "   to resolve.\n\n    PRESS ANY KEY to Exit Setup\n\n";
+               <STDIN>;
+               exit 1;
+            }
          }
          return $cygwin_query;
       } return 0
@@ -793,7 +809,7 @@ sub ws_info {
    $clo=~s/\\/\\\\/g;
    my %userlist=();my %passlins=();
    my @newpassw=();my $modflag=0;
-   if (-e $cygwin_loc) {
+   if (-e $cygwin_loc."/bin") {
       my $pasen='SET CYGWIN=nodosfilewarning & '.
                 "cmd /c $cygwin_loc\\bin\\bash -lc ".
                 '"cat /etc/passwd"';
@@ -806,7 +822,7 @@ sub ws_info {
       foreach my $lin (keys %passlins) {
          my $linn=$lin;
          my @pl=@{$passlins{$linn}};
-         if (0<$#{$linn}) {
+         if (0<$#pl) {
             my %asklin=(
                Label => asklin,
                Item_1 => {
@@ -839,7 +855,7 @@ sub ws_info {
             exit if $select eq ']quit[';
             my $s=0;
             ($s=$select)=~s/^.*\n\s+Line: (\d+).*$/$1/s;
-            $s--;my $adjust=0;
+            my $adjust=0;
             foreach my $i (@pl) {
                my $ii=$i;
                my $n=0;
@@ -854,7 +870,11 @@ sub ws_info {
       }
       if ($modflag) {
          my $npass=join "\n",@newpassw;
-         `echo \"$npass\" > /etc/passwd`;
+         open(NP,">$cygwin_loc/etc/passwd");
+         foreach my $l (@newpassw) {
+            print NP "$l\n";
+         }
+         close NP;
       } $modflag=0;
       my $users='SET CYGWIN=nodosfilewarning & '.
                 "cmd /c $cygwin_loc\\bin\\bash -lc ".
@@ -873,7 +893,7 @@ sub ws_info {
       my @list=();my @retrn=();
       my $domain_id_flag=0;
       my $local_id_flag=0;
-      my %cygsrvs=();
+      my %cYgsrvs=();
       if (-1<$#u) {
          foreach my $e (@u) {
             my @it=split ':',$e;
@@ -935,15 +955,15 @@ sub ws_info {
                $ct++;$n++;
             }
          }
-
-
          if ($modflag) {
-            my $npass=join "\n",@newpassw;
-            `echo \"$npass\" > /etc/passwd`;
+            open(NP,">$cygwin_loc/etc/passwd");
+            foreach my $l (@newpassw) {
+               print NP "$l\n";
+            }
+            close NP;
          }
-
          test_windows_user_rights('cyg_server');
-      } 
+      }
    }
    my $found_dotted=0;
    my $domain='';
@@ -1007,7 +1027,7 @@ sub ws_info {
 
    if ($dom ne 'Local') {
       if ($cyg_id eq 'cyg_server') {
-         my $o=`net user cyg_server`;
+         my $o=`net user cyg_server 2>&1`;
          if (-1==index $o,'user name could not be found') {
             my %_cygserv=(
    
@@ -1706,46 +1726,46 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
             # Let's see if Cygwin remnants remain that could mess
             # up the installation
-            my $check_for_orphaned_sshd_service=`sc qc sshd 2&>1`;              
+            my $check_for_orphaned_sshd_service=`sc qc sshd 2>&1`;              
             unless (-1<index $check_for_orphaned_sshd_service,'does not') {
                my $cygpath=~s/^.*H_NAME\s+:\s+(.*exe).*$/$1/s;
                $cygpath=~s/\\/\//g;
                unless (-e $cygpath) {
                   # cygrunsrv does not exist - let's see if its running?
-                  my $chkrun=`sc query sshd 2&>1`;
+                  my $chkrun=`sc query sshd 2>&1`;
                   if (-1<index $chkrun,'RUNNING') {
                      # Its running - let's stop it
-                     my $stopout=`net stop sshd 2&>1`;
+                     my $stopout=`net stop sshd 2>&1`;
                      unless (-1<index $stopout,'stopped suc') {
                         print "FATAL ERROR - cannot stop sshd: $stopout\n";
                         exit 1;
                      } 
                   }
                   # Now let's delete sshd 
-                  my $sc_out=`sc delete sshd 2&>1`;
+                  my $sc_out=`sc delete sshd 2>&1`;
                   unless (-1<$sc_out,'SUCCESS') {
                      print "FATAL ERROR - cannot delete sshd: $sc_out\n";
                      exit 1;
                   }
                }
             }
-            my $check_for_orphaned_cygserver_service=`sc qc cygserver 2&>1`;
+            my $check_for_orphaned_cygserver_service=`sc qc cygserver 2>&1`;
             unless (-1<index $check_for_orphaned_cygserver_service,'does not') {
                my $cygpath=~s/^.*H_NAME\s+:\s+(.*exe).*$/$1/s;
                $cygpath=~s/\\/\//g;
                unless (-e $cygpath) {
                   # cygrunsrv does not exist - let's see if its running?
-                  my $chkrun=`sc query cygserver 2&>1`;
+                  my $chkrun=`sc query cygserver 2>&1`;
                   if (-1<index $chkrun,'RUNNING') {
                      # Its running - let's stop it
-                     my $stopout=`net stop cygserver 2&>1`;
+                     my $stopout=`net stop cygserver 2>&1`;
                      unless (-1<index $stopout,'stopped suc') {
                         print "FATAL ERROR - cannot stop cygserver: $stopout\n";
                         exit 1;
                      }
                   }
                   # Now let's delete cygserver
-                  my $sc_out=`sc delete cygserver 2&>1`;
+                  my $sc_out=`sc delete cygserver 2>&1`;
                   unless (-1<$sc_out,'SUCCESS') {
                      print "FATAL ERROR - cannot delete cygserver: $sc_out\n";
                      exit 1;
@@ -2027,6 +2047,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       '\'B::Utils\')}\""');
                system('export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
+                      '"/usr/bin/perl -e \"eval { require Algorithm::Diff;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Algorithm::Diff\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { '.
                       'require Data::Dump::Streamer;1 }'.
                       ' or do {require CPAN and '.
@@ -2157,6 +2183,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'B::Utils\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      "cmd /c $cygwin_loc\\bin\\bash -lc ".
+                      '"/usr/bin/perl -e \"eval { require Algorithm::Diff;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Algorithm::Diff\')}\""');
                my $ddstest='SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/perl -e \"eval { '.
@@ -2175,15 +2207,17 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   my $streamdir='SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $clo\\\\bin\\\\bash -lc ".
                          '"/usr/bin/perl -e '.
-                         '\"require CPAN and CPAN::HandleConfig-^^^>load and '.
+                         '\"require CPAN and CPAN::HandleConfig-^^^>load;'.
                          'print \$CPAN::Config-^^^>{build_dir}\""';
                   my $stmout=`$streamdir`;
-                  chomp($stmout);
+                  $stmout=~s/\s*$//s;
+                  $stmout=~s/^\s*//s;
                   $streamdir='SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $clo\\\\bin\\\\bash -lc ".
                          '"/usr/bin/cygpath -lm \"'.$stmout.'\""';
                   $stmout=`$streamdir`;
-                  chomp($stmout);
+                  $stmout=~s/\s*$//s;
+                  $stmout=~s/^\s*//s;
                   $streamdir='SET CYGWIN=nodosfilewarning & '.
                          "cmd /c $clo\\\\bin\\\\bash -lc ".
                          '"/usr/bin/perl -e '.
@@ -2201,7 +2235,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          '\$t=\$d;\$n=\$f;}if(\$d^^^<\$t){'.
                          '\$t=\$d;\$n=\$f;}}\$n=\$f if !\$n and \$f;'.
                          'print \$f\""';
-                  my $sdir=`$streamdir`; 
+                  my $sdir=`$streamdir`;
+                  $sdir=~s/\s*$//s;
+                  $sdir=~s/^\s*//s;
                   system('SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"cd \"'.$sdir.'\";/usr/bin/perl Build.PL NODDS;"');
