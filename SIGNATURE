@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.61.
+signed via the Module::Signature module, version 0.68.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -14,13 +14,13 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 4e326286f8b7d6e5cc48cc2a0b55a4b8c912dcac ChangeLog
+SHA1 c40792f81929f25c7e218d1c6dbd7c56f35d5bca ChangeLog
 SHA1 5437f164ae11b18bb58a8576204254a1b4a9334b LICENSE
 SHA1 2b6b8f9fc192662e60281ea9353bfafae92e2774 MANIFEST
-SHA1 3d6cd4b42310d96eb8a714ddaf9847d4b16d1459 META.yml
-SHA1 3dafbb2f877ed51e281ecfe7651294827cbeb5a9 MYMETA.json
-SHA1 b96263b5f9b98939106b44c8e16f523d7088e35e MYMETA.yml
-SHA1 2e4012720601f02158e830af647aa2339f51a8a6 Makefile.PL
+SHA1 67206ceabe24dc4d0b3a1731475cd5e46faade8f META.yml
+SHA1 f9a69b1097b126eff341d0e5e00c5bfc28eee2ac MYMETA.json
+SHA1 309b0965ffd22a8066da5582a8d90fa5c87da1cc MYMETA.yml
+SHA1 4009418237910f4738db65986782441432fdab79 Makefile.PL
 SHA1 fd6c642523f44765fc64b3515231a3ad62f90d73 README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 4fe10515de60ffa439d09fbb4eadf7dc1cfd275f bin/fullauto.pl
@@ -37,7 +37,7 @@ SHA1 026cc0551a0ad399d195e395b46bdf842e115192 inc/Module/Install/Metadata.pm
 SHA1 d3a4c720c6ec7f8fce7df37002fbc9177fb77050 inc/Module/Install/Scripts.pm
 SHA1 5457015ea5a50e93465bf2dafa29feebd547f85b inc/Module/Install/Win32.pm
 SHA1 051e7fa8063908befa3440508d0584a2497b97db inc/Module/Install/WriteAll.pm
-SHA1 3f2842a658823425ff34e909e4c537e3aa4ff5bc lib/Net/FullAuto.pm
+SHA1 1b8476660aa5fea57ba86c1f72bf977fc88c67df lib/Net/FullAuto.pm
 SHA1 8a710a48bb21aa584949dbbe3649c0d5b2b084fc lib/Net/FullAuto/Custom/BackUp/README
 SHA1 b9b90c2707951d9d5753dc9ef9699abe7daddee9 lib/Net/FullAuto/Custom/README
 SHA1 7cacb9a2873a4baac0d084529eed8cb78a301248 lib/Net/FullAuto/Distro/fa_code.pm
@@ -48,13 +48,13 @@ SHA1 5e5bf1fb274122e41b89de64d065cfbacc8b2cd6 lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 532a954b8f2f3183851b3381bef60d7d70fa0541 lib/Net/FullAuto/Distro/fa_menu.pm
 SHA1 a624f36d14585c7635e2a04cb771e0bf0157c0f7 lib/Net/FullAuto/Distro/fa_menu_demo.pm
 SHA1 c61c03f9beda14559fdf07e569e813a2bd553a53 lib/Net/FullAuto/Distro/fullautologo.jpg
-SHA1 d80ef8d520e9322b76e34477cfedbdca5bf5d73b lib/Net/FullAuto/FA_Core.pm
+SHA1 e635535c008a83092e45dc5f841a46708dca5927 lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.12 (Cygwin)
 
-iEYEARECAAYFAlBxBmEACgkQJM3IZYB6aOoJFwCgqCiaW44528SFQK1Exsp2HejS
-V00AoJFwaVuUkrgB6gT5atEwMVJFnHLl
-=omf9
+iEYEARECAAYFAlB11IkACgkQJM3IZYB6aOqcRwCgiQbKwpSCd611bciplSG6ub7/
+GW4An3WNp0T8PO6F8Ecsghl0pbgFqV7g
+=wzCm
 -----END PGP SIGNATURE-----

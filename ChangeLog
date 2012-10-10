@@ -19,6 +19,16 @@
 ################################################################
 
 
+2012-10-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999931 released.
+
+        * Implemented delayed lookup for bin utilities until
+          actually called for - improves overall startup time.
+
+        * Replaced all make_path calls with setuid_cmd to mkdir.
+
+
 2012-10-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999930 released.

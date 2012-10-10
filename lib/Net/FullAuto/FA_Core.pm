@@ -197,7 +197,6 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
    use Errno qw(EAGAIN EINTR EWOULDBLOCK);
    use File::stat;
    use File::Copy;
-   use File::Path;
    use MIME::Entity;
    use Module::Load::Conditional qw[can_load];
    use Net::Telnet;
@@ -306,176 +305,90 @@ BEGIN {
       }
    }
 
-   our $bashpath='';
-   if (-e '/usr/bin/bash') {
-      $bashpath='/usr/bin/';
-   } elsif (-e '/bin/bash') {
-      $bashpath='/bin/';
-   } elsif (-e '/usr/local/bin/bash') {
-      $bashpath='/usr/local/bin/';
-   }
+   our $sftpport='';
 
-   our $greppath='';
-   if (-e '/usr/bin/grep') {
-      $greppath='/usr/bin/';
-   } elsif (-e '/bin/grep') {
-      $greppath='/bin/';
-   } elsif (-e '/usr/local/bin/grep') {
-      $greppath='/usr/local/bin/';
-   }
+   sub sftport {
 
-   our $findpath='';
-   if (-e '/usr/bin/find') {
-      $findpath='/usr/bin/';
-   } elsif (-e '/bin/find') {
-      $findpath='/bin/';
-   } elsif (-e '/usr/local/bin/find') {
-      $findpath='/usr/local/bin/';
-   }
-
-   our $lspath='';
-   if (-e '/usr/bin/ls') {
-      $lspath='/usr/bin/';
-   } elsif (-e '/bin/ls') {
-      $lspath='/bin/';
-   } elsif (-e '/usr/local/bin/ls') {
-      $lspath='/usr/local/bin/';
-   }
-
-   our $sedpath='';
-   if (-e '/usr/bin/sed') {
-      $sedpath='/usr/bin/';
-   } elsif (-e '/bin/sed') {
-      $sedpath='/bin/';
-   } elsif (-e '/usr/local/bin/sed') {
-      $sedpath='/usr/local/bin/';
-   }
-
-   our $printfpath='';
-   if (-e '/usr/bin/printf') {
-      $printfpath='/usr/bin/';
-   } elsif (-e '/bin/printf') {
-      $printfpath='/bin/';
-   } elsif (-e '/usr/local/bin/printf') {
-      $printfpath='/usr/local/bin/';
-   }
-
-   our $pspath='';
-   if (-e '/usr/bin/ps') {
-      $pspath='/usr/bin/';
-   } elsif (-e '/bin/ps') {
-      $pspath='/bin/';
-   } elsif (-e '/usr/local/bin/ps') {
-      $pspath='/usr/local/bin/';
-   }
-
-   our $sshpath='';
-   if (-e '/usr/bin/ssh') {
-      $sshpath='/usr/bin/';
-   } elsif (-e '/bin/ssh') {
-      $sshpath='/bin/';
-   } elsif (-e '/usr/local/bin/ssh') {
-      $sshpath='/usr/local/bin/';
-   }
-
-   our $telnetpath='';
-   if (-e '/usr/bin/telnet') {
-      $telnetpath='/usr/bin/';
-   } elsif (-e '/bin/telnet') {
-      $telnetpath='/bin/';
-   } elsif (-e '/usr/local/bin/telnet') {
-      $telnetpath='/usr/local/bin/';
-   }
-
-   our $sftppath='';our $sftpport='';
-   if (-e '/usr/bin/sftp') {
-      $sftppath='/usr/bin/';
-      $sftpport=`${sftppath}sftp 2>&1`;
-   } elsif (-e '/bin/sftp') {
-      $sftppath='/bin/';
-      $sftpport=`${sftppath}sftp 2>&1`;
-   } elsif (-e '/usr/local/bin/sftp') {
-      $sftppath='/usr/local/bin/';
-      $sftpport=`${sftppath}sftp 2>&1`;
-   }
-   if ($sftpport) {
-      if ($sftpport=~/-P sftp_server_path/s) {
-         $sftpport='-oPort=';
-      } else {
-         $sftpport='-P ';
+      $Net::FullAuto::FA_Core::sftpport='';
+      my $sftppath=$_[0];
+      my $sftport=`${sftppath}sftp 2>&1`;
+      if ($sftport) {
+         if ($sftport=~/-P sftp_server_path/s) {
+            $sftport='-oPort=';
+         } else {
+            $sftport='-P ';
+         }
+         $Net::FullAuto::FA_Core::sftpport=$sftport;
       }
    }
 
-   our $ftppath='';
-   if (-e '/usr/bin/ftp') {
-      $ftppath='/usr/bin/';
-   } elsif (-e '/bin/ftp') {
-      $ftppath='/bin/';
-   } elsif (-e '/usr/local/bin/ftp') {
-      $ftppath='/usr/local/bin/';
-   }
+   my $win2unix=sub {
 
-   our $mountpath='';
-   if (-e '/usr/bin/mount') {
-      $mountpath='/usr/bin/';
-   } elsif (-e '/bin/mount') {
-      $mountpath='/bin/';
-   } elsif (-e '/usr/local/bin/mount') {
-      $mountpath='/usr/local/bin/';
-   }
+      my $slash=$_[0];
+      $slash=~s/\\/\//g;
+      return $slash;
+   };
 
-   our $killpath='';
-   if (-e '/usr/bin/kill') {
-      $killpath='/usr/bin/';
-   } elsif (-e '/bin/kill') {
-      $killpath='/bin/';
-   } elsif (-e '/usr/local/bin/kill') {
-      $killpath='/usr/local/bin/';
-   }
+   our $gbp=sub { # Get Bin Path
 
-   our $stringspath='';
-   if (-e '/usr/bin/strings') {
-      $stringspath='/usr/bin/';
-   } elsif (-e '/bin/strings') {
-      $stringspath='/bin/';
-   } elsif (-e '/usr/local/bin/strings') {
-      $stringspath='/usr/local/bin/';
-   }
-
-   our $tarpath='';
-   if (-e '/usr/bin/tar') {
-      $tarpath='/usr/bin/';
-   } elsif (-e '/bin/tar') {
-      $tarpath='/bin/';
-   } elsif (-e '/usr/local/bin/tar') {
-      $tarpath='/usr/local/bin/';
-   }
-
-   our $xargspath='';
-   if (-e '/usr/bin/xargs') {
-      $xargspath='/usr/bin/';
-   } elsif (-e '/bin/xargs') {
-      $xargspath='/bin/';
-   } elsif (-e '/usr/local/bin/xargs') {
-      $xargspath='/usr/local/bin/';
-   }
-
-   our $pingpath='';
-   if ($^O eq 'cygwin') {
-      my $windir=$ENV{'WINDIR'};
-      $windir=~s/\\/\//g;
-      $pingpath="$windir/system32/";
-   } elsif (-e '/usr/bin/ping') {
-      $pingpath='/usr/bin/';
-   } elsif (-e '/bin/ping') {
-      $pingpath='/bin/';
-   } elsif (-e '/usr/local/bin/ping') {
-      $pingpath='/usr/local/bin/';
-   } elsif (-e '/etc/ping') {
-      $pingpath='/etc/';
-   } elsif (-e '/usr/sbin/ping') {
-      $pingpath='/usr/sbin/';
-   }
+      my $cmd=$_[0];
+      my $test='';
+      my $evalu="\$test=\$Net::FullAuto::FA_Core::$cmd";
+      eval $evalu;
+      unless ($test) {
+         if (-e "/usr/bin/$cmd") {
+            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/bin/\"";
+            eval $comand;
+            sftport("/usr/bin/") if $cmd eq 'sftp'; 
+            return "/usr/bin/";
+         } elsif (-e "/bin/$cmd") {
+            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/bin/\"";
+            eval $comand;
+            sftport("/bin/") if $cmd eq 'sftp';
+            return "/bin/";
+         } elsif (-e "/usr/local/bin/$cmd") {
+            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/local/bin/\"";
+            eval $comand;
+            sftport("/usr/local/bin/") if $cmd eq 'sftp';
+            return "/usr/local/bin/";
+         } elsif ($^O eq 'cygwin' && (exists $ENV{'WINDIR'}) &&
+               ((-e $win2unix->($ENV{'WINDIR'}).'/system32/'.$cmd)
+               || (-e $win2unix->($ENV{'WINDIR'}).'/system32/'.$cmd.'.exe'))) {
+            my $comand='';
+            if (-e $win2unix->($ENV{'WINDIR'}).'/system32/'.$cmd) {
+               $comand="\$Net::FullAuto::FA_Core::$cmd=\"".
+                       $win2unix->($ENV{'WINDIR'})."/system32/$cmd\"";
+            } else {
+               $comand="\$Net::FullAuto::FA_Core::$cmd=\"".
+                       $win2unix->($ENV{'WINDIR'})."/system32/${cmd}.exe\"";
+            }
+            eval $comand;
+            sftport("$win2unix->($ENV{'WINDIR'}).'/system32/'")
+               if $cmd eq 'sftp';
+            return $win2unix->($ENV{'WINDIR'}).'/system32/';
+         } elsif (-e "/etc/$cmd") {
+            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/etc/\"";
+            eval $comand;
+            sftport("/etc/") if $cmd eq 'sftp';
+            return "/etc/";
+         } elsif (-e "/usr/sbin/$cmd") {
+            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/sbin/\"";
+            eval $comand;
+            sftport("/usr/sbin/") if $cmd eq 'sftp';
+            return "/usr/sbin/";
+         } elsif (-e "/sbin/$cmd") {
+            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/sbin/\"";
+            eval $comand;
+            sftport("/sbin/") if $cmd eq 'sftp';
+            return "/sbin/";
+         }
+      } else {
+         my $ret="\$Net::FullAuto::FA_Core::$cmd";
+         $ret=eval $ret;
+         $ret||='';
+         return $ret;
+      }
+   };
 
    our $termwidth=''; our $termheight='';
    if (!$Net::FullAuto::FA_Core::cron || $Net::FullAuto::FA_Core::debug) {
@@ -932,7 +845,7 @@ print "WHAT IS THE LINE_2 EVALERROR=$@<====\n" if $Net::FullAuto::FA_Core::debug
                           # handled by the "if ($@)" block at the bottom
                           # of this routine.
                      CC: while (defined fileno $cmd_fh) {
-                        $cmd_fh->print($Net::FullAuto::FA_Core::printfpath.
+                        $cmd_fh->print($Net::FullAuto::FA_Core::gbp->('printf').
                                        "printf $funkyprompt");
                         while (my $line=$cmd_fh->get(timeout=>2)) {
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
@@ -1217,7 +1130,10 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
    }
    if ($Net::FullAuto::FA_Core::makeplan) {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
-         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -1588,9 +1504,9 @@ print "find_berkeleydb_recover CALLER=",caller,"\n";<STDIN>;
          close CH;
       }
    }
-   my $bcmd="${Net::FullAuto::FA_Core::stringspath}strings ".
+   my $bcmd=$Net::FullAuto::FA_Core::gbp->('strings'),'strings '.
             "$berkeleydb_perl_module_lib ".
-            "| ${Net::FullAuto::FA_Core::greppath}grep Release";
+            "| ".$Net::FullAuto::FA_Core::gbp->('grep')."grep Release";
    my $bver=`$bcmd`;
    $bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
    if ((defined $fa_conf::berkeleydb) &&
@@ -1637,17 +1553,18 @@ print "find_berkeleydb_recover CALLER=",caller,"\n";<STDIN>;
       }
    } else {
       my @output=();
-      my $testgrep =`${Net::FullAuto::FA_Core::greppath}grep -H 2>&1`;
-      my $testgrep2=`${Net::FullAuto::FA_Core::greppath}grep 2>&1`;
+      my $greppath=$Net::FullAuto::FA_Core::gbp->('grep');
+      my $testgrep =`${greppath}grep -H 2>&1`;
+      my $testgrep2=`${greppath}grep 2>&1`;
       my $grepopt='';
       if ((-1==index $testgrep,'illegal option')
             && (-1==index $testgrep2,'-insvxbhwyu')) {
          $grepopt='-H ';
       }
-      my $find_cmd1="${Net::FullAuto::FA_Core::findpath}find ";
+      my $find_cmd1=$Net::FullAuto::FA_Core::gbp->('find')."find ";
       my $find_cmd2=" -name \"*.h\" ".
-                   "| ${Net::FullAuto::FA_Core::xargspath}xargs ".
-                   "${Net::FullAuto::FA_Core::greppath}grep ".
+                   "| ".$Net::FullAuto::FA_Core::gbp->('xargs')."xargs ".
+                   $greppath."grep ".
                    "${grepopt}DB_VERSION_STRING";
       print "\nSearching for latest verison of BerkeleyDB.\n".
             "This may take up to five minutes ...\n\n";
@@ -1836,7 +1753,7 @@ sub edit {
    } else {
       my $stderr='';my $stdout='';
       chdir $cpath;
-      ($stdout,$stderr)=cmd("${Net::FullAuto::FA_Core::lspath}ls -lR");
+      ($stdout,$stderr)=cmd($Net::FullAuto::FA_Core::gbp->('ls')."ls -lR");
       die $stderr if $stderr;
       my @files=split "\n", $stdout;
       my @file=();my $dirr='';
@@ -2369,7 +2286,10 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
 
    if ($output ne ']quit[') {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
-         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -2572,8 +2492,10 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          ($stdout,$stderr)=cmd("${crontabpath}crontab -l");
 #print "WAHT IS CRONTABSTDOUT=$stdout\n";
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-               'Jobs');
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs',
@@ -2595,7 +2517,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
             $plnn=~s/^(\d+).*$/$1/;
             my $dig=sha256_hex("$cronstring /usr/local/bin/fa --login ".
                                "$username --password --plan $plnn");
-            ($stdout,$stderr)=cmd($Net::FullAuto::FA_Core::printfpath.
+            ($stdout,$stderr)=cmd($Net::FullAuto::FA_Core::gbp->('printf').
                "printf \"# FullAuto Plan $planstring \]|\[ $dig\012".
                "$cronstring /usr/local/bin/fa --login $username ".
                "--password --plan $plnn\012\"".'| crontab -'); 
@@ -2645,7 +2567,10 @@ sub persist_get {
       "&persist_get\(\[key\]\)")
       unless $key;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
@@ -2682,7 +2607,10 @@ sub persist_put {
       unless $key && $value;
    my $track='';
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+             $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
@@ -2708,7 +2636,10 @@ sub openplandb {
 print "openplandb CALLER=",caller,"\n";
    my $track='';
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+             $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -2801,8 +2732,7 @@ sub acquire_semaphore
          # wait for semaphore to be zero
          my $previous='';
          if ($semaphore_count<2) {
-            my $time_since_start=time()-$Net::FullAuto::FA_Core::invoked[0];
-            if ($process_description && (15<$time_since_start)
+            if ($process_description
                   && ((!$Net::FullAuto::FA_Core::cron
                   || $Net::FullAuto::FA_Core::debug)
                   && !$Net::FullAuto::FA_Core::quiet)) {
@@ -2847,8 +2777,7 @@ sub acquire_semaphore
       $sem = IPC::Semaphore->new($IPC_KEY,$semaphore_count,&S_IRWXU);
       if (defined $sem && $sem) {
          if ($semaphore_count<2) {
-            my $time_since_start=time()-$Net::FullAuto::FA_Core::invoked[0];
-            if ($process_description && (15<$time_since_start)
+            if ($process_description
                   && ((!$Net::FullAuto::FA_Core::cron
                   || $Net::FullAuto::FA_Core::debug)
                   && !$Net::FullAuto::FA_Core::quiet)) {
@@ -2992,17 +2921,17 @@ sub kill
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $pid=$_[0];my $arg=$_[1]||'';my $cmd=[];
    my $stdout='';my $ignore='';
-   my $killpath=$Net::FullAuto::FA_Core::killpath;
+   my $killpath=$Net::FullAuto::FA_Core::gbp->('kill');
    if (exists $Hosts{"__Master_${$}__"}{'kill'}) {
       $killpath=$Hosts{"__Master_${$}__"}{'kill'};
       $killpath.='/' if $killpath!~/\/$/;
    }
-   my $bashpath=$Net::FullAuto::FA_Core::bashpath;
+   my $bashpath=$Net::FullAuto::FA_Core::gbp->('bash');
    if (exists $Hosts{"__Master_${$}__"}{'bash'}) {
       $bashpath=$Hosts{"__Master_${$}__"}{'bash'};
       $bashpath.='/' if $bashpath!~/\/$/;
    }
-   my $sedpath=$Net::FullAuto::FA_Core::sedpath;
+   my $sedpath=$Net::FullAuto::FA_Core::gbp->('sed');
    if (exists $Hosts{"__Master_${$}__"}{'sed'}) {
       $sedpath=$Hosts{"__Master_${$}__"}{'sed'};
       $sedpath.='/' if $sedpath!~/\/$/;
@@ -3054,17 +2983,17 @@ sub testpid
          return 0,'';
       } else { return 0 }
    }
-   my $killpath=$Net::FullAuto::FA_Core::killpath;
+   my $killpath=$Net::FullAuto::FA_Core::gbp->('kill');
    if (exists $Hosts{"__Master_${$}__"}{'kill'}) {
       $killpath=$Hosts{"__Master_${$}__"}{'kill'};
       $killpath.='/' if $killpath!~/\/$/;
    }
-   my $bashpath=$Net::FullAuto::FA_Core::bashpath;
+   my $bashpath=$Net::FullAuto::FA_Core::gbp->('bash');
    if (exists $Hosts{"__Master_${$}__"}{'bash'}) {
       $bashpath=$Hosts{"__Master_${$}__"}{'bash'};
       $bashpath.='/' if $bashpath!~/\/$/;
    }
-   my $sedpath=$Net::FullAuto::FA_Core::sedpath;
+   my $sedpath=$Net::FullAuto::FA_Core::gbp->('sed');
    if (exists $Hosts{"__Master_${$}__"}{'sed'}) {
       $sedpath=$Hosts{"__Master_${$}__"}{'sed'};
       $sedpath.='/' if $sedpath!~/\/$/;
@@ -3447,8 +3376,7 @@ if (keys %DeployFTM_Proxy) {
    }
 }
 
-#my $ps__=($^O eq 'cygwin')?'ps':$pspath.'ps';
-my $ps_stdout=&cmd($Net::FullAuto::FA_Core::pspath.'ps');
+my $ps_stdout=&cmd($Net::FullAuto::FA_Core::gbp->('ps').'ps');
 
 sub get_all_hosts
 {
@@ -3975,7 +3903,10 @@ sub handle_error
       $suberr=${$track}[3] if defined ${$track}[3] && ${$track}[3];
       $suberr||='';
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}."Track") {
-         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}."Track");
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       my $dbenv = BerkeleyDB::Env->new(
            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track',
@@ -4337,12 +4268,12 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS USE?=$use\n"
       my $die="Cannot Contact Server \'$hostlabel\' -";
       my $fah=$Net::FullAuto::FA_Core::fa_host;
       if ($ip_flag) {
-         $die.="\n              1ping failed for ip address $ip";
+         $die.="\n              ping (1) failed for ip address $ip";
          if ($hn_flag) {
             $die.="\n              and hostname: $hostname\n" if $hostname;
          } &handle_error($die);
       } elsif ($hn_flag) {
-         $die.="\n              2ping failed for hostname: $hostname  &"
+         $die.="\n              ping (2) failed for hostname: $hostname  &"
              ."\n              No ip address if defined for Server"
              ."\n              --> $hostlabel  in $fah file.";
          &handle_error($die);
@@ -4516,7 +4447,7 @@ sub test_dir
    my $shell_cmd="if\n[[ -d $tdir ]]\nthen\nif\n[[ -w $tdir ]]"
                 ."\nthen\necho WRITE\nelse\necho READ\nfi\n"
                 ."else\necho NODIR\nfi;".
-                $Net::FullAuto::FA_Core::printfpath."printf \\\\055";
+                $Net::FullAuto::FA_Core::gbp->('printf')."printf \\\\055";
    my $cnt=5;
    while ($cnt--) {
       $cmd_handle->print($shell_cmd);
@@ -4654,7 +4585,7 @@ my $onemore=0;
       $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
       $filehandle->print('cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                         '|| '.$Net::FullAuto::FA_Core::printfpath.
+                         '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                          'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
                          '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                          '\\\\137\\\\055 2>/dev/null');
@@ -4827,8 +4758,10 @@ sub attempt_cmd_xtimes
          &handle_error($cfh_error,'-1') if $cfh_error;
          select(undef,undef,undef,0.02);
          $cmd_handle->print(
-            $Net::FullAuto::FA_Core::printfpath.'printf \\\\041\\\\041;$cmd;'.
-            $Net::FullAuto::FA_Core::printfpath.'printf \\\\045\\\\045');
+            $Net::FullAuto::FA_Core::gbp->('printf').
+               'printf \\\\041\\\\041;$cmd;'.
+            $Net::FullAuto::FA_Core::gbp->('printf').
+               'printf \\\\045\\\\045');
          my $allins='';my $ct=0;
          while (my $line=$cmd_handle->get) {
             chomp($line=~tr/\0-\37\177-\377//d);
@@ -4842,7 +4775,8 @@ print $Net::FullAuto::FA_Core::MRLOG "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<== AND L
                last;
             } else {
                $cmd_handle->
-                  print($Net::FullAuto::FA_Core::printfpath.'printf \\\\055');
+                  print($Net::FullAuto::FA_Core::gbp->('printf').
+                  'printf \\\\055');
             }
             if ($ct++==10) {
                $cmd_handle->print;
@@ -5417,8 +5351,10 @@ sub getpasswd
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db","<==\n"
          if -1<index $MRLOG,'*';
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         File::Path::make_path(
-         $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -5458,7 +5394,7 @@ sub getpasswd
          (join "\n",keys %{$href}),"<==\n" 
          if -1<index $MRLOG,'*';
       if (exists $href->{$key} && !$force) {
-         my $pspath=$Net::FullAuto::FA_Core::pspath;
+         my $pspath=$Net::FullAuto::FA_Core::gbp->('ps');
          if (exists $Hosts{"__Master_${$}__"}{'ps'}) {
             $pspath=$Hosts{"__Master_${$}__"}{'ps'};
             $pspath.='/' if $pspath!~/\/$/;
@@ -5742,8 +5678,10 @@ sub getpasswd
    }
    unless ($Net::FullAuto::FA_Core::tosspass) {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         File::Path::make_path(
-            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -6396,8 +6334,10 @@ $main::get_default_modules=sub {
       close(FD); 
    } 
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-      'Defaults');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
@@ -6449,8 +6389,10 @@ $main::get_default_modules=sub {
          || !exists $default_modules->{fa_maps}
          || !exists $default_modules->{fa_menu}) {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets') {
-         File::Path::make_path(
-            $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets',
@@ -6523,7 +6465,11 @@ my $set_default_sub=sub {
    my $progname=substr($0,(rindex $0,'/')+1,-3);
    require "$loc/fa_defs.pm";
    unless (-d $fa_defs::FA_Secure.'Sets') {
-      File::Path::make_path($fa_defs::FA_Secure.'Sets');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         $fa_defs::FA_Secure.'Sets';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.'Sets',
@@ -6576,11 +6522,16 @@ my $get_modules=sub {
    my $username=getlogin || getpwuid($<);
    my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
    unless (-d "$fadir/Custom/$username/$type") {
-      File::Path::make_path(
-         "$fadir/Custom/$username/$type");
-      copy("$fadir/Custom/fa_".lc($type).".pm",
-         "$fadir/Custom/$username/$type")
-         || do{ die "copy failed: $!" };
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              "$fadir/Custom/$username/$type";
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
+      $cmd="${Net::FullAuto::FA_Core::cppath}cp ".
+           "$fadir/Custom/fa_".lc($type).'.pm'.
+           "$fadir/Custom/$username/$type";
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
    }
    opendir(DIR,"$fadir/Custom/$username/$type");
    my @xfiles = readdir(DIR);
@@ -6697,22 +6648,21 @@ my $fasetdef=sub {
    my $progname=substr($0,(rindex $0,'/')
                        +1,-3);
    require "$loc/fa_defs.pm";
-   unless (-d
-         $fa_defs::FA_Secure.'Defaults') {
-      File::Path::make_path(
-         $fa_defs::FA_Secure.'Defaults');
+   unless (-d $fa_defs::FA_Secure.'Defaults') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         $fa_defs::FA_Secure.'Defaults';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.
                 'Defaults',
-      -Flags =>
-                DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or die(
       "cannot open environment for DB: ".
       $BerkeleyDB::Error,"\n",'','');
    my $bdb = BerkeleyDB::Btree->new(
-      -Filename => $progname.
-                   "_defaults.db",
+      -Filename => $progname."_defaults.db",
       -Flags    => DB_CREATE,
       -Env      => $dbenv
    );
@@ -6831,7 +6781,10 @@ my $default_sets_banner_sub=sub {
    my $progname=substr($0,(rindex $0,'/')+1,-3);
    require "$loc/fa_defs.pm";
    unless (-d $fa_defs::FA_Secure.'Sets') {
-      File::Path::make_path($fa_defs::FA_Secure.'Sets');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $fa_defs::FA_Secure.'Sets';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $sdbenv = BerkeleyDB::Env->new(
          -Home  => $fa_defs::FA_Secure.'Sets',
@@ -6906,10 +6859,13 @@ my $cacomm_sub=sub {
                            my $progname=substr($0,(rindex $0,'/')
                                                +1,-3);
                            require "$loc/fa_defs.pm";
-                           unless (-d
-                                      $fa_defs::FA_Secure.'Defaults') {
-                                   File::Path::make_path(
-                                      $fa_defs::FA_Secure.'Defaults');
+                           unless (-d $fa_defs::FA_Secure.'Defaults') {
+                              my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                                 'mkdir -p '.
+                                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                                 'Defaults';
+                              my $stdout='';my $stderr='';
+                              ($stdout,$stderr)=&setuid_cmd($cmd,5);
                            }
                            my $dbenv = BerkeleyDB::Env->new(
                                -Home  => $fa_defs::FA_Secure.
@@ -7250,7 +7206,10 @@ my $define_modules_commit_sub=sub {
             my $progname=substr($0,(rindex $0,'/')+1,-3);
             require "$loc/fa_defs.pm";
             unless (-d $fa_defs::FA_Secure.'Sets') {
-               File::Path::make_path($fa_defs::FA_Secure.'Sets');
+               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                       $fa_defs::FA_Secure.'Sets';
+               my $stdout='';my $stderr='';
+               ($stdout,$stderr)=&setuid_cmd($cmd,5);
             }
             my $dbenv = BerkeleyDB::Env->new(
                -Home  => $fa_defs::FA_Secure.'Sets',
@@ -7468,11 +7427,16 @@ my $define_modules_menu_fa_code_sub=sub {
             my $username=getlogin || getpwuid($<);
             my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
             unless (-d "$fadir/Custom/$username/Code") {
-               File::Path::make_path(
-                  "$fadir/Custom/$username/Code");
-               copy("$fadir/Custom/fa_code.pm",
-                  "$fadir/Custom/$username/Code")
-                  || do{ die "copy failed: $!" };
+               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                       "$fadir/Custom/$username/Code";
+               my $stdout='';my $stderr='';
+               ($stdout,$stderr)=&setuid_cmd($cmd,5);
+               die $stderr if $stderr;
+               $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
+                   "$fadir/Custom/fa_code.pm".
+                   "$fadir/Custom/$username/Code";
+               ($stdout,$stderr)=&setuid_cmd($cmd,5);
+               die $stderr if $stderr;
             }
             opendir(DIR,"$fadir/Custom/$username/Code");
             my @xfiles = readdir(DIR);
@@ -7541,16 +7505,16 @@ my $delete_sets_menu_sub=sub {
                            my $progname=substr($0,(rindex $0,'/')
                                       +1,-3);
                            require "$loc/fa_defs.pm";
-                           unless (-d
-                              $fa_defs::FA_Secure.'Defaults') {
-                              File::Path::make_path(
-                                 $fa_defs::FA_Secure.'Defaults');
+                           unless (-d $fa_defs::FA_Secure.'Defaults') {
+                              my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                                 'mkdir -p '.$fa_defs::FA_Secure.'Defaults';
+                              my $stdout='';my $stderr='';
+                              ($stdout,$stderr)=&setuid_cmd($cmd,5);
                            }
                            my $dbenv = BerkeleyDB::Env->new(
                               -Home  => $fa_defs::FA_Secure.
                                         'Defaults',
-                              -Flags =>
-                                 DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                            ) or die(
                               "cannot open environment for DB: ".
                               $BerkeleyDB::Error,"\n",'','');
@@ -7583,10 +7547,11 @@ my $delete_sets_menu_sub=sub {
                               '$HASH';
                            $default_modules=eval $default_modules;
                            $default_modules||='';
-                           unless (-d
-                                 $fa_defs::FA_Secure.'Sets') {
-                              File::Path::make_path(
-                                 $fa_defs::FA_Secure.'Sets');
+                           unless (-d $fa_defs::FA_Secure.'Sets') {
+                              my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                                 'mkdir -p '.$fa_defs::FA_Secure.'Sets';
+                              my $stdout='';my $stderr='';
+                              ($stdout,$stderr)=&setuid_cmd($cmd,5);
                            }
                            my $sdbenv = BerkeleyDB::Env->new(
                               -Home  => $fa_defs::FA_Secure.'Sets',
@@ -8087,7 +8052,10 @@ sub fa_login
    } $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
       unless (-d '/var/db/Berkeley/FullAuto') {
-         File::Path::make_path('/var/db/Berkeley/FullAuto');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 '/var/db/Berkeley/FullAuto';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       if (!(-d '/var/db/Berkeley/FullAuto' && -w _)) {
          &handle_error("Cannot Write to Encrypted Passwd Directory :".
@@ -8233,8 +8201,10 @@ sub fa_login
       $kind='test' if $Net::FullAuto::FA_Core::test
          && !$Net::FullAuto::FA_Core::prod;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-                               'Passwds');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -8514,11 +8484,16 @@ sub fa_login
                   my $username=getlogin || getpwuid($<);
                   my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
                   unless (-d "$fadir/Custom/$username/$type") {
-                     File::Path::make_path(
-                        "$fadir/Custom/$username/$type");
-                     copy("$fadir/Custom/fa_".lc($type).".pm",
-                        "$fadir/Custom/$username/$type")
-                       || do{ die "copy failed: $!" };
+                     my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                          'mkdir -p '."$fadir/Custom/$username/$type";
+                     my $stdout='';my $stderr='';
+                     ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                     die $stderr if $stderr;
+                     $cmd="${Net::FullAuto::FA_Core::cppath}cp ".
+                          "$fadir/Custom/fa_".lc($type).'.pm'.
+                          "$fadir/Custom/$username/$type";
+                     ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                     die $stderr if $stderr;
                   }
                   opendir(DIR,"$fadir/Custom/$username/$type");
                   my @xfiles = readdir(DIR);
@@ -8703,8 +8678,10 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          $kind='test' if $Net::FullAuto::FA_Core::test &&
                   !$Net::FullAuto::FA_Core::prod;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-            'Passwds');
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -9163,12 +9140,12 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             $lc_cnt++;
             if (lc($connect_method) eq 'telnet') {
                $cmd_type='telnet';
-               my $telnetpath='';
+               my $telnetpath=$Net::FullAuto::FA_Core::gbp->('telnet');
                if (exists $Hosts{"__Master_${$}__"}{'telnet'}) {
                   $telnetpath=$Hosts{"__Master_${$}__"}{'telnet'};
                   $telnetpath.='/' if $telnetpath!~/\/$/;
                }
-               my $telnetport='';
+               my $telnetport=$Net::FullAuto::FA_Core::gbp->('telnet');
                if (exists $Hosts{"__Master_${$}__"}{'telnetport'}) {
                   $telnetport=$Hosts{"__Master_${$}__"}{'telnetport'};
                }
@@ -9235,7 +9212,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                } last 
             } elsif (lc($connect_method) eq 'ssh') {
                $cmd_type='ssh';
-               my $sshpath=$Net::FullAuto::FA_Core::sshpath;
+               my $sshpath=$Net::FullAuto::FA_Core::gbp->('ssh');
                if (exists $Hosts{"__Master_${$}__"}{'ssh'}) {
                   $sshpath=$Hosts{"__Master_${$}__"}{'ssh'};
                   $sshpath.='/' if $sshpath!~/\/$/;
@@ -9510,9 +9487,9 @@ print $Net::FullAuto::FA_Core::MRLOG "ERROR LOCALLLLLLLLLLLLLLLLLLLL_sh_pid=$loc
             if (!$localhost->{_sh_pid}) {
                $localhost->print;
                $localhost->print(
-                  $Net::FullAuto::FA_Core::printfpath.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\041\\\\041;echo $$;'.
-                  $Net::FullAuto::FA_Core::printfpath.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\045\\\\045');
                my $allins='';my $ct=0;
                while (1) {
@@ -9589,8 +9566,10 @@ print $Net::FullAuto::FA_Core::MRLOG
          $kind='test' if $Net::FullAuto::FA_Core::test &&
                          !$Net::FullAuto::FA_Core::prod;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-               'Passwds');
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
          }
          $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -9747,7 +9726,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                ($localhost->{_cygdrive},$stderr)=
                   Rem_Command::cmd(
                   $localhost,
-                  "${Net::FullAuto::FA_Core::mountpath}mount -p");
+                  $Net::FullAuto::FA_Core::gbp->('mount')."mount -p");
                &Net::FullAuto::FA_Core::release_semaphore(8712);
                $localhost->{_cygdrive}=~s/^.*(\/\S+).*$/$1/s;
                last if $localhost->{_cygdrive} && unpack('a1',
@@ -9802,7 +9781,8 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                if $Net::FullAuto::FA_Core::log &&
                -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             unless ($localhost->{_sh_pid}) {
-               my $ps_out=`${Net::FullAuto::FA_Core::pspath}ps -el`;
+               my $pspath=$Net::FullAuto::FA_Core::gbp->('ps');
+               my $ps_out=`${pspath}ps -el`;
                print $Net::FullAuto::FA_Core::MRLOG
                   "\nHERE IS THE PS CMD OUTPUT:\n       ",
                   "$ps_out\n"
@@ -9853,7 +9833,8 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                (-1<index $login_Mast_error,$passline)) {
             if ($retrys<2 && -1<index $login_Mast_error,'timed-out') {
 #print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETRYING LOGINMASTERERROR=$login_Mast_error\n";
-               my $psoutput=`${Net::FullAuto::FA_Core::pspath}ps`;
+               my $pspath=$Net::FullAuto::FA_Core::gbp->('ps');
+               my $psoutput=`${pspath}ps`;
 #print $Net::FullAuto::FA_Core::MRLOG "PSOUTPUTTTTTTTTTTTT=$psoutput<==\n";
                $retrys++;
                if (-1<index $login_Mast_error,'read') {
@@ -10281,7 +10262,10 @@ sub passwd_db_update
    $kind='test' if
       $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -10394,7 +10378,10 @@ sub su_scrub
    $kind='test' if
       $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -10563,8 +10550,10 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
          $kind='test' if $Net::FullAuto::FA_Core::test &&
                       !$Net::FullAuto::FA_Core::prod;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.
-               'Passwds');
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -10851,24 +10840,25 @@ sub ping
    my $cmd='';my $stdout='';my $stderr='';my $didping=10;
    if ($specialperms eq 'setuid') {
       if ($^O eq 'cygwin') {
-         $cmd=[ "${Net::FullAuto::FA_Core::pingpath}ping",'-n','1',$_[0],"2>&1" ];
+         $cmd=[ $Net::FullAuto::FA_Core::gbp->('ping').
+                "ping",'-n','1',$_[0],"2>&1" ];
       } else {
-         my $bashpath=$Net::FullAuto::FA_Core::bashpath;
+         my $bashpath=$Net::FullAuto::FA_Core::gbp->('bash');
          if (exists $Hosts{"__Master_${$}__"}{'bash'}) {
             $bashpath=$Hosts{"__Master_${$}__"}{'bash'};
             $bashpath.='/' if $bashpath!~/\/$/;
          }
          my $pth=$Hosts{"__Master_${$}__"}{'FA_Core'}."ping$$.sh";
          open(TP,">$pth") || die "CANNOT OPEN $pth $!";
-         print TP "${Net::FullAuto::FA_Core::pingpath}ping -c1 $_[0] 2>&1"; 
+         print TP $Net::FullAuto::FA_Core::gbp->('ping')."ping -c1 $_[0] 2>&1"; 
          CORE::close(TP);
          $cmd=[ "${bashpath}bash",$pth,"2>&1" ];
       }
    } else {
       if ($^O eq 'cygwin') {
-         $cmd=[ "${Net::FullAuto::FA_Core::pingpath}ping -n 1 $_[0]" ];
+         $cmd=[ $Net::FullAuto::FA_Core::gbp->('ping')."ping -n 1 $_[0]" ];
       } else {
-         $cmd=[ "${Net::FullAuto::FA_Core::pingpath}ping -c1 $_[0]" ];
+         $cmd=[ $Net::FullAuto::FA_Core::gbp->('ping')."ping -c1 $_[0]" ];
       }
    }
    eval {
@@ -10886,11 +10876,11 @@ sub ping
    if ($ev_err) {
       if (wantarray) {
          return 0,
-            ${Net::FullAuto::FA_Core::pingpath}.
+            $Net::FullAuto::FA_Core::gbp->('ping').
             "ping timed-out: $ev_err";
       } else {
          &Net::FullAuto::FA_Core::handle_error(
-            ${Net::FullAuto::FA_Core::pingpath}.
+            $Net::FullAuto::FA_Core::gbp->('ping').
             "ping timed-out: $ev_err","-$didping");
       }
    }
@@ -11385,7 +11375,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
       } $cmd_handle->close;
    } else {
       if ($self!~/^cd[\t ]/) {
-         my $sedpath=$Net::FullAuto::FA_Core::sedpath;
+         my $sedpath=$Net::FullAuto::FA_Core::gbp->('sed');
          if (exists $Hosts{"__Master_${$}__"}{'sed'}) {
             $sedpath=$Hosts{"__Master_${$}__"}{'sed'};
             $sedpath.='/' if $sedpath!~/\/$/;
@@ -11468,7 +11458,10 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       $kind='test' if $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
       return unless exists $Hosts{"__Master_${$}__"}{'FA_Secure'};
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds');
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -11747,7 +11740,7 @@ print "GET_VLABEL_CALLER=",caller,"\n";<STDIN>;
 #### DO ERROR TRAPPING!!!!!!!!!!!!
 print "MKDIR1=$archivedir\n";
                      $Net::FullAuto::FA_Core::localhost->{_cmd_handle}->SUPER::cmd(
-                                              "mkdir \'/$archivedir\'");
+                                              $Net::FullAuto::FA_Core::gbp->('mkdir')."mkdir \'/$archivedir\'");
                      my $chmod=$Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Chmod'};
                      my $own=$Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Owner'};
                      my $grp=$Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Group'};
@@ -12698,8 +12691,10 @@ print "FTR_RETURN3\n";
                                    "_${kind}_passwds.db";
 print "DBPATHHHH=$dbpath<==\n";
                         unless (-d $Hosts{$mr}{'FA_Secure'}.'Passwds') {
-                           File::Path::make_path($Hosts{$mr}{'FA_Secure'}.
-                              'Passwds');
+                           my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                              'mkdir -p '.$Hosts{$mr}{'FA_Secure'}.'Passwds';
+                           my $stdout='';my $stderr='';
+                           ($stdout,$stderr)=&setuid_cmd($cmd,5);
                         }
                         my $dbenv = BerkeleyDB::Env->new(
                               -Home  => 
@@ -13107,9 +13102,10 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST2222=$host\n"
                         $Net::FullAuto::FA_Core::ftppath.='/'
                            if $Net::FullAuto::FA_Core::ftppath!~/\/$/;
                      }
-                     my $ftp__cmd="${Net::FullAuto::FA_Core::ftppath}ftp $host";
+                     my $ftp__cmd=$Net::FullAuto::FA_Core::gbp->('ftp').
+                           "ftp $host";
                      ($fpx_handle,$fpx_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                        ["${Net::FullAuto::FA_Core::ftppath}ftp",$host,'',
+                        [$Net::FullAuto::FA_Core::gbp->('ftp')."ftp",$host,'',
                         $Net::FullAuto::FA_Core::slave])
                         or &Net::FullAuto::FA_Core::handle_error(
                         "couldn't launch ftp subprocess");
@@ -13160,12 +13156,13 @@ print "WHAT IS SLAVE=$Net::FullAuto::FA_Core::slave<==\n";
                      my $sshport='';
                      if (exists $Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'sshport'}) {
+                        $Net::FullAuto::FA_Core::gbp->('sftp');
                         my $sp=$Net::FullAuto::FA_Core::sftpport;
                         $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'sshport'}.' ';
                      }
                      ($fpx_handle,$fpx_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                        ["${Net::FullAuto::FA_Core::sftppath}sftp",
+                        [$Net::FullAuto::FA_Core::gbp->('sftp')."sftp",
                         "${sshport}$sftploginid\@$host",
                         '',$Net::FullAuto::FA_Core::slave])
                         or &Net::FullAuto::FA_Core::handle_error(
@@ -13303,7 +13300,7 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST3333=$host\n"
                      if $cfh_error;
                   eval {
                      my $ftp__cmd=
-                        "${Net::FullAuto::FA_Core::ftppath}ftp $host";
+                        $Net::FullAuto::FA_Core::gbp->('ftp')."ftp $host";
                      $ftp_handle->print($ftp__cmd);
                      my $allines='';
                      my $fc='';
@@ -13438,7 +13435,8 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST3333=$host\n"
                               $cmd_type=$ftp_handle->{_cmd_type};
                               $ftp_handle=$ftp_handle->{_cmd_handle};
                               $ftp_handle->print(
-                                 "${Net::FullAuto::FA_Core::ftppath}ftp $host");
+                                 $Net::FullAuto::FA_Core::gbp->('ftp').
+                                 "ftp $host");
                               FH1: foreach my $hlabel (
                                     keys %Net::FullAuto::FA_Core::Processes) {
                                  foreach my $sid (
@@ -13591,12 +13589,13 @@ print "WHAT IS THE FTP_EVAL_ERROR1111=$@\n";
                   my $sshport='';
                   if (exists $Net::FullAuto::FA_Core::Hosts{
                         $hostlabel}{'sshport'}) {
+                     $Net::FullAuto::FA_Core::gbp->('sftp');
                      my $sp=$Net::FullAuto::FA_Core::sftpport;
                      $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                         $hostlabel}{'sshport'}.' ';
                   }
-                  $ftp_handle->print("${Net::FullAuto::FA_Core::sftppath}sftp ".
-                     "${sshport}$sftploginid\@$host");
+                  $ftp_handle->print($Net::FullAuto::FA_Core::gbp->('sftp').
+                     "sftp ${sshport}$sftploginid\@$host");
                   $ftm_type='sftp';
                }
             }
@@ -13737,8 +13736,8 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                   && !$Net::FullAuto::FA_Core::quiet);
             } else { $previous_method=$connect_method;$stderr='' }
             if (lc($connect_method) eq 'ftp') {
-               my $ftp__cmd="${Net::FullAuto::FA_Core::ftppath}ftp $host";
-               $ftp_handle->print("${Net::FullAuto::FA_Core::ftppath}ftp $host");
+               my $ftp__cmd=$Net::FullAuto::FA_Core::gbp->('ftp')."ftp $host";
+               $ftp_handle->print($ftp__cmd);
                FH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
                   foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
                      foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
@@ -13918,11 +13917,12 @@ print "FTP_PID=$ftp_pid<== and ==>$localhost->{_cmd_pid}<==\n";
                               my $previous_method='';$stderr='';
                               my $fm_cnt=-1;
                               my $ftp__cmd=
-                                 "${Net::FullAuto::FA_Core::ftppath}ftp $host";
+                                 $Net::FullAuto::FA_Core::gbp->('ftp').
+                                 "ftp $host";
                               foreach $connect_method (@connect_method) {
                                  if (lc($connect_method) eq 'ftp') {
                                     $ftp_handle->print(
-                                       $Net::FullAuto::FA_Core::ftppath.
+                                       $Net::FullAuto::FA_Core::gbp->('ftp').
                                        "ftp $host");
                                     last;
                                  } elsif (lc($connect_method) eq 'sftp') {
@@ -13930,13 +13930,14 @@ print "FTP_PID=$ftp_pid<== and ==>$localhost->{_cmd_pid}<==\n";
                                     if (exists 
                                           $Net::FullAuto::FA_Core::Hosts{
                                           $hostlabel}{'sshport'}) {
+                                       $Net::FullAuto::FA_Core::gbp->('sftp');
                                        my $sp=$Net::FullAuto::FA_Core::sftpport;
                                        $sshport=$sp.
                                           $Net::FullAuto::FA_Core::Hosts{
                                           $hostlabel}{'sshport'}.' ';
                                     }
                                     $ftp_handle->print(
-                                       $Net::FullAuto::FA_Core::sftppath.
+                                       $Net::FullAuto::FA_Core::gbp->('sftp').
                                        "sftp ${sshport}$sftploginid\@$host");
                                     last;
                                  }
@@ -14134,14 +14135,15 @@ print "RETURNFOUR and FTR_CMD=$ftr_cmd\n";<STDIN>;
                                     $ftp_handle->timeout($fttimeout);
                                     my $sftploginid=($su_id)?$su_id:$login_id;
                                     my $ftp__cmd=
-                                       $Net::FullAuto::FA_Core::ftppath.
+                                       $Net::FullAuto::FA_Core::gbp->('ftp').
                                        "ftp $host";
+                                    $Net::FullAuto::FA_Core::gbp->('sftp');
                                     my $sp=$Net::FullAuto::FA_Core::sftpport;
                                     foreach $connect_method (@{$ftr_cnct}) {
                                        if (lc($connect_method) eq 'ftp') {
                                           $ftp_handle->print(
-                                             $Net::FullAuto::FA_Core::ftppath.
-                                             "ftp $host");
+                                             $Net::FullAuto::FA_Core::gbp->(
+                                             'ftp')."ftp $host");
                                           $ftm_type='ftp';
                                        } elsif (lc($connect_method) eq 'sftp') {
                                           my $sshport='';
@@ -14250,6 +14252,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                my $sshport='';
                if (exists
                      $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+                  $Net::FullAuto::FA_Core::gbp->('sftp');
                   my $sp=$Net::FullAuto::FA_Core::sftpport;
                   $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                      $hostlabel}{'sshport'}.' ';
@@ -14412,6 +14415,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                  my $sshport='';
                                  if (exists $Net::FullAuto::FA_Core::Hosts{
                                        $hostlabel}{'sshport'}) {
+                                    $Net::FullAuto::FA_Core::gbp->('sftp');
                                     my $sp=$Net::FullAuto::FA_Core::sftpport;
                                     $sshport=$sp.
                                        $Net::FullAuto::FA_Core::Hosts{
@@ -14516,6 +14520,7 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                      my $sshport='';
                      if (exists $Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'sshport'}) {
+                        $Net::FullAuto::FA_Core::gbp->('sftp');
                         my $sp=$Net::FullAuto::FA_Core::sftpport;
                         $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'sshport'}.' ';
@@ -15594,8 +15599,8 @@ sub tmp
       $path=~s/\\/\\\\/g;
       $Net::FullAuto::FA_Core::tmp_files_dirs{$self->{_cmd_handle}}=[
          $self->{_work_dirs}->{_tmp},$tdir ];
-      ($output,$stderr)=$self->cmd('mkdir -p '.
-         $self->{_work_dirs}->{_tmp}.'/'.$tdir);
+      ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
+         "mkdir -p ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
       $return_path=$self->{_work_dirs}->{_tmp_mswin}
                   .$tdir.'\\'.$path;
@@ -15603,8 +15608,8 @@ sub tmp
       $path=~tr/\\/\//;
       $Net::FullAuto::FA_Core::tmp_files_dirs{$self->{_cmd_handle}}=[
          $self->{_work_dirs}->{_tmp},$tdir ];
-      ($output,$stderr)=$self->cmd('mkdir -p '.
-         $self->{_work_dirs}->{_tmp}.'/'.$tdir);
+      ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
+         "mkdir -p ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
       $return_path=$self->{_work_dirs}->{_tmp}.$tdir.'/'.$path;
    } return $return_path;
@@ -17049,7 +17054,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                     if $Net::FullAuto::FA_Core::log &&
                                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            ($output,$stderr)=$baseFH->cmd(
-                              "${Net::FullAuto::FA_Core::tarpath}$tar_cmd",500);
+                              $Net::FullAuto::FA_Core::gbp->('tar').
+                              $tar_cmd,500);
                            &Net::FullAuto::FA_Core::handle_error(
                               $stderr,'-1') if $stderr &&
                               $stderr!~/\[A(?:\[C)+\[K1/;
@@ -17093,7 +17099,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                         }
                         $tar_cmd.="-C \"$bcurdir\" \"$key\"";
                         ($output,$stderr)=$baseFH->cmd(
-                           "${Net::FullAuto::FA_Core::tarpath}$tar_cmd");
+                           $Net::FullAuto::FA_Core::gbp->('tar').$tar_cmd);
                         &Net::FullAuto::FA_Core::handle_error(
                            $stderr,'-1') if $stderr &&
                            $stderr!~/\[A(?:\[C)+\[K1/;
@@ -18670,7 +18676,7 @@ sub ftm_connect
          eval {
             while ($host=pop @hosts) {
                $ftpFH->{_cmd_handle}->print(
-                  "${Net::FullAuto::FA_Core::pingpath}ping $host");
+                  $Net::FullAuto::FA_Core::gbp->('ping')."ping $host");
                while (my $line=
                      $ftpFH->{_cmd_handle}->get(
                      Timeout=>5)) {
@@ -18883,6 +18889,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftm_connect::cmd() HAD TO DO SFTP LOGIN_RE
 #print "SU_IDDDDDDDDDDDDDDD=$su_id and FTHH=$ftpFH and CH=$ftpFH->{_cmd_handle}<==\n";
             my $sshport='';
             if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+               $Net::FullAuto::FA_Core::gbp->('sftp');
                my $sp=$Net::FullAuto::FA_Core::sftpport;
                $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
             }
@@ -19016,6 +19023,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                               }
                               my $sshport='';
                               if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+                                 $Net::FullAuto::FA_Core::gbp->('sftp');
                                  my $sp=$Net::FullAuto::FA_Core::sftpport;
                                  $sshport=$sp.
                                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
@@ -19149,6 +19157,7 @@ print "555 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";<STDIN>;
          $ftpFH->{_cmd_handle}->timeout($fctimeout);
          my $sshport='';
          if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+            $Net::FullAuto::FA_Core::gbp->('sftp');
             my $sp=$Net::FullAuto::FA_Core::sftpport;
             $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
          }
@@ -21290,7 +21299,8 @@ sub close
               # handled by the "if ($@)" block at the bottom
               # of this routine.
          CM: while (defined fileno $self->{_cmd_handle}) {
-            $self->{_cmd_handle}->print($Net::FullAuto::FA_Core::printfpath.
+            $self->{_cmd_handle}->print(
+                           $Net::FullAuto::FA_Core::gbp->('printf').
                            "printf $funkyprompt");
             while (my $line=$self->{_cmd_handle}->get) {
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
@@ -21558,7 +21568,7 @@ my $w2loop=0;
                   $previous_method=$connect_method;
                   if (lc($connect_method) eq 'telnet') {
                      eval { 
-                        my $telnetpath='';
+                        my $telnetpath=$Net::FullAuto::FA_Core::gbp->('telnet');
                         if (exists $Hosts{"__Master_${$}__"}{'telnet'}) {
                            $telnetpath=$Hosts{"__Master_${$}__"}{'telnet'};
                            $telnetpath.='/' if $telnetpath!~/\/$/;
@@ -21710,7 +21720,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                      } last
                   } elsif (lc($connect_method) eq 'ssh') {
                      $sshloginid=($use_su_login)?$su_id:$login_id;
-                     my $sshpath=$Net::FullAuto::FA_Core::sshpath;
+                     my $sshpath=$Net::FullAuto::FA_Core::gbp->('ssh');
                      eval {
                         if (exists $Hosts{"__Master_${$}__"}{'ssh'}) {
                            $sshpath=$Hosts{"__Master_${$}__"}{'ssh'};
@@ -21868,7 +21878,7 @@ if (0) {
             $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
             $cmd_handle->print('cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                         '|| '.$Net::FullAuto::FA_Core::printfpath.
+                         '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                          'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
                          '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                          '\\\\137\\\\055 2>/dev/null');
@@ -22005,7 +22015,7 @@ if (0) {
                         &Net::FullAuto::FA_Core::get_prompt();
                      $cmd_handle->print('cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                         '|| '.$Net::FullAuto::FA_Core::printfpath.
+                         '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                          'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
                          '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                          '\\\\137\\\\055 2>/dev/null');
@@ -22021,7 +22031,7 @@ if (0) {
                            &Net::FullAuto::FA_Core::get_prompt();
                         $cmd_handle->print('cmd /Q /C "set /A '
                            .${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                           '|| '.$Net::FullAuto::FA_Core::printfpath.
+                           '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                            'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2]
                            .'\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                            '\\\\137\\\\055 2>/dev/null');
@@ -22098,9 +22108,9 @@ if (0) {
             if (!$shell_pid) {
                $cmd_handle->print;my $ct=0;
                $cmd_handle->print(
-                  $Net::FullAuto::FA_Core::printfpath.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\041\\\\041;echo $$;'.
-                  $Net::FullAuto::FA_Core::printfpath.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\045\\\\045');
                my $allins='';$ct=0;
                while (1) {
@@ -22175,7 +22185,7 @@ if (0) {
                ($cygdrive,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_handle,
                     _hostlabel=>[ $hostlabel,'' ] },
-                  "${Net::FullAuto::FA_Core::mountpath}mount -p");
+                  $Net::FullAuto::FA_Core::gbp->('mount')."mount -p");
                &Net::FullAuto::FA_Core::release_semaphore(8712);
                $cygdrive=~s/^.*(\/\S+).*$/$1/s;
             }
@@ -22194,9 +22204,9 @@ print "JSUT CHECKING\n";<STDIN>;
             $cmd_handle->print;
             if (!$uname) {
                $cmd_handle->print(
-                  $Net::FullAuto::FA_Core::printfpath.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\041\\\\041;uname;'.
-                  $Net::FullAuto::FA_Core::printfpath.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\045\\\\045');
                my $allins='';my $ct=0;
                while (my $line=$cmd_handle->get) {
@@ -22475,7 +22485,7 @@ sub wait_for_prompt {
    unless ($from_su) {
       $cmd_handle->print('cmd /Q /C "set /A '.
              ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-             '|| '.$Net::FullAuto::FA_Core::printfpath.
+             '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
              'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
              '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
              '\\\\137\\\\055 2>/dev/null');
@@ -22612,7 +22622,7 @@ sub wait_for_prompt {
                &Net::FullAuto::FA_Core::get_prompt();
             $cmd_handle->print('cmd /Q /C "set /A '.
                 ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                '|| '.$Net::FullAuto::FA_Core::printfpath.
+                '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                 'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
                 '\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                 '\\\\137\\\\055 2>/dev/null');
@@ -22628,7 +22638,7 @@ sub wait_for_prompt {
                   &Net::FullAuto::FA_Core::get_prompt();
                $cmd_handle->print('cmd /Q /C "set /A '
                   .${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
-                  '|| '.$Net::FullAuto::FA_Core::printfpath.
+                  '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2]
                   .'\\\\'.${$Net::FullAuto::FA_Core::uhray}[3].
                   '\\\\137\\\\055 2>/dev/null');
@@ -23237,6 +23247,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                my $sftploginid=($su_id)?$su_id:$login_id;
                my $sshport='';
                if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+                  $Net::FullAuto::FA_Core::gbp->('sftp');
                   my $sp=$Net::FullAuto::FA_Core::sftpport;
                   $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
                }
@@ -25768,7 +25779,10 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    $line="${hostlabel}|%|$line";
    ${$self->{_host_queried}}{"$hostlabel"}='-';
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -25843,7 +25857,10 @@ print "STARTING TIE\n" if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -25903,8 +25920,10 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          &Net::FullAuto::FA_Core::cleanup()
       } elsif ($output eq 'Do NOT Transfer EVER') {
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-            File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}
-               .'Custom');
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -25915,7 +25934,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          my $bdb = BerkeleyDB::Btree->new(
             -Filename => "$self->{_dbfile}.db",
             -Flags    => DB_CREATE,
-            -Compare    => sub { $_[0] <=> $_[1] },
+            -Compare  => sub { $_[0] <=> $_[1] },
             -Env      => $dbenv
          ) or &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n");
@@ -26000,7 +26019,10 @@ sub mod
 {
    my $self=shift;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -26036,7 +26058,10 @@ sub close
 print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
    my $self=shift;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      File::Path::make_path($Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom');
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
