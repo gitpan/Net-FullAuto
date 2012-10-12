@@ -19,6 +19,13 @@
 ################################################################
 
 
+2012-10-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999932 released.
+
+        * Fixed endless loop in login process.
+
+
 2012-10-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999931 released.

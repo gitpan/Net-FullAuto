@@ -22315,7 +22315,7 @@ print $Net::FullAuto::FA_Core::MRLOG "CURDIRDETERMINED!!!!!!=$curdir<==\n"
       };
       if ($@) {
          $cmd_errmsg=$@;
-print "WHAT IS THE CMD_ERR=$@\n";<STDIN>;
+#print "WHAT IS THE CMD_ERR=$@\n";<STDIN>;
          print $Net::FullAuto::FA_Core::MRLOG
             "\ncmd_login() Login ERROR!".
             " - The Username or Password is INCORRECT\n",
@@ -22549,7 +22549,7 @@ sub wait_for_prompt {
                   if (-1<$#connect_method) {
                      last if $previous_method eq $connect_method[0];
                      shift @connect_method;
-                  }
+                  } else { last }
                }
                $output=~s/^\s*//s;
                $output=~s/\s*//s;
