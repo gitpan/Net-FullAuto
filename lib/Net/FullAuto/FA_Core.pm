@@ -4060,7 +4060,7 @@ sub handle_error
    } else {
 print "WE ARE GOING TO DIE IN HANDLE_ERROR and CALLER=",(join ' ',@topcaller),"\n"
 if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
-print $Net::FullAuto::FA_Core::MRLOG "WE ARE GOING TO DIE IN HANDLE_ERROR and CALLER=",(join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print $Net::FullAuto::FA_Core::MRLOG "WE ARE GOING TO DIE IN HANDLE_ERROR and CALLER=",(join ' ',@topcaller)," and ERROR=$errtxt<==\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       if ($return && $warn) {
          print "\n       $errtxt\n";
       } else { die $errtxt }
@@ -11518,6 +11518,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
    }
 
 }
+
 1;
 
 package File_Transfer;
@@ -21491,6 +21492,8 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
          $Net::FullAuto::FA_Core::DeploySMB_Proxy[0],
          $loginid,$ms_domain,'','','smb');
          #$loginid,$ms_domain,$cmd_errmsg,'','SMB_Proxy');
+   } elsif (exists $Hosts{$hostlabel} &&
+         lc($Hosts{$hostlabel}->{'Label'}) eq 'mozrepl') {
    } else {
       $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
          $hostlabel,$login_id,'','');
@@ -21688,7 +21691,9 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                         }
                         last if $line=~
                            /(?<!Last )login[: ]+$|username[: ]+$/i;
-                        if ($line=~/repl>\s*$/s) {
+                        if ($line=~/(repl\d*)>\s*$/s) {
+                           $shell=$1;
+                           $cmd_handle->prompt("/$shell> \$/");
                            return $cmd_handle,$work_dirs,$uname,
                            $cmd_type,$ftm_type,$smb,$die,$ip,$hostname,
                            $cmd_pid,$shell_pid,$cygdrive,$shell;
@@ -23544,11 +23549,28 @@ sub repl
    $self->{_cmd_handle}->print($command);
    while (my $line=$self->{_cmd_handle}->get(Timeout=>10000)) {
       $output.=$line;
-      last if $output=~s/\n*repl>\s*$//;
+      last if $output=~s/\n*repl\d*>\s*$//;
    }
+   $output=~s/^\s*//s;
    substr($output,0,(length $command))='';
    $output=~s/^\s*//s;
-   return $output;
+   chomp($output=~tr/\0-\11\13-\37\177-\377//d);
+   my $error=$output if $output=~/^[!][!][!] /;
+   my $die='';
+   if ($error) {
+      $error="FATAL ERROR! - MozRepl returned the"
+            ."\n              Following Unrecoverable Error "
+            ."Condition\n              at ".(caller(0))[1]." "
+            ."line ".(caller(0))[2]." :\n\n       ".$error;
+   }
+   if (wantarray) {
+      $output='' if $error;
+      return $output,$error;
+   } elsif ($error) {
+      &Net::FullAuto::FA_Core::handle_error($error);
+   } else {
+      return $output;
+   }
 }
 
 sub cmd
@@ -25544,6 +25566,26 @@ sub cwd
       $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG
       "\nBad_Handle::cwd() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   if (wantarray) {
+      return '',$self->{_stderr};
+   } else {
+      &Net::FullAuto::FA_Core::handle_error($self->{_stderr});
+   }
+}
+
+sub repl
+{
+   my $self=$_[0];
+   my @topcaller=caller;
+   print "\nINFO: Bad_Handle::repl() (((((((CALLER))))))):\n       ",
+      (join ' ',@topcaller),"\n\n"
+      if !$Net::FullAuto::FA_Core::cron &&
+      $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG
+      "\nBad_Handle::repl() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
