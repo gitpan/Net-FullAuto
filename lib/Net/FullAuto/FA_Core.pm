@@ -2710,6 +2710,7 @@ sub acquire_semaphore
    my $IPC_KEY=(defined $_[0] && $_[0])?$_[0]:'1234';
    my $process_description=$_[1]||'';
    my $pd="$process_description " if $process_description;
+   $pd||='';
    print "acquire_semaphore() ${pd}CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "acquire_semaphore() ${pd}CALLER=",
@@ -6862,7 +6863,7 @@ my $cacomm_sub=sub {
                            unless (-d $fa_defs::FA_Secure.'Defaults') {
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
                                  'mkdir -p '.
-                                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                                 $Hosts{"__Master_${$}_"}{'FA_Secure'}.
                                  'Defaults';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);

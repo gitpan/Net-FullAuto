@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999933';
+$main::VERSION='0.999934';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1406,6 +1406,24 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $editor='/bin/mc.exe';
          }
       }
+      # Let's look for Firefox
+      my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                  'Mozilla\\Mozilla Firefox" 2>&1';
+      $firefox=`$firefox`;
+      chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+      $firefox=~s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
+      $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+               "Mozilla\\Mozilla Firefox\\$firefox\\Main\" 2>&1";
+      $firefox=`$firefox`;
+      chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+      $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+      $firefox=~s/\s*$//s;
+      if ($firefox=~/^Error.*unable to find/) {
+         # Ask if we should install
+      } else {
+         # Let's Check for MozRepl
+      }
+
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
          FA::LWP::UserAgent->config;
@@ -1518,15 +1536,15 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron,inetutils,procps,vim,unzip'
+                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.8,'
+                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.5,'
-                      .'libdb4.5-devel,ncurses,cron,inetutils,procps,vim,unzip'
+                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.8,'
+                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } else {
@@ -3068,10 +3086,10 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
 } elsif ($^O eq 'cygwin') {
    $ENV{'BERKELEYDB_INCLUDE'}='/usr/include';
    $ENV{'BERKELEYDB_LIB'}='/usr/lib';
-   $ENV{'BERKELEYDB_NAME'}='-ldb-4.5';
+   $ENV{'BERKELEYDB_NAME'}='-ldb-4.8';
    $ENV{'DB_FILE_INCLUDE'}='/usr/include';
    $ENV{'DB_FILE_LIB'}='/usr/lib';
-   $ENV{'DB_FILE_NAME'}='-ldb-4.5';
+   $ENV{'DB_FILE_NAME'}='-ldb-4.8';
 }
 
 chdir $main::curdir;
