@@ -1258,7 +1258,7 @@ my $version=<<VERSION;
 This is Net::FullAuto, v$Net::FullAuto::VERSION
 (See  fullauto -V  or  fa -V  for more detail)
 
-Copyright 2000-2011, Brian M. Kelly
+Copyright 2000-2012, Brian M. Kelly
 
 FullAuto may be copied only under the terms of the GNU General Public License,
 which may be found in the FullAuto source distribution.
@@ -14156,8 +14156,10 @@ print "RETURNFOUR and FTR_CMD=$ftr_cmd\n";<STDIN>;
                                                 $Net::FullAuto::FA_Core::Hosts{
                                                 $hostlabel}{'sshport'}.' ';
                                           }
+                                          my $s='sftp';
                                           $ftp_handle->print(
-                                             "${Net::FullAuto::FA_Core::sftppath}sftp ".
+                                             $Net::FullAuto::FA_Core::gbp->($s).
+                                             'sftp '.
                                              "${sshport}$sftploginid\@$host");
                                           $ftm_type='sftp';
                                        }
@@ -14259,8 +14261,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                   $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                      $hostlabel}{'sshport'}.' ';
                }
-               $ftp_handle->print("${Net::FullAuto::FA_Core::sftppath}sftp ".
-                                  "${sshport}$sftploginid\@$host");
+               $ftp_handle->print($Net::FullAuto::FA_Core::gbp->('sftp').
+                                  'sftp '."${sshport}$sftploginid\@$host");
                FH: foreach my $hlabel (
                      keys %Net::FullAuto::FA_Core::Processes) {
                   foreach my $sid (
@@ -14424,8 +14426,8 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                        $hostlabel}{'sshport'}.' ';
                                  }
                                  $ftp_handle->print(
-                                    "${Net::FullAuto::FA_Core::sftppath}sftp ".
-                                    "${sshport}$login_id\@$host");
+                                    $Net::FullAuto::FA_Core::gbp->('sftp').
+                                    'sftp '."${sshport}$login_id\@$host");
 
                                  ## Wait for password prompt.
                                  my $ignore='';
@@ -14528,7 +14530,7 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                            $hostlabel}{'sshport'}.' ';
                      }
                      $ftp_handle->print(
-                        "${Net::FullAuto::FA_Core::sftppath}sftp ".
+                        $Net::FullAuto::FA_Core::gbp->('sftp').'sftp '.
                         "${sshport}$login_id\@$host");
 
                      ## Wait for password prompt.
@@ -17394,7 +17396,8 @@ print $Net::FullAuto::FA_Core::MRLOG "DELETEFILE1b=$file\n"
                }
                foreach my $key (keys %{$baseFH->{_bhash}}) {
                   if (defined ${$baseFH->{_bhash}}{$key}[3]
-                        && ${$baseFH->{_bhash}}{$key}[3] eq 'NOT_ON_DEST') {
+                        && ${$baseFH->{_bhash}}{$key}[3] eq 'NOT_ON_DEST'
+                        && ${$baseFH->{_bhash}}{$key}[0] ne 'EXCLUDE') {
                      if (exists $destFH->{_smb}) {
                         my $tdir=$key;
                         $tdir=~tr/\//\\/;
@@ -18893,14 +18896,17 @@ print $Net::FullAuto::FA_Core::MRLOG "ftm_connect::cmd() HAD TO DO SFTP LOGIN_RE
             if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
                $Net::FullAuto::FA_Core::gbp->('sftp');
                my $sp=$Net::FullAuto::FA_Core::sftpport;
-               $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+               $sshport=$sp.
+                  $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
             }
             if ($su_id) {
                $ftpFH->{_cmd_handle}->print( 
-                  "${Net::FullAuto::FA_Core::sftppath}sftp ${sshport}$su_id\@$host");
+                  $Net::FullAuto::FA_Core::gbp->('sftp').
+                  "sftp ${sshport}$su_id\@$host");
             } else {
                $ftpFH->{_cmd_handle}->print(
-                  "${Net::FullAuto::FA_Core::sftppath}sftp ${sshport}$login_id\@$host");
+                  $Net::FullAuto::FA_Core::gbp->('sftp').
+                  "sftp ${sshport}$login_id\@$host");
             }
 
             ## Wait for password prompt.
@@ -19024,7 +19030,8 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                  last if $line=~/Killed by signal 2\.$/s;
                               }
                               my $sshport='';
-                              if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+                              if (exists
+                                    $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
                                  $Net::FullAuto::FA_Core::gbp->('sftp');
                                  my $sp=$Net::FullAuto::FA_Core::sftpport;
                                  $sshport=$sp.
@@ -19032,12 +19039,12 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                               }
                               if ($sshport) {
                                  $ftpFH->{_cmd_handle}->print(
-                                    "${Net::FullAuto::FA_Core::sftppath}sftp ".
-                                    "${sshport}$login_id\@$host");
+                                    $Net::FullAuto::FA_Core::gbp->('sftp').
+                                    'sftp '."${sshport}$login_id\@$host");
                               } else {
                                  $ftpFH->{_cmd_handle}->print(
-                                    "${Net::FullAuto::FA_Core::sftppath}sftp ".
-                                    "${sshport}$login_id\@$host");
+                                    $Net::FullAuto::FA_Core::gbp->('sftp').
+                                    'sftp '."${sshport}$login_id\@$host");
                               }
 
                               ## Wait for password prompt.
@@ -19169,10 +19176,12 @@ print "555 LIN=$lin<== and FTM_ERRMSG=$ftm_errmsg<==\n";<STDIN>;
          } elsif ($ftm_type eq 'sftp') {
             if ($su_id) {
                $ftpFH->{_cmd_handle}->print(
-                  "${Net::FullAuto::FA_Core::sftppath}sftp ${sshport}$su_id\@$host");
+                  $Net::FullAuto::FA_Core::gbp->('sftp').
+                  "sftp ${sshport}$su_id\@$host");
             } else {
                $ftpFH->{_cmd_handle}->print(
-                  "${Net::FullAuto::FA_Core::sftppath}sftp ${sshport}$login_id\@$host");
+                  $Net::FullAuto::FA_Core::gbp->('sftp').
+                  "sftp ${sshport}$login_id\@$host");
             }
          }
          $ftpFH->{_cmd_handle}->
@@ -20774,7 +20783,7 @@ print "LS LOOPING STDOUT=$stdout\n";
                               ${$cmd_handle->{"_${bd}hash"}}{$key}
                                  =[ 'EXCLUDE', {},
                                  'DEPLOY_NOFILES_OF_CURDIR' ];
-print "BASE_DEST=$base_dest and EXCLUDEDKEY=$key\n";<STDIN>;
+#print "BASE_DEST=$base_dest and EXCLUDEDKEY=$key\n";<STDIN>;
                               if ($base_dest eq 'BASE') {
                                  $Net::FullAuto::FA_Core::base_excluded_dirs{$key}='-';
                               }
@@ -20786,7 +20795,7 @@ print "BASE_DEST=$base_dest and EXCLUDEDKEY=$key\n";<STDIN>;
                               foreach my $key (@keys) {
                                  if (${$cmd_handle->{"_${bd}hash"}}{$key}[0]
                                        eq 'EXCLUDE') {
-print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
+#print "HERE I AMMM777 AND KEY=$key\n";<STDIN>;
                                     ${$cmd_handle->{"_${bd}hash"}}{$key}[0]
                                        ='SOME';
                                  }
@@ -23252,18 +23261,25 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
             } elsif (lc($connect_method) eq 'sftp') {
                my $sftploginid=($su_id)?$su_id:$login_id;
                my $sshport='';
-               if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+               if (exists
+                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
                   $Net::FullAuto::FA_Core::gbp->('sftp');
                   my $sp=$Net::FullAuto::FA_Core::sftpport;
-                  $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+                  $sshport=$sp.
+                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
                }
-               $handle->{_ftp_handle}->print("${Net::FullAuto::FA_Core::sftppath}sftp ".
-                                             "${sshport}$sftploginid\@$host");
-               FH: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
-                  foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
-                     foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
+               $handle->{_ftp_handle}->print(
+                  $Net::FullAuto::FA_Core::gbp->('sftp').'sftp '.
+                  "${sshport}$sftploginid\@$host");
+               FH: foreach my $hlabel (
+                     keys %Net::FullAuto::FA_Core::Processes) {
+                  foreach my $sid (
+                        keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
+                     foreach my $type (
+                           keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
                            {$sid}}) {
-                        if ($handle->{_ftp_handle} eq $Net::FullAuto::FA_Core::Processes
+                        if ($handle->{_ftp_handle} eq
+                              $Net::FullAuto::FA_Core::Processes
                               {$hlabel}{$sid}{$type}) {
                            delete
                               $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type};
@@ -23556,7 +23572,7 @@ sub repl
    substr($output,0,(length $command))='';
    $output=~s/^\s*//s;
    chomp($output=~tr/\0-\11\13-\37\177-\377//d);
-   my $error=$output if $output=~/^[!][!][!] /;
+   my $error=$output if $output=~/^[!][!][!]|back to creation context/;
    my $die='';
    if ($error) {
       $error="FATAL ERROR! - MozRepl returned the"
@@ -23566,6 +23582,7 @@ sub repl
    }
    if (wantarray) {
       $output='' if $error;
+      $error||='';
       return $output,$error;
    } elsif ($error) {
       &Net::FullAuto::FA_Core::handle_error($error);

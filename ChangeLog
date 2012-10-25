@@ -19,6 +19,17 @@
 ################################################################
 
 
+2012-10-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999935 released.
+
+        * Dynamically find sftp in setuid mode.
+
+        * Fixed bug in mirror().
+
+        * Other minor bugs.
+
+
 2012-10-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999934 released.
