@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999935';
+$main::VERSION='0.999936';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -767,18 +767,6 @@ END
    print $stdout if $stdout;
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
-   #($stdout,$stderr)=&fa_install_module('IPC::ShareLite','install','Makefile');
-   #&fa_err_exit($stderr,'IPC::ShareLite') if $stderr;
-   #print $stdout if $stdout;
-   #($stdout,$stderr)=&fa_install_module('Digest::SHA1','install','Makefile');
-   #&fa_err_exit($stderr,'Digest::SHA1') if $stderr;
-   #print $stdout if $stdout;
-   #($stdout,$stderr)=&fa_install_module('Error','install','Makefile');
-   #&fa_err_exit($stderr,'Error') if $stderr;
-   #print $stdout if $stdout;
-   #($stdout,$stderr)=&fa_install_module('Cache::Cache','install','Makefile');
-   #&fa_err_exit($stderr,'Cache::Cache') if $stderr;
-   #print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
@@ -3520,6 +3508,7 @@ requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
 requires        'Crypt::DES'                => 0;
 requires        'Cache::Cache'              => 0;
+requires        'CHI'                       => 0;
 requires        'HTTP::Date'                => 0;
 requires        'JSON'                      => 2.14;
 requires        'IO::Pty'                   => 0;
