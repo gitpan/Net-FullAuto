@@ -19,11 +19,18 @@
 ################################################################
 
 
+2012-11-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999937 released.
+
+        * Fixed a number of output filters.
+
+
 2012-10-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999936 released.
 
-        * Added Caching of Output with CHI.
+        * Added Caching of output with CHI.
 
 
 2012-10-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>

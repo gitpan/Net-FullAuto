@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999936';
+$main::VERSION='0.999937';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -780,7 +780,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.19');
+      '','2.20');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
 };
@@ -3502,7 +3502,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.19;
+#requires        'Term::Menus'               => 2.20;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

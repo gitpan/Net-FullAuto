@@ -15998,7 +15998,7 @@ sub mirror
    my $cache=$args{Cache};
 
 print "WHAT IS CACHE=$cache\n";
-print "KEYS=",(join " | ",keys %{$cache}),"\n";
+print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
 #print $Net::FullAuto::FA_Core::MRLOG "CACHEEEEEEEEEEEEEEEEEEEEEEEEEE=",$cache->{'key'},"\n";
    
    ($caller,$cline)=(caller)[1,2];
@@ -17799,18 +17799,19 @@ ${$baseFH->{_unaltered_basehash}}{$key}[1]{$file}||='';
                   }
                }
             }
+print $Net::FullAuto::FA_Core::MRLOG "WHAT THE HECK1 IS ACTIVITY=$activity\n";
             my $nodif="\n       THERE ARE NO DIFFERENCES "
                      ."BETWEEN THE BASE AND TARGET\n\n";
-            if (((!$Net::FullAuto::FA_Core::cron && $verbose)
-                  || $Net::FullAuto::FA_Core::debug) && !$activity) {
+            if ((!$activity) && ((!$Net::FullAuto::FA_Core::cron && $verbose)
+                  || $Net::FullAuto::FA_Core::debug)) {
                print $nodif;
                $cache->set($cache->{'key'},[0,$nodif])
                   if $cache;
             }
             print $Net::FullAuto::FA_Core::MRLOG $nodif
-               if $Net::FullAuto::FA_Core::log &&
-               -1<index $Net::FullAuto::FA_Core::MRLOG,'*'
-               && !$activity;
+               if (!$activity) &&
+               $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             $mirror_output.=$nodif if !$activity;
             $mirror_debug.=$nodif if !$activity;
             push @main::test_tar_output, $mirror_output;
@@ -18200,18 +18201,19 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO TOUCH TIME=$time and FILE=$file\n
                         $stderr,'-1') if $stderr;
                   }
                }
+print $Net::FullAuto::FA_Core::MRLOG "WHAT THE HECK2 IS ACTIVITY=$activity\n";
                $nodif="\n       THERE ARE NO DIFFERENCES "
                      ."BETWEEN THE BASE AND TARGET\n\n";
-               if (((!$Net::FullAuto::FA_Core::cron && $verbose)
-                     || $Net::FullAuto::FA_Core::debug) && !$activity) {
+               if ((!$activity) && ((!$Net::FullAuto::FA_Core::cron && $verbose)
+                     || $Net::FullAuto::FA_Core::debug)) {
                   print $nodif;
                   $cache->set($cache->{'key'},[0,$nodif])
                      if $cache;
                }
                print $Net::FullAuto::FA_Core::MRLOG $nodif
-                  if $Net::FullAuto::FA_Core::log &&
-                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*'
-                  && !$activity;
+                  if (!$activity) &&
+                  $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                $mirror_output.=$nodif if !$activity;
                $mirror_debug.=$nodif if !$activity;
                push @main::test_tar_output, $mirror_output;
@@ -24008,9 +24010,16 @@ sub repl
    my $command=$_[1];$command||='';my $output='';
    $self->{_cmd_handle}->print($command);
    while (my $line=$self->{_cmd_handle}->get(Timeout=>10000)) {
+      print $Net::FullAuto::FA_Core::MRLOG
+            "REPL LINE=>$line<=\n"
+            if $Net::FullAuto::FA_Core::log &&
+            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+#print "REPLLINE=$line\n";
       $output.=$line;
       last if $output=~s/\n*repl\d*>\s*$//;
+      last if $output=~/Host context unloading/s;
    }
+#print "OUTREPL=$output\n";
    $output=~s/^\s*//s;
    substr($output,0,(length $command))='';
    $output=~s/^\s*//s;
@@ -24935,19 +24944,27 @@ print $Net::FullAuto::FA_Core::MRLOG "LSLC_in=$lslc and LTSO_in=$ltso and UNPACK
                               my $oup=unpack("a$llc",$output);
                               if ($oup ne $live_command) {
 print $Net::FullAuto::FA_Core::MRLOG "OUPPPPPPPPPPPP=$oup\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                                 my $o=$output;my $c=0;
-                                 while (1) {
-                                    last if $c++==5;
-                                    $o=~s/^(.*?)\n(.*)$/$1$2/s;
+                                 if (substr($oup,-1) eq 's') {
+                                    $llc--;
+                                    $output=unpack("x$llc a*",$output);
+                                 } else {
+                                    my $o=$output;my $c=0;
+                                    while (1) {
+                                       last if $c++==5;
+                                       $o=~s/^(.*?)\n(.*)$/$1$2/s;
 print $Net::FullAuto::FA_Core::MRLOG "ONNNNNNNNNN=$o\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                                    my $op=unpack("a$llc",$o);
+                                       my $op=unpack("a$llc",$o);
 print $Net::FullAuto::FA_Core::MRLOG "OPPPPPPPPPPP=$op<== and LC=$live_command<==\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                                    if ($op eq $live_command) {
+                                       if ($op eq $live_command) {
 print $Net::FullAuto::FA_Core::MRLOG "OOOOOOOOOOOO=$o\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                                       $op=unpack("x$llc a*",$o);
-                                       $output=$op;last;
+                                          $op=unpack("x$llc a*",$o);
+                                          $output=$op;last;
+                                       }
                                     }
                                  }
+                              } elsif (substr($oup,-1) eq 's') {
+                                 $llc--;
+                                 $output=unpack("x$llc a*",$output);
                               } else {
                                  $output=unpack("x$llc a*",$output);
                               }
@@ -25224,10 +25241,11 @@ print $Net::FullAuto::FA_Core::MRLOG "GROWOUTPUT2=$growoutput\n"
                               }
                               my $lvc=$live_command;
                               last FETCH if !$growoutput && ($allow_no_output
-                                 || $lvc=~/^[(]*cd\s/ || $lvc=~/^[(]*ls\s/
+                                 || $lvc=~/^[(]*c[dp]\s/ || $lvc=~/^[(]*ls\s/
                                  || $lvc=~/^[(]*mkdir\s/ || $lvc=~/^[(]*mv\s/
                                  || $lvc=~/^[(]*rm\s/ || $lvc=~/[\/]ls\s/
-                                 || $lvc=~/[\/]rm\s/ || $lvc=~/[\/]mkdir\s/);
+                                 || $lvc=~/[\/]rm\s/ || $lvc=~/[\/]mkdir\s/
+                                 || $lvc=~/[\/]cp\s/);
                               next FETCH if !$growoutput;
                               if (-1<index $growoutput,'stdout: /') {
                                  my $stub=substr($growoutput,0,
@@ -25312,7 +25330,8 @@ print $Net::FullAuto::FA_Core::MRLOG "LSLC_TEEN=$lslc and LTSO_TEEN=$ltso and UN
                               my $oup=unpack("a$llc",$output);
                               if ($oup ne $live_command) {
 print $Net::FullAuto::FA_Core::MRLOG "OUPPPPPPPPPPPPTTTTTTT=$oup\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                                 my $o=$output;my $c=0;
+                                 #my $o=$output;my $c=0;
+                                 my $o=$growoutput;my $c=0;
                                  while (1) {
                                     last if $c++==5;
                                     $o=~s/^(.*?)\n(.*)$/$1$2/s;
@@ -25321,6 +25340,10 @@ print $Net::FullAuto::FA_Core::MRLOG "ONNNNNTTTT=$o\n" if $Net::FullAuto::FA_Cor
 print $Net::FullAuto::FA_Core::MRLOG "OPPPPPPTTTTP=$op<== and LC=$live_command<==\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                                     if ($op eq $live_command) {
 print $Net::FullAuto::FA_Core::MRLOG "OOOOOOOOTTTT=$o\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                                       $op=unpack("x$llc a*",$o);
+                                       $output=$op;last;
+                                    } elsif (substr($op,-1) eq 's') {
+                                       $llc--;
                                        $op=unpack("x$llc a*",$o);
                                        $output=$op;last;
                                     }
