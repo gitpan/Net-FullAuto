@@ -19,6 +19,16 @@
 ################################################################
 
 
+2012-11-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999938 released.
+
+        * BerkeleyDB based locking system instead of OS
+          semaphores.
+
+        * Improved find BerkeleyDB version routine.
+
+
 2012-11-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999937 released.

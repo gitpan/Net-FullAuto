@@ -178,7 +178,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   %email_defaults $service
                   persist_get persist_put cache
                   $berkeleydb %admin_menus
-                  $cache_root $cache_key);
+                  $cache_root $cache_key
+                  acquire_fa_lock release_fa_lock);
 
 {
    no warnings;
@@ -429,6 +430,84 @@ BEGIN {
    );
 
 }
+
+our $locks = {
+
+   1234 => {
+               MaxNumberAllowed => 1,
+               KillAfterSeconds => 300,
+               Enable           => 1,
+               Lock_Description =>
+                  'DEFAULT Lock - used when a unique'.
+                  " key is not supplied.\n          ".
+                  'Used internally mostly to protect'.
+                  ' short duration input I/O.',
+               Wait_For_NewLock => 60,
+               PollingMilliSecs => 1000,
+           },
+   7755 => {
+               MaxNumberAllowed => 1,
+               KillAfterSeconds => 300,
+               Enable           => 1,
+               Lock_Description =>
+                  'clean_filehandle() Lock - '.
+                  "used to prevent more than\n          ".
+                  'one FullAuto instance using'.
+                  ' this routine at a time.',
+               Wait_For_NewLock => 60,
+               PollingMilliSecs => 500,
+           },
+   9361 => {
+               MaxNumberAllowed => 1,
+               KillAfterSeconds => 300,
+               Enable           => 1,
+               Lock_Description =>
+                  'getpasswd() Lock - '.
+                  'used to protect password'.
+                  ' retrieval.',
+               Wait_For_NewLock => 60,
+               PollingMilliSecs => 500,
+           },
+   9854 => {
+               MaxNumberAllowed => 1,
+               KillAfterSeconds => 300,
+               Enable           => 1,
+               Lock_Description =>
+                  'Password Input Lock',
+               Wait_For_NewLock => 60,
+               PollingMilliSecs => 500,
+           },
+   9876 => {
+               MaxNumberAllowed => 2,
+               Enable           => 1,
+               Lock_Description =>
+                  'FullAuto Capacity '.
+                  'Lock - dictates the '.
+                  "maximum\n          number of FullAuto".
+                  ' invocations running in '.
+                  'parallel.',
+               Wait_For_NewLock => 60,
+               PollingMilliSecs => 500,
+           },
+   6543 => {
+               MaxNumberAllowed => 1,
+               KillAfterSeconds => 300,
+               Enable           => 1,
+               Lock_Description =>
+                  'Local Host Login Lock',
+               Wait_For_NewLock => 60,
+               PollingMilliSecs => 500,
+           },
+   8712 => {
+               MaxNumberAllowed => 1,
+               KillAfterSeconds => 300,
+               Enable_This_Lock => 1,
+               Lock_Description =>
+                  '/bin/mount Lock',
+               Wait_For_NewLock => 60,
+               PollingMilliSecs => 500,
+           },
+};
 
 # Globally Scoped Variables, but Intentionally NOT Initialized.
 # Getopt::Long needs it this way for some args to work properly. 
@@ -692,6 +771,36 @@ sub cleanup {
       }
    }
 
+   if ($Net::FullAuto::FA_Core::bdb_locks) {
+      my $cursor=$Net::FullAuto::FA_Core::bdb_locks->db_cursor();
+      my ($lockid,$locks)=('','');
+      while ($cursor->c_get($lockid, $locks, DB_NEXT) == 0) {
+         $locks=~s/\$HASH\d*\s*=\s*//s;
+         my $locks=eval $locks;
+         my @processes=keys %{$locks};
+         if (-1==$#processes) {
+            my $status=$Net::FullAuto::FA_Core::bdb_locks->db_del($lockid);
+            next;
+         }
+         foreach my $process (@processes) {
+            if ($process eq $$) {
+               delete $locks->{$process};
+            }
+         }
+         if (keys %{$locks}) {
+            $locks=Data::Dump::Streamer::Dump($locks)->Out();
+            my $status=
+                  $Net::FullAuto::FA_Core::bdb_locks->db_put($lockid,$locks);
+         } else {
+            my $status=$Net::FullAuto::FA_Core::bdb_locks->db_del($lockid);
+         }
+      }
+      undef $cursor;
+      undef $Net::FullAuto::FA_Core::bdb_locks;
+      $Net::FullAuto::FA_Core::dbenv_locks->close();
+      undef $Net::FullAuto::FA_Core::dbenv_locks;
+   }
+
    my $tm='';my $ob='';my %cleansync=();
    my $new_cmd='';my $cmd='';my $clean_master='';
    my @cmd=();my %did_tran=();
@@ -739,8 +848,10 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_1=$line\n"
 print "clean_ERRORRRRR=$@\n" if $Net::FullAuto::FA_Core::debug;
                } 
                if (exists $Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}) {
-                  my $tmpdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[0];
-                  my $tdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[1];
+                  my $tmpdir=
+                        ${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[0];
+                  my $tdir=
+                        ${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[1];
                   ($stdout,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_fh,
                     _hostlabel=>[ $hostlabel,'' ] },"cd $tmpdir");
@@ -799,7 +910,8 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_2=$line\n"
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            last if $line=~/_funkyPrompt_$|
                               logout|221\sGoodbye/sx;
-                           last SC if $line=~/Connection.*closed|Exit\sstatus\s0/s;
+                           last SC if
+                              $line=~/Connection.*closed|Exit\sstatus\s0/s;
                            if ($line=~/^\s*$|^\s*exit\s*$/s) {
                               last SC if $count++==20;
                            } else { $count=0 }
@@ -915,11 +1027,12 @@ print $Net::FullAuto::FA_Core::MRLOG
 print $Net::FullAuto::FA_Core::MRLOG "cleanup() I GOT TO WAS A LOCAL\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  if (!$was_a_local && !$gone &&
-                        exists $Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}) {
+                  if (!$was_a_local && !$gone && exists
+                        $Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}) {
 print $Net::FullAuto::FA_Core::MRLOG "IN !WASALOCAL AND !GONE<====\n";
 print "IN !WASALOCAL AND !GONE<====\n";
-                     my $tmpdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[0];
+                     my $tmpdir=
+                        ${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[0];
                      my $tdir=${$Net::FullAuto::FA_Core::tmp_files_dirs{$cmd_fh}}[1];
                      ($stdout,$stderr)=Rem_Command::cmd(
                      { _cmd_handle=>$cmd_fh,
@@ -1067,7 +1180,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT EVEN FARTHER HERE\n"
 print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                  ($stdout,$stderr)=&kill($cmd_pid,$kill_arg) if &testpid($cmd_pid);
+                  ($stdout,$stderr)=&kill($cmd_pid,$kill_arg)
+                     if &testpid($cmd_pid);
                }
             }
          }
@@ -1079,7 +1193,6 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          if $Net::FullAuto::FA_Core::log &&
          -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
       if ($tran[3]) {
-         #$localhost->{_cmd_handle}->print("\003");
          my $cfh_ignore='';my $cfh_error='';
          ($cfh_ignore,$cfh_error)=&clean_filehandle($localhost->{_cmd_handle});
          &handle_error("CLEANUP ERROR -> $cfh_error",'-1') if $cfh_error
@@ -1139,7 +1252,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -1212,7 +1325,7 @@ $SIG{ INT } = sub{
                        if $Net::FullAuto::FA_Core::log &&
                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
-                    &release_semaphore(6543);
+                    &release_fa_lock(6543);
                     $cleanup=1;&cleanup('','INT') };
 our $alarm_sounded=0;
 $SIG{ ALRM } = sub{ open(AL,">>ALRM.txt");
@@ -1441,8 +1554,6 @@ sub ls_timestamp
 
 sub find_berkeleydb_recover {
 
-print "find_berkeleydb_recover CALLER=",caller,"\n";<STDIN>;
-
    my @topcaller=caller;
    my $hlab="localhost - ".hostname;
    print "\nINFO: main::find_berkeleydb_recover() (((((((CALLER))))))) ".
@@ -1457,61 +1568,20 @@ print "find_berkeleydb_recover CALLER=",caller,"\n";<STDIN>;
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $berkeleydb_perl_module_lib='';
-   if ((defined $fa_conf::berkeleydb_perl_module_lib) &&
-         ($fa_conf::berkeleydb_perl_module_lib) &&
-         (-f $fa_conf::berkeleydb_perl_module_lib)) {
-      $berkeleydb_perl_module_lib=$fa_conf::berkeleydb_perl_module_lib;
-   } else {
-      require ExtUtils::Installed;
-      my ($inst) = ExtUtils::Installed->new();
-      my @db_path = grep { /\.dll|\.so/ } $inst->files("BerkeleyDB");
-      if (-f $db_path[0] && (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.
-                  "Custom/$Net::FullAuto::FA_Core::fa_conf")) {
-         $berkeleydb_perl_module_lib=$db_path[0];
-         my $fconf=$Hosts{"__Master_${$}__"}{'FA_Core'}.'Custom/'.
-                   $Net::FullAuto::FA_Core::fa_conf;
-         open(CH,"+<$fconf") or &handle_error("Cannot open $fconf");
-         flock CH, 2;
-         my @data=<CH>;
-         my $bd=0;my @new=();
-         foreach my $ln (@data) {
-            my $l=$ln;
-            if (($bd==0) &&
-                  ($l=~/^\s*[#]*\s*our\s+[\$]berkeleydb_perl_module_lib\s*=/)) {
-               push @new, "our \$berkeleydb_perl_module_lib = \"".
-                          $db_path[0]."\";\n";
-               $bd=1;
-            } else {
-               push @new, $l;
-            }
-         }
-         unless ($bd) {
-            @new=();
-            foreach my $ln (@data) {
-               my $l=$ln;
-               if (($bd==0) &&
-                     ($l=~/^\s*[#]*\s*our\s*(?!ISA|VERSION|EXPORT)/)) {
-                  push @new, "our \$berkeleydb_perl_module_lib = \"".
-                             $db_path[0]."\";\n";
-                  push @new, $ln;
-                  $bd=1;
-               } else {
-                  push @new, $ln;
-               }
-            }
-         }
-         seek CH, 0, 0;
-         truncate CH, 0;
-         print CH @new;
-         close CH;
-      }
-   }
-   my $bcmd=$Net::FullAuto::FA_Core::gbp->('strings'),'strings '.
-            "$berkeleydb_perl_module_lib ".
-            "| ".$Net::FullAuto::FA_Core::gbp->('grep')."grep Release";
+   can_load(modules => { "BerkeleyDB" => 0 });
+   my $berkeleydb_path=$INC{'BerkeleyDB.pm'};
+   $berkeleydb_perl_module_lib=$berkeleydb_path;
+   $berkeleydb_perl_module_lib=~s/\/Berkeley/\/auto\/BerkeleyDB\/Berkeley/;
+   my $ext=($^O eq 'cygwin')?'dll':'so';
+   $berkeleydb_perl_module_lib=~s/pm$/$ext/;
+   my $bcmd=$Net::FullAuto::FA_Core::gbp->('strings').'strings '.
+            "$berkeleydb_perl_module_lib | ".
+            $Net::FullAuto::FA_Core::gbp->('grep')."grep \"Berkeley DB.*:\"";
    my $bver=`$bcmd`;
-   $bver=~s/^.*?version \d+\.\d+\.(.*?)\.\d+:.*$/$1/s;
-   if ((defined $fa_conf::berkeleydb) &&
+   $bver=~s/^.*DB\s+(.*?)\.\d+:.*$/$1/s;
+   if ($^O eq 'cygwin' && -f "/bin/db${bver}_recover.exe") {
+      return "/bin/db${bver}_recover.exe";
+   } elsif ((defined $fa_conf::berkeleydb) &&
          ($fa_conf::berkeleydb) && (-d $fa_conf::berkeleydb)) {
       if (-1<index $fa_conf::berkeleydb,$bver) {
          if (-d $fa_conf::berkeleydb.'/bin') {
@@ -2295,7 +2365,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -2502,7 +2572,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
            "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          my $bdb = BerkeleyDB::Btree->new(
@@ -2576,7 +2646,7 @@ sub persist_get {
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -2616,7 +2686,7 @@ sub persist_put {
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -2645,7 +2715,7 @@ print "openplandb CALLER=",caller,"\n";
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -2704,6 +2774,269 @@ CHAR:    while (sysread($handle, my $nextbyte, 1)) {
    }
    return $line;
 } sub at_eol($) { $_[0] =~ /\n\z/ }
+
+sub acquire_fa_lock
+{
+
+   my @topcaller=caller;
+   print "acquire_fa_lock() CALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG "acquire_fa_lock() CALLER=",
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
+   my $lock_id=(defined $_[0] && $_[0])?$_[0]:'1234';
+   my $maxnumberallowed=(defined $_[1] && $_[1])?$_[1]:'';
+   my $killafterseconds=(defined $_[2] && $_[2])?$_[2]:'';
+   my $enable=(defined $_[3] && $_[3])?$_[3]:'';
+   my $lock_description=(defined $_[4] && $_[4])?$_[4]:'';
+   my $wait_for_newlock=(defined $_[5] && $_[5])?$_[5]:'';
+   my $pollingmillisecs=(defined $_[6] && $_[6])?$_[6]:'';
+
+   my $locks='';my $getnewlock=0;my $newlock={};my $queue='';
+
+   unless ($Net::FullAuto::FA_Core::bdb_locks) {
+      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks';
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      }
+      unless ($Net::FullAuto::FA_Core::dbenv_locks) {
+         $Net::FullAuto::FA_Core::dbenv_locks = BerkeleyDB::Env->new(
+            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks',
+            -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+         ) or &handle_error(
+            "cannot open environment for DB: $BerkeleyDB::Error\n");
+      }
+      $Net::FullAuto::FA_Core::bdb_locks = BerkeleyDB::Btree->new(
+         -Filename => "${Net::FullAuto::FA_Core::progname}_locks.db",
+         -Flags    => DB_CREATE,
+         -Compare  => sub { $_[0] <=> $_[1] },
+         -Env      => $Net::FullAuto::FA_Core::dbenv_locks
+      ) or &handle_error(
+         "cannot open Btree for DB: $BerkeleyDB::Error\n");
+   }
+   
+   my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get($lock_id,$locks);
+   my @processes=();
+   unless ($status) {
+      $locks=~s/\$HASH\d*\s*=\s*//s;
+      $locks=eval $locks;
+      $queue=$locks->{'Queue'};
+      delete $locks->{'Queue'}; 
+      @processes=keys %{$locks};
+   }
+   if (-1<$#processes) {
+      $maxnumberallowed=$locks->{$processes[0]}->{'MaxNumberAllowed'};
+      $killafterseconds=$locks->{$processes[0]}->{'KillAfterSeconds'}||0;
+      $enable=$locks->{$processes[0]}->{'Enable'};
+      $lock_description=$locks->{$processes[0]}->{'Lock_Description'}||'';
+      $wait_for_newlock=$locks->{$processes[0]}->{'Wait_For_NewLock'};
+      $pollingmillisecs=$locks->{$processes[0]}->{'PollingMilliSecs'};
+      $newlock={
+
+         MaxNumberAllowed => $maxnumberallowed,
+         KillAfterSeconds => $killafterseconds,
+         Enable           => $enable,
+         Lock_Description => $lock_description,
+         Wait_For_NewLock => $wait_for_newlock,
+         PollingMilliSecs => $pollingmillisecs,
+
+      };
+#print "PROCESSES=@processes and $$\n";
+      if ($maxnumberallowed>$#processes+1) {
+         $getnewlock=1;
+      } else {
+         my $ps=$Net::FullAuto::FA_Core::gbp->('ps').'ps -e';
+         my ($psout,$pserr)=Net::FullAuto::FA_Core::cmd($ps);
+         my %pl=();
+         foreach my $line (split "\n", $psout) {
+            next unless -1<index $line,'perl';
+            my $pl=$line;
+            next unless -1<index $line,'perl';
+            $pl=~s/^I*\s+(\d+)\s+.*$/$1/;
+            $pl{$pl}='';
+         }
+         my @del_locks=();
+         my $kill_arg=($^O eq 'cygwin')?'f':9;
+         foreach my $proc (@processes) {
+            my $process=$proc;
+            unless (exists $pl{$process}) {
+               push @del_locks, $process;
+               next;
+            } elsif ($killafterseconds) {
+               my ($stdout,$stderr)=('','');
+               my $t=time;
+               my $ta=$locks->{$process}->{'Time_LockAcquired'};
+               $ta+=$killafterseconds;
+               if ($t>$ta) {
+                  ($stdout,$stderr)=&kill($process,$kill_arg)
+                     if &testpid($process);
+                  push @del_locks, $process;
+                  next;
+               }
+            }
+         }
+         if (-1<$#del_locks) {
+            foreach my $process (@del_locks) {
+               delete $locks->{$process};
+            }
+            if (-1==$#{[keys %{$locks}]}) {
+               my $status=$Net::FullAuto::FA_Core::bdb_locks->db_del(
+                     $lock_id);
+            } else {
+               my $status=$Net::FullAuto::FA_Core::bdb_locks->db_put(
+                     $lock_id,$locks);
+            }
+            my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get(
+                  $lock_id,$locks);
+            if ($status) {
+               $getnewlock=1;
+            } else {
+               $locks=~s/\$HASH\d*\s*=\s*//s;
+               $locks=eval $locks;
+               $locks||={};
+               my @processes=keys %{$locks};
+               if ($maxnumberallowed>$#processes+1) {
+                  $getnewlock=1;
+               }
+            }
+         }
+         my $expired_flag=0;
+         if (!$getnewlock) {
+            my $expires=time+$locks->{$processes[0]}->{'Wait_For_NewLock'};
+            my $p_length=length $pollingmillisecs;
+            my $polling=$pollingmillisecs;
+            if ($p_length==3) {
+               $polling="0.$polling";
+            } elsif ($p_length==2) {
+               $polling="0.0$polling";
+            } elsif ($p_length==1) {
+               $polling="0.00$polling";
+            } else {
+               $polling=~s/^(\d+)(\d\d\d)/$1.$2/;
+            }
+#my $count=0;
+#print "\n";
+            while (time<$expires) {
+#print "  POLLING=$count and LOCKID=$lock_id\n";
+#$count++;
+               select(undef,undef,undef,$polling);
+               $expired_flag=1;
+               $status=$Net::FullAuto::FA_Core::bdb_locks->db_get(
+                  $lock_id,$locks);
+               $locks=~s/\$HASH\d*\s*=\s*//s;
+               $locks=eval $locks;
+               if ($status || $maxnumberallowed>$#{[keys %{$locks}]}+1) {
+                  $expired_flag=0;
+                  last;
+               } elsif ($lock_id eq '9876') {
+                  &handle_error("FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
+                     ."          Waiting period expired while waiting "
+                     ."for lock:\n\n          $lock_description\n\n"
+                     ."       Called by " . join ' ', @topcaller)
+               }
+            }
+         }
+         if ($status || $expired_flag==0) {
+            $getnewlock=1;
+         } else {
+            my $max='';
+            if ($lock_id==9876) {
+               $max="          Maximum Number Allowed => "
+                   ."$maxnumberallowed\n\n";
+            }
+            &handle_error("FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
+               ."          Waiting period expired while waiting "
+               ."for lock:\n\n          $lock_description\n\n$max"
+               ."       Called by " . join ' ', @topcaller)
+         }
+      }
+   } else {
+
+      $maxnumberallowed=
+         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'MaxNumberAllowed'}
+         unless $maxnumberallowed;
+      $killafterseconds=
+         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'KillAfterSeconds'}
+         unless $killafterseconds;
+      $enable=
+         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'Enable'}
+         unless $enable;
+      $lock_description=
+         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'Lock_Description'}
+         unless $lock_description;
+      $wait_for_newlock=
+         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'Wait_For_NewLock'}
+         unless $wait_for_newlock;
+      $pollingmillisecs=
+         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'PollingMilliSecs'}
+         unless $pollingmillisecs;
+      $newlock={
+
+         MaxNumberAllowed => $maxnumberallowed,
+         KillAfterSeconds => $killafterseconds,
+         Enable           => $enable,
+         Lock_Description => $lock_description,
+         Wait_For_NewLock => $wait_for_newlock,
+         PollingMilliSecs => $pollingmillisecs,
+         UserName         => $username,
+         Logfile          => $Hosts{"__Master_${$}__"}{'LogFile'}
+
+      };
+      $getnewlock=1;
+
+   }
+   if ($getnewlock) {
+      return 0 if (!(exists $newlock->{'Enable'} && 
+         $newlock->{'Enable'}));
+      $newlock->{'FullAutoProcessID'}=$$;
+      $newlock->{'FA_ProcessInvoked'}=\@invoked;
+      $newlock->{'Time_LockAcquired'}=time;
+      if ($locks) {
+         $locks->{$$}=$newlock;
+      } else {
+         $locks={ $$, $newlock };
+      }
+      $newlock=Data::Dump::Streamer::Dump($locks)->Out();
+      my $status=$Net::FullAuto::FA_Core::bdb_locks->db_put($lock_id,$newlock);
+   }
+}
+
+sub release_fa_lock
+{
+
+   my @topcaller=caller;
+   print "release_fa_lock() CALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG "release_fa_lock() CALLER=",
+      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   my $lockid=(defined $_[0] && $_[0])?$_[0]:'1234';
+   my $locks='';
+   if ($Net::FullAuto::FA_Core::bdb_locks) {
+      my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get($lockid,$locks);
+      if ($status) {
+         $Net::FullAuto::FA_Core::bdb_locks->db_del($lockid);
+         return 0;
+      }
+      $locks=~s/\$HASH\d*\s*=\s*//s;
+      $locks=eval $locks;
+      if (exists $locks->{$$}) {
+         delete $locks->{$$};
+      }
+      if (keys %{$locks}) {
+         $locks=Data::Dump::Streamer::Dump($locks)->Out();
+         $status=$Net::FullAuto::FA_Core::bdb_locks->db_put(
+               $lockid,$locks);
+      } else {
+         $status=$Net::FullAuto::FA_Core::bdb_locks->db_del(
+               $lockid);
+      }
+   }
+   return 0;
+}
 
 sub acquire_semaphore
 {
@@ -4055,7 +4388,7 @@ sub handle_error
       }
       my $dbenv = BerkeleyDB::Env->new(
            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track',
-           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -4660,8 +4993,9 @@ my $onemore=0;
 #my $logreset=1;
 #if ($Net::FullAuto::FA_Core::log) { $logreset=0 }
 #else { $Net::FullAuto::FA_Core::log=1 }
-   &acquire_semaphore(7755,
-      "clean_filehandle() at Line: ".__LINE__,1);
+   #&acquire_semaphore(7755,
+   #   "clean_filehandle() at Line: ".__LINE__,1);
+   #&acquire_fa_lock(7755);
    my @topcaller=caller;
    print "\nINFO: main::clean_filehandle() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
@@ -4685,10 +5019,10 @@ my $onemore=0;
          if (($@ && -1==index $filehandle,'GLOB') ||
                !defined fileno $filehandle) {
             if (wantarray) {
-               &release_semaphore(7755);
+               &release_fa_lock(7755);
                return '','Invalid filehandle';
             } else {
-               &release_semaphore(7755);
+               &release_fa_lock(7755);
                &Net::FullAuto::FA_Core::handle_error($@.
                  "\n       from &main::clean_filehandle(): Line ".__LINE__.
                  "\n       Reminder: Return output to list (\$stdout,\$stderr)".
@@ -4699,7 +5033,7 @@ my $onemore=0;
       } else {
          if (wantarray) {
             if ($cftimeout) {
-               &release_semaphore(7755);
+               &release_fa_lock(7755);
                return '',"\n\n       Command did not complete before timeout".
                          "\n       => $timeout seconds. This is common if".
                          " the\n       command takes more than $timeout".
@@ -4712,11 +5046,11 @@ my $onemore=0;
                          "\n       that appears before the timeout of".
                          "\n       $timeout seconds expires.";
             } else {
-               &release_semaphore(7755);
+               &release_fa_lock(7755);
                return '','Invalid filehandle';
             }
          } else {
-            &release_semaphore(7755);
+            &release_fa_lock(7755);
             &Net::FullAuto::FA_Core::handle_error(
                "$filehandle is NOT a valid filehandle".
                "\n       from &main::clean_filehandle(): Line ".__LINE__.
@@ -4737,10 +5071,10 @@ my $onemore=0;
       if ($loop==100) {
          my $die="100 attempts without indication that filehandle is clean";
          if (wantarray) {
-            &release_semaphore(7755);
+            &release_fa_lock(7755);
             return '',$die;
          } else {
-            &release_semaphore(7755);
+            &release_fa_lock(7755);
             &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
          }
       }
@@ -4783,10 +5117,10 @@ my $onemore=0;
                my $die="100 attempts without indication ".
                        "that filehandle is clean";
                if (wantarray) {
-                  &release_semaphore(7755);
+                  &release_fa_lock(7755);
                   return '',$die;
                } else {
-                  &release_semaphore(7755);
+                  &release_fa_lock(7755);
                   &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__')
                }
             }
@@ -4807,10 +5141,10 @@ my $onemore=0;
       if ($@) {
          if (!$onemore) {
             if (wantarray) {
-               &release_semaphore(7755);
+               &release_fa_lock(7755);
                return '',$@;
             } else {
-               &release_semaphore(7755);
+               &release_fa_lock(7755);
                &Net::FullAuto::FA_Core::handle_error($@.
                  "\n       from &main::clean_filehandle(): Line ".__LINE__.
                  "\n       Reminder: Return output to list (\$stdout,\$stderr)".
@@ -4822,10 +5156,10 @@ my $onemore=0;
          }
       } elsif ($closederror) {
          if (wantarray) {
-            &release_semaphore(7755);
+            &release_fa_lock(7755);
             return '',$closederror;
          } else {
-            &release_semaphore(7755);
+            &release_fa_lock(7755);
             &Net::FullAuto::FA_Core::handle_error($closederror.
                "\n       from &main::clean_filehandle(): Line ".__LINE__.
                "\n       Reminder: Return output to list (\$stdout,\$stderr)".
@@ -4833,7 +5167,7 @@ my $onemore=0;
                '__cleanup__');
          }
       } else {
-         &release_semaphore(7755);
+         &release_fa_lock(7755);
          select(undef,undef,undef,0.02);
          # sleep for 1/50th second;
          return '',''
@@ -5502,11 +5836,10 @@ sub getpasswd
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      &acquire_semaphore(9361,
-         "BDB DB Access: ".__LINE__);
+      &acquire_fa_lock(9361);
       my $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -5561,7 +5894,7 @@ sub getpasswd
          undef $bdb; 
          $dbenv->close();
          undef $dbenv;
-         &release_semaphore(9361);
+         &release_fa_lock(9361);
          $pass='';
          eval {
             $pass=$cipher->decrypt($encrypted_passwd);
@@ -5588,12 +5921,12 @@ sub getpasswd
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         &release_semaphore(9361);
+         &release_fa_lock(9361);
       } else {
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         &release_semaphore(9361);
+         &release_fa_lock(9361);
       }
       &scrub_passwd_file($passlabel,$login_id) if
          $errmsg=~/Permission denied|Password:/s;
@@ -5743,13 +6076,12 @@ sub getpasswd
          eval {
             $SIG{ALRM} = sub { die "alarm\n" }; # \n required
             alarm($passwd_timeout);
-            &acquire_semaphore(9854,
-               "Password Input Prompt at Line: ".__LINE__,1);
+            &acquire_fa_lock(9854);
             print $print1;
-            print "\n  PasswordX1: ";
+            print "\n  Password (1): ";
             ReadMode 2;
             $save_passwd=<STDIN>;
-            &release_semaphore(9854);
+            &release_fa_lock(9854);
             alarm(0);
          };
          if ($@ eq "alarm\n") {
@@ -5829,11 +6161,10 @@ sub getpasswd
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      &acquire_semaphore(9361,
-         "BDB DB Access: ".__LINE__);
+      &acquire_fa_lock(9361);
       my $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -5891,7 +6222,7 @@ sub getpasswd
       undef $bdb;
       $dbenv->close();
       undef $dbenv;
-      &release_semaphore(9361);
+      &release_fa_lock(9361);
    } else {
       $Net::FullAuto::FA_Core::tosspass{$key}=$save_passwd;
    }
@@ -6486,7 +6817,7 @@ $main::get_default_modules=sub {
    $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
       -Flags =>
-      DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',
       $track);
@@ -6541,7 +6872,7 @@ $main::get_default_modules=sub {
       $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets',
          -Flags =>
-            DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+            DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',
          $track);
@@ -6617,7 +6948,7 @@ my $set_default_sub=sub {
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.'Sets',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or die(
       "cannot open environment for DB: ".
       $BerkeleyDB::Error."\n",'','');
@@ -6801,7 +7132,7 @@ my $fasetdef=sub {
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.
                 'Defaults',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or die(
       "cannot open environment for DB: ".
       $BerkeleyDB::Error,"\n",'','');
@@ -6933,7 +7264,7 @@ my $default_sets_banner_sub=sub {
    my $sdbenv = BerkeleyDB::Env->new(
          -Home  => $fa_defs::FA_Secure.'Sets',
          -Flags =>
-             DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+             DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or die(
          "cannot open environment for DB: ".
          $BerkeleyDB::Error,"\n",'','');
@@ -7015,7 +7346,7 @@ my $cacomm_sub=sub {
                                -Home  => $fa_defs::FA_Secure.
                                          'Defaults',
                                -Flags =>
-                                         DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
                            ) or die(
                                "cannot open environment for DB: ".
                                        $BerkeleyDB::Error,"\n",'','');
@@ -7320,7 +7651,7 @@ my $defaults_sub=sub {
             (-1<index $selection,'will EXIT') ||
             ($selection eq 'Finished Defining Defaults') ||
             ($selection eq 'Finished Default Module')) {
-         &release_semaphore(9361);
+         &release_fa_lock(9361);
          &cleanup();
       }
    } else {
@@ -7328,7 +7659,7 @@ my $defaults_sub=sub {
       if (($selection eq ']quit[') ||
             (-1<index $selection,'will EXIT') ||
             ($selection eq 'Finished Defining Defaults')) {
-         &release_semaphore(9361);
+         &release_fa_lock(9361);
          &cleanup();
       }
    }
@@ -7357,7 +7688,7 @@ my $define_modules_commit_sub=sub {
             }
             my $dbenv = BerkeleyDB::Env->new(
                -Home  => $fa_defs::FA_Secure.'Sets',
-               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
             ) or die(
                "cannot open environment for DB: ".
                $BerkeleyDB::Error."\n",'','');
@@ -7658,7 +7989,8 @@ my $delete_sets_menu_sub=sub {
                            my $dbenv = BerkeleyDB::Env->new(
                               -Home  => $fa_defs::FA_Secure.
                                         'Defaults',
-                              -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                              -Flags =>
+                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
                            ) or die(
                               "cannot open environment for DB: ".
                               $BerkeleyDB::Error,"\n",'','');
@@ -7700,7 +8032,7 @@ my $delete_sets_menu_sub=sub {
                            my $sdbenv = BerkeleyDB::Env->new(
                               -Home  => $fa_defs::FA_Secure.'Sets',
                               -Flags =>
-                                 DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
                            ) or die(
                               "cannot open environment for DB: ".
                                  $BerkeleyDB::Error,"\n",'','');
@@ -8281,21 +8613,20 @@ sub fa_login
             print "ERROR MESSAGE-> $login_Mast_error\n";
          }
          if ($test && !$prod) {
-            print "\n  Running in TEST mode\n";
+            print "\n  Running in TEST (1) mode\n";
          } else {
-            print "\n  Running in PRODUCTION mode\n"
+            print "\n  Running in PRODUCTION (1) mode\n"
          }
          my $usrname_timeout=350;
          my $usrname='';
          eval {
             $SIG{ALRM} = sub { die "alarm\n" }; # \n required
             alarm($usrname_timeout);
-            &acquire_semaphore(1234,
-               "Username Input Prompt at Line: ".__LINE__,1);
+            &acquire_fa_lock(1234);
             my $ikey='';
             print "\n";
             ($usrname,$ikey)=rawInput("  $hostname Login <$uid> : ");
-            &release_semaphore(1234);
+            &release_fa_lock(1234);
             alarm(0);
          };
          if ($@ eq "alarm\n") {
@@ -8316,11 +8647,11 @@ sub fa_login
       while (1) {
          print "\n  Enter Old Password: ";
          ReadMode 2;
-         &release_semaphore(1234);
+         &release_fa_lock(1234);
          my $pas=<STDIN>;
          $pas=~/^(.*)$/;
          $passwd[0]=$1;
-         $sem=acquire_semaphore(1234,,1);
+         &acquire_fa_lock(1234);
          ReadMode 0;
          chomp($passwd[0]);
          print "\n\n";
@@ -8331,11 +8662,11 @@ sub fa_login
          }
          print "  Please Enter Old Password Again: ";
          ReadMode 2;
-         &release_semaphore(1234);
+         &release_fa_lock(1234);
          $pas=<STDIN>;
          $pas=~/^(.*)$/;
          $passwd[3]=$1;
-         $sem=acquire_semaphore(1234,,1);
+         &acquire_fa_lock(1234);
          ReadMode 0;
          chomp($passwd[3]);
          print "\n\n";
@@ -8357,9 +8688,9 @@ sub fa_login
       while (1) {
          print "\n  Enter New Password: ";
          ReadMode 2;
-         &release_semaphore(1234);
+         &release_fa_lock(1234);
          $passwd[5]=<STDIN>;
-         $sem=acquire_semaphore(1234,,1);
+         &acquire_fa_lock(1234);
          ReadMode 0;
          chomp($passwd[5]);
          print "\n\n";
@@ -8370,9 +8701,9 @@ sub fa_login
          }
          print "  Please Enter New Password Again: ";
          ReadMode 2;
-         &release_semaphore(1234);
+         &release_fa_lock(1234);
          $passwd[7]=<STDIN>;
-         $sem=acquire_semaphore(1234,,1);
+         &acquire_fa_lock(1234);
          ReadMode 0;
          chomp($passwd[7]);
          print "\n\n";
@@ -8406,11 +8737,10 @@ sub fa_login
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      &acquire_semaphore(9361,
-         "BDB DB Access: ".__LINE__);
+      &acquire_fa_lock(9361);
       my $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -8463,12 +8793,11 @@ sub fa_login
       undef $bdb ;
       $dbenv->close();
       undef $dbenv;
-      &release_semaphore(9361);
+      &release_fa_lock(9361);
       &cleanup();
    }
 
-   &acquire_semaphore(9876,
-      "FullAuto Process Limit at Line: ".__LINE__,2);
+   &acquire_fa_lock(9876);
 
    my $loop_count=0;
    while (1) {
@@ -8535,7 +8864,7 @@ sub fa_login
                   Banner => $fabann->($default_modules,'Code'),
                );
                my $selection=Menu(\%define_module_fa_code);
-               &release_semaphore(9361);
+               &release_fa_lock(9361);
                &cleanup();
             } elsif (defined $faconf) {
                my %define_module_fa_conf=(
@@ -8548,7 +8877,7 @@ sub fa_login
                   Banner => $fabann->($default_modules,'Conf'),
                );
                my $selection=Menu(\%define_module_fa_conf);
-               &release_semaphore(9361);
+               &release_fa_lock(9361);
                &cleanup();
             } elsif (defined $fahost) {
                my %define_module_fa_host=(
@@ -8561,7 +8890,7 @@ sub fa_login
                   Banner => $fabann->($default_modules,'Host'),
                );
                my $selection=Menu(\%define_module_fa_host);
-               &release_semaphore(9361);
+               &release_fa_lock(9361);
                &cleanup();
             } elsif (defined $famaps) {
                my %define_module_fa_maps=(
@@ -8574,7 +8903,7 @@ sub fa_login
                   Banner => $fabann->($default_modules,'Maps'),
                );
                my $selection=Menu(\%define_module_fa_maps);
-               &release_semaphore(9361);
+               &release_fa_lock(9361);
                &cleanup();
             } elsif (defined $famenu) {
                my %define_module_fa_menu=(
@@ -8587,7 +8916,7 @@ sub fa_login
                   Banner => $fabann->($default_modules,'Menu'),
                );
                my $selection=Menu(\%define_module_fa_menu);
-               &release_semaphore(9361);
+               &release_fa_lock(9361);
                &cleanup();
             } elsif (defined $set) {
                $default_modules->{'set'}||='none';
@@ -8597,7 +8926,7 @@ sub fa_login
                      (-1<index $selection,'will EXIT') ||
                      ($selection eq 'Finished Defining Set') ||
                      ($selection eq 'Finished Deleting Set')) {
-                  &release_semaphore(9361);
+                  &release_fa_lock(9361);
                   &cleanup();
                }
                my $status='';
@@ -8608,7 +8937,7 @@ sub fa_login
                   $default_modules->{'set'}=$selection;
                   my $dbenv = BerkeleyDB::Env->new(
                      -Home  => $fa_defs::FA_Secure.'Defaults',
-                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
                   ) or die(
                      "cannot open environment for DB: ".
                      $BerkeleyDB::Error."\n",'','');
@@ -8640,7 +8969,7 @@ sub fa_login
                   $default_modules->{'set'}='none';
                   my $dbenv = BerkeleyDB::Env->new(
                      -Home  => $fa_defs::FA_Secure.'Defaults',
-                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
                   ) or die(
                      "cannot open environment for DB: ".
                       $BerkeleyDB::Error."\n",'','');
@@ -8670,7 +8999,7 @@ sub fa_login
                   $selection=$current_default_set;
                } else { $selection='none' }
                print "\n\n   Default Module Set is now -> \'$selection\'.\n";
-               &release_semaphore(9361);
+               &release_fa_lock(9361);
                &cleanup();
             }
             if (defined $famenu) {
@@ -8722,7 +9051,7 @@ sub fa_login
                         (-1<index $selection,'will EXIT') ||
                         ($selection eq 'Finished Defining Defaults') ||
                         ($selection eq 'Finished Default Module')) {
-                     &release_semaphore(9361);
+                     &release_fa_lock(9361);
                      &cleanup();
                   }
                   #print "SELECTION=$selection\n";sleep 5;
@@ -8731,7 +9060,7 @@ sub fa_login
                   if (($selection eq ']quit[') ||
                         (-1<index $selection,'will EXIT') ||
                         ($selection eq 'Finished Defining Defaults')) {
-                     &release_semaphore(9361);
+                     &release_fa_lock(9361);
                      &cleanup();
                   }
                }
@@ -8754,7 +9083,7 @@ sub fa_login
             my $dbenv = BerkeleyDB::Env->new(
                -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
                -Flags =>
-                  DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                  DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
             ) or &handle_error(
                "cannot open environment for DB: $BerkeleyDB::Error\n",'',
                $track);
@@ -8847,21 +9176,20 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      print "ERROR MESSAGE-> $login_Mast_error\n";
                   }
                   if ($test && !$prod) {
-                     print "\n  Running in TEST mode\n";
+                     print "\n  Running in TEST (2) mode\n";
                   } else {
-                     print "\n  Running in PRODUCTION mode\n";
+                     print "\n  Running in PRODUCTION (2) mode\n";
                   }
                   my $usrname_timeout=350;
                   my $usrname='';
                   eval {
                      $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                      alarm($usrname_timeout);
-                     &acquire_semaphore(1234,
-                        "Username Input Prompt at Line: ".__LINE__,1);
+                     &acquire_fa_lock(1234);
                      my $ikey='';
                      print "\n";
                      ($usrname,$ikey)=rawInput("  $hostname Login <$uid> : ");
-                     &release_semaphore(1234);
+                     &release_fa_lock(1234);
                      alarm(0);
                   };
                   if ($@ eq "alarm\n") {
@@ -8894,12 +9222,12 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-            -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+            -Flags =>
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",
             '',$track);
-         &acquire_semaphore(9361,
-            "BDB DB Access: ".__LINE__);
+         &acquire_fa_lock(9361);
          my $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -8930,7 +9258,6 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             my $status=$bdb->db_get('localhost',$href);
             $href=~s/\$HASH\d*\s*=\s*//s;
             $href=eval $href;
-#delete ${$href}{"gatekeep_$username"};
             if (exists $href->{"gatekeep_$username"}) {
                my $zyxarray=$href->{"passetts_$username"};
                $zyxarray=~s/\$ARRAY\d*\s*=\s*//s;
@@ -9021,12 +9348,11 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   eval {
                      $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                      alarm($passwd_timeout);
-                     &acquire_semaphore(9854,
-                        "Password Input Prompt at Line: ".__LINE__,1);
-                     print "\n  PasswordX2: ";
+                     &acquire_fa_lock(9854);
+                     print "\n  Password (2): ";
                      ReadMode 2;
                      $pas=<STDIN>;
-                     &release_semaphore(9854);
+                     &release_fa_lock(9854);
                      alarm(0);
                   };
                   if ($@ eq "alarm\n") {
@@ -9112,12 +9438,11 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                eval {
                   $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                   alarm($passwd_timeout);
-                  &acquire_semaphore(9854,
-                     "Password Input Prompt at Line: ".__LINE__,1);
+                  &acquire_fa_lock(9854);
                   print "\n\n  Password: ";
                   ReadMode 2;
                   $pas=<STDIN>;
-                  &release_semaphore(9854);
+                  &release_fa_lock(9854);
                   alarm(0);
                };
                my $te_time2=time;
@@ -9187,12 +9512,11 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             eval {
                $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                alarm($passwd_timeout);
-               &acquire_semaphore(9854,
-                  "Password Input Prompt at Line: ".__LINE__,1);
+               &acquire_fa_lock(9854);
                print "\n\n  Password: ";
                ReadMode 2;
                $pas=<STDIN>;
-               &release_semaphore(9854);
+               &release_fa_lock(9854);
                alarm(0);
             };
             my $te_time2=time;
@@ -9351,7 +9675,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         &release_semaphore(9361);
+         &release_fa_lock(9361);
 
          $login_id=$username;
          $passwd[2]='';
@@ -9363,8 +9687,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          $localhost=bless $localhost, 'Rem_Command';
          bless $localhost, substr($custom_code_module_file,0,-3);
 
-         &acquire_semaphore(6543,
-            "Local Host Login at Line: ".__LINE__,1);
+         &acquire_fa_lock(6543);
 
          foreach my $connect_method (@RCM_Link) {
             $lc_cnt++;
@@ -9382,13 +9705,13 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                if ($telnetport) {
                   ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
                      ["${telnetpath}telnet",'localhost'])
-                     or (&release_semaphore(6543) &&
+                     or (&release_fa_lock(6543) &&
                         &Net::FullAuto::FA_Core::handle_error(
                         "couldn't launch telnet subprocess"));
                } else {
                   ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
                      ["${telnetpath}telnet",'localhost'],$telnetport)
-                     or (&release_semaphore(6543) &&
+                     or (&release_fa_lock(6543) &&
                         &Net::FullAuto::FA_Core::handle_error(
                         "couldn't launch telnet subprocess"));
                } 
@@ -9416,9 +9739,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   if (7<length $line && unpack('a8',$line) eq 'Insecure') {
                      $line=~s/^Insecure/INSECURE/s;
                      if (wantarray) {
-                        &release_semaphore(6543);
+                        &release_fa_lock(6543);
                         return '',$line;
-                     } else { &release_semaphore(6543);die $line }
+                     } else { &release_fa_lock(6543);die $line }
                   }
                   last if $line=~
                      /(?<!Last )login[: ]*$|username[: ]*$/i;
@@ -9426,7 +9749,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
 
                $local_host->print($login_id);
                if ($local_host->errmsg) {
-                  &release_semaphore(6543);
+                  &release_fa_lock(6543);
                   &handle_error($local_host->errmsg,'-1')
                }
                ## Wait for password prompt.
@@ -9436,7 +9759,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      $localhost,$timeout);
                if ($stderr) {
                   if ($lc_cnt==$#RCM_Link) {
-                     &release_semaphore(6543);
+                     &release_fa_lock(6543);
                      die $stderr;
                   } else { next }
                } last 
@@ -9459,7 +9782,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         ["${sshpath}ssh","-p$sshport",
                          "$login_id\@localhost",'',
                          $Net::FullAuto::FA_Core::slave])
-                         or (&release_semaphore(6543) &&
+                         or (&release_fa_lock(6543) && 
                              &Net::FullAuto::FA_Core::handle_error(
                              "couldn't launch ssh subprocess"));
                   } else {
@@ -9467,7 +9790,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
                         ["${sshpath}ssh","$login_id\@localhost",
                          '',$Net::FullAuto::FA_Core::slave])
-                         or (&release_semaphore(6543) &&
+                         or (&release_fa_lock(6543) &&
                              &Net::FullAuto::FA_Core::handle_error(
                              "couldn't launch ssh subprocess"));
                   }
@@ -9498,7 +9821,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                           _connect=>$_connect },$timeout);
                   if ($stderr) {
                      if ($lc_cnt==$#RCM_Link) {
-                        &release_semaphore(6543);
+                        &release_fa_lock(6543);
                         die $stderr;
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
                         my $kill_arg=($^O eq 'cygwin')?'f':9;
@@ -9506,7 +9829,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                            if &testpid($cmd_pid);
                         $Net::FullAuto::FA_Core::slave='_slave_';next
                      } elsif (3<$try_count++) {
-                        &release_semaphore(6543);
+                        &release_fa_lock(6543);
                         &Net::FullAuto::FA_Core::handle_error($stderr)
                      } else { sleep 1;next }
                   } last
@@ -9576,7 +9899,8 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                   undef $pass_test;
                   $local_host->print("\032");
                   $local_host->close;
-                  $passerror=1;&release_semaphore(6543);
+                  $passerror=1;
+                  &release_fa_lock(6543);
                   return;
                } else {
                   undef $pass_test;
@@ -9586,16 +9910,15 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                my $dbenv = BerkeleyDB::Env->new(
                   -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                   -Flags =>
-                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
-                  &release_semaphore(6543);
+                  &release_fa_lock(6543);
                   &handle_error(
                      "cannot open environment for DB: $BerkeleyDB::Error\n",
                      '__cleanup__',$track);
                }
-               &acquire_semaphore(9361,
-                  "BDB DB Access: ".__LINE__);
+               &acquire_fa_lock(9361);
                my $bdb = BerkeleyDB::Btree->new(
                   -Filename =>
                      "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -9616,7 +9939,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                   }
                }
                unless ($BerkeleyDB::Error=~/Successful/) {
-                  &release_semaphore(6543);
+                  &release_fa_lock(6543);
                   &handle_error(
                      "cannot open Btree for DB: $BerkeleyDB::Error\n",
                      '__cleanup__',$track);
@@ -9641,18 +9964,18 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                $dbenv->close();
                undef $dbenv;
 ## ADD - TELL USER ABOUT MISSING CRON CREDS ON CMD LINE
-               &release_semaphore(9361);
-               &release_semaphore(6543);
+               &release_fa_lock(9361);
+               &release_fa_lock(6543);
                die $line;
                #die "Permission denied";
             }
             if ($line=~/Connection reset by peer|node or service name/s) {
-               &release_semaphore(6543);
+               &release_fa_lock(6543);
                die $line;
             }
             if ($line=~/(?<!Last )login[: ]*$/m ||
                   (-1<index $line,' sync_with_child: ')) {
-               &release_semaphore(6543);
+               &release_fa_lock(6543);
                &handle_error($output,'__cleanup__');
             }
             if ($line=~/new password: ?$/is) {
@@ -9684,7 +10007,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
-         &release_semaphore(6543);
+         &release_fa_lock(6543);
 
          &change_pw($localhost) if $newpw;
 
@@ -9710,14 +10033,13 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
          if (exists $Hosts{"__Master_${$}__"}{'SU_ID'}) {
             my $ignore='';my $su_err='';
             my $su_id=$Hosts{"__Master_${$}__"}{'SU_ID'};
-            &release_semaphore(6543);
+            &release_fa_lock(6543);
             ($ignore,$su_err)=&su($localhost->{_cmd_handle},$hostlabel,
                     $username,$su_id,$hostname,
                     $ip,$use,$^O,$_connect,$cmd_type,
                     [],$login_Mast_error);
             &handle_error($su_err,'-1') if $su_err;
-            &acquire_semaphore(6543,
-               "Local Host Login at Line: ".__LINE__,1);
+            &acquire_fa_lock(6543);
          }
          while (1) {
             my $_sh_pid='';
@@ -9825,7 +10147,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          $bdb = BerkeleyDB::Btree->new(
@@ -9976,13 +10298,12 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
          if ($^O eq 'cygwin') {
             my $wloop=0;
             while (1) {
-               &Net::FullAuto::FA_Core::acquire_semaphore(8712,
-                  "mount -p at Line: ".__LINE__,1);
+               &acquire_fa_lock(8712);
                ($localhost->{_cygdrive},$stderr)=
                   Rem_Command::cmd(
                   $localhost,
                   $Net::FullAuto::FA_Core::gbp->('mount')."mount -p");
-               &Net::FullAuto::FA_Core::release_semaphore(8712);
+               &release_fa_lock(8712);
                $localhost->{_cygdrive}=~s/^.*(\/\S+).*$/$1/s;
                last if $localhost->{_cygdrive} && unpack('a1',
                   $localhost->{_cygdrive}) eq '/';
@@ -10172,7 +10493,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
       $plan||=$plan_ignore_error||='';
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -10524,11 +10845,10 @@ sub passwd_db_update
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-   &acquire_semaphore(9361,
-      "BDB DB Access: ".__LINE__);
+   &acquire_fa_lock(9361);
    my $bdb = BerkeleyDB::Btree->new(
       -Filename =>
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -10622,7 +10942,7 @@ print $Net::FullAuto::FA_Core::MRLOG
    undef $bdb;
    $dbenv->close();
    undef $dbenv;
-   &release_semaphore(9361);
+   &release_fa_lock(9361);
 
 }
 
@@ -10640,11 +10960,10 @@ sub su_scrub
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-   &acquire_semaphore(9361,
-      "BDB DB Access: ".__LINE__);
+   &acquire_fa_lock(9361);
    my $bdb = BerkeleyDB::Btree->new(
       -Filename =>
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -10731,7 +11050,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA
    undef $bdb;
    $dbenv->close();
    undef $dbenv;
-   &release_semaphore(9361);
+   &release_fa_lock(9361);
 
 }
 
@@ -10813,11 +11132,10 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-         &acquire_semaphore(9361,
-            "BDB DB Access: ".__LINE__);
+         &acquire_fa_lock(9361);
          my $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -10852,7 +11170,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         &release_semaphore(9361);
+         &release_fa_lock(9361);
    print $Net::FullAuto::FA_Core::MRLOG "DYING HERE WITH LOCK PROB" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          return '',"$die       $!";
       }
@@ -11720,13 +12038,12 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
 print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
          if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-      &acquire_semaphore(9361,
-         "BDB DB Access: ".__LINE__);
+      &acquire_fa_lock(9361);
       my $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -11768,7 +12085,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
       undef $bdb;
       $dbenv->close();
       undef $dbenv;
-      &release_semaphore(9361);
+      &release_fa_lock(9361);
       return $successflag;
    }
 
@@ -12584,13 +12901,13 @@ sub get
                }
             } else { $file=$file_arg }
          } else { $file=$file_arg }
-         unless (&Net::FullAuto::FA_Core::acquire_semaphore($file_arg,,1)) {
+         unless (&acquire_fa_lock($file_arg)) {
             return 'SEMAPHORE','' if wantarray;
             return 'SEMAPHORE';
          }
          ($output,$stderr)=&Rem_Command::ftpcmd($self,
             "get \"$file\"",$cache);
-         &Net::FullAuto::FA_Core::release_semaphore($file_arg);
+         &release_fa_lock($file_arg);
          if ($stderr) {
            if (wantarray) {
                return '',$stderr;
@@ -12632,7 +12949,7 @@ sub put
       if ($self->{_ftp_handle} ne "__Master_${$}__") {
          ($output,$stderr)=&Rem_Command::ftpcmd($self,
             "put $file",$cache);
-         &Net::FullAuto::FA_Core::release_semaphore($file);
+         &release_fa_lock($file);
          if ($stderr) {
             print "ERROR! - $stderr\n";
          } 
@@ -12992,12 +13309,11 @@ print "DBPATHHHH=$dbpath<==\n";
                               $Net::FullAuto::FA_Core::Hosts{$mr}{'FA_Secure'}.
                               'Passwds',
                               -Flags =>
-                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
                         ) or &handle_error(
                            "cannot open environment for DB: ".
                            "$BerkeleyDB::Error\n",'',$track);
-                        &acquire_semaphore(9361,
-                           "BDB DB Access: ".__LINE__);
+                        &acquire_fa_lock(9361);
                         my $pn=$Net::FullAuto::FA_Core::progname;
                         my $bdb = BerkeleyDB::Btree->new(
                              -Filename => "${pn}_${kind}_passwds.db",
@@ -13058,7 +13374,7 @@ print "DBPATHHHH=$dbpath<==\n";
                         undef $bdb;
                         $dbenv->close();
                         undef $dbenv;
-                        &release_semaphore(9361);
+                        &release_fa_lock(9361);
                      }
                      $ftr_cmd->{_cmd_handle}->cmd(
                         "export PS1='_funkyPrompt_';unset PROMPT_COMMAND");
@@ -13359,7 +13675,7 @@ print "HOW ABOUT AN SMB UNAME???===$uname<===\n";<STDIN>;
                $host=($use eq 'ip') ? $ip : $hostname;
 print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST2222=$host\n"
       if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               &Net::FullAuto::FA_Core::acquire_semaphore(1234,,1);
+               &acquire_fa_lock(1234);
                if ($su_id) {
                   $fpx_passwd=&Net::FullAuto::FA_Core::getpasswd(
                      $hostlabel,$su_id,$ms_share,
@@ -13521,7 +13837,7 @@ print "FPX_PID=$fpx_pid and TEL=$fpx_handle\n";
                ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,'binary',$cache)
                   if $ftm_type ne 'sftp';
                &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-               &Net::FullAuto::FA_Core::release_semaphore(1234);
+               &release_fa_lock(1234);
                if (defined $transfer_dir && $transfer_dir) {
 print "FTRFOUR\n";
                   $work_dirs=&Net::FullAuto::FA_Core::work_dirs($transfer_dir,
@@ -22100,7 +22416,6 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
       $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
          $hostlabel,$login_id,'','');
    }
-   #&Net::FullAuto::FA_Core::acquire_semaphore(1234,,1);
    $host=($use eq 'ip')?$ip:$hostname;
    $host='localhost' if exists $same_host_as_Master{$host};
    if ($host eq 'localhost' && exists $Hosts{$hostlabel}
@@ -22151,7 +22466,6 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
             $cmd_handle=$Net::FullAuto::FA_Core::localhost->{_cmd_handle};
             $cmd_pid=$Net::FullAuto::FA_Core::localhost->{_cmd_pid};
             $shell_pid=$Net::FullAuto::FA_Core::localhost->{_sh_pid};
-            #&Net::FullAuto::FA_Core::release_semaphore(1234);
          } else {
 print $Net::FullAuto::FA_Core::MRLOG
    "GOINGKKK FOR NEW CMD_HANDLE and CONNECT_METH=@connect_method<==\n"
@@ -22405,7 +22719,6 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                            $cmd_handle->close;
                            next CM3;
                         } else {
-                           #&Net::FullAuto::FA_Core::release_semaphore(1234);
                            die $stderr;
                         }
                      }
@@ -22611,13 +22924,12 @@ print $Net::FullAuto::FA_Core::MRLOG
                   &Net::FullAuto::FA_Core::handle_error($su_err) if $su_err;
                }
             } else {
-               &Net::FullAuto::FA_Core::acquire_semaphore(8712,
-                  "mount -p at Line: ".__LINE__,1);
+               &acquire_fa_lock(8712);
                ($cygdrive,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_handle,
                     _hostlabel=>[ $hostlabel,'' ] },
                   $Net::FullAuto::FA_Core::gbp->('mount')."mount -p");
-               &Net::FullAuto::FA_Core::release_semaphore(8712);
+               &release_fa_lock(8712);
                $cygdrive=~s/^.*(\/\S+).*$/$1/s;
             }
          }
@@ -22766,7 +23078,6 @@ print "WHAT IS THE ERROR=$cmd_errmsg<===\n";
 print $Net::FullAuto::FA_Core::MRLOG "WHAT IS THE ERROR=$cmd_errmsg<=== and RETRYS=$retrys\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #&Net::FullAuto::FA_Core::handle_error("$@ and LINE=$outpt",'__cleanup__') if $outpt;
-            #&Net::FullAuto::FA_Core::release_semaphore(1234);
             if ($retrys<2) {
                $retrys++;
                if (($su_login || $use_su_login) &&
@@ -24201,7 +24512,7 @@ sub cmd
                   return 0,"Semaphore Blocking Command";
                } else { return 'Semaphore Blocking Command' }
             } else {
-               &Net::FullAuto::FA_Core::acquire_semaphore($_[5],,1);
+               &acquire_fa_lock($_[5]);
                $sem=$_[5];
             }
          }
@@ -24267,7 +24578,7 @@ sub cmd
          ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($new_cmd->{_cmd_pid},$kill_arg) if   
             &Net::FullAuto::FA_Core::testpid($new_cmd->{_cmd_pid});
          $new_cmd->{_cmd_handle}->close;
-         &Net::FullAuto::FA_Core::release_semaphore($sem) if $sem;
+         &release_fa_lock($sem) if $sem;
          return $stdout,$stderr if $wantarray;
          return $stdout if !$stderr;
          return $stderr;
@@ -25693,7 +26004,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cmd() STDERRBOTTOM=$stderr<== and LASTLINE
             "==>$eval_error<==",
             "\n       at Line ",__LINE__,"\n\n"
             if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
-         &Net::FullAuto::FA_Core::release_semaphore($sem) if $sem;
+         &release_fa_lock($sem) if $sem;
          if ((-1<index $command,"kill ") &&
                (-1<index $eval_error,"eof")) {
             my $prc=substr($command,-3);
@@ -25846,7 +26157,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETURNING ERROR=$eval_error\n"
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEMMMMMMMMMM\n";
       pop @FA_Core::pid_ts if $pid_ts;
       $stdout||='';$stderr||='';
-      &Net::FullAuto::FA_Core::release_semaphore($sem) if $sem;
+      &release_fa_lock($sem) if $sem;
 print $Net::FullAuto::FA_Core::MRLOG "DO WE EVER REALLY GET HERE? ".
    "and STDOUT=$stdout<== and STDERR=$stderr<==\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -26359,8 +26670,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
          "$@ - LSLINE=$line<- AND TIMESTAMP=$timestamp<- AND MN=$mn<-");
    }
    my $ipc_key="$timestamp$size";
-   #my $ipc_key=substr($timestamp,-4);
-   &Net::FullAuto::FA_Core::release_semaphore($ipc_key);
+   &release_fa_lock($ipc_key);
    $line="${hostlabel}|%|$line";
    ${$self->{_host_queried}}{"$hostlabel"}='-';
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
@@ -26371,7 +26681,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
@@ -26449,7 +26759,7 @@ print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
@@ -26513,7 +26823,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n");
          my $bdb = BerkeleyDB::Btree->new(
@@ -26530,7 +26840,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          ${$self->{_line_queried}}{$line}='-';
          return 'User Declines to EVER Transfer File','';
       } else {
-         &Net::FullAuto::FA_Core::acquire_semaphore($ipc_key,,1);
+         &acquire_fa_lock($ipc_key);
          ${$self->{_line_queried}}{$line}='-';
          if ($Net::FullAuto::FA_Core::log) {
             print $Net::FullAuto::FA_Core::MRLOG "FA_DB::query() QUERYLINE=",
@@ -26549,7 +26859,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          $result='File Less then 10 Minutes Old';
       } else {
          ${$self->{_line_queried}}{$line}='-';
-         &Net::FullAuto::FA_Core::acquire_semaphore($ipc_key,,1);
+         &acquire_fa_lock($ipc_key);
          if ($Net::FullAuto::FA_Core::log) {
             print $Net::FullAuto::FA_Core::MRLOG "FA_DB::query() QUERYLINE=",
                "$line\n" if $Net::FullAuto::FA_Core::log &&
@@ -26611,7 +26921,7 @@ sub mod
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
@@ -26650,7 +26960,7 @@ print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron 
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
@@ -26669,8 +26979,8 @@ print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron 
          my $status=$bdb->db_del($k);
       }
    }
-   undef $cursor ;
-   undef $bdb ;
+   undef $cursor;
+   undef $bdb;
    $dbenv->close();
    undef $dbenv;
 
