@@ -12901,13 +12901,13 @@ sub get
                }
             } else { $file=$file_arg }
          } else { $file=$file_arg }
-         unless (&acquire_fa_lock($file_arg)) {
+         unless (&Net::FullAuto::FA_Core::acquire_fa_lock($file_arg)) {
             return 'SEMAPHORE','' if wantarray;
             return 'SEMAPHORE';
          }
          ($output,$stderr)=&Rem_Command::ftpcmd($self,
             "get \"$file\"",$cache);
-         &release_fa_lock($file_arg);
+         &Net::FullAuto::FA_Core::release_fa_lock($file_arg);
          if ($stderr) {
            if (wantarray) {
                return '',$stderr;
@@ -12949,7 +12949,7 @@ sub put
       if ($self->{_ftp_handle} ne "__Master_${$}__") {
          ($output,$stderr)=&Rem_Command::ftpcmd($self,
             "put $file",$cache);
-         &release_fa_lock($file);
+         &Net::FullAuto::FA_Core::release_fa_lock($file);
          if ($stderr) {
             print "ERROR! - $stderr\n";
          } 
@@ -13313,7 +13313,7 @@ print "DBPATHHHH=$dbpath<==\n";
                         ) or &handle_error(
                            "cannot open environment for DB: ".
                            "$BerkeleyDB::Error\n",'',$track);
-                        &acquire_fa_lock(9361);
+                        &Net::FullAuto::FA_Core::acquire_fa_lock(9361);
                         my $pn=$Net::FullAuto::FA_Core::progname;
                         my $bdb = BerkeleyDB::Btree->new(
                              -Filename => "${pn}_${kind}_passwds.db",
@@ -13374,7 +13374,7 @@ print "DBPATHHHH=$dbpath<==\n";
                         undef $bdb;
                         $dbenv->close();
                         undef $dbenv;
-                        &release_fa_lock(9361);
+                        &Net::FullAuto::FA_Core::release_fa_lock(9361);
                      }
                      $ftr_cmd->{_cmd_handle}->cmd(
                         "export PS1='_funkyPrompt_';unset PROMPT_COMMAND");
@@ -13675,7 +13675,7 @@ print "HOW ABOUT AN SMB UNAME???===$uname<===\n";<STDIN>;
                $host=($use eq 'ip') ? $ip : $hostname;
 print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST2222=$host\n"
       if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               &acquire_fa_lock(1234);
+               &Net::FullAuto::FA_Core::acquire_fa_lock(1234);
                if ($su_id) {
                   $fpx_passwd=&Net::FullAuto::FA_Core::getpasswd(
                      $hostlabel,$su_id,$ms_share,
@@ -13837,7 +13837,7 @@ print "FPX_PID=$fpx_pid and TEL=$fpx_handle\n";
                ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,'binary',$cache)
                   if $ftm_type ne 'sftp';
                &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
-               &release_fa_lock(1234);
+               &Net::FullAuto::FA_Core::release_fa_lock(1234);
                if (defined $transfer_dir && $transfer_dir) {
 print "FTRFOUR\n";
                   $work_dirs=&Net::FullAuto::FA_Core::work_dirs($transfer_dir,
@@ -22924,12 +22924,12 @@ print $Net::FullAuto::FA_Core::MRLOG
                   &Net::FullAuto::FA_Core::handle_error($su_err) if $su_err;
                }
             } else {
-               &acquire_fa_lock(8712);
+               &Net::FullAuto::FA_Core::acquire_fa_lock(8712);
                ($cygdrive,$stderr)=Rem_Command::cmd(
                   { _cmd_handle=>$cmd_handle,
                     _hostlabel=>[ $hostlabel,'' ] },
                   $Net::FullAuto::FA_Core::gbp->('mount')."mount -p");
-               &release_fa_lock(8712);
+               &Net::FullAuto::FA_Core::release_fa_lock(8712);
                $cygdrive=~s/^.*(\/\S+).*$/$1/s;
             }
          }
@@ -24512,7 +24512,7 @@ sub cmd
                   return 0,"Semaphore Blocking Command";
                } else { return 'Semaphore Blocking Command' }
             } else {
-               &acquire_fa_lock($_[5]);
+               &Net::FullAuto::FA_Core::acquire_fa_lock($_[5]);
                $sem=$_[5];
             }
          }
@@ -24578,7 +24578,7 @@ sub cmd
          ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill($new_cmd->{_cmd_pid},$kill_arg) if   
             &Net::FullAuto::FA_Core::testpid($new_cmd->{_cmd_pid});
          $new_cmd->{_cmd_handle}->close;
-         &release_fa_lock($sem) if $sem;
+         &Net::FullAuto::FA_Core::release_fa_lock($sem) if $sem;
          return $stdout,$stderr if $wantarray;
          return $stdout if !$stderr;
          return $stderr;
@@ -26004,7 +26004,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cmd() STDERRBOTTOM=$stderr<== and LASTLINE
             "==>$eval_error<==",
             "\n       at Line ",__LINE__,"\n\n"
             if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
-         &release_fa_lock($sem) if $sem;
+         &Net::FullAuto::FA_Core::release_fa_lock($sem) if $sem;
          if ((-1<index $command,"kill ") &&
                (-1<index $eval_error,"eof")) {
             my $prc=substr($command,-3);
@@ -26157,7 +26157,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETURNING ERROR=$eval_error\n"
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEMMMMMMMMMM\n";
       pop @FA_Core::pid_ts if $pid_ts;
       $stdout||='';$stderr||='';
-      &release_fa_lock($sem) if $sem;
+      &Net::FullAuto::FA_Core::release_fa_lock($sem) if $sem;
 print $Net::FullAuto::FA_Core::MRLOG "DO WE EVER REALLY GET HERE? ".
    "and STDOUT=$stdout<== and STDERR=$stderr<==\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -26670,7 +26670,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
          "$@ - LSLINE=$line<- AND TIMESTAMP=$timestamp<- AND MN=$mn<-");
    }
    my $ipc_key="$timestamp$size";
-   &release_fa_lock($ipc_key);
+   &Net::FullAuto::FA_Core::release_fa_lock($ipc_key);
    $line="${hostlabel}|%|$line";
    ${$self->{_host_queried}}{"$hostlabel"}='-';
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
@@ -26840,7 +26840,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          ${$self->{_line_queried}}{$line}='-';
          return 'User Declines to EVER Transfer File','';
       } else {
-         &acquire_fa_lock($ipc_key);
+         &Net::FullAuto::FA_Core::acquire_fa_lock($ipc_key);
          ${$self->{_line_queried}}{$line}='-';
          if ($Net::FullAuto::FA_Core::log) {
             print $Net::FullAuto::FA_Core::MRLOG "FA_DB::query() QUERYLINE=",
@@ -26859,7 +26859,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          $result='File Less then 10 Minutes Old';
       } else {
          ${$self->{_line_queried}}{$line}='-';
-         &acquire_fa_lock($ipc_key);
+         &Net::FullAuto::FA_Core::acquire_fa_lock($ipc_key);
          if ($Net::FullAuto::FA_Core::log) {
             print $Net::FullAuto::FA_Core::MRLOG "FA_DB::query() QUERYLINE=",
                "$line\n" if $Net::FullAuto::FA_Core::log &&

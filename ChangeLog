@@ -21,6 +21,14 @@
 
 2012-11-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999939 released.
+
+        * Prepended package qualifier to fa_lock routines calls
+          in other packages.
+
+
+2012-11-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999938 released.
 
         * BerkeleyDB based locking system instead of OS
