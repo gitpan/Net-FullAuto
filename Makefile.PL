@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999939';
+$main::VERSION='0.999940';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3641,7 +3641,6 @@ if ($^O eq 'cygwin') {
    print FH "\n";
    close FH;
    install_script('bin/fullauto.exe');
-   install_script('bin/startmozrepl.exe');
    unlink "bin/fullauto.exe";
 } else {
    open(FH,">bin/fullauto");

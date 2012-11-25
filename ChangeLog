@@ -19,6 +19,17 @@
 ################################################################
 
 
+2012-11-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999940 released.
+
+        * Lots of MozRepl enhancements.
+
+        * Firefox located and launched for MozRepl when needed.
+
+        * fa_lock enhancements.
+
+
 2012-11-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999939 released.

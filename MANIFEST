@@ -1,5 +1,4 @@
 bin/fullauto.pl
-bin/startmozrepl.exe
 ChangeLog
 inc/Module/AutoInstall.pm
 inc/Module/Install.pm

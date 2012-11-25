@@ -161,6 +161,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   connect_host get_all_hosts
                   $username connect_ftp $cron
                   connect_telnet connect_sftp
+                  connect_mozrepl $passwd_file_loc
                   send_email $log connect_ssh
                   connect_secure connect_insecure
                   connect_reverse $prod $random
@@ -170,10 +171,9 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $increment %month ls_timestamp
                   cleanup $dest_first_hash %days
                   test_file test_dir timelocal
-                  %GLOBAL @GLOBAL $MRLOG 
+                  %GLOBAL @GLOBAL $MRLOG $fullauto
                   $funkyprompt handle_error
                   $quiet $batch $unattended
-                  $passwd_file_loc $fullauto
                   %email_addresses @plans $^O
                   %email_defaults $service
                   persist_get persist_put cache
@@ -428,6 +428,9 @@ BEGIN {
       'set_menu'                    => '',
 
    );
+
+   use Fcntl qw(S_IMODE);
+   our $fa_perm=S_IMODE((CORE::stat($main::netfull))[2]);
 
 }
 
@@ -2795,6 +2798,16 @@ sub acquire_fa_lock
 
    my $locks='';my $getnewlock=0;my $newlock={};my $queue='';
 
+   my @letoct=split '', $_[0];
+   my $letoct='';
+   foreach my $c (@letoct) {
+     if ($c=~/\d/) {
+        $letoct.=$c;
+     } else {
+        $letoct.=ord($c);
+     }
+   }
+
    unless ($Net::FullAuto::FA_Core::bdb_locks) {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks') {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
@@ -2818,7 +2831,7 @@ sub acquire_fa_lock
          "cannot open Btree for DB: $BerkeleyDB::Error\n");
    }
    
-   my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get($lock_id,$locks);
+   my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get($letoct,$locks);
    my @processes=();
    unless ($status) {
       $locks=~s/\$HASH\d*\s*=\s*//s;
@@ -2884,13 +2897,13 @@ sub acquire_fa_lock
             }
             if (-1==$#{[keys %{$locks}]}) {
                my $status=$Net::FullAuto::FA_Core::bdb_locks->db_del(
-                     $lock_id);
+                     $letoct);
             } else {
                my $status=$Net::FullAuto::FA_Core::bdb_locks->db_put(
-                     $lock_id,$locks);
+                     $letoct,$locks);
             }
             my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get(
-                  $lock_id,$locks);
+                  $letoct,$locks);
             if ($status) {
                $getnewlock=1;
             } else {
@@ -2920,18 +2933,18 @@ sub acquire_fa_lock
 #my $count=0;
 #print "\n";
             while (time<$expires) {
-#print "  POLLING=$count and LOCKID=$lock_id\n";
+#print "  POLLING=$count and LOCKID=$letoct\n";
 #$count++;
                select(undef,undef,undef,$polling);
                $expired_flag=1;
                $status=$Net::FullAuto::FA_Core::bdb_locks->db_get(
-                  $lock_id,$locks);
+                  $letoct,$locks);
                $locks=~s/\$HASH\d*\s*=\s*//s;
                $locks=eval $locks;
                if ($status || $maxnumberallowed>$#{[keys %{$locks}]}+1) {
                   $expired_flag=0;
                   last;
-               } elsif ($lock_id eq '9876') {
+               } elsif ($letoct eq '9876') {
                   &handle_error("FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
                      ."          Waiting period expired while waiting "
                      ."for lock:\n\n          $lock_description\n\n"
@@ -2943,7 +2956,7 @@ sub acquire_fa_lock
             $getnewlock=1;
          } else {
             my $max='';
-            if ($lock_id==9876) {
+            if ($letoct==9876) {
                $max="          Maximum Number Allowed => "
                    ."$maxnumberallowed\n\n";
             }
@@ -2956,22 +2969,22 @@ sub acquire_fa_lock
    } else {
 
       $maxnumberallowed=
-         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'MaxNumberAllowed'}
+         $Net::FullAuto::FA_Core::locks->{$letoct}->{'MaxNumberAllowed'}
          unless $maxnumberallowed;
       $killafterseconds=
-         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'KillAfterSeconds'}
+         $Net::FullAuto::FA_Core::locks->{$letoct}->{'KillAfterSeconds'}
          unless $killafterseconds;
       $enable=
-         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'Enable'}
+         $Net::FullAuto::FA_Core::locks->{$letoct}->{'Enable'}
          unless $enable;
       $lock_description=
-         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'Lock_Description'}
+         $Net::FullAuto::FA_Core::locks->{$letoct}->{'Lock_Description'}
          unless $lock_description;
       $wait_for_newlock=
-         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'Wait_For_NewLock'}
+         $Net::FullAuto::FA_Core::locks->{$letoct}->{'Wait_For_NewLock'}
          unless $wait_for_newlock;
       $pollingmillisecs=
-         $Net::FullAuto::FA_Core::locks->{$lock_id}->{'PollingMilliSecs'}
+         $Net::FullAuto::FA_Core::locks->{$letoct}->{'PollingMilliSecs'}
          unless $pollingmillisecs;
       $newlock={
 
@@ -3000,7 +3013,7 @@ sub acquire_fa_lock
          $locks={ $$, $newlock };
       }
       $newlock=Data::Dump::Streamer::Dump($locks)->Out();
-      my $status=$Net::FullAuto::FA_Core::bdb_locks->db_put($lock_id,$newlock);
+      my $status=$Net::FullAuto::FA_Core::bdb_locks->db_put($letoct,$newlock);
    }
 }
 
@@ -3014,11 +3027,22 @@ sub release_fa_lock
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $lockid=(defined $_[0] && $_[0])?$_[0]:'1234';
+
+   my @letoct=split '', $_[0];
+   my $letoct='';
+   foreach my $c (@letoct) {
+     if ($c=~/\d/) {
+        $letoct.=$c;
+     } else {
+        $letoct.=ord($c);
+     }
+   }
+
    my $locks='';
    if ($Net::FullAuto::FA_Core::bdb_locks) {
-      my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get($lockid,$locks);
+      my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get($letoct,$locks);
       if ($status) {
-         $Net::FullAuto::FA_Core::bdb_locks->db_del($lockid);
+         $Net::FullAuto::FA_Core::bdb_locks->db_del($letoct);
          return 0;
       }
       $locks=~s/\$HASH\d*\s*=\s*//s;
@@ -3029,10 +3053,10 @@ sub release_fa_lock
       if (keys %{$locks}) {
          $locks=Data::Dump::Streamer::Dump($locks)->Out();
          $status=$Net::FullAuto::FA_Core::bdb_locks->db_put(
-               $lockid,$locks);
+               $letoct,$locks);
       } else {
          $status=$Net::FullAuto::FA_Core::bdb_locks->db_del(
-               $lockid);
+               $letoct);
       }
    }
    return 0;
@@ -3921,6 +3945,36 @@ sub connect_reverse
    }
 }
 
+sub connect_mozrepl
+{
+   unless (defined $_[0] && $_[0]) {
+
+   }
+   push @_, '__telnet__';
+   my ($handle,$stderr)=('','');
+   ($handle,$stderr)=connect_host(@_);
+   my $shell=$handle->{_shell};
+   if (defined $Net::FullAuto::FA_Core::ff_flag) { 
+      foreach my $n (1..30) {
+         my $loc=$handle->repl("$shell.whereAmI()");
+         last if -1<index $loc,'FullAuto Software';
+         if ($n==5 || $n==10 || $n==15) {
+            my $go_to='content.document.location.href='.
+               '"http://www.fullautosoftware.net"';
+            my ($out,$error)=$handle->repl($go_to);
+         }
+         sleep 1;
+      }
+   }
+   if (wantarray) {
+      return $handle,$stderr;
+   } elsif ($stderr) {
+      &handle_error($stderr,'-4','__cleanup__');
+   } else {
+      return $handle;
+   }
+}
+
 sub connect_cmd
 {
    my @topcaller=caller;
@@ -3959,16 +4013,29 @@ sub connect_host
    my $caller=(caller(1))[3];
    substr($caller,0,(index $caller,'::')+2)='';
    my $sub='';my $_connect='connect_host';my $cache='';
+   my $hostlabel=$_[0];
    if ((-1<index $caller,'connect_ftp')
          || (-1<index $caller,'connect_telnet')
          || (-1<index $caller,'connect_ssh')
          || (-1<index $caller,'connect_sftp')
          || (-1<index $caller,'connect_secure')
          || (-1<index $caller,'connect_insecure')
-         || (-1<index $caller,'connect_reverse')) {
+         || (-1<index $caller,'connect_reverse')
+         || (-1<index $caller,'connect_mozrepl')) {
+      my $connect_caller=$caller;
       $_connect=(split '::', $caller)[2];
       ($caller,$sub)=split '::', (caller(2))[3];
       $caller.='.pm';
+      if ((-1<index $connect_caller,'connect_mozrepl') &&
+            (($_[0] eq '__telnet__') ||
+            (-1<index $_[0],'Moose::Meta::Class::__ANON__::SERIAL')
+            || (-1<index $_[0],'Cache::FileCache'))) {
+         $hostlabel='Firefox MozRepl';
+         $Hosts{$hostlabel}{'HostName'}='localhost';
+         $Hosts{$hostlabel}{'Label'}=$hostlabel;
+         $Hosts{$hostlabel}{'telnetport'}=4242;
+         $_connect='connect_telnet';
+      }
    } else {
       my @called=caller(2);
       #if ((-1<index $caller,'mirror') || (-1<index $caller,'login_retry')
@@ -3983,7 +4050,6 @@ sub connect_host
          $sub=~s/^.*:://;
       } $sub=~s/\s*\;\n*//
    }
-   my $hostlabel=$_[0];
    $Net::FullAuto::FA_Core::cltimeout||='X';
    if ($Net::FullAuto::FA_Core::cltimeout ne 'X') {
       $timeout=$Net::FullAuto::FA_Core::cltimeout;
@@ -5978,7 +6044,9 @@ sub getpasswd
       while (1) {
          $loop_count++;
          print $blanklines;
-         print "\n  ERROR MESSAGE-> $errmsg" if $errmsg;
+         my $errm=$errmsg;
+         $errm=~s/^(.*) (at .*)$/$1\n  $2/s;
+         print "\n  ERROR MESSAGE (1) -> $errm" if $errmsg;
          my $print1='';
          if ($ms_domain) {
             if ($local_host_flag) {
@@ -6091,7 +6159,7 @@ sub getpasswd
             if (exists $email_defaults{Usage} &&
                   lc($email_defaults{Usage}) eq 'notify_on_error') {
                my $body='';
-               $body="\n  ERROR MESSAGE-> $errmsg" if $errmsg;
+               $body="\n  ERROR MESSAGE (2) -> $errmsg" if $errmsg;
                $body.=$print1;my $subject='';
                if ($host) {
                   $subject="Login Failed for $login_id on $host";
@@ -6136,7 +6204,7 @@ sub getpasswd
          if (exists $email_defaults{Usage} &&
                lc($email_defaults{Usage}) eq 'notify_on_error') {
             my $body='';
-            $body="\n  ERROR MESSAGE-> $errmsg" if $errmsg;
+            $body="\n  ERROR MESSAGE (3) -> $errmsg" if $errmsg;
             $body.=$print1;my $subject='';
             if ($host) {
                $subject="Login Failed for $login_id on $host";
@@ -8610,7 +8678,7 @@ sub fa_login
             print "$blanklines\n";
          }
          if ($login_Mast_error) {
-            print "ERROR MESSAGE-> $login_Mast_error\n";
+            print "ERROR MESSAGE (4) -> $login_Mast_error\n";
          }
          if ($test && !$prod) {
             print "\n  Running in TEST (1) mode\n";
@@ -9159,7 +9227,6 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                chomp($login_Mast_error);
             } else {
                chomp($login_Mast_error);
-               #print "ERROR MESSAGE-> $login_Mast_error\n";<STDIN>;
             }
          }
 
@@ -9173,7 +9240,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      print "$blanklines\n";
                   }
                   if ($login_Mast_error) {
-                     print "ERROR MESSAGE-> $login_Mast_error\n";
+                     print "ERROR MESSAGE (5) -> $login_Mast_error\n";
                   }
                   if ($test && !$prod) {
                      print "\n  Running in TEST (2) mode\n";
@@ -14952,7 +15019,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
          while (1) {
             while (my $line=$ftp_handle->get(Timeout=>$fttimeout)) {
                if ($line=~/command not found/) {
-                  die 'Perm';
+                  die 'Permssion Denied';
                }
                print $Net::FullAuto::FA_Core::MRLOG
                   "\nFile_Transfer::ftm_login() ",
@@ -15418,12 +15485,14 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
                }
                next;
             } else {
-               print "\nEXITING from ftm_login()  ERROR: $@\n       at Line ",__LINE__,"\n       ".
+               print "\nEXITING from ftm_login()  ERROR: $@\n       at Line ",
+                  __LINE__,"\n       ".
                   (join ' ',@topcaller)."\n\n"
                   if !$Net::FullAuto::FA_Core::cron &&
                   $Net::FullAuto::FA_Core::debug;
                print $Net::FullAuto::FA_Core::MRLOG
-                  "\nEXITING FROM ftm_login()  ERROR: $@\n       at Line ",__LINE__,"\n       ".
+                  "\nEXITING FROM ftm_login()  ERROR: $@\n       at Line ",
+                  __LINE__,"\n       ".
                   (join ' ',@topcaller)."\n\n"
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -15468,6 +15537,7 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
                   if &Net::FullAuto::FA_Core::testpid($shell_pid)
                   && $shell_pid ne
                   $Net::FullAuto::FA_Core::localhost->{_sh_pid};
+               $Net::FullAuto::FA_Core::localhost{_cmd_pid}||='';
                ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
                   $ftp_pid,$kill_arg)
                   if &Net::FullAuto::FA_Core::testpid($ftp_pid)
@@ -17760,6 +17830,20 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                               $cppath='/bin/';
                            } elsif (-e '/usr/local/bin/cp') {
                               $cppath='/usr/local/bin/';
+                           }
+                        }
+                        if ($^O eq 'cygwin') {
+                           if (exists
+                                 $Net::FullAuto::FA_Core::cygpathw{$dir}) {
+                              $dir=$Net::FullAuto::FA_Core::cygpathw{$dir};
+                           } else {
+                              my $cdr='';
+                              ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                                 $localhost,"cygpath -w $dir");
+                              &handle_error($stderr,'-1') if $stderr;
+                              $cdr=~s/\\/\\\\/g;
+                              $Net::FullAuto::FA_Core::cygpathw{$dir}=$cdr;
+                              $dir=$cdr;
                            }
                         }
                         ($output,$stderr)=$baseFH->cmd(
@@ -22411,7 +22495,8 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
          $loginid,$ms_domain,'','','smb');
          #$loginid,$ms_domain,$cmd_errmsg,'','SMB_Proxy');
    } elsif (exists $Hosts{$hostlabel} &&
-         lc($Hosts{$hostlabel}->{'Label'}) eq 'mozrepl') {
+         (lc($Hosts{$hostlabel}->{'Label'}) eq 'mozrepl' ||
+         $Hosts{$hostlabel}->{'Label'} eq 'Firefox MozRepl')) {
    } else {
       $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
          $hostlabel,$login_id,'','');
@@ -22579,6 +22664,103 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                               delete $Net::FullAuto::FA_Core::Processes{
                                  $hostlabel}{$login_id}
                                  {'cmd_id_'.$Net::FullAuto::FA_Core::pcnt};
+                           }
+                           my $lchl=lc($hostlabel);
+                           if (($^O eq 'cygwin') && (-1<index $lchl,'mozrepl')
+                                 && !($Net::FullAuto::FA_Core::firefox)) {
+                              unshift @connect_method,'telnet';
+                              # Let's look for Firefox
+                              my $firefox=
+                                 'REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                                 'Mozilla\\Mozilla FireFox" 2>&1';
+                              ($firefox,$stderr)=
+                                 &Net::FullAuto::FA_Core::cmd($firefox);
+                              chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+                              $firefox=~s/^\s*//;
+                              if ($firefox=~/^Error:/) {
+                                 my $die="   Cannot Locate a "
+                                        ."Mozilla FireFox installation"
+                                        ."\n              "
+                                        ."needed for FullAuto repl() "
+                                        ."functionality:\n"
+                                        ."\n       ".$firefox;
+                                 &Net::FullAuto::FA_Core::handle_error($die);
+                              } 
+                              &Net::FullAuto::FA_Core::handle_error($stderr)
+                                 if $stderr;
+                              $firefox=~
+                                 s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
+                              $firefox=
+                                 'REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                                 "Mozilla\\Mozilla Firefox\\$firefox\\Main\"".
+                                 ' 2>&1';
+                              ($stdout,$stderr)=
+                                 &Net::FullAuto::FA_Core::cmd(
+                                 'ps -W | grep firefox');
+                              my $fireflag=0;
+                              if (-1<index $stdout,'firefox') {
+                                 $fireflag=1;
+                              }
+                              ($firefox,$stderr)=
+                                 &Net::FullAuto::FA_Core::cmd($firefox);
+                              if ($firefox=~/^Error:/) {
+                                 my $die="   Cannot Locate a "
+                                        ."Mozilla FireFox installation"
+                                        ."\n              "
+                                        ."needed for FullAuto repl() "
+                                        ."functionality:\n"
+                                        ."\n       ".$firefox;
+                                 &Net::FullAuto::FA_Core::handle_error($die);
+                              }
+                              &Net::FullAuto::FA_Core::handle_error($stderr)
+                                 if $stderr;
+                              chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+                              $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+                              $firefox=~s/\s*$//s;
+                              ($firefox,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                                 "cygpath $firefox");
+                              $firefox=~s/\n/ /gs;
+                              &Net::FullAuto::FA_Core::handle_error($stderr)
+                                 if $stderr;
+                              my $fcmd="\"${firefox}\" -new-instance -repl ".
+                                    "http://www.fullautosoftware.net ".
+                                    "1>$localhost->{_work_dirs}->{_tmp}".
+                                    "repl_out.txt &";
+                              unless ($fireflag) {
+                                 my $ro=$localhost->{_work_dirs}->{_tmp}.
+                                       "repl_out.txt";
+                                 unlink $ro if -e $ro;
+                                 my $mystdout='';
+                                 IO::CaptureOutput::capture sub {
+                                    system($fcmd);
+                                 }, \$mystdout;
+                                 my $cat=$Net::FullAuto::FA_Core::gbp->('cat');
+                                 foreach (1..30) {
+                                    my $out=`${cat}cat $ro`;
+                                    if (-1<index $out,'MOZREPL : Listening') {
+                                       unlink $ro;
+                                       $previous_method=0;
+                                       $Net::FullAuto::FA_Core::ff_flag=1;
+                                       next WH;
+                                    }
+                                    sleep 1;
+                                 }
+                                 $fcmd="\"${firefox}\" -new-instance -repl ".
+                                       "http://www.fullautosoftware.net".
+                                 eval {
+                                    $SIG{ALRM} = sub { die "alarm\n" };
+                                    alarm(30);
+                                    ($stdout,$stderr)=$localhost->cmd($fcmd);
+                                    alarm(0);
+                                 };
+                                 $stderr=$@ if $@;
+                                 &Net::FullAuto::FA_Core::handle_error($stderr);
+                              } else {
+                                 my $mystdout='';
+                                 IO::CaptureOutput::capture sub {
+                                    system($fcmd);
+                                 }, \$mystdout;
+                              }
                            }
                            if (1<=$#connect_method) {
                               $stderr=$line;
@@ -24317,25 +24499,41 @@ sub repl
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $self=$_[0];
+   my $self=(defined $Net::FullAuto::FA_Core::newrepl)?
+            $Net::FullAuto::FA_Core::newrepl:$_[0];
    my $command=$_[1];$command||='';my $output='';
-   $self->{_cmd_handle}->print($command);
-   while (my $line=$self->{_cmd_handle}->get(Timeout=>10000)) {
-      print $Net::FullAuto::FA_Core::MRLOG
-            "REPL LINE=>$line<=\n"
-            if $Net::FullAuto::FA_Core::log &&
-            -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   while (1) {
+      $self->{_cmd_handle}->print($command);
+      eval {
+         while (my $line=$self->{_cmd_handle}->get(Timeout=>30)) {
+            print $Net::FullAuto::FA_Core::MRLOG
+                  "REPL LINE=>$line<=\n"
+                  if $Net::FullAuto::FA_Core::log &&
+                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #print "REPLLINE=$line\n";
-      $output.=$line;
-      last if $output=~s/\n*repl\d*>\s*$//;
-      last if $output=~/Host context unloading/s;
+            $output.=$line;
+            last if $output=~s/\n*repl\d*>\s*$//;
+            last if $output=~/Host context unloading/s;
+            last if $output=~/Connection closed by/s;
+         }
+      };
+      if ($@ || $output=~/Connection closed by/s) {
+#print "GOING FOR NEW SELF\n";
+         $self->{_cmd_handle}->print("\004");
+         $Net::FullAuto::FA_Core::newrepl=
+            Net::FullAuto::FA_Core::connect_mozrepl();
+         $self=$Net::FullAuto::FA_Core::newrepl;
+         $output='';
+         undef $@;
+         next;
+      } else { last }
    }
-#print "OUTREPL=$output\n";
    $output=~s/^\s*//s;
    substr($output,0,(length $command))='';
    $output=~s/^\s*//s;
    chomp($output=~tr/\0-\11\13-\37\177-\377//d);
    my $error=$output if $output=~/^[!][!][!]|back to creation context/;
+   $error=$output if $output=~/Connection closed by/s;
    my $die='';
    if ($error) {
       $error="FATAL ERROR! - MozRepl returned the"
