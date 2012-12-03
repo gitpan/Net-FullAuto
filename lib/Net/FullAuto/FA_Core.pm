@@ -24515,11 +24515,23 @@ sub repl
             last if $output=~s/\n*repl\d*>\s*$//;
             last if $output=~/Host context unloading/s;
             last if $output=~/Connection closed by/s;
+            if ($output=~/[.][.][.][.][>]/) {
+               $self->{_cmd_handle}->print(';');
+               sleep 2;
+               next;
+            }
          }
       };
       if ($@ || $output=~/Connection closed by/s) {
 #print "GOING FOR NEW SELF\n";
          $self->{_cmd_handle}->print("\004");
+         my $kill_arg=($^O eq 'cygwin')?'f':9;
+         my ($stdout,$stderr)=('','');
+         ($stdout,$stderr)=&Net::FullAuto::FA_Core::kill(
+               $self->{_cmd_pid},$kill_arg);
+         $self->{_cmd_handle}->close;
+#         ($output,$stderr)=$Net::FullAuto::FA_Core::localhost->cmd('ps -e');
+#print "PS OUT=$output\n";<STDIN>;
          $Net::FullAuto::FA_Core::newrepl=
             Net::FullAuto::FA_Core::connect_mozrepl();
          $self=$Net::FullAuto::FA_Core::newrepl;
@@ -24533,6 +24545,7 @@ sub repl
    $output=~s/^\s*//s;
    chomp($output=~tr/\0-\11\13-\37\177-\377//d);
    my $error=$output if $output=~/^[!][!][!]|back to creation context/;
+   $error=$output if -1<index $output,'!!! SyntaxError:';
    $error=$output if $output=~/Connection closed by/s;
    my $die='';
    if ($error) {
