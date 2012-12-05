@@ -19,6 +19,15 @@
 ################################################################
 
 
+2012-12-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999942 released.
+
+        * Permissions 777 for Berkeley DB with Cygwin/Windows.
+
+        * Added Regex to strip socket noise.
+
+
 2012-12-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999941 released.
