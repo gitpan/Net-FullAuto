@@ -1247,12 +1247,15 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          $username);
    }
    if ($Net::FullAuto::FA_Core::makeplan) {
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -1266,6 +1269,12 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          -Env      => $dbenv
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
       my $plan_number=$Net::FullAuto::FA_Core::makeplan->{'Number'}||'';
       my $plan_title =$Net::FullAuto::FA_Core::makeplan->{'Title'}||'';
       my $put_plan=Data::Dump::Streamer::Dump(
@@ -2361,12 +2370,15 @@ my $outp=join ' ', @{$output} if ref $output eq 'ARRAY';
 print "OUTPUT=$outp\n" if defined $outp && $outp;
 
    if ($output ne ']quit[') {
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -2380,6 +2392,12 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          -Env      => $dbenv
       ) or &handle_error(
         "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
       my $new_plan_number=0;
       my ($k,$v) = ('','') ;
       if ($output eq 'Accept Defaults and Create New Plan') {
@@ -2568,12 +2586,15 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          my ($stdout,$stderr)=('','');
          ($stdout,$stderr)=cmd("${crontabpath}crontab -l");
 #print "WAHT IS CRONTABSTDOUT=$stdout\n";
+         my $mkdflag=0;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs') {
-            my $m=($^O eq 'cygwin')?'-m 777 ':'';
+            $mkdflag=1;
+            my $m=($^O eq 'cygwin')?'-m 660 ':'';
             my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs',
@@ -2588,7 +2609,12 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
             -Env      => $dbenv
          ) or &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-         
+         if ($mkdflag && $^O eq 'cygwin') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs/*';
+            my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
          if ($stderr && -1<index $stderr,'no crontab') {
             $planstring=~tr/ //s;
             my $plnn=$planstring;
@@ -2644,12 +2670,15 @@ sub persist_get {
    &handle_error("Missing Arguements: ".
       "&persist_get\(\[key\]\)")
       unless $key;
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
@@ -2662,6 +2691,12 @@ sub persist_get {
       -Env      => $dbenv
    ) or &handle_error(
      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    $key.='&';
    $key.=join '&', caller;
    $key.='&'.$Net::FullAuto::FA_Core::local_hostname.$username;
@@ -2685,12 +2720,15 @@ sub persist_put {
       "\[string_to_persist\]\)")
       unless $key && $value;
    my $track='';
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
@@ -2703,6 +2741,12 @@ sub persist_put {
       -Env      => $dbenv
    ) or &handle_error(
      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    my $status=$bdb->db_put($key,$value);
    undef $bdb;
    $dbenv->close();
@@ -2715,12 +2759,15 @@ sub persist_put {
 sub openplandb {
 print "openplandb CALLER=",caller,"\n";
    my $track='';
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -2734,6 +2781,12 @@ print "openplandb CALLER=",caller,"\n";
       -Env      => $dbenv
    ) or &handle_error(
      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    return $bdb;
 }
 
@@ -2815,12 +2868,15 @@ sub acquire_fa_lock
    }
 
    unless ($Net::FullAuto::FA_Core::bdb_locks) {
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $stdout='';my $stderr='';
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks';
-         my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       unless ($Net::FullAuto::FA_Core::dbenv_locks) {
          $Net::FullAuto::FA_Core::dbenv_locks = BerkeleyDB::Env->new(
@@ -2836,6 +2892,12 @@ sub acquire_fa_lock
          -Env      => $Net::FullAuto::FA_Core::dbenv_locks
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n");
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
    }
    
    my $status=$Net::FullAuto::FA_Core::bdb_locks->db_get($letoct,$locks);
@@ -4453,12 +4515,15 @@ sub handle_error
       $command=${$track}[2];
       $suberr=${$track}[3] if defined ${$track}[3] && ${$track}[3];
       $suberr||='';
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}."Track") {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       my $dbenv = BerkeleyDB::Env->new(
            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track',
@@ -4472,6 +4537,12 @@ sub handle_error
            -Env      => $dbenv
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
       my $tref='';
       my $status=$bdb->db_get($invoked[2],$tref);
       $tref=eval $tref;
@@ -5366,7 +5437,7 @@ sub master_transfer_dir
             $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
          } else {
             ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-               $localhost,"cygpath -w $curdir");
+               $localhost,"cygpath -w \"$curdir\"");
             &handle_error($stderr,'-1') if $stderr;
             $cdr=~s/\\/\\\\/g;
             $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
@@ -5515,7 +5586,7 @@ sub master_transfer_dir
                $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
             } else {
                ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                  $localhost,"cygpath -w $curdir");
+                  $localhost,"cygpath -w \"$curdir\"");
                &handle_error($stderr,'-1') if $stderr;
                $cdr=~s/\\/\\\\/g;
                $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
@@ -5597,7 +5668,7 @@ sub master_transfer_dir
             $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
          } else {
             ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-               $localhost,"cygpath -w $curdir");
+               $localhost,"cygpath -w \"$curdir\"");
             &handle_error($stderr,'-1') if $stderr;
             $cdr=~s/\//\\\\/g;
             $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
@@ -5902,18 +5973,27 @@ sub getpasswd
       print $MRLOG "PASSWDDB=",
          "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db","<==\n"
          if -1<index $MRLOG,'*';
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
       &acquire_fa_lock(9361);
       my $bdb = BerkeleyDB::Btree->new(
          -Filename =>
@@ -6230,12 +6310,15 @@ sub getpasswd
       }
    }
    unless ($Net::FullAuto::FA_Core::tosspass) {
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -6266,6 +6349,12 @@ sub getpasswd
          "cannot open Btree for DB: $BerkeleyDB::Error\n",
          '__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
       $status=$bdb->db_get($passlabel,$href);
       $href=~s/\$HASH\d*\s*=\s*//s;
       $href=eval $href;
@@ -6886,12 +6975,15 @@ $main::get_default_modules=sub {
          "1;";
       close(FD); 
    } 
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
@@ -6923,6 +7015,12 @@ $main::get_default_modules=sub {
    &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n",
       '__cleanup__',$track) unless $BerkeleyDB::Error=~/Successful/;
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    my $default_modules='';
    my $status=$Net::FullAuto::FA_Core::bdb_once->db_get(
          $username,$default_modules);
@@ -6942,12 +7040,15 @@ $main::get_default_modules=sub {
          || !exists $default_modules->{fa_host} 
          || !exists $default_modules->{fa_maps}
          || !exists $default_modules->{fa_menu}) {
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets',
@@ -6975,6 +7076,12 @@ $main::get_default_modules=sub {
                 "${Net::FullAuto::FA_Core::progname}_sets.db".
                 " $BerkeleyDB::Error\n";
          }
+      }
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         die $stderr if $stderr;
       }
       my $sref={
 
@@ -7019,13 +7126,15 @@ my $set_default_sub=sub {
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $progname=substr($0,(rindex $0,'/')+1,-3);
    require "$loc/fa_defs.pm";
+   my $mkdflag=0;
    unless (-d $fa_defs::FA_Secure.'Sets') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
          $m.$fa_defs::FA_Secure.'Sets';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      die $stderr if $stderr;
+      die $stderr if $stderr; 
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.'Sets',
@@ -7048,6 +7157,12 @@ my $set_default_sub=sub {
          die "Cannot Open DB: ".
              "${progname}_sets.db $BerkeleyDB::Error\n";
       }
+   }
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
    }
    my $mysets='';
    my $status=$bdb->db_get($username,$mysets);
@@ -7077,8 +7192,10 @@ my $get_modules=sub {
    }
    my $username=getlogin || getpwuid($<);
    my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
+   my $mkdflag=0;
    unless (-d "$fadir/Custom/$username/$type") {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               "$m$fadir/Custom/$username/$type";
       my $stdout='';my $stderr='';
@@ -7088,6 +7205,12 @@ my $get_modules=sub {
            "$fadir/Custom/fa_".lc($type).'.pm'.
            "$fadir/Custom/$username/$type";
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
+   }
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              "$fadir/Custom/$username/$type/*";
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
    }
    opendir(DIR,"$fadir/Custom/$username/$type");
@@ -7205,12 +7328,15 @@ my $fasetdef=sub {
    my $progname=substr($0,(rindex $0,'/')
                        +1,-3);
    require "$loc/fa_defs.pm";
+   my $mkdflag=0;
    unless (-d $fa_defs::FA_Secure.'Defaults') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
          $m.$fa_defs::FA_Secure.'Defaults';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.
@@ -7224,6 +7350,12 @@ my $fasetdef=sub {
       -Flags    => DB_CREATE,
       -Env      => $dbenv
    );
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
+   }
    my $default_modules='';
    my $status=$bdb->db_get(
       $username,$default_modules);
@@ -7338,12 +7470,15 @@ my $default_sets_banner_sub=sub {
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $progname=substr($0,(rindex $0,'/')+1,-3);
    require "$loc/fa_defs.pm";
+   my $mkdflag=0;
    unless (-d $fa_defs::FA_Secure.'Sets') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$fa_defs::FA_Secure.'Sets';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
    }
    my $sdbenv = BerkeleyDB::Env->new(
          -Home  => $fa_defs::FA_Secure.'Sets',
@@ -7368,6 +7503,12 @@ my $default_sets_banner_sub=sub {
          die "Cannot Open DB: ${progname}_sets.db ".
              $BerkeleyDB::Error."\n";
       }
+   }
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
    }
    my $mysets='';
    my $status=$sbdb->db_get($username,$mysets);
@@ -7418,14 +7559,17 @@ my $cacomm_sub=sub {
                            my $progname=substr($0,(rindex $0,'/')
                                                +1,-3);
                            require "$loc/fa_defs.pm";
+                           my $mkdflag=0;
                            unless (-d $fa_defs::FA_Secure.'Defaults') {
-                              my $m=($^O eq 'cygwin')?'-m 777 ':'';
+                              $mkdflag=1;
+                              my $m=($^O eq 'cygwin')?'-m 660 ':'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
                                  'mkdir -p '.$m.
                                  $Hosts{"__Master_".$$."__"}{'FA_Secure'}.
                                  'Defaults';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                              die $stderr if $stderr;
                            }
                            my $dbenv = BerkeleyDB::Env->new(
                                -Home  => $fa_defs::FA_Secure.
@@ -7435,58 +7579,65 @@ my $cacomm_sub=sub {
                            ) or die(
                                "cannot open environment for DB: ".
                                        $BerkeleyDB::Error,"\n",'','');
-                               my $bdb = BerkeleyDB::Btree->new(
-                                  -Filename => $progname.
-                                               "_defaults.db",
-                                  -Flags    => DB_CREATE,
-                                  -Env      => $dbenv
-                               );
-                               my $default_modules='';
-                               my $status=$bdb->db_get(
-                                  $username,$default_modules);
-                               $default_modules||='';
-                               $default_modules=~s/\$HASH\d*\s*=\s*//s
-                                  if -1<index $default_modules,'$HASH';
-                               $default_modules=eval $default_modules;
-                               $default_modules||={};
-                               $default_modules->{'set'}='none';
-                               $default_modules->{'fa_code'}=
-                                  "Net/FullAuto/Custom/$username/".
-                                  "Code/]P[{cacode}";
-                               $default_modules->{'fa_conf'}=
-                                  "Net/FullAuto/Custom/$username/".
-                                  "Conf/]P[{caconf}";
-                               $default_modules->{'fa_host'}=
-                                  "Net/FullAuto/Custom/$username/".
-                                  "Host/]P[{cahost}";
-                               $default_modules->{'fa_maps'}=
-                                  "Net/FullAuto/Custom/$username/".
-                                  "Maps/]P[{camaps}";
-                               $default_modules->{'fa_menu'}=
-                                  "Net/FullAuto/Custom/$username/".
-                                  "Menu/]P[{camenu}";
-                               my $put_dref=
-                                  Data::Dump::Streamer::Dump(
-                                  $default_modules)->Out();
-                               $status=$bdb->db_put(
-                                  $username,$put_dref);
-                               undef $bdb;
-                               $dbenv->close();
-                               undef $dbenv;
-                               print "\n\n   New Default Modules ".
-                                     "now:\n\n   Code  =>  ".
-                                     "Net/FullAuto/Custom/$username/".
-                                     "]P[{cacode}\n   Conf  =>  ".
-                                     "Net/FullAuto/Custom/$username/".
-                                     "]P[{caconf}\n   Host  =>  ".
-                                     "Net/FullAuto/Custom/$username/".
-                                     "]P[{cahost}\n   Maps  =>  ".
-                                     "Net/FullAuto/Custom/$username/".
-                                     "]P[{camaps}\n   Menu  =>  ".
-                                     "Net/FullAuto/Custom/$username/".
-                                     "]P[{camenu}\n   Set   =>  ".
-                                     "\'none\'\n\n";
-                               return "Finished Defining Defaults";
+                           my $bdb = BerkeleyDB::Btree->new(
+                               -Filename => $progname.
+                                            "_defaults.db",
+                               -Flags    => DB_CREATE,
+                               -Env      => $dbenv
+                           );
+                           if ($mkdflag && $^O eq 'cygwin') {
+                              my $cmd=$Net::FullAuto::FA_Core::gbp->(
+                                 'chmod').'chmod -Rv 660 '.
+                                 "${fa_defs::FA_Secure}.Defaults/*";
+                              my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                              die $stderr if $stderr;
+                           }
+                           my $default_modules='';
+                           my $status=$bdb->db_get(
+                              $username,$default_modules);
+                           $default_modules||='';
+                           $default_modules=~s/\$HASH\d*\s*=\s*//s
+                              if -1<index $default_modules,'$HASH';
+                           $default_modules=eval $default_modules;
+                           $default_modules||={};
+                           $default_modules->{'set'}='none';
+                           $default_modules->{'fa_code'}=
+                              "Net/FullAuto/Custom/$username/".
+                               "Code/]P[{cacode}";
+                           $default_modules->{'fa_conf'}=
+                              "Net/FullAuto/Custom/$username/".
+                              "Conf/]P[{caconf}";
+                           $default_modules->{'fa_host'}=
+                              "Net/FullAuto/Custom/$username/".
+                              "Host/]P[{cahost}";
+                           $default_modules->{'fa_maps'}=
+                              "Net/FullAuto/Custom/$username/".
+                              "Maps/]P[{camaps}";
+                           $default_modules->{'fa_menu'}=
+                              "Net/FullAuto/Custom/$username/".
+                              "Menu/]P[{camenu}";
+                           my $put_dref=
+                              Data::Dump::Streamer::Dump(
+                              $default_modules)->Out();
+                           $status=$bdb->db_put(
+                              $username,$put_dref);
+                           undef $bdb;
+                           $dbenv->close();
+                           undef $dbenv;
+                           print "\n\n   New Default Modules ".
+                                 "now:\n\n   Code  =>  ".
+                                 "Net/FullAuto/Custom/$username/".
+                                 "]P[{cacode}\n   Conf  =>  ".
+                                 "Net/FullAuto/Custom/$username/".
+                                 "]P[{caconf}\n   Host  =>  ".
+                                 "Net/FullAuto/Custom/$username/".
+                                 "]P[{cahost}\n   Maps  =>  ".
+                                 "Net/FullAuto/Custom/$username/".
+                                 "]P[{camaps}\n   Menu  =>  ".
+                                 "Net/FullAuto/Custom/$username/".
+                                 "]P[{camenu}\n   Set   =>  ".
+                                 "\'none\'\n\n";
+                           return "Finished Defining Defaults";
                         }
       },
       Item_2 => {
@@ -7765,12 +7916,15 @@ my $define_modules_commit_sub=sub {
             my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
             my $progname=substr($0,(rindex $0,'/')+1,-3);
             require "$loc/fa_defs.pm";
+            my $mkdflag=0;
             unless (-d $fa_defs::FA_Secure.'Sets') {
-               my $m=($^O eq 'cygwin')?'-m 777 ':'';
+               $mkdflag=1;
+               my $m=($^O eq 'cygwin')?'-m 660 ':'';
                my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                        $m.$fa_defs::FA_Secure.'Sets';
                my $stdout='';my $stderr='';
                ($stdout,$stderr)=&setuid_cmd($cmd,5);
+               die $stderr if $stderr;
             }
             my $dbenv = BerkeleyDB::Env->new(
                -Home  => $fa_defs::FA_Secure.'Sets',
@@ -7793,6 +7947,12 @@ my $define_modules_commit_sub=sub {
                   die "Cannot Open DB: ".
                       "${progname}_sets.db $BerkeleyDB::Error\n";
                }
+            }
+            if ($mkdflag && $^O eq 'cygwin') {
+               my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                       $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
+               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+               die $stderr if $stderr;
             }
             my $mysets='';
             my $status=$bdb->db_get($username,$mysets);
@@ -7988,7 +8148,7 @@ my $define_modules_menu_fa_code_sub=sub {
             my $username=getlogin || getpwuid($<);
             my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
             unless (-d "$fadir/Custom/$username/Code") {
-               my $m=($^O eq 'cygwin')?'-m 777 ':'';
+               my $m=($^O eq 'cygwin')?'-m 660 ':'';
                my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                        "$m$fadir/Custom/$username/Code";
                my $stdout='';my $stderr='';
@@ -7999,6 +8159,13 @@ my $define_modules_menu_fa_code_sub=sub {
                    "$fadir/Custom/$username/Code";
                ($stdout,$stderr)=&setuid_cmd($cmd,5);
                die $stderr if $stderr;
+               if ($^O eq 'cygwin') {
+                  my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').
+                       'chmod -Rv 660 '.
+                       "$fadir/Custom/$username/Code/*";
+                  my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                  die $stderr if $stderr;
+               }
             }
             opendir(DIR,"$fadir/Custom/$username/Code");
             my @xfiles = readdir(DIR);
@@ -8067,12 +8234,15 @@ my $delete_sets_menu_sub=sub {
                            my $progname=substr($0,(rindex $0,'/')
                                       +1,-3);
                            require "$loc/fa_defs.pm";
+                           my $mkdflag=0;
                            unless (-d $fa_defs::FA_Secure.'Defaults') {
-                              my $m=($^O eq 'cygwin')?'-m 777 ':'';
+                              $mkdflag=1;
+                              my $m=($^O eq 'cygwin')?'-m 660 ':'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
                                  'mkdir -p '.$m.$fa_defs::FA_Secure.'Defaults';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                              die $stderr if $stderr;
                            }
                            my $dbenv = BerkeleyDB::Env->new(
                               -Home  => $fa_defs::FA_Secure.
@@ -8102,6 +8272,13 @@ my $delete_sets_menu_sub=sub {
                                      $BerkeleyDB::Error."\n";
                               }
                            }
+                           if ($mkdflag && $^O eq 'cygwin') {
+                              my $cmd=$Net::FullAuto::FA_Core::gbp->(
+                                 'chmod').'chmod -Rv 660 '.
+                                 "${fa_defs::FA_Secure}Defaults/*";
+                              my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                              die $stderr if $stderr;
+                           }
                            my $default_modules='';
                            my $status=$bdb->db_get(
                                  $username,$default_modules);
@@ -8111,12 +8288,15 @@ my $delete_sets_menu_sub=sub {
                               '$HASH';
                            $default_modules=eval $default_modules;
                            $default_modules||='';
+                           $mkdflag=0;
                            unless (-d $fa_defs::FA_Secure.'Sets') {
-                              my $m=($^O eq 'cygwin')?'-m 777 ':'';
+                              $mkdflag=1;
+                              my $m=($^O eq 'cygwin')?'-m 660 ':'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
                                  'mkdir -p '.$m.$fa_defs::FA_Secure.'Sets';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                              die $stderr if $stderr;
                            }
                            my $sdbenv = BerkeleyDB::Env->new(
                               -Home  => $fa_defs::FA_Secure.'Sets',
@@ -8142,6 +8322,13 @@ my $delete_sets_menu_sub=sub {
                                      "${progname}_sets.db ".
                                      $BerkeleyDB::Error."\n";
                               }
+                           }
+                           if ($mkdflag && $^O eq 'cygwin') {
+                              my $cmd=$Net::FullAuto::FA_Core::gbp->(
+                                 'chmod').'chmod -Rv 660 '.
+                                 "${fa_defs::FA_Secure}Sets/*";
+                              my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                              die $stderr if $stderr;
                            }
                            my $mysets='';
                            $status=$sbdb->db_get(
@@ -8669,11 +8856,12 @@ sub fa_login
    } $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
       unless (-d '/var/db/Berkeley/FullAuto') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.'/var/db/Berkeley/FullAuto';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       if (!(-d '/var/db/Berkeley/FullAuto' && -w _)) {
          &handle_error("Cannot Write to Encrypted Passwd Directory :".
@@ -8819,12 +9007,15 @@ sub fa_login
       my $kind='prod';
       $kind='test' if $Net::FullAuto::FA_Core::test
          && !$Net::FullAuto::FA_Core::prod;
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         $mkdflag=1;
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -8856,6 +9047,12 @@ sub fa_login
          '__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
       # print the contents of the file
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
       my ($k,$v) = ("","") ;
       my $cursor = $bdb->db_cursor() ;
       while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
@@ -9111,7 +9308,7 @@ sub fa_login
                   my $username=getlogin || getpwuid($<);
                   my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
                   unless (-d "$fadir/Custom/$username/$type") {
-                     my $m=($^O eq 'cygwin')?'-m 777 ':'';
+                     my $m=($^O eq 'cygwin')?'-m 660 ':'';
                      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
                              $m.'mkdir -p '."$fadir/Custom/$username/$type";
                      my $stdout='';my $stderr='';
@@ -9122,6 +9319,13 @@ sub fa_login
                           "$fadir/Custom/$username/$type";
                      ($stdout,$stderr)=&setuid_cmd($cmd,5);
                      die $stderr if $stderr;
+                     if ($^O eq 'cygwin') {
+                        my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').
+                             'chmod -Rv 660 '.
+                             "$fadir/Custom/$username/$type/*";
+                        my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                        die $stderr if $stderr;
+                     }
                   }
                   opendir(DIR,"$fadir/Custom/$username/$type");
                   my @xfiles = readdir(DIR);
@@ -9305,12 +9509,15 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          my $kind='prod';
          $kind='test' if $Net::FullAuto::FA_Core::test &&
                   !$Net::FullAuto::FA_Core::prod;
+         my $mkdflag=0;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            my $m=($^O eq 'cygwin')?'-m 777 ':'';
+            $mkdflag=1;
+            my $m=($^O eq 'cygwin')?'-m 660 ':'';
             my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -9343,6 +9550,12 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             "cannot open Btree for DB: $BerkeleyDB::Error\n",
             '__cleanup__',$track)
             unless $BerkeleyDB::Error=~/Successful/;
+         if ($mkdflag && $^O eq 'cygwin') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+            my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
          my $href={};
          if ($save_main_pass || $password_from ne 'user_input' ||
                ($login_Mast_error &&
@@ -10231,11 +10444,13 @@ print $Net::FullAuto::FA_Core::MRLOG
          $kind='test' if $Net::FullAuto::FA_Core::test &&
                          !$Net::FullAuto::FA_Core::prod;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            my $m=($^O eq 'cygwin')?'-m 777 ':'';
+            $mkdflag=1;
+            my $m=($^O eq 'cygwin')?'-m 660 ':'';
             my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
          }
          $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -10274,6 +10489,12 @@ print $Net::FullAuto::FA_Core::MRLOG
    "PAST THE TIE TO PASSWD DB\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         if ($mkdflag && $^O eq 'cygwin') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+            my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
          my $local_host_flag=0;
          my $host__label='';
          if ($hostlabel eq "__Master_${$}__") {
@@ -10930,12 +11151,15 @@ sub passwd_db_update
    my $track='';
    $kind='test' if
       $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -10969,6 +11193,12 @@ print $Net::FullAuto::FA_Core::MRLOG
          "FA_SUCURE8=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n"
          if $Net::FullAuto::FA_Core::log &&
          -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    if ($hostlabel eq "__Master_${$}__") {
       # print the contents of the file
       my ($k,$v) = ("","") ;
@@ -11046,12 +11276,15 @@ sub su_scrub
    my $kind='prod';my $track='';
    $kind='test' if
       $Net::FullAuto::FA_Core::test && !$Net::FullAuto::FA_Core::prod;
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -11082,6 +11315,12 @@ sub su_scrub
       "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
       unless $BerkeleyDB::Error=~/Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    my $local_host_flag=0;
    if ($hostlabel eq "__Master_${$}__") {
       foreach my $hostlab (keys %Net::FullAuto::FA_Core::same_host_as_Master) {
@@ -11218,12 +11457,15 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
          my $kind='prod';
          $kind='test' if $Net::FullAuto::FA_Core::test &&
                       !$Net::FullAuto::FA_Core::prod;
+         my $mkdflag=0;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-            my $m=($^O eq 'cygwin')?'-m 777 ':'';
+            $mkdflag=1;
+            my $m=($^O eq 'cygwin')?'-m 660 ':'';
             my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -11256,6 +11498,12 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             '__cleanup__',$track)
             unless $BerkeleyDB::Error=~/Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         if ($mkdflag && $^O eq 'cygwin') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+            my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
          my $href='';
          my $status=$bdb->db_get($hostlabel,$href);
          $href=~s/\$HASH\d*\s*=\s*//s;
@@ -11696,7 +11944,7 @@ sub work_dirs
                $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
             } else {
                ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                  $localhost,"cygpath -w $curdir");
+                  $localhost,"cygpath -w \"$curdir\"");
                &handle_error($stderr,'-1') if $stderr;
                $cdr=~s/\\/\\\\/g;
                $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
@@ -12127,12 +12375,14 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       $kind='test' if $Net::FullAuto::FA_Core::test &&
                       !$Net::FullAuto::FA_Core::prod;
       return unless exists $Hosts{"__Master_${$}__"}{'FA_Secure'};
+      my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
-         my $m=($^O eq 'cygwin')?'-m 777 ':'';
+         my $m=($^O eq 'cygwin')?'-m 660 ':'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -12164,6 +12414,12 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
+      if ($mkdflag && $^O eq 'cygwin') {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         &handle_error($stderr) if $stderr;
+      }
       my $href='';
       my $status=$bdb->db_get($passlabel,$href);
       $href=~s/\$HASH\d*\s*=\s*//s;
@@ -12559,7 +12815,7 @@ sub select_dir
                      $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
                   } else {
                      ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                     $localhost,"cygpath -w $curdir");
+                     $localhost,"cygpath -w \"$curdir\"");
                      &handle_error($stderr,'-1') if $stderr;
                      $cdr=~s/\\/\\\\/g;
                      $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
@@ -13149,7 +13405,7 @@ sub ftr_cmd
                $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
             } else {
                ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                  $ftr_cmd,"cygpath -w $curdir");
+                  $ftr_cmd,"cygpath -w \"$curdir\"");
                &handle_error($stderr,'-1') if $stderr;
                $cdr=~s/\\/\\\\/g;
                $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
@@ -13238,7 +13494,7 @@ sub ftr_cmd
                      $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
                   } else {
                      ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                        $localhost,"cygpath -w $curdir");
+                        $localhost,"cygpath -w \"$curdir\"");
                      &handle_error($stderr,'-1') if $stderr;
                      $cdr=~s/\\/\\\\/g;
                      $cdr=$Net::FullAuto::FA_Core::cygpathw{$curdir};
@@ -13395,13 +13651,15 @@ print "FTR_RETURN3\n";
                                    {'FA_Secure'}.
                                    ${Net::FullAuto::FA_Core::progname}.
                                    "_${kind}_passwds.db";
-print "DBPATHHHH=$dbpath<==\n";
+                        my $mkdflag=0;
                         unless (-d $Hosts{$mr}{'FA_Secure'}.'Passwds') {
-                           my $m=($^O eq 'cygwin')?'-m 777 ':'';
+                           $mkdflag=1;
+                           my $m=($^O eq 'cygwin')?'-m 660 ':'';
                            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
                               'mkdir -p '.$m.$Hosts{$mr}{'FA_Secure'}.'Passwds';
                            my $stdout='';my $stderr='';
                            ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                           &handle_error($stderr) if $stderr;
                         }
                         my $dbenv = BerkeleyDB::Env->new(
                               -Home  => 
@@ -13436,6 +13694,13 @@ print "DBPATHHHH=$dbpath<==\n";
                            "cannot open Btree for DB: ".
                            "$BerkeleyDB::Error\n",'__cleanup__',$track)
                            unless $BerkeleyDB::Error=~/Successful/;
+                        if ($mkdflag && $^O eq 'cygwin') {
+                           my $cmd=$Net::FullAuto::FA_Core::gbp->(
+                              'chmod').'chmod -Rv 660 '.
+                              $Hosts{$mr}{'FA_Secure'}.'Passwds/*';
+                           my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                           &handle_error($stderr) if $stderr;
+                        }
                         my $href='';
                         my $status=$bdb->db_get($host,$href);
                         $href=~s/\$HASH\d*\s*=\s*//s;
@@ -16256,7 +16521,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
                   if (exists $Net::FullAuto::FA_Core::cygpathw{$target_dir}) {
                      $tdir=$Net::FullAuto::FA_Core::cygpathw{$target_dir};
                   } else {
-                     ($tdir,$stderr)=$self->cmd("cygpath -w $target_dir");
+                     ($tdir,$stderr)=$self->cmd("cygpath -w \"$target_dir\"");
                      if ($stderr) {
                         if (wantarray) {
                            return '',$stderr;
@@ -16352,7 +16617,7 @@ sub tmp
       $path=~s/\\/\\\\/g;
       $Net::FullAuto::FA_Core::tmp_files_dirs{$self->{_cmd_handle}}=[
          $self->{_work_dirs}->{_tmp},$tdir ];
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
          "${m}mkdir -p ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
@@ -16362,7 +16627,7 @@ sub tmp
       $path=~tr/\\/\//;
       $Net::FullAuto::FA_Core::tmp_files_dirs{$self->{_cmd_handle}}=[
          $self->{_work_dirs}->{_tmp},$tdir ];
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
          "${m}mkdir -p ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
@@ -16549,7 +16814,7 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                   if (exists $Net::FullAuto::FA_Core::cygpathw{$dir}) {
                      $dir=$Net::FullAuto::FA_Core::cygpathw{$dir};
                   } else {
-                     ($dir,$stderr)=$baseFH->cmd("cygpath -w $dir");
+                     ($dir,$stderr)=$baseFH->cmd("cygpath -w \"$dir\"");
                      &handle_error($stderr,'-1') if $stderr;
                      $dir=~s/\\/\\\\/g;
                      $Net::FullAuto::FA_Core::cygpathw{$dir}=$dir;
@@ -17571,7 +17836,7 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                               }
                            }
                         } else {
-                           my $m=($^O eq 'cygwin')?'-m 777 ':'';
+                           my $m=($^O eq 'cygwin')?'-m 660 ':'';
                            ($output,$stderr)=$destFH->cmd(
                               "cmd /c mkdir -p $m\"$tdir\"",'__live__');
                               #'__display__','__notrap__');
@@ -17652,7 +17917,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2" if $Net::FullAuto::FA_Core::log
                            if (exists $Net::FullAuto::FA_Core::cygpathu{$dir}) {
                               $dir=$Net::FullAuto::FA_Core::cygpathu{$dir};
                            } else {
-                              ($dir,$stderr)=$baseFH->cmd("cygpath -u $dir");
+                              ($dir,$stderr)=$baseFH->cmd(
+                                 "cygpath -u \"$dir\"");
                               if ($stderr) {
                                  &Net::FullAuto::FA_Core::handle_error(
                                     $stderr,'-1');
@@ -17665,7 +17931,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2" if $Net::FullAuto::FA_Core::log
                               $bcd=$Net::FullAuto::FA_Core::cygpathu{$base_fdr};
                            } else {
                               ($bcd,$stderr)=$baseFH->cmd(
-                                 "cygpath -u $base_fdr");
+                                 "cygpath -u \"$base_fdr\"");
                               if ($stderr) {
                                  &Net::FullAuto::FA_Core::handle_error(
                                     $stderr,'-1');
@@ -17874,7 +18140,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            } else {
                               my $cdr='';
                               ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                                 $localhost,"cygpath -w $dir");
+                                 $localhost,"cygpath -w \"$dir\"");
                               &handle_error($stderr,'-1') if $stderr;
                               $cdr=~s/\\/\\\\/g;
                               $Net::FullAuto::FA_Core::cygpathw{$dir}=$cdr;
@@ -18226,7 +18492,7 @@ ${$baseFH->{_unaltered_basehash}}{$key}[1]{$file}||='';
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                            if $stderr;
                      } else {
-                        my $m=($^O eq 'cygwin')?'-m 777 ':'';
+                        my $m=($^O eq 'cygwin')?'-m 660 ':'';
                         ($output,$stderr)=$destFH->cmd("mkdir -p $m$key");
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                            if $stderr;
@@ -18702,7 +18968,8 @@ sub get_drive
          if (exists $Net::FullAuto::FA_Core::cygpathw{$sav_curdir}) {
             $sav_curdir=$Net::FullAuto::FA_Core::cygpathw{$sav_curdir};
          } else {
-            ($sav_curdir,$stderr)=$cmd_handle->cmd("cygpath -w $sav_curdir");
+            ($sav_curdir,$stderr)=$cmd_handle->cmd(
+               "cygpath -w \"$sav_curdir\"");
             &handle_error($stderr,'-1') if $stderr;
             $sav_curdir=~s/\\/\\\\/g;
             $Net::FullAuto::FA_Core::cygpathw{$sav_curdir}=$sav_curdir;
@@ -18994,9 +19261,8 @@ sub move_tarfile
                # cd ftp handle to trandir
             $d_fdr=$destFH->{_work_dirs}->{_tmp};
             if (exists $destFH->{_smb}) { # If DEST needs SMB
-               my $m=($^O eq 'cygwin')?'-m 777 ':'';
                ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-                  "mkdir p $m\"transfer$Net::FullAuto::FA_Core::tran[3]\"",
+                  "mkdir \"transfer$Net::FullAuto::FA_Core::tran[3]\"",
                   $cache); # Add tmp 'transfer' dir
                &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                   if $stderr && (-1==index $stderr,'command success');
@@ -19078,7 +19344,7 @@ sub move_tarfile
                   (-1==index $stderr,'command success');
                $d_fdr=$destFH->{_work_dirs}->{_tmp};
             }
-            my $m=($^O eq 'cygwin')?'-m 777 ':''; 
+            my $m=($^O eq 'cygwin')?'-m 660 ':''; 
             ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
                "!mkdir -p ${m}transfer$Net::FullAuto::FA_Core::tran[3]",$cache);
             &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
@@ -19171,9 +19437,8 @@ sub move_tarfile
                   (-1==index $stderr,'command success');
                $d_fdr=$destFH->{_work_dirs}->{_tmp};
             }
-            my $m=($^O eq 'cygwin')?'-m 777 ':'';
             ($output,$stderr)=&Rem_Command::ftpcmd($destFH,
-               "mkdir -p ${m}transfer$Net::FullAuto::FA_Core::tran[3]",$cache);
+               "mkdir transfer$Net::FullAuto::FA_Core::tran[3]",$cache);
             &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
             $Net::FullAuto::FA_Core::tran[4]=1;
             $d_fdr.="transfer$Net::FullAuto::FA_Core::tran[3]";
@@ -22705,6 +22970,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  {'cmd_id_'.$Net::FullAuto::FA_Core::pcnt};
                            }
                            my $lchl=lc($hostlabel);
+                           $Net::FullAuto::FA_Core::firefox||='';
                            if (($^O eq 'cygwin') && (-1<index $lchl,'mozrepl')
                                  && !($Net::FullAuto::FA_Core::firefox)) {
                               unshift @connect_method,'telnet';
@@ -22757,8 +23023,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                               $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
                               $firefox=~s/\s*$//s;
                               ($firefox,$stderr)=&Net::FullAuto::FA_Core::cmd(
-                                 "cygpath $firefox");
-                              $firefox=~s/\n/ /gs;
+                                 "cygpath \"$firefox\"");
                               &Net::FullAuto::FA_Core::handle_error($stderr)
                                  if $stderr;
                               my $fcmd="\"${firefox}\" -new-instance -repl ".
@@ -26933,12 +27198,15 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    &Net::FullAuto::FA_Core::release_fa_lock($ipc_key);
    $line="${hostlabel}|%|$line";
    ${$self->{_host_queried}}{"$hostlabel"}='-';
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -26954,7 +27222,14 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
       "cannot open Btree for DB: $BerkeleyDB::Error\n");
 print "ADDING LINE=$line<==\n" if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "ADDING LINE=$line<==\n"
-                     if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    my $status=$bdb->db_put($line,time);
    undef $bdb;
    $dbenv->close();
@@ -27012,12 +27287,15 @@ print $Net::FullAuto::FA_Core::MRLOG "TIMEINFO=> MT=$mt HR=$hr DYX=$dy MN=$mn FY
 print "STARTING TIE\n" if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -27034,6 +27312,12 @@ print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
 print "DONE WITH TIE\n" if $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
                      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    my $result=0;
    my $dbcopy='';my $status='';
    # print the contents of the file
@@ -27076,12 +27360,15 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
       } elsif ($output eq ']quit[') {
          &Net::FullAuto::FA_Core::cleanup()
       } elsif ($output eq 'Do NOT Transfer EVER') {
+         my $mkdflag=0;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-            my $m=($^O eq 'cygwin')?'-m 777 ':'';
+            $mkdflag=1;
+            my $m=($^O eq 'cygwin')?'-m 660 ':'';
             my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -27096,6 +27383,12 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
             -Env      => $dbenv
          ) or &handle_error(
             "cannot open Btree for DB: $BerkeleyDB::Error\n");
+         if ($mkdflag && $^O eq 'cygwin') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
+            my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
          my $status=$bdb->db_put($line,time);
          undef $bdb;
          $dbenv->close();
@@ -27176,12 +27469,15 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_DB::testtime() FILENAME=$filename and D
 sub mod
 {
    my $self=shift;
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -27195,6 +27491,12 @@ sub mod
       -Env      => $dbenv
    ) or &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n");
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    my $banner="\n   Please Pick a SkipDB Entry to Delete :";
    my ($k,$v) = ("","") ;
    my $cursor = $bdb->db_cursor() ;
@@ -27216,12 +27518,15 @@ sub close
    my @caller=caller;
 print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
    my $self=shift;
+   my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
-      my $m=($^O eq 'cygwin')?'-m 777 ':'';
+      $mkdflag=1;
+      my $m=($^O eq 'cygwin')?'-m 660 ':'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
@@ -27235,6 +27540,12 @@ print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron 
       -Env      => $dbenv
    ) or &handle_error(
       "cannot open Btree for DB: $BerkeleyDB::Error\n");
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 660 '.
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr;
+   }
    my ($k,$v) = ("","") ;
    my $cursor = $bdb->db_cursor() ;
    while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
