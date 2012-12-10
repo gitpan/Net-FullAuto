@@ -800,8 +800,6 @@ sub cleanup {
       }
       undef $cursor;
       undef $Net::FullAuto::FA_Core::bdb_locks;
-      $Net::FullAuto::FA_Core::dbenv_locks->close();
-      undef $Net::FullAuto::FA_Core::dbenv_locks;
    }
 
    my $tm='';my $ob='';my %cleansync=();
@@ -1259,7 +1257,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -2382,7 +2380,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
         "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -2599,7 +2597,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
          ) or &handle_error(
            "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          my $bdb = BerkeleyDB::Btree->new(
@@ -2682,7 +2680,7 @@ sub persist_get {
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -2732,7 +2730,7 @@ sub persist_put {
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -2771,7 +2769,7 @@ print "openplandb CALLER=",caller,"\n";
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
      "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    my $bdb = BerkeleyDB::Btree->new(
@@ -2857,7 +2855,7 @@ sub acquire_fa_lock
 
    my $locks='';my $getnewlock=0;my $newlock={};my $queue='';
 
-   my @letoct=split '', $_[0];
+   my @letoct=split '', $lock_id;
    my $letoct='';
    foreach my $c (@letoct) {
      if ($c=~/\d/) {
@@ -2881,9 +2879,10 @@ sub acquire_fa_lock
       unless ($Net::FullAuto::FA_Core::dbenv_locks) {
          $Net::FullAuto::FA_Core::dbenv_locks = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks',
-            -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+            -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n");
+         $Net::FullAuto::FA_Core::dbenv_locks->set_flags(DB_CDB_ALLDB,1);
       }
       $Net::FullAuto::FA_Core::bdb_locks = BerkeleyDB::Btree->new(
          -Filename => "${Net::FullAuto::FA_Core::progname}_locks.db",
@@ -3097,7 +3096,7 @@ sub release_fa_lock
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $lockid=(defined $_[0] && $_[0])?$_[0]:'1234';
 
-   my @letoct=split '', $_[0];
+   my @letoct=split '', $lockid;
    my $letoct='';
    foreach my $c (@letoct) {
      if ($c=~/\d/) {
@@ -4527,7 +4526,7 @@ sub handle_error
       }
       my $dbenv = BerkeleyDB::Env->new(
            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track',
-           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+           -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -5985,7 +5984,7 @@ sub getpasswd
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       if ($mkdflag && $^O eq 'cygwin') {
@@ -6322,7 +6321,7 @@ sub getpasswd
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       &acquire_fa_lock(9361);
@@ -6988,7 +6987,7 @@ $main::get_default_modules=sub {
    $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
       -Flags =>
-      DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',
       $track);
@@ -7053,7 +7052,7 @@ $main::get_default_modules=sub {
       $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets',
          -Flags =>
-            DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+            DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',
          $track);
@@ -7138,7 +7137,7 @@ my $set_default_sub=sub {
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.'Sets',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or die(
       "cannot open environment for DB: ".
       $BerkeleyDB::Error."\n",'','');
@@ -7341,7 +7340,7 @@ my $fasetdef=sub {
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $fa_defs::FA_Secure.
                 'Defaults',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or die(
       "cannot open environment for DB: ".
       $BerkeleyDB::Error,"\n",'','');
@@ -7483,7 +7482,7 @@ my $default_sets_banner_sub=sub {
    my $sdbenv = BerkeleyDB::Env->new(
          -Home  => $fa_defs::FA_Secure.'Sets',
          -Flags =>
-             DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+             DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or die(
          "cannot open environment for DB: ".
          $BerkeleyDB::Error,"\n",'','');
@@ -7575,7 +7574,7 @@ my $cacomm_sub=sub {
                                -Home  => $fa_defs::FA_Secure.
                                          'Defaults',
                                -Flags =>
-                               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+                               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                            ) or die(
                                "cannot open environment for DB: ".
                                        $BerkeleyDB::Error,"\n",'','');
@@ -7928,7 +7927,7 @@ my $define_modules_commit_sub=sub {
             }
             my $dbenv = BerkeleyDB::Env->new(
                -Home  => $fa_defs::FA_Secure.'Sets',
-               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+               -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
             ) or die(
                "cannot open environment for DB: ".
                $BerkeleyDB::Error."\n",'','');
@@ -8248,7 +8247,7 @@ my $delete_sets_menu_sub=sub {
                               -Home  => $fa_defs::FA_Secure.
                                         'Defaults',
                               -Flags =>
-                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                            ) or die(
                               "cannot open environment for DB: ".
                               $BerkeleyDB::Error,"\n",'','');
@@ -8301,7 +8300,7 @@ my $delete_sets_menu_sub=sub {
                            my $sdbenv = BerkeleyDB::Env->new(
                               -Home  => $fa_defs::FA_Secure.'Sets',
                               -Flags =>
-                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+                              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                            ) or die(
                               "cannot open environment for DB: ".
                                  $BerkeleyDB::Error,"\n",'','');
@@ -9019,7 +9018,7 @@ sub fa_login
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       &acquire_fa_lock(9361);
@@ -9225,7 +9224,7 @@ sub fa_login
                   $default_modules->{'set'}=$selection;
                   my $dbenv = BerkeleyDB::Env->new(
                      -Home  => $fa_defs::FA_Secure.'Defaults',
-                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                   ) or die(
                      "cannot open environment for DB: ".
                      $BerkeleyDB::Error."\n",'','');
@@ -9257,7 +9256,7 @@ sub fa_login
                   $default_modules->{'set'}='none';
                   my $dbenv = BerkeleyDB::Env->new(
                      -Home  => $fa_defs::FA_Secure.'Defaults',
-                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                   ) or die(
                      "cannot open environment for DB: ".
                       $BerkeleyDB::Error."\n",'','');
@@ -9379,7 +9378,7 @@ sub fa_login
             my $dbenv = BerkeleyDB::Env->new(
                -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
                -Flags =>
-                  DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+                  DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
             ) or &handle_error(
                "cannot open environment for DB: $BerkeleyDB::Error\n",'',
                $track);
@@ -9522,7 +9521,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",
             '',$track);
@@ -10215,7 +10214,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                my $dbenv = BerkeleyDB::Env->new(
                   -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
                   -Flags =>
-                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
                   &release_fa_lock(6543);
@@ -10455,7 +10454,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          $bdb = BerkeleyDB::Btree->new(
@@ -10807,7 +10806,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
       $plan||=$plan_ignore_error||='';
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
       my $bdb = BerkeleyDB::Btree->new(
@@ -11163,7 +11162,7 @@ sub passwd_db_update
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    &acquire_fa_lock(9361);
@@ -11288,7 +11287,7 @@ sub su_scrub
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
    &acquire_fa_lock(9361);
@@ -11470,7 +11469,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          &acquire_fa_lock(9361);
@@ -12386,7 +12385,7 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
-         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
 print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
@@ -13666,7 +13665,7 @@ print "FTR_RETURN3\n";
                               $Net::FullAuto::FA_Core::Hosts{$mr}{'FA_Secure'}.
                               'Passwds',
                               -Flags =>
-                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE|DB_CDB_ALLDB
+                     DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
                         ) or &handle_error(
                            "cannot open environment for DB: ".
                            "$BerkeleyDB::Error\n",'',$track);
@@ -27210,7 +27209,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
@@ -27299,7 +27298,7 @@ print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
@@ -27373,7 +27372,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
             -Flags =>
-               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
          ) or &handle_error(
             "cannot open environment for DB: $BerkeleyDB::Error\n");
          my $bdb = BerkeleyDB::Btree->new(
@@ -27481,7 +27480,7 @@ sub mod
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
@@ -27530,7 +27529,7 @@ print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron 
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_CDB_ALLDB
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
       "cannot open environment for DB: $BerkeleyDB::Error\n");
    my $bdb = BerkeleyDB::Btree->new(
