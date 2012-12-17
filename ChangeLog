@@ -19,6 +19,15 @@
 ################################################################
 
 
+2012-12-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999945 released.
+
+        * Permissions 770 for Berkeley DB with Cygwin/Windows. 
+
+        * Added code to install Firefox and MozRepl if Cygwin.
+
+
 2012-12-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999944 released.

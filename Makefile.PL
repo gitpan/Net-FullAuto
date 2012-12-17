@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999944';
+$main::VERSION='0.999945';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -726,6 +726,10 @@ END
    ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'LWP') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('LWP::Protocol::https','install',
+      'Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'LWP') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Task::Weaken','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Task::Weaken') if $stderr;
@@ -957,7 +961,7 @@ sub ws_info {
    my $domain='';
    $domain=' /domain' if $_[0];
    my $server='';
-   foreach my $line (split "\n", `net user$domain`) {
+   foreach my $line (split "\n", `net user$domain 2>&1`) {
       unless ($found_dotted) {
          if (-1<index $line,'-------') {
             $found_dotted=1;
@@ -996,10 +1000,14 @@ sub ws_info {
    $one++;
    my $mid=$two-$one+1;
    my @users=();my $cyg_id='';
+   my $success_flag=0;
    foreach my $line (@output) {
       my ($on,$tw,$th)=unpack("a$one a$mid a$two",$line);
       $on=~s/\s*$//;$tw=~s/\s*$//;$th=~s/\s*$//;
-      last if -1<index $on,'The command compl';
+      if (-1<index $on,'The command compl') {
+         $success_flag=1;
+         last;
+      }
       push @users, $on if $on;
       $cyg_id='cyg_server' if $on eq 'cyg_server';
       push @users, $tw if $tw;
@@ -1014,7 +1022,49 @@ sub ws_info {
    chomp($hostname);
 
    if ($dom ne 'Local') {
-      if ($cyg_id eq 'cyg_server') {
+      unless ($success_flag) {
+         my %_cygservnf=(
+            Label => '_cygservnf',
+            Item_1 =>  {
+                  Text   => "]C[",
+                  Convey => [ "Use Domain ID \'cyg_server\'\n           ".
+                              "     ( You need to know the password! )\n\n",
+                              "Enter a different User ID\n\n",
+                              'Use a Local account' ],
+            },
+            Banner=> "   WARNING! - The Windows command   net user /domain\n".
+                     "      did *NOT* complete successfully. The following\n".
+                     "      is the output from that command:\n\n".
+                     "      ".(join "\n",@output)."\n\n".
+                     "   The FullAuto Installer cannot validate User ID's\n".
+                     "      without this information. You may proceed if\n".
+                     "      the ID you intend to use exists.\n\n".
+                     "   (If you wish to use a Domain User ID, please\n".
+                     "      *make sure it exists* in the current Domain:".
+                     "\n      -> $dom - before running FullAuto Setup.\n".
+                     "      If you wish to use a Local account, FullAuto\n".
+                     "      can use an existing one, or create a new one.)",
+         );
+         $selection=Menu(\%_cygservnf);
+         chomp $selection;
+         exit if $selection eq ']quit[';
+         $selection='UsE_separate_login_id_for_sshd'
+            if -1<index $selection,'Use a Local';
+         if (-1<index $selection,'Enter a different') {
+            while (1) {
+               print "\n\n\n   Please enter the $domain User ID you",
+                     "   intend to use for the sshd service: ".
+                     "\n\n\n",
+                     "   Please TYPE the User ID: ";
+               $cyg_id=<STDIN>;
+               chomp $selection;
+               print "\n\n\n   You entered ==> $cyg_id\n\n".
+                     "   is this correct? (Y|N): ";
+               my $yn=<STDIN>;
+               last if lc($yn) eq 'y' || 'yes';
+            }
+         }
+      } elsif ($cyg_id eq 'cyg_server') {
          my $o=`net user cyg_server 2>&1`;
          if (-1==index $o,'user name could not be found') {
             my %_cygserv=(
@@ -1042,6 +1092,8 @@ sub ws_info {
             $selection=Menu(\%_cygserv);
             chomp $selection;
             exit if $selection eq ']quit[';
+            $selection='UsE_separate_login_id_for_sshd'
+               if -1<index $selection,'Use a Local';
          } else {
             $selection='cyg_server'; 
          }         
@@ -1071,6 +1123,8 @@ sub ws_info {
          $selection=Menu(\%_cygserv);
          chomp($selection);
          exit if $selection eq ']quit[';
+         $selection='UsE_separate_login_id_for_sshd'
+            if -1<index $selection,'Use a Local';
       }
       if (-1<index $selection, 'All Domain' || !$cyg_id) {
          my %_users=(
@@ -1156,6 +1210,7 @@ BEGIN {
 my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
+my $install_firefox_without_asking=0;
 
 if (exists $Config{prefix} &&
       $Config{prefix}) {
@@ -1165,7 +1220,8 @@ if (exists $Config{prefix} &&
 foreach my $arg (@ARGV) {
    if ($arg=~/INSTALL_*CYGWIN\s*=\*1/i) {
       $install_cygwin_without_asking=1;
-      last;
+   } elsif ($arg=~/INSTALL_*FIREFOX\s*=\*1/i) {
+      $install_firefox_without_asking=1;
    } elsif ($arg=~/-*-PREFIX=/i) {
       $PREFIX=$arg;
       $PREFIX=~s/^-*-[Pp][Rr][Ee][Ff][Ii][Xx]=//;
@@ -1394,23 +1450,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $editor='/bin/mc.exe';
          }
       }
-      # Let's look for Firefox
-      my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
-                  'Mozilla\\Mozilla Firefox" 2>&1';
-      $firefox=`$firefox`;
-      chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
-      $firefox=~s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
-      $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
-               "Mozilla\\Mozilla Firefox\\$firefox\\Main\" 2>&1";
-      $firefox=`$firefox`;
-      chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
-      $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
-      $firefox=~s/\s*$//s;
-      if ($firefox=~/^Error.*unable to find/) {
-         # Ask if we should install
-      } else {
-         # Let's Check for MozRepl
-      }
+
+      &get_firefox();
 
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
@@ -1524,14 +1565,14 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.8,'
+                      .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,perl,perl-libwin32,db4.8,'
+                      .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .' -X -A -q '."-R $main::root_dir "
                       .'-s http://cygwin.mirrors.pair.com';
@@ -1586,6 +1627,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $privl=' --privileged' if -1<index $account_type,'separate';
             }
             $domain_user=&ws_info($domain) unless $wver=~/XP|2000|NT/;
+            if ($domain_user eq 'UsE_separate_login_id_for_sshd') {
+               $account_type='separate';
+               $domain_user='';
+            }
             if ($domain_user) {
                print "\n\n\n   Please enter the Password for the $domain ",
                      "account $domain_user,\n   and take steps to insure ".
@@ -1729,6 +1774,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   print "Press any key to exit FullAuto Setup.\n";
                   <STDIN>;exit 1;
                }
+            } else {
+# Check if cyg_server exists but is bad
+# Then either remove and ask or just ask if cyg_server or other id
             }
             # Let's see if Cygwin remnants remain that could mess
             # up the installation
@@ -2536,10 +2584,13 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
             $editor='';
          }
       }
+
    }
 } else {
    chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
+
+&get_firefox() if $^O eq 'cygwin';
 
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
@@ -3148,6 +3199,133 @@ if ($@) {
    }
    $die.="\n\n";
    die $die;
+}
+
+sub get_firefox {
+
+   # Let's look for Firefox
+   my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+               'Mozilla\\Mozilla Firefox" 2>&1';
+   $firefox=`$firefox`;
+   chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+   $firefox=~s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
+   $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+            "Mozilla\\Mozilla Firefox\\$firefox\\Main\" 2>&1";
+   $firefox=`$firefox`;
+   chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+   $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+   $firefox=~s/\s*$//s;
+print "FIREFOX=$firefox\n";
+   if ($firefox=~/^Error.*unable to find/) {
+      my $selection='Install Mozilla Firefox';
+      unless ($install_firefox_without_asking) {
+         # Ask if we should install
+         my $one="YES - Install Mozilla Firefox & MozRepl\n\n";
+         my %_askfirefox=(
+
+            Label => '_askfirefox',
+            Item_1 =>  {
+                           Text   => "]C[",
+                           Convey => [ $one,
+                                       'NO  - DO *NOT* INSTALL Firefox'],
+                       },
+            Banner=> "   Mozilla Firefox has an available add-on called ".
+                     "MozRepl.\n\n   With Firefox equipped with MozRepl, ".
+                     "FullAuto can do\n   extremely powerful WEB ".
+                     "Automation!\n\n   Would you like the FullAuto ".
+                     "installer to install Firefox\n   and MozRepl?\n",
+         );
+         $selection=Menu(\%_askfirefox);
+         chomp($selection);
+         exit if $selection eq ']quit[';
+         if (-1<index $selection,'Install Mozilla Firefox') {
+            my $url='http://www.mozilla.org/en-US/firefox/all.html';
+            if ($CPAN::META->has_usable('LWP')) {
+               FA::LWP::UserAgent->config;
+               print "Fetching with LWP:\n  $url\n";
+               my $Ua;
+               eval { $Ua = FA::LWP::UserAgent->new(
+                      timeout=>300,show_progress=>1) };
+               if ($@) {
+                  $CPAN::Frontend->mywarn(
+                     "ERROR: FA::LWP::UserAgent->new dies with $@\n");
+               } else {
+                  my($var);
+                  $Ua->proxy('http', $var)
+                     if $var = $CPAN::Config->{http_proxy} ||
+                     $ENV{http_proxy};
+                  $Ua->no_proxy($var)
+                     if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
+               }
+               my $req = HTTP::Request->new(GET => $url);
+               $req->header('Accept' => 'text/html');
+               my $res = $Ua->request($req);
+               my $href='';
+               if ($res->is_success) {
+                  print " + request successful.\n"
+                     if $CPAN::DEBUG;
+                  my $count=0;
+                  foreach my $line (split "\n", $res->content) {
+                     if ((-1<index $line, 'English (US)') ||
+                           ((0<$count) && ($count<5))) {
+                        if ($count==3) {
+                           $href=$line;
+                           last;
+                        }
+                        $count++;
+                     }
+
+                  }
+               }
+               $href=~s/^.*href=["](.*?)["].*$/$1/;
+               $href=~s/https/http/;
+               my $exe_name=substr($href,(rindex $href,'/'));
+               $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
+               $exe_name=~s/firefox-/Firefox Setup /;
+               $req = HTTP::Request->new(GET => $href);
+               $req->header('Accept' => 'text/html');
+               $res = $Ua->request($req);
+               if ($res->is_success) {
+                  print " + request successful.\n"
+                     if $CPAN::DEBUG;
+                  mkpath($main::root_dir,1) unless -d $main::root_dir;
+                  unless (-w $main::root_dir) {
+                     print "\n\n   Fatal Error! - The current Cygwin directory: ".
+                              "\n\n      ".$main::root_dir."\n\n".
+                              "   is not writable. Please change the permissions\n".
+                              "   to writable before installing FullAuto.\n";
+                     print "\n   PRESS ANY KEY TO EXIT SETUP\n\n";
+                     <STDIN>;
+                     exit 1;
+                  }
+                  open(CP,">$main::root_dir/${exe_name}.exe") || die $!;
+                  binmode(CP);
+                  print CP $res->content;
+                  close CP;
+               }
+               $url='https://addons.mozilla.org/firefox/downloads/file/'.
+                    '138898/mozrepl-1.1-fx.xpi?src=dp-btn-primary';
+               my $req = HTTP::Request->new(GET => $url);
+               $req->header('Accept' => 'text/html');
+               $Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
+               #$Ua->ssl_opts( SSL_ca_file => Mozilla::CA::SSL_ca_file() );
+               my $res = $Ua->request($req);
+               my $href='';
+               if ($res->is_success) {
+                  print " + request successful.\n"
+                     if $CPAN::DEBUG;
+                  open(CP,">$main::root_dir/mozrepl-1.1-fx.xpi") || die $!;
+                  binmode(CP);
+                  print CP $res->content;
+                  close CP;
+               }
+            }
+         }
+      }
+   } else {
+      # Let's Check for MozRepl
+   }
+
 }
 
 sub remove_sshd {
