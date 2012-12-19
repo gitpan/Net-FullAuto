@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999945';
+$main::VERSION='0.999946';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1095,6 +1095,7 @@ sub ws_info {
             $selection='UsE_separate_login_id_for_sshd'
                if -1<index $selection,'Use a Local';
          } else {
+            test_windows_user_rights('cyg_server') if $^O eq 'cygwin';
             $selection='cyg_server'; 
          }         
       } else {
@@ -1142,8 +1143,9 @@ sub ws_info {
          $selection=Menu(\%_users);
          chomp($selection);
          exit if $selection eq ']quit[';
-         test_windows_user_rights($selection);
+         test_windows_user_rights($selection) if $^O eq 'cygwin';
       } elsif (-1<index $selection, 'Use Domain') {
+         test_windows_user_rights('cyg_server') if $^O eq 'cygwin';
          $selection='cyg_server'; 
       }
    }
@@ -3211,12 +3213,24 @@ sub get_firefox {
    $firefox=~s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
    $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
             "Mozilla\\Mozilla Firefox\\$firefox\\Main\" 2>&1";
-   $firefox=`$firefox`;
+   #$firefox=`$firefox`;
+   open (FF,"$firefox|");
+   while (my $line=<FF>) {
+      $firefox.=$line;
+   }
+   close FF;
    chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
    $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
    $firefox=~s/\s*$//s;
-print "FIREFOX=$firefox\n";
-   if ($firefox=~/^Error.*unable to find/) {
+print "FIREFOX=$firefox<==\n";
+   my $fftest=substr($firefox,0,2) if 1<length $firefox;
+   $fftest||='';
+   if ($fftest=~/\w:|\/\w/) {
+      $fftest=substr($firefox,0,(rindex $firefox,'\\'));
+   } else {
+      $fftest='';
+   }
+   if (-1<index $firefox,'unable to find') {
       my $selection='Install Mozilla Firefox';
       unless ($install_firefox_without_asking) {
          # Ask if we should install
@@ -3278,12 +3292,13 @@ print "FIREFOX=$firefox\n";
                   }
                }
                $href=~s/^.*href=["](.*?)["].*$/$1/;
-               $href=~s/https/http/;
+               #$href=~s/https/http/;
                my $exe_name=substr($href,(rindex $href,'/'));
                $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
                $exe_name=~s/firefox-/Firefox Setup /;
                $req = HTTP::Request->new(GET => $href);
                $req->header('Accept' => 'text/html');
+               $Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
                $res = $Ua->request($req);
                if ($res->is_success) {
                   print " + request successful.\n"
@@ -3307,7 +3322,7 @@ print "FIREFOX=$firefox\n";
                     '138898/mozrepl-1.1-fx.xpi?src=dp-btn-primary';
                my $req = HTTP::Request->new(GET => $url);
                $req->header('Accept' => 'text/html');
-               $Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
+               #$Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
                #$Ua->ssl_opts( SSL_ca_file => Mozilla::CA::SSL_ca_file() );
                my $res = $Ua->request($req);
                my $href='';
@@ -3322,8 +3337,14 @@ print "FIREFOX=$firefox\n";
             }
          }
       }
-   } else {
+   } elsif (!(-d "$fftest".
+         "/extensions/{ec8030f7-c20a-464f-9b0e-13a3a9e97384}/")) {
+print "$fftest/extensions/\n";
+      print "WE DO NOT HAVE MOZREPL\n";
       # Let's Check for MozRepl
+   } else {
+      print "$fftest/extensions/\n";
+      print "WE DO HAVE MOZREPL\n";
    }
 
 }

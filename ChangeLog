@@ -19,6 +19,15 @@
 ################################################################
 
 
+2012-12-18  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999946 released.
+
+        * Fixed false positive error when chmod.
+
+        * Fixed cp lookup.
+
+
 2012-12-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999945 released.

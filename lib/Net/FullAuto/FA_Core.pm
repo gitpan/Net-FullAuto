@@ -1253,7 +1253,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -1271,7 +1271,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $plan_number=$Net::FullAuto::FA_Core::makeplan->{'Number'}||'';
       my $plan_title =$Net::FullAuto::FA_Core::makeplan->{'Title'}||'';
@@ -2376,7 +2376,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -2394,7 +2394,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $new_plan_number=0;
       my ($k,$v) = ('','') ;
@@ -2592,7 +2592,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
+            &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs',
@@ -2611,7 +2611,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
+            &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
          if ($stderr && -1<index $stderr,'no crontab') {
             $planstring=~tr/ //s;
@@ -2676,7 +2676,7 @@ sub persist_get {
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
@@ -2693,7 +2693,7 @@ sub persist_get {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    $key.='&';
    $key.=join '&', caller;
@@ -2726,7 +2726,7 @@ sub persist_put {
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist',
@@ -2743,7 +2743,7 @@ sub persist_put {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $status=$bdb->db_put($key,$value);
    undef $bdb;
@@ -2765,7 +2765,7 @@ print "openplandb CALLER=",caller,"\n";
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
@@ -2783,7 +2783,7 @@ print "openplandb CALLER=",caller,"\n";
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    return $bdb;
 }
@@ -2874,7 +2874,7 @@ sub acquire_fa_lock
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       unless ($Net::FullAuto::FA_Core::dbenv_locks) {
          $Net::FullAuto::FA_Core::dbenv_locks = BerkeleyDB::Env->new(
@@ -2895,7 +2895,7 @@ sub acquire_fa_lock
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
    }
    
@@ -4522,7 +4522,7 @@ sub handle_error
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $dbenv = BerkeleyDB::Env->new(
            -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track',
@@ -4540,7 +4540,7 @@ sub handle_error
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $tref='';
       my $status=$bdb->db_get($invoked[2],$tref);
@@ -5980,7 +5980,7 @@ sub getpasswd
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -5991,7 +5991,7 @@ sub getpasswd
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       &acquire_fa_lock(9361);
       my $bdb = BerkeleyDB::Btree->new(
@@ -6317,7 +6317,7 @@ sub getpasswd
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -6352,7 +6352,7 @@ sub getpasswd
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       $status=$bdb->db_get($passlabel,$href);
       $href=~s/\$HASH\d*\s*=\s*//s;
@@ -6966,8 +6966,10 @@ $main::get_default_modules=sub {
          "#################################################################\n",
          "##  -------------------------------------------------------------\n",
          "##  ADD SETTINGS HERE:\n",
-         "##  -------------------------------------------------------------\n\n",
-         "our \$FA_Secure = \"",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\";\n\n",
+         "##  -------------------------------------------------------------\n",
+         "\n",
+         "our \$FA_Secure = \"",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\";\n",
+         "\n",
          "#################################################################\n",
          "##  Do NOT alter code BELOW this block.\n",
          "#################################################################\n",
@@ -6982,7 +6984,7 @@ $main::get_default_modules=sub {
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    $Net::FullAuto::FA_Core::dbenv_once = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults',
@@ -7018,7 +7020,7 @@ $main::get_default_modules=sub {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $default_modules='';
    my $status=$Net::FullAuto::FA_Core::bdb_once->db_get(
@@ -7080,7 +7082,7 @@ $main::get_default_modules=sub {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         die $stderr if $stderr;
+         die $stderr if $stderr && -1==index $stderr,'mode of';
       }
       my $sref={
 
@@ -7161,7 +7163,7 @@ my $set_default_sub=sub {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      die $stderr if $stderr;
+      die $stderr if $stderr && -1==index $stderr,'mode of';
    }
    my $mysets='';
    my $status=$bdb->db_get($username,$mysets);
@@ -7200,7 +7202,7 @@ my $get_modules=sub {
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
-      $cmd="${Net::FullAuto::FA_Core::cppath}cp ".
+      $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
            "$fadir/Custom/fa_".lc($type).'.pm'.
            "$fadir/Custom/$username/$type";
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -7210,7 +7212,7 @@ my $get_modules=sub {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               "$fadir/Custom/$username/$type/*";
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      die $stderr if $stderr;
+      die $stderr if $stderr && -1==index $stderr,'mode of';
    }
    opendir(DIR,"$fadir/Custom/$username/$type");
    my @xfiles = readdir(DIR);
@@ -7353,7 +7355,7 @@ my $fasetdef=sub {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      die $stderr if $stderr;
+      die $stderr if $stderr && -1==index $stderr,'mode of';
    }
    my $default_modules='';
    my $status=$bdb->db_get(
@@ -7507,7 +7509,7 @@ my $default_sets_banner_sub=sub {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      die $stderr if $stderr;
+      die $stderr if $stderr && -1==index $stderr,'mode of';
    }
    my $mysets='';
    my $status=$sbdb->db_get($username,$mysets);
@@ -7589,7 +7591,8 @@ my $cacomm_sub=sub {
                                  'chmod').'chmod -Rv 770 '.
                                  "${fa_defs::FA_Secure}.Defaults/*";
                               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-                              die $stderr if $stderr;
+                              die $stderr if $stderr &&
+                                 -1==index $stderr,'mode of';
                            }
                            my $default_modules='';
                            my $status=$bdb->db_get(
@@ -7951,7 +7954,7 @@ my $define_modules_commit_sub=sub {
                my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                        $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets/*';
                my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-               die $stderr if $stderr;
+               die $stderr if $stderr && -1==index $stderr,'mode of';
             }
             my $mysets='';
             my $status=$bdb->db_get($username,$mysets);
@@ -8163,7 +8166,7 @@ my $define_modules_menu_fa_code_sub=sub {
                        'chmod -Rv 770 '.
                        "$fadir/Custom/$username/Code/*";
                   my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-                  die $stderr if $stderr;
+                  die $stderr if $stderr && -1==index $stderr,'mode of';
                }
             }
             opendir(DIR,"$fadir/Custom/$username/Code");
@@ -8276,7 +8279,8 @@ my $delete_sets_menu_sub=sub {
                                  'chmod').'chmod -Rv 770 '.
                                  "${fa_defs::FA_Secure}Defaults/*";
                               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-                              die $stderr if $stderr;
+                              die $stderr if $stderr &&
+                                  -1==index $stderr,'mode of';
                            }
                            my $default_modules='';
                            my $status=$bdb->db_get(
@@ -8327,7 +8331,8 @@ my $delete_sets_menu_sub=sub {
                                  'chmod').'chmod -Rv 770 '.
                                  "${fa_defs::FA_Secure}Sets/*";
                               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-                              die $stderr if $stderr;
+                              die $stderr if $stderr &&
+                                  -1==index $stderr,'mode of';
                            }
                            my $mysets='';
                            $status=$sbdb->db_get(
@@ -9050,7 +9055,7 @@ sub fa_login
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my ($k,$v) = ("","") ;
       my $cursor = $bdb->db_cursor() ;
@@ -9313,7 +9318,7 @@ sub fa_login
                      my $stdout='';my $stderr='';
                      ($stdout,$stderr)=&setuid_cmd($cmd,5);
                      die $stderr if $stderr;
-                     $cmd="${Net::FullAuto::FA_Core::cppath}cp ".
+                     $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
                           "$fadir/Custom/fa_".lc($type).'.pm'.
                           "$fadir/Custom/$username/$type";
                      ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -9323,7 +9328,7 @@ sub fa_login
                              'chmod -Rv 770 '.
                              "$fadir/Custom/$username/$type/*";
                         my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-                        die $stderr if $stderr;
+                        die $stderr if $stderr && -1==index $stderr,'mode of';
                      }
                   }
                   opendir(DIR,"$fadir/Custom/$username/$type");
@@ -9553,7 +9558,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
+            &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
          my $href={};
          if ($save_main_pass || $password_from ne 'user_input' ||
@@ -10492,7 +10497,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
+            &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
          my $local_host_flag=0;
          my $host__label='';
@@ -11196,7 +11201,7 @@ print $Net::FullAuto::FA_Core::MRLOG
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    if ($hostlabel eq "__Master_${$}__") {
       # print the contents of the file
@@ -11318,7 +11323,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $local_host_flag=0;
    if ($hostlabel eq "__Master_${$}__") {
@@ -11501,7 +11506,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
+            &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
          my $href='';
          my $status=$bdb->db_get($hostlabel,$href);
@@ -12417,7 +12422,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
       my $href='';
       my $status=$bdb->db_get($passlabel,$href);
@@ -13698,7 +13703,8 @@ print "FTR_RETURN3\n";
                               'chmod').'chmod -Rv 770 '.
                               $Hosts{$mr}{'FA_Secure'}.'Passwds/*';
                            my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-                           &handle_error($stderr) if $stderr;
+                           &handle_error($stderr) if $stderr &&
+                              -1==index $stderr,'mode of';
                         }
                         my $href='';
                         my $status=$bdb->db_get($host,$href);
@@ -16608,7 +16614,8 @@ sub tmp
    }
 
    my $tdir='tmp'.$self->{_cmd_pid}.'_'
-           .$Net::FullAuto::FA_Core::invoked[0].'_'.$Net::FullAuto::FA_Core::increment++;
+           .$Net::FullAuto::FA_Core::invoked[0].'_'
+           .$Net::FullAuto::FA_Core::increment++;
    my $return_path='';
    if ($token) {
       $path=~tr/\\/\//;
@@ -27227,7 +27234,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDING LINE=$line<==\n"
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $status=$bdb->db_put($line,time);
    undef $bdb;
@@ -27315,7 +27322,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $result=0;
    my $dbcopy='';my $status='';
@@ -27386,7 +27393,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
+            &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
          my $status=$bdb->db_put($line,time);
          undef $bdb;
@@ -27494,7 +27501,7 @@ sub mod
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $banner="\n   Please Pick a SkipDB Entry to Delete :";
    my ($k,$v) = ("","") ;
@@ -27543,7 +27550,7 @@ print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron 
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr;
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my ($k,$v) = ("","") ;
    my $cursor = $bdb->db_cursor() ;
