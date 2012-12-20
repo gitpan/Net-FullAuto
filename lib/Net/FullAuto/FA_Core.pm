@@ -7203,7 +7203,7 @@ my $get_modules=sub {
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
       $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
-           "$fadir/Custom/fa_".lc($type).'.pm'.
+           "$fadir/Custom/fa_".lc($type).'.pm '.
            "$fadir/Custom/$username/$type";
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
@@ -8157,7 +8157,7 @@ my $define_modules_menu_fa_code_sub=sub {
                ($stdout,$stderr)=&setuid_cmd($cmd,5);
                die $stderr if $stderr;
                $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
-                   "$fadir/Custom/fa_code.pm".
+                   "$fadir/Custom/fa_code.pm ".
                    "$fadir/Custom/$username/Code";
                ($stdout,$stderr)=&setuid_cmd($cmd,5);
                die $stderr if $stderr;
@@ -9319,7 +9319,7 @@ sub fa_login
                      ($stdout,$stderr)=&setuid_cmd($cmd,5);
                      die $stderr if $stderr;
                      $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
-                          "$fadir/Custom/fa_".lc($type).'.pm'.
+                          "$fadir/Custom/fa_".lc($type).'.pm '.
                           "$fadir/Custom/$username/$type";
                      ($stdout,$stderr)=&setuid_cmd($cmd,5);
                      die $stderr if $stderr;

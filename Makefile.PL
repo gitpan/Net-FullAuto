@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999946';
+$main::VERSION='0.999947';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4079,7 +4079,7 @@ sub MY::install {
 
    if ($^O eq 'cygwin') {
 
-      $inherited .= "\nsetuid_permissions ::\n".
+      $inherited .= "\nnon_privileged_permissions ::\n".
          "\t\$(NOECHO) \$(ECHO) \"Applying Setuid Permissions\"\n".
          "\t\$(NOECHO) \$(CHMOD) \$(PERM_S+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
          "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
