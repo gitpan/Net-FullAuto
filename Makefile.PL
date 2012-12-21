@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999947';
+$main::VERSION='0.999948';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1213,6 +1213,7 @@ my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
 my $install_firefox_without_asking=0;
+my $install_firefox=0;
 
 if (exists $Config{prefix} &&
       $Config{prefix}) {
@@ -1453,7 +1454,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          }
       }
 
-      &get_firefox();
+      $install_firefox=&find_firefox_mozrepl();
 
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
@@ -1629,9 +1630,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $privl=' --privileged' if -1<index $account_type,'separate';
             }
             $domain_user=&ws_info($domain) unless $wver=~/XP|2000|NT/;
+            my $setup_cyg_server=0;
             if ($domain_user eq 'UsE_separate_login_id_for_sshd') {
                $account_type='separate';
                $domain_user='';
+               $setup_cyg_server=1 if (-1==index `net user`,'cyg_server');
             }
             if ($domain_user) {
                print "\n\n\n   Please enter the Password for the $domain ",
@@ -1685,8 +1688,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   <STDIN>;exit 1;
                }
                print "\n";
-            } elsif ((-1<index $account_type,'separate') &&
-                     (&test_windows_user($sshd_account))) {
+            } elsif (((-1<index $account_type,'separate') &&
+                     (&test_windows_user($sshd_account))) ||
+                      $setup_cyg_server) {
                my $banner="   OpenSsh's sshd service running via Cygwin is ".
                   "*REQUIRED* for\n   FullAuto to run on MS Windows. Two ".
                   "separate user accounts\n   are needed - one for the ".
@@ -2408,6 +2412,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
          }
          close(CD);
+         &install_firefox($install_firefox) if $install_firefox;
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
                "\n\n   Please report any bugs and send any",
@@ -2592,7 +2597,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
 
-&get_firefox() if $^O eq 'cygwin';
+$install_firefox=&find_firefox_mozrepl() if $^O eq 'cygwin';
 
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
@@ -3203,7 +3208,7 @@ if ($@) {
    die $die;
 }
 
-sub get_firefox {
+sub find_firefox_mozrepl {
 
    # Let's look for Firefox
    my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
@@ -3213,7 +3218,6 @@ sub get_firefox {
    $firefox=~s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
    $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
             "Mozilla\\Mozilla Firefox\\$firefox\\Main\" 2>&1";
-   #$firefox=`$firefox`;
    open (FF,"$firefox|");
    while (my $line=<FF>) {
       $firefox.=$line;
@@ -3222,16 +3226,15 @@ sub get_firefox {
    chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
    $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
    $firefox=~s/\s*$//s;
-print "FIREFOX=$firefox<==\n";
    my $fftest=substr($firefox,0,2) if 1<length $firefox;
    $fftest||='';
+   my $selection='';
    if ($fftest=~/\w:|\/\w/) {
       $fftest=substr($firefox,0,(rindex $firefox,'\\'));
    } else {
       $fftest='';
    }
    if (-1<index $firefox,'unable to find') {
-      my $selection='Install Mozilla Firefox';
       unless ($install_firefox_without_asking) {
          # Ask if we should install
          my $one="YES - Install Mozilla Firefox & MozRepl\n\n";
@@ -3241,7 +3244,7 @@ print "FIREFOX=$firefox<==\n";
             Item_1 =>  {
                            Text   => "]C[",
                            Convey => [ $one,
-                                       'NO  - DO *NOT* INSTALL Firefox'],
+                                       'NO  - DO *NOT* INSTALL Firefox' ],
                        },
             Banner=> "   Mozilla Firefox has an available add-on called ".
                      "MozRepl.\n\n   With Firefox equipped with MozRepl, ".
@@ -3252,101 +3255,122 @@ print "FIREFOX=$firefox<==\n";
          $selection=Menu(\%_askfirefox);
          chomp($selection);
          exit if $selection eq ']quit[';
-         if (-1<index $selection,'Install Mozilla Firefox') {
-            my $url='http://www.mozilla.org/en-US/firefox/all.html';
-            if ($CPAN::META->has_usable('LWP')) {
-               FA::LWP::UserAgent->config;
-               print "Fetching with LWP:\n  $url\n";
-               my $Ua;
-               eval { $Ua = FA::LWP::UserAgent->new(
-                      timeout=>300,show_progress=>1) };
-               if ($@) {
-                  $CPAN::Frontend->mywarn(
-                     "ERROR: FA::LWP::UserAgent->new dies with $@\n");
-               } else {
-                  my($var);
-                  $Ua->proxy('http', $var)
-                     if $var = $CPAN::Config->{http_proxy} ||
-                     $ENV{http_proxy};
-                  $Ua->no_proxy($var)
-                     if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
-               }
-               my $req = HTTP::Request->new(GET => $url);
-               $req->header('Accept' => 'text/html');
-               my $res = $Ua->request($req);
-               my $href='';
-               if ($res->is_success) {
-                  print " + request successful.\n"
-                     if $CPAN::DEBUG;
-                  my $count=0;
-                  foreach my $line (split "\n", $res->content) {
-                     if ((-1<index $line, 'English (US)') ||
-                           ((0<$count) && ($count<5))) {
-                        if ($count==3) {
-                           $href=$line;
-                           last;
-                        }
-                        $count++;
-                     }
-
-                  }
-               }
-               $href=~s/^.*href=["](.*?)["].*$/$1/;
-               #$href=~s/https/http/;
-               my $exe_name=substr($href,(rindex $href,'/'));
-               $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
-               $exe_name=~s/firefox-/Firefox Setup /;
-               $req = HTTP::Request->new(GET => $href);
-               $req->header('Accept' => 'text/html');
-               $Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
-               $res = $Ua->request($req);
-               if ($res->is_success) {
-                  print " + request successful.\n"
-                     if $CPAN::DEBUG;
-                  mkpath($main::root_dir,1) unless -d $main::root_dir;
-                  unless (-w $main::root_dir) {
-                     print "\n\n   Fatal Error! - The current Cygwin directory: ".
-                              "\n\n      ".$main::root_dir."\n\n".
-                              "   is not writable. Please change the permissions\n".
-                              "   to writable before installing FullAuto.\n";
-                     print "\n   PRESS ANY KEY TO EXIT SETUP\n\n";
-                     <STDIN>;
-                     exit 1;
-                  }
-                  open(CP,">$main::root_dir/${exe_name}.exe") || die $!;
-                  binmode(CP);
-                  print CP $res->content;
-                  close CP;
-               }
-               $url='https://addons.mozilla.org/firefox/downloads/file/'.
-                    '138898/mozrepl-1.1-fx.xpi?src=dp-btn-primary';
-               my $req = HTTP::Request->new(GET => $url);
-               $req->header('Accept' => 'text/html');
-               #$Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
-               #$Ua->ssl_opts( SSL_ca_file => Mozilla::CA::SSL_ca_file() );
-               my $res = $Ua->request($req);
-               my $href='';
-               if ($res->is_success) {
-                  print " + request successful.\n"
-                     if $CPAN::DEBUG;
-                  open(CP,">$main::root_dir/mozrepl-1.1-fx.xpi") || die $!;
-                  binmode(CP);
-                  print CP $res->content;
-                  close CP;
+      } else { $selection='Install Mozilla Firefox' }
+   } else { # Look for MozRepl
+      my $up=$ENV{'USERPROFILE'};
+      if (-1<index $up,'Documents') {
+         $up.="\\Application Data\\Mozilla\\Firefox\\Profiles\\";
+      } else {
+         $up.="\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\";
+      }
+      my @dirs=();
+      if (-e $up) {
+         opendir(DIR,$up);
+         @dirs = readdir(DIR);
+         closedir(DIR);
+      }
+      if (-1<$#dirs) {
+         foreach my $profile (@dirs) {
+            opendir(DIR,$up."\\$profile\\extensions");
+            my @files = readdir(DIR);
+            closedir(DIR);
+            foreach my $file (@files) {
+               if (-1<index $file,'mozrepl') {
+                  return 0;
                }
             }
          }
       }
-   } elsif (!(-d "$fftest".
-         "/extensions/{ec8030f7-c20a-464f-9b0e-13a3a9e97384}/")) {
-print "$fftest/extensions/\n";
-      print "WE DO NOT HAVE MOZREPL\n";
-      # Let's Check for MozRepl
-   } else {
-      print "$fftest/extensions/\n";
-      print "WE DO HAVE MOZREPL\n";
+      return 'Install MozRepl';
    }
+}
 
+sub install_firefox {
+
+   my $Ua;
+   if ($CPAN::META->has_usable('LWP')) {
+      FA::LWP::UserAgent->config;
+      eval { $Ua = FA::LWP::UserAgent->new(
+             timeout=>300,show_progress=>1) };
+      if ($@) {
+         $CPAN::Frontend->mywarn(
+         "ERROR: FA::LWP::UserAgent->new dies with $@\n");
+      } else {
+         my($var);
+         $Ua->proxy('http', $var)
+            if $var = $CPAN::Config->{http_proxy} ||
+            $ENV{http_proxy};
+         $Ua->no_proxy($var)
+            if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
+      }
+      $Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
+      #$Ua->ssl_opts( SSL_ca_file => Mozilla::CA::SSL_ca_file() );
+   } else {
+      die "Unable to install Firefox due to no LWP availability";
+   }
+   unless ($_[0] eq 'Install MozRepl') {
+      my $url='http://www.mozilla.org/en-US/firefox/all.html';
+      print "Fetching with LWP:\n  $url\n";
+      my $req = HTTP::Request->new(GET => $url);
+      $req->header('Accept' => 'text/html');
+      my $res = $Ua->request($req);
+      my $href='';
+      if ($res->is_success) {
+         print " + request successful.\n"
+            if $CPAN::DEBUG;
+         my $count=0;
+         foreach my $line (split "\n", $res->content) {
+            if ((-1<index $line, 'English (US)') ||
+                  ((0<$count) && ($count<5))) {
+               if ($count==3) {
+                  $href=$line;
+                  last;
+               }
+               $count++;
+            }
+         }
+      }
+      $href=~s/^.*href=["](.*?)["].*$/$1/;
+      my $exe_name=substr($href,(rindex $href,'/'));
+      $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
+      $exe_name=~s/firefox-/Firefox Setup /;
+      $req = HTTP::Request->new(GET => $href);
+      $req->header('Accept' => 'text/html');
+      $res = $Ua->request($req);
+      if ($res->is_success) {
+         print " + request successful.\n"
+         if $CPAN::DEBUG;
+         mkpath($main::root_dir,1) unless -d $main::root_dir;
+         unless (-w $main::root_dir) {
+            print "\n\n   Fatal Error! - The current Cygwin directory: ".
+                  "\n\n      ".$main::root_dir."\n\n".
+                  "   is not writable. Please change the permissions\n".
+                  "   to writable before installing FullAuto.\n";
+            print "\n   PRESS ANY KEY TO EXIT SETUP\n\n";
+            <STDIN>;
+            exit 1;
+         }
+         open(CP,">$main::root_dir/${exe_name}.exe") || die $!;
+         binmode(CP);
+         print CP $res->content;
+         close CP;
+         `"$main::root_dir/${exe_name}.exe" -ms`;
+      }
+   }
+   my $url='https://addons.mozilla.org/firefox/downloads/file/'.
+        '138898/mozrepl-1.1-fx.xpi?src=dp-btn-primary';
+   my $req = HTTP::Request->new(GET => $url);
+   $req->header('Accept' => 'text/html');
+   my $res = $Ua->request($req);
+   my $href='';
+   if ($res->is_success) {
+      print " + request successful.\n"
+         if $CPAN::DEBUG;
+      open(CP,">$main::root_dir/mozrepl-1.1-fx.xpi") || die $!;
+      binmode(CP);
+      print CP $res->content;
+      close CP;
+   }
 }
 
 sub remove_sshd {
