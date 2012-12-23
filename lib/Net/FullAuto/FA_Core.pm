@@ -1757,27 +1757,31 @@ sub edit {
       $fa_conf=$Term::Menus::fa_conf;
       if (-d $tpath.'Net/FullAuto/Custom/'.$username) {
          eval {
-            require 'Net/FullAuto/Custom/'.$username.'/Conf/'.$fa_conf;
-            my $mod=substr($fa_conf,(rindex $fa_conf,'/')+1,-3);
+            require $fa_conf->[0];
+            my $mod=substr($fa_conf->[0],(rindex $fa_conf->[0],'/')+1,-3);
             import $mod;
             $fa_conf=$mod.'.pm';
          };
          if ($@) {
-            die "ERROR=$@\n";
+            warn "ERROR=$@\n";
          }
       }
    }
    if (defined $Term::Menus::fa_code) {
-      $fa_code=$Term::Menus::fa_code;
+      $fa_code=substr($Term::Menus::fa_code->[0],
+               (rindex $Term::Menus::fa_code->[0],'/')+1);
    }
    if (defined $Term::Menus::fa_host) {
-      $fa_host=$Term::Menus::fa_host;
+      $fa_host=substr($Term::Menus::fa_host->[0],
+               (rindex $Term::Menus::fa_host->[0],'/')+1);
    }
    if (defined $Term::Menus::fa_maps) {
-      $fa_maps=$Term::Menus::fa_maps;
+      $fa_maps=substr($Term::Menus::fa_maps->[0],
+               (rindex $Term::Menus::fa_maps->[0],'/')+1);
    }
    if (defined $Term::Menus::fa_menu) {
-      $fa_menu=$Term::Menus::fa_menu;
+      $fa_menu=substr($Term::Menus::fa_menu->[0],
+               (rindex $Term::Menus::fa_menu->[0],'/')+1);
    }
 
    my $editor='';
