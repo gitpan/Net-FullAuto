@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999950';
+$main::VERSION='0.999951';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1213,6 +1213,7 @@ my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
 my $install_firefox_without_asking=0;
+my $mozrepl_file='mozrepl-1.1-fx.xpi';
 my $install_firefox=0;
 
 if (exists $Config{prefix} &&
@@ -3358,7 +3359,7 @@ sub install_firefox {
       }
    }
    my $url='https://addons.mozilla.org/firefox/downloads/file/'.
-        '138898/mozrepl-1.1-fx.xpi?src=dp-btn-primary';
+        '138898/$mozrepl_file?src=dp-btn-primary';
    my $req = HTTP::Request->new(GET => $url);
    $req->header('Accept' => 'text/html');
    my $res = $Ua->request($req);
@@ -3366,7 +3367,7 @@ sub install_firefox {
    if ($res->is_success) {
       print " + request successful.\n"
          if $CPAN::DEBUG;
-      open(CP,">$main::root_dir/mozrepl-1.1-fx.xpi") || die $!;
+      open(CP,">$main::root_dir/$mozrepl_file") || die $!;
       binmode(CP);
       print CP $res->content;
       close CP;
@@ -3864,6 +3865,7 @@ if ($^O eq 'cygwin') {
    print FH "\n";
    close FH;
    install_script('bin/fullauto.exe');
+   install_script('bin/install_mozrepl_plugin.exe');
    unlink "bin/fullauto.exe";
    $permission = 'Non-Privileged';
 } else {
@@ -3964,6 +3966,10 @@ sub MY::makefile {
                     "\n\t\$(NOECHO)\n\n";
       unlink "lib/Net/FullAuto/Custom/fa_code.pm";
       unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
+   }
+   if ($install_firefox) {
+      $inherited .= "lib/Net/FullAuto/$mozrepl_file:".
+                    "\n\t\$(CP) $main::root_dir/$mozrepl_file \$@\n\n";
    }
 
    $inherited; 

@@ -1,4 +1,6 @@
 bin/fullauto.pl
+bin/install_mozrepl_plugin.exe
+install_mozrepl_plugin.ahk
 ChangeLog
 inc/Module/AutoInstall.pm
 inc/Module/Install.pm

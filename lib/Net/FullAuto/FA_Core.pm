@@ -23032,10 +23032,62 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                               chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
                               $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
                               $firefox=~s/\s*$//s;
+                              my $winff=$firefox;
                               ($firefox,$stderr)=&Net::FullAuto::FA_Core::cmd(
                                  "cygpath \"$firefox\"");
                               &Net::FullAuto::FA_Core::handle_error($stderr)
                                  if $stderr;
+                              # Let's look for MozRepl
+                              my $have_mozrepl=0;
+                              my $up=$ENV{'USERPROFILE'};
+                              if (-1<index $up,'Documents') {
+                                 $up.="\\Application Data\\Mozilla\\".
+                                      "Firefox\\Profiles\\";
+                              } else {
+                                 $up.="\\AppData\\Roaming\\Mozilla\\".
+                                      "Firefox\\Profiles\\";
+                              }
+                              my @dirs=();
+                              if (-e $up) {
+                                 opendir(DIR,$up);
+                                 @dirs = readdir(DIR);
+                                 closedir(DIR);
+                              }
+                              if (-1<$#dirs) {
+                                 HM: foreach my $profile (@dirs) {
+                                    opendir(DIR,$up."\\$profile\\extensions");
+                                    my @files = readdir(DIR);
+                                    closedir(DIR);
+                                    foreach my $file (@files) {
+                                       if (-1<index $file,'mozrepl') {
+                                          $have_mozrepl=1;
+                                          last HM;
+                                       }
+                                    }
+                                 }
+                              }
+                              unless ($have_mozrepl) {
+                                 eval {
+                                    die;
+                                 };
+                                 my $path=$@;
+                                 $path=~s/Died at (.*)FA_Core.pm.*$/$1/;
+                                 chomp($path);
+                                 my $cdr='';
+                                 ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                                    "cygpath -w \"$path\"");
+                                 &Net::FullAuto::FA_Core::handle_error($stderr)
+                                    if $stderr;
+                                 $cdr=~s/\\/\\\\/g;
+                                 $winff=~s/\\/\\\\/g;
+                                 my $progpath=substr($0,0,(rindex $0,'/')+1);
+                                 my $mc=$progpath.'install_mozrepl_plugin '.
+                                       $winff." ${cdr}mozrepl-1.1-fx.xpi";  
+                                 my $mystdout='';
+                                 IO::CaptureOutput::capture sub {
+                                    system($mc);
+                                 }, \$mystdout;
+                              }
                               my $fcmd="\"${firefox}\" -new-instance -repl ".
                                     "http://www.fullautosoftware.net ".
                                     "1>$localhost->{_work_dirs}->{_tmp}".
