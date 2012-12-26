@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999951';
+$main::VERSION='0.999952';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1215,6 +1215,7 @@ my $install_cygwin_without_asking=0;
 my $install_firefox_without_asking=0;
 my $mozrepl_file='mozrepl-1.1-fx.xpi';
 my $install_firefox=0;
+$install_firefox=$ENV{FA_MOZREPL} if exists $ENV{FA_MOZREPL};
 
 if (exists $Config{prefix} &&
       $Config{prefix}) {
@@ -2172,6 +2173,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
+                      'export FA_MOZREPL=\\"'.$install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
@@ -2359,6 +2361,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
+                      'export FA_MOZREPL=\\"'.$install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
@@ -2598,7 +2601,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
 
-$install_firefox=&find_firefox_mozrepl() if $^O eq 'cygwin';
+$install_firefox=&find_firefox_mozrepl() if $^O eq 'cygwin'
+   && !$install_firefox;
 
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
@@ -3253,7 +3257,7 @@ sub find_firefox_mozrepl {
                      "Automation!\n\n   Would you like the FullAuto ".
                      "installer to install Firefox\n   and MozRepl?\n",
          );
-         $selection=Menu(\%_askfirefox);
+         $selection=Term::Menus::Menu(\%_askfirefox);
          chomp($selection);
          exit if $selection eq ']quit[';
       } else { $selection='Install Mozilla Firefox' }
