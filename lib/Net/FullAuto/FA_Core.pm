@@ -5991,7 +5991,7 @@ sub getpasswd
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      if ($mkdflag && $^O eq 'cygwin') {
+      if ($^O eq 'cygwin') {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -6352,7 +6352,7 @@ sub getpasswd
          "cannot open Btree for DB: $BerkeleyDB::Error\n",
          '__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
-      if ($mkdflag && $^O eq 'cygwin') {
+      if ($^O eq 'cygwin') {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -9103,7 +9103,7 @@ sub fa_login
          '__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
       # print the contents of the file
-      if ($mkdflag && $^O eq 'cygwin') {
+      if ($^O eq 'cygwin') {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -9622,7 +9622,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             "cannot open Btree for DB: $BerkeleyDB::Error\n",
             '__cleanup__',$track)
             unless $BerkeleyDB::Error=~/Successful/;
-         if ($mkdflag && $^O eq 'cygwin') {
+         if ($^O eq 'cygwin') {
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -10561,7 +10561,7 @@ print $Net::FullAuto::FA_Core::MRLOG
    "PAST THE TIE TO PASSWD DB\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         if ($mkdflag && $^O eq 'cygwin') {
+         if ($^O eq 'cygwin') {
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -11265,7 +11265,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          "FA_SUCURE8=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n"
          if $Net::FullAuto::FA_Core::log &&
          -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   if ($mkdflag && $^O eq 'cygwin') {
+   if ($^O eq 'cygwin') {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -11387,7 +11387,7 @@ sub su_scrub
       "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
       unless $BerkeleyDB::Error=~/Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
-   if ($mkdflag && $^O eq 'cygwin') {
+   if ($^O eq 'cygwin') {
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
               $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -11570,7 +11570,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             '__cleanup__',$track)
             unless $BerkeleyDB::Error=~/Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         if ($mkdflag && $^O eq 'cygwin') {
+         if ($^O eq 'cygwin') {
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                     $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -12486,7 +12486,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
-      if ($mkdflag && $^O eq 'cygwin') {
+      if ($^O eq 'cygwin') {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').'chmod -Rv 770 '.
                  $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -13766,7 +13766,7 @@ print "FTR_RETURN3\n";
                            "cannot open Btree for DB: ".
                            "$BerkeleyDB::Error\n",'__cleanup__',$track)
                            unless $BerkeleyDB::Error=~/Successful/;
-                        if ($mkdflag && $^O eq 'cygwin') {
+                        if ($^O eq 'cygwin') {
                            my $cmd=$Net::FullAuto::FA_Core::gbp->(
                               'chmod').'chmod -Rv 770 '.
                               $Hosts{$mr}{'FA_Secure'}.'Passwds/*';
@@ -23127,7 +23127,6 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  HM: foreach my $profile (@dirs) {
                                     next if $profile eq '.';
                                     next if $profile eq '..';
-print "WHAT IS THIS=$up/$profile/extensions";sleep 10;
                                     opendir(DIR,$up."/$profile/extensions");
                                     my @files = readdir(DIR);
                                     closedir(DIR);
