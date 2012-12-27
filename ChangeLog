@@ -19,6 +19,18 @@
 ################################################################
 
 
+2012-12-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999953 released.
+
+        * Fixed permissions when making dirs. With cygwin
+          mkdir, -p cannot be used with -m.
+
+        * Added Owner-Group permissions to Makefile.PL.
+       
+        * Changed Non-Privileged to Full-Access.
+
+
 2012-12-26  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999952 released.

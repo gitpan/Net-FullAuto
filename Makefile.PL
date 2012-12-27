@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999952';
+$main::VERSION='0.999953';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3840,7 +3840,8 @@ eval {
    alarm $timeout;
    my @list=('Install with Setuid Permissions (Recommended Default)',
              'Install with Setgid Permissions',
-             'Install with Non-Privileged Permissions');
+             'Install with Owner Group Permissions',
+             'Install with Full Access Permissions');
    my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE 'Setuid' IN 2 MINUTES ***\n".
            "\n   Choose a Permission Setting :\n\n";
    @selection=&pick(\@list,$banner);
@@ -3858,8 +3859,10 @@ if (-1<index $selection,'Setuid') {
    $permission = 'Setuid';
 } elsif (-1<index $selection,'Setgid') {
    $permission = 'Setgid';
-} elsif (-1<index $selection,'Non-Privileged') {
-   $permission = 'Non-Privileged';
+} elsif (-1<index $selection,'Owner-Group') {
+   $permission = 'Owner-Group';
+} elsif (-1<index $selection,'Full-Access') {
+   $permission = 'Full-Access';
 } elsif (-1<index $selection,'quit') {
    exit;
 } print "\n"; 
@@ -3871,7 +3874,7 @@ if ($^O eq 'cygwin') {
    install_script('bin/fullauto.exe');
    install_script('bin/install_mozrepl_plugin.exe');
    unlink "bin/fullauto.exe";
-   $permission = 'Non-Privileged';
+   $permission = 'Owner-Group';
 } else {
    open(FH,">bin/fullauto");
    print FH "\n";
@@ -4062,7 +4065,9 @@ sub MY::constants {
    $inherited =~
       s/(PERM_S[+]X = \d+)/$1\nPERM_R+X = 555\nPERM_R-X = 550\nPERM_R_X = 511/m;
    $inherited =~
-      s/(PERM_R_X = \d+)/$1\nPERM_D-X = 750\nPERM_D_X = 700\nPERM_WRX = 755/m;
+      s/(PERM_R_X = \d+)/$1\nPERM_D-X = 750\nPERM_D_X = 700\nPERM_WRX = 777/m;
+   $inherited =~
+      s/(PERM_WRX = \d+)/$1\nPERM_OG_ = 770/m;
 
    $inherited;
 
@@ -4091,7 +4096,7 @@ sub MY::install {
    } elsif ($permission eq 'Setgid') {
       $inherited =~ s/(install ::.*)$/$1 setgid_permissions/m;
    } else {
-      $inherited =~ s/(install ::.*)$/$1 non_privileged_permissions/m;
+      $inherited =~ s/(install ::.*)$/$1 full_access_permissions/m;
    }
 
    my $link='';
@@ -4128,12 +4133,22 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_D-X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R-X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       $link;
-   $inherited .= "\nnon_privileged_permissions ::\n".
-      "\t\$(NOECHO) \$(ECHO) \"Applying Non-Privileged Permissions\"\n".
+   $inherited .= "\nowner_group_permissions ::\n".
+      "\t\$(NOECHO) \$(ECHO) \"Applying Owner-Group Permissions\"\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_DIR) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
+      $link;
+   $inherited .= "\nfull_access_permissions ::\n".
+      "\t\$(NOECHO) \$(ECHO) \"Applying Full-Access Permissions\"\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto.pl\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto.pm\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".

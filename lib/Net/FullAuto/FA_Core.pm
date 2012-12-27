@@ -1249,7 +1249,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
          $mkdflag=1;
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -2376,7 +2376,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
          $mkdflag=1;
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -2592,7 +2592,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs') {
             $mkdflag=1;
             my $m=($^O eq 'cygwin')?'-m 770 ':'';
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -2676,7 +2676,7 @@ sub persist_get {
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -2726,7 +2726,7 @@ sub persist_put {
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Persist';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -2765,7 +2765,7 @@ print "openplandb CALLER=",caller,"\n";
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -2875,7 +2875,7 @@ sub acquire_fa_lock
          $mkdflag=1;
          my $stdout='';my $stderr='';
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
@@ -4522,7 +4522,7 @@ sub handle_error
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}."Track") {
          $mkdflag=1;
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Track';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -5980,7 +5980,7 @@ sub getpasswd
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
          $mkdflag=1;
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -6317,7 +6317,7 @@ sub getpasswd
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
          $mkdflag=1;
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -6984,7 +6984,7 @@ $main::get_default_modules=sub {
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -7049,7 +7049,7 @@ $main::get_default_modules=sub {
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets') {
          $mkdflag=1;
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -7135,7 +7135,7 @@ my $set_default_sub=sub {
    unless (-d $fa_defs::FA_Secure.'Sets') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
          $m.$fa_defs::FA_Secure.'Sets';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -7201,15 +7201,31 @@ my $get_modules=sub {
    unless (-d "$fadir/Custom/$username/$type") {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
-              "$m$fadir/Custom/$username/$type";
-      my $stdout='';my $stderr='';
-      ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      die $stderr if $stderr;
-      $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
+      unless (-d "$fadir/Custom") {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                 $m.'mkdir '."$fadir/Custom";
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         die $stderr if $stderr;
+      }
+      unless (-d "$fadir/Custom/$username") {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                 $m.'mkdir '."$fadir/Custom/$username";
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         die $stderr if $stderr;
+      }
+      unless (-d "$fadir/Custom/$username/$type") {
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                 $m.'mkdir '."$fadir/Custom/$username/$type";
+         my $stdout='';my $stderr='';
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         die $stderr if $stderr;
+      }
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
            "$fadir/Custom/fa_".lc($type).'.pm '.
            "$fadir/Custom/$username/$type";
-      ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
    }
    if ($mkdflag && $^O eq 'cygwin') {
@@ -7337,7 +7353,7 @@ my $fasetdef=sub {
    unless (-d $fa_defs::FA_Secure.'Defaults') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
          $m.$fa_defs::FA_Secure.'Defaults';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -7479,7 +7495,7 @@ my $default_sets_banner_sub=sub {
    unless (-d $fa_defs::FA_Secure.'Sets') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$fa_defs::FA_Secure.'Sets';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -7569,7 +7585,7 @@ my $cacomm_sub=sub {
                               $mkdflag=1;
                               my $m=($^O eq 'cygwin')?'-m 770 ':'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                 'mkdir -p '.$m.
+                                 'mkdir '.$m.
                                  $Hosts{"__Master_".$$."__"}{'FA_Secure'}.
                                  'Defaults';
                               my $stdout='';my $stderr='';
@@ -7926,7 +7942,7 @@ my $define_modules_commit_sub=sub {
             unless (-d $fa_defs::FA_Secure.'Sets') {
                $mkdflag=1;
                my $m=($^O eq 'cygwin')?'-m 770 ':'';
-               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                        $m.$fa_defs::FA_Secure.'Sets';
                my $stdout='';my $stderr='';
                ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -8155,15 +8171,31 @@ my $define_modules_menu_fa_code_sub=sub {
             my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
             unless (-d "$fadir/Custom/$username/Code") {
                my $m=($^O eq 'cygwin')?'-m 770 ':'';
-               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
-                       "$m$fadir/Custom/$username/Code";
-               my $stdout='';my $stderr='';
-               ($stdout,$stderr)=&setuid_cmd($cmd,5);
-               die $stderr if $stderr;
-               $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
+               unless (-d "$fadir/Custom") {
+                  my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                          $m.'mkdir '."$fadir/Custom";
+                  my $stdout='';my $stderr='';
+                  ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                  die $stderr if $stderr;
+               }
+               unless (-d "$fadir/Custom/$username") {
+                  my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                          $m.'mkdir '."$fadir/Custom/$username";
+                  my $stdout='';my $stderr='';
+                  ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                  die $stderr if $stderr;
+               }
+               unless (-d "$fadir/Custom/$username/Code") {
+                  my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                          $m.'mkdir '."$fadir/Custom/$username/Code";
+                  my $stdout='';my $stderr='';
+                  ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                  die $stderr if $stderr;
+               }
+               my $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
                    "$fadir/Custom/fa_code.pm ".
                    "$fadir/Custom/$username/Code";
-               ($stdout,$stderr)=&setuid_cmd($cmd,5);
+               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
                die $stderr if $stderr;
                if ($^O eq 'cygwin') {
                   my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').
@@ -8245,7 +8277,7 @@ my $delete_sets_menu_sub=sub {
                               $mkdflag=1;
                               my $m=($^O eq 'cygwin')?'-m 770 ':'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                 'mkdir -p '.$m.$fa_defs::FA_Secure.'Defaults';
+                                 'mkdir '.$m.$fa_defs::FA_Secure.'Defaults';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);
                               die $stderr if $stderr;
@@ -8300,7 +8332,7 @@ my $delete_sets_menu_sub=sub {
                               $mkdflag=1;
                               my $m=($^O eq 'cygwin')?'-m 770 ':'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                 'mkdir -p '.$m.$fa_defs::FA_Secure.'Sets';
+                                 'mkdir '.$m.$fa_defs::FA_Secure.'Sets';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);
                               die $stderr if $stderr;
@@ -8865,21 +8897,37 @@ sub fa_login
    if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
       unless (-d '/var/db/Berkeley/FullAuto') {
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
-                 $m.'/var/db/Berkeley/FullAuto';
-         my $stdout='';my $stderr='';
-         ($stdout,$stderr)=&setuid_cmd($cmd,5);
-         &handle_error($stderr) if $stderr;
+         unless (-d '/var/db') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+                    $m.'/var/db';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
+         unless (-d '/var/db/Berkeley') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+                    $m.'/var/db/Berkeley';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
+         unless (-d '/var/db/Berkeley/FullAuto') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+                    $m.'/var/db/Berkeley/FullAuto';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
       }
       if (!(-d '/var/db/Berkeley/FullAuto' && -w _)) {
-         &handle_error("Cannot Write to Encrypted Passwd Directory :".
+         &handle_error("Cannot Write to Berkeley FullAuto Directory :".
             "\n\n             ".
             '/var/db/Berkeley/FullAuto');
       }
       $Hosts{"__Master_${$}__"}{'FA_Secure'}=
          '/var/db/Berkeley/FullAuto/';
    } elsif (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
-      handle_error("Cannot Write to Encrypted Passwd Directory :".
+      handle_error("Cannot Write to Berkeley FullAuto Directory :".
          "\n\n             ".
          $Hosts{"__Master_${$}__"}{'FA_Secure'});
    } else {
@@ -9019,7 +9067,7 @@ sub fa_login
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
          $mkdflag=1;
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -9317,12 +9365,28 @@ sub fa_login
                   my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
                   unless (-d "$fadir/Custom/$username/$type") {
                      my $m=($^O eq 'cygwin')?'-m 770 ':'';
-                     my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                             $m.'mkdir -p '."$fadir/Custom/$username/$type";
-                     my $stdout='';my $stderr='';
-                     ($stdout,$stderr)=&setuid_cmd($cmd,5);
-                     die $stderr if $stderr;
-                     $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
+                     unless (-d "$fadir/Custom") {
+                        my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                                $m.'mkdir '."$fadir/Custom";
+                        my $stdout='';my $stderr='';
+                        ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                        die $stderr if $stderr;
+                     }
+                     unless (-d "$fadir/Custom/$username") {
+                        my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                                $m.'mkdir '."$fadir/Custom/$username";
+                        my $stdout='';my $stderr='';
+                        ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                        die $stderr if $stderr;
+                     }
+                     unless (-d "$fadir/Custom/$username/$type") {
+                        my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
+                                $m.'mkdir '."$fadir/Custom/$username/$type";
+                        my $stdout='';my $stderr='';
+                        ($stdout,$stderr)=&setuid_cmd($cmd,5);
+                        die $stderr if $stderr;
+                     }
+                     my $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
                           "$fadir/Custom/fa_".lc($type).'.pm '.
                           "$fadir/Custom/$username/$type";
                      ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -9521,7 +9585,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
             $mkdflag=1;
             my $m=($^O eq 'cygwin')?'-m 770 ':'';
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -10454,7 +10518,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
             $mkdflag=1;
             my $m=($^O eq 'cygwin')?'-m 770 ':'';
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -11163,7 +11227,7 @@ sub passwd_db_update
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -11288,7 +11352,7 @@ sub su_scrub
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -11469,7 +11533,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
             $mkdflag=1;
             my $m=($^O eq 'cygwin')?'-m 770 ':'';
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -12386,7 +12450,7 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
       my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
          my $m=($^O eq 'cygwin')?'-m 770 ':'';
-         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                  $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -12706,7 +12770,7 @@ print "GET_VLABEL_CALLER=",caller,"\n";<STDIN>;
                         || $ENV{OS} eq 'Windows_NT') {
 print "DO MORE WORK ON MSWIN!\n";<STDIN>;
                      $Net::FullAuto::FA_Core::localhost->{_cmd_handle}->SUPER::cmd(
-                        "mkdir -p -m 777 $label1");
+                        "mkdir -m 777 $label1");
                      $version_label=$label1;last;
                   }
                }
@@ -13664,7 +13728,7 @@ print "FTR_RETURN3\n";
                            $mkdflag=1;
                            my $m=($^O eq 'cygwin')?'-m 770 ':'';
                            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                              'mkdir -p '.$m.$Hosts{$mr}{'FA_Secure'}.'Passwds';
+                              'mkdir '.$m.$Hosts{$mr}{'FA_Secure'}.'Passwds';
                            my $stdout='';my $stderr='';
                            ($stdout,$stderr)=&setuid_cmd($cmd,5);
                            &handle_error($stderr) if $stderr;
@@ -16629,7 +16693,7 @@ sub tmp
          $self->{_work_dirs}->{_tmp},$tdir ];
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
       ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
-         "${m}mkdir -p ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
+         "${m}mkdir ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
       $return_path=$self->{_work_dirs}->{_tmp_mswin}
                   .$tdir.'\\'.$path;
@@ -16639,7 +16703,7 @@ sub tmp
          $self->{_work_dirs}->{_tmp},$tdir ];
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
       ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
-         "${m}mkdir -p ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
+         "${m}mkdir ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
       $return_path=$self->{_work_dirs}->{_tmp}.$tdir.'/'.$path;
    } return $return_path;
@@ -17848,7 +17912,7 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                         } else {
                            my $m=($^O eq 'cygwin')?'-m 770 ':'';
                            ($output,$stderr)=$destFH->cmd(
-                              "cmd /c mkdir -p $m\"$tdir\"",'__live__');
+                              "cmd /c mkdir $m\"$tdir\"",'__live__');
                               #'__display__','__notrap__');
                            &Net::FullAuto::FA_Core::handle_error($stderr)
                               if $stderr;
@@ -18502,8 +18566,10 @@ ${$baseFH->{_unaltered_basehash}}{$key}[1]{$file}||='';
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                            if $stderr;
                      } else {
-                        my $m=($^O eq 'cygwin')?'-m 770 ':'';
-                        ($output,$stderr)=$destFH->cmd("mkdir -p $m$key");
+                        ($output,$stderr)=$destFH->cmd("mkdir -p $key");
+                        &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
+                           if $stderr;
+                        ($output,$stderr)=$destFH->cmd("chmod -Rv 770 $key");
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                            if $stderr;
                      }
@@ -19356,7 +19422,7 @@ sub move_tarfile
             }
             my $m=($^O eq 'cygwin')?'-m 770 ':''; 
             ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-               "!mkdir -p ${m}transfer$Net::FullAuto::FA_Core::tran[3]",$cache);
+               "!mkdir ${m}transfer$Net::FullAuto::FA_Core::tran[3]",$cache);
             &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
             $Net::FullAuto::FA_Core::tran[4]=1;
             ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
@@ -23047,6 +23113,10 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  $up.="\\AppData\\Roaming\\Mozilla\\".
                                       "Firefox\\Profiles\\";
                               }
+                              ($up,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                                 "cygpath \"$up\"");
+                              &Net::FullAuto::FA_Core::handle_error($stderr)
+                                 if $stderr;
                               my @dirs=();
                               if (-e $up) {
                                  opendir(DIR,$up);
@@ -23055,7 +23125,10 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                               }
                               if (-1<$#dirs) {
                                  HM: foreach my $profile (@dirs) {
-                                    opendir(DIR,$up."\\$profile\\extensions");
+                                    next if $profile eq '.';
+                                    next if $profile eq '..';
+print "WHAT IS THIS=$up/$profile/extensions";sleep 10;
+                                    opendir(DIR,$up."/$profile/extensions");
                                     my @files = readdir(DIR);
                                     closedir(DIR);
                                     foreach my $file (@files) {
@@ -23085,7 +23158,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                        $winff." ${cdr}mozrepl-1.1-fx.xpi";  
                                  my $mystdout='';
                                  IO::CaptureOutput::capture sub {
-                                    system($mc);
+                                    #system($mc);
                                  }, \$mystdout;
                               }
                               my $fcmd="\"${firefox}\" -new-instance -repl ".
@@ -27264,7 +27337,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ADDCALLER=".(caller)."\n"
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -27353,7 +27426,7 @@ print $Net::FullAuto::FA_Core::MRLOG "STARTING TIE\n"
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -27426,7 +27499,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DONE WITH TIE\n"
          unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
             $mkdflag=1;
             my $m=($^O eq 'cygwin')?'-m 770 ':'';
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
                     $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -27535,7 +27608,7 @@ sub mod
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
@@ -27584,7 +27657,7 @@ print "CLOSE_Caller=",(join ' ',@caller),"\n" if !$Net::FullAuto::FA_Core::cron 
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom') {
       $mkdflag=1;
       my $m=($^O eq 'cygwin')?'-m 770 ':'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir -p '.
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
               $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Custom';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
