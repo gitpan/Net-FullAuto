@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999955';
+$main::VERSION='0.999956';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -784,7 +784,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.23');
+      '','2.24');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
 };
@@ -3730,7 +3730,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.23;
+#requires        'Term::Menus'               => 2.24;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
@@ -3854,6 +3854,7 @@ if ($@) {
 }
 
 my $permission = 'Setuid';
+my $cygwin_berkeley_db_mode=0;
 #print "SELECTION = $selection<==\n";sleep 3;
 if (-1<index $selection,'Setuid') {
    $permission = 'Setuid';
@@ -3861,8 +3862,10 @@ if (-1<index $selection,'Setuid') {
    $permission = 'Setgid';
 } elsif (-1<index $selection,'Owner-Group') {
    $permission = 'Owner-Group';
+   $cygwin_berkeley_db_mode=770 if $^O eq 'cygwin';
 } elsif (-1<index $selection,'Full-Access') {
    $permission = 'Full-Access';
+   $cygwin_berkeley_db_mode=777  if $^O eq 'cygwin';
 } elsif (-1<index $selection,'quit') {
    exit;
 } print "\n"; 
@@ -4261,6 +4264,7 @@ sub MY::pm_to_blib {
    
    $inherited =~ s/\s+\\(\s*[$][(]NOE)/$1/s;
    $inherited =~ s/([\$][(]NOECHO[)] [\$])/-$1/s;
+   my $newline_flag=0;
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
          'our \\1'."editor = \"$editor\";/g\' ".
@@ -4268,6 +4272,18 @@ sub MY::pm_to_blib {
          "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
          if defined $editor and $editor;
    } else {
+      $newline_flag=1;
+      $inherited .= "\n";
+   }
+
+   unless (-e $Config{installsitelib}."/Net/FullAuto/FA_Code.pm") {
+      $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)".
+         "\$cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
+         "\$cygwin_berkeley_db_mode = \"$cygwin_berkeley_db_mode\";/g\' ".
+         "<blib/lib/Net/FullAuto/FA_Code.pm >tmp_fa_code.pm\n".
+         "\t\$(MV) tmp_fa_code.pm blib/lib/Net/FullAuto/FA_Code.pm\n\n"
+         if defined $cygwin_berkeley_db_mode and $cygwin_berkeley_db_mode;
+   } elsif (!$newline_flag) {
       $inherited .= "\n";
    }
 

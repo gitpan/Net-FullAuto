@@ -19,6 +19,14 @@
 ################################################################
 
 
+2012-12-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999956 released.
+
+        * Updated Makefile.PL to modify mode setting in
+          FA_Core.pm.
+
+
 2012-12-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999955 released.

@@ -72,9 +72,9 @@ package Net::FullAuto::FA_Core;
 use strict;
 use warnings;
 
-#################################
-our $cygwin_berkeley_db_mode=777;
-#################################
+###################################
+our $cygwin_berkeley_db_mode = 777;
+###################################
 
 our $progname=substr($0,(rindex $0,'/')+1,-3);
 our @tran=('','',0,$$."_".$^T,'',0);
