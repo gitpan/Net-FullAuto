@@ -3,7 +3,7 @@ package Net::FullAuto::FA_Core;
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2012  Brian M. Kelly
+#    Copyright (C) 2012, 2013  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -6007,16 +6007,21 @@ sub getpasswd
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
+      } elsif ($^O eq 'cygwin' &&
+            !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+            "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+         $mkdflag=1;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-      if ($^O eq 'cygwin') {
+      if ($mkdflag && $^O eq 'cygwin') {
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
@@ -6346,6 +6351,10 @@ sub getpasswd
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
+      } elsif ($^O eq 'cygwin' &&
+            !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+            "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+         $mkdflag=1;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -6376,10 +6385,11 @@ sub getpasswd
          "cannot open Btree for DB: $BerkeleyDB::Error\n",
          '__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
-      if ($^O eq 'cygwin') {
+      if ($mkdflag && $^O eq 'cygwin') {
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
@@ -9128,6 +9138,10 @@ sub fa_login
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr;
+      } elsif ($^O eq 'cygwin' &&
+            !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+            "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+         $mkdflag=1;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -9159,10 +9173,11 @@ sub fa_login
          '__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
       # print the contents of the file
-      if ($^O eq 'cygwin') {
+      if ($mkdflag && $^O eq 'cygwin') {
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
@@ -9651,6 +9666,10 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
             &handle_error($stderr) if $stderr;
+         } elsif ($^O eq 'cygwin' &&
+               !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+            $mkdflag=1;
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -9683,10 +9702,11 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             "cannot open Btree for DB: $BerkeleyDB::Error\n",
             '__cleanup__',$track)
             unless $BerkeleyDB::Error=~/Successful/;
-         if ($^O eq 'cygwin') {
+         if ($mkdflag && $^O eq 'cygwin') {
             my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                    "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
             &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
@@ -10586,6 +10606,10 @@ print $Net::FullAuto::FA_Core::MRLOG
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
             &handle_error($stderr) if $stderr;
+         } elsif ($^O eq 'cygwin' &&
+               !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+            $mkdflag=1;
          }
          $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -10624,10 +10648,11 @@ print $Net::FullAuto::FA_Core::MRLOG
    "PAST THE TIE TO PASSWD DB\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         if ($^O eq 'cygwin') {
+         if ($mkdflag && $^O eq 'cygwin') {
             my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                    "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
             &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
@@ -11297,6 +11322,10 @@ sub passwd_db_update
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr;
+   } elsif ($^O eq 'cygwin' &&
+         !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+         "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+      $mkdflag=1;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -11330,10 +11359,11 @@ print $Net::FullAuto::FA_Core::MRLOG
          "FA_SUCURE8=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n"
          if $Net::FullAuto::FA_Core::log &&
          -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   if ($^O eq 'cygwin') {
+   if ($mkdflag && $^O eq 'cygwin') {
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+              "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
@@ -11424,6 +11454,10 @@ sub su_scrub
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr;
+   } elsif ($^O eq 'cygwin' &&
+         !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+         "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+      $mkdflag=1;
    }
    my $dbenv = BerkeleyDB::Env->new(
       -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -11454,10 +11488,11 @@ sub su_scrub
       "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
       unless $BerkeleyDB::Error=~/Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n";
-   if ($^O eq 'cygwin') {
+   if ($mkdflag && $^O eq 'cygwin') {
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+              "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
@@ -11607,6 +11642,10 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             my $stdout='';my $stderr='';
             ($stdout,$stderr)=&setuid_cmd($cmd,5);
             &handle_error($stderr) if $stderr;
+         } elsif ($^O eq 'cygwin' &&
+               !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+               "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+            $mkdflag=1;
          }
          my $dbenv = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -11639,10 +11678,11 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             '__cleanup__',$track)
             unless $BerkeleyDB::Error=~/Successful/;
 print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'FA_Secure'},"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         if ($^O eq 'cygwin') {
+         if ($mkdflag && $^O eq 'cygwin') {
             my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
             my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+                    $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                    "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
             my ($stdout,$stderr)=&setuid_cmd($cmd,5);
             &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
          }
@@ -12526,6 +12566,10 @@ print $Net::FullAuto::FA_Core::MRLOG "SCRUBBINGTHISKEY=$key<==\n"
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr;
+      } elsif ($^O eq 'cygwin' &&
+            !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+            "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
+         $mkdflag=1;
       }
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
@@ -12557,10 +12601,11 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
       &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'__cleanup__',$track)
          unless $BerkeleyDB::Error=~/Successful/;
-      if ($^O eq 'cygwin') {
+      if ($mkdflag && $^O eq 'cygwin') {
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/*';
+                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
@@ -13806,6 +13851,11 @@ print "FTR_RETURN3\n";
                            my $stdout='';my $stderr='';
                            ($stdout,$stderr)=&setuid_cmd($cmd,5);
                            &handle_error($stderr) if $stderr;
+                        } elsif ($^O eq 'cygwin' &&
+                              !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                              'Passwds/'.$Net::FullAuto::FA_Core::progname.
+                              "_${kind}_passwds.db")) {
+                           $mkdflag=1;
                         }
                         my $dbenv = BerkeleyDB::Env->new(
                               -Home  => 
@@ -13843,9 +13893,11 @@ print "FTR_RETURN3\n";
                         if ($^O eq 'cygwin') {
                            my $mode=
                               $Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
-                           my $cmd=$Net::FullAuto::FA_Core::gbp->(
-                              'chmod')."chmod -Rv $mode ".
-                              $Hosts{$mr}{'FA_Secure'}.'Passwds/*';
+                           my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod').
+                              "chmod -Rv $mode ".
+                              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                              $Net::FullAuto::FA_Core::progname.
+                              "_${kind}_passwds.db";
                            my ($stdout,$stderr)=&setuid_cmd($cmd,5);
                            &handle_error($stderr) if $stderr &&
                               -1==index $stderr,'mode of';

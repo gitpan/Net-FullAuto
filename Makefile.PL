@@ -1,7 +1,7 @@
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2011, 2012  Brian M. Kelly
+#    Copyright (C) 2011, 2012, 2013  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999956';
+$main::VERSION='0.999957';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -49,7 +49,7 @@ my $fa_banner=<<END;
 
 
 
-   Copyright (C) 2011, 2012  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
+   Copyright (C) 2013  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
 
 
 END
@@ -4146,6 +4146,15 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
       $link;
+   if (-e $Config{installsitelib}."/Net/FullAuto/FA_Core.pm") {
+      $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
+         "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
+         "cygwin_berkeley_db_mode = 770;/g\' ".
+         "$Config{installsitelib}/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+         "\t\$(MV) ./tmp_fa_core.pm $Config{installsitelib}".
+         "/Net/FullAuto/FA_Core.pm\n\n"
+         if $^O eq 'cygwin';
+   }
    $inherited .= "\nfull_access_permissions ::\n".
       "\t\$(NOECHO) \$(ECHO) \"Applying Full-Access Permissions\"\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
@@ -4155,8 +4164,16 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
-      $link; 
-
+      $link;
+   if (-e $Config{installsitelib}."/Net/FullAuto/FA_Core.pm") {
+      $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
+         "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
+         "cygwin_berkeley_db_mode = 777;/g\' ".
+         "$Config{installsitelib}/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+         "\t\$(MV) ./tmp_fa_core.pm $Config{installsitelib}".
+         "/Net/FullAuto/FA_Core.pm\n\n"
+         if $^O eq 'cygwin';
+   }
    $inherited;
 
 }
@@ -4276,13 +4293,14 @@ sub MY::pm_to_blib {
       $inherited .= "\n";
    }
 
-   unless (-e $Config{installsitelib}."/Net/FullAuto/FA_Code.pm") {
-      $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)".
-         "\$cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
-         "\$cygwin_berkeley_db_mode = \"$cygwin_berkeley_db_mode\";/g\' ".
-         "<blib/lib/Net/FullAuto/FA_Code.pm >tmp_fa_code.pm\n".
-         "\t\$(MV) tmp_fa_code.pm blib/lib/Net/FullAuto/FA_Code.pm\n\n"
-         if defined $cygwin_berkeley_db_mode and $cygwin_berkeley_db_mode;
+   unless (-e $Config{installsitelib}."/Net/FullAuto/FA_Core.pm") {
+      $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
+         "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
+         "cygwin_berkeley_db_mode = $cygwin_berkeley_db_mode;/g\' ".
+         "$Config{installsitelib}/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+         "\t\$(MV) ./tmp_fa_core.pm $Config{installsitelib}".
+         "/Net/FullAuto/FA_Core.pm\n\n"
+         if $^O eq 'cygwin';
    } elsif (!$newline_flag) {
       $inherited .= "\n";
    }
