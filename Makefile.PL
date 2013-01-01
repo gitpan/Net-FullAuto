@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999957';
+$main::VERSION='0.999958';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1212,10 +1212,10 @@ BEGIN {
 my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
-my $install_firefox_without_asking=0;
-my $mozrepl_file='mozrepl-1.1-fx.xpi';
-my $install_firefox=0;
-$install_firefox=$ENV{FA_MOZREPL} if exists $ENV{FA_MOZREPL};
+$main::mozrepl_file='mozrepl-1.1-fx.xpi';
+$main::install_firefox_without_asking=0;
+$main::install_firefox=0;
+$main::install_firefox=$ENV{FA_MOZREPL} if exists $ENV{FA_MOZREPL};
 
 if (exists $Config{prefix} &&
       $Config{prefix}) {
@@ -1226,7 +1226,7 @@ foreach my $arg (@ARGV) {
    if ($arg=~/INSTALL_*CYGWIN\s*=\*1/i) {
       $install_cygwin_without_asking=1;
    } elsif ($arg=~/INSTALL_*FIREFOX\s*=\*1/i) {
-      $install_firefox_without_asking=1;
+      $main::install_firefox_without_asking=1;
    } elsif ($arg=~/-*-PREFIX=/i) {
       $PREFIX=$arg;
       $PREFIX=~s/^-*-[Pp][Rr][Ee][Ff][Ii][Xx]=//;
@@ -1456,7 +1456,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          }
       }
 
-      $install_firefox=&find_firefox_mozrepl();
+      $main::install_firefox=&find_firefox_mozrepl();
 
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
@@ -2173,7 +2173,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
-                      'export FA_MOZREPL=\\"'.$install_firefox.'\\";'.
+                      'export FA_MOZREPL=\\"'.$main::install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
@@ -2361,7 +2361,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
-                      'export FA_MOZREPL=\\"'.$install_firefox.'\\";'.
+                      'export FA_MOZREPL=\\"'.$main::install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
@@ -2416,7 +2416,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
          }
          close(CD);
-         &install_firefox($install_firefox) if $install_firefox;
+         &install_firefox() if -1<index $main::install_firefox,'Install';
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
                "\n\n   Please report any bugs and send any",
@@ -2601,8 +2601,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
 
-$install_firefox=&find_firefox_mozrepl() if $^O eq 'cygwin'
-   && !$install_firefox;
+&find_firefox_mozrepl() if $^O eq 'cygwin' &&
+   -1==$main::install_firefox,'Install';
 
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
@@ -3240,7 +3240,7 @@ sub find_firefox_mozrepl {
       $fftest='';
    }
    if (-1<index $firefox,'unable to find') {
-      unless ($install_firefox_without_asking) {
+      unless ($main::install_firefox_without_asking) {
          # Ask if we should install
          my $one="YES - Install Mozilla Firefox & MozRepl\n\n";
          my %_askfirefox=(
@@ -3261,6 +3261,7 @@ sub find_firefox_mozrepl {
          chomp($selection);
          exit if $selection eq ']quit[';
       } else { $selection='Install Mozilla Firefox' }
+      $main::install_firefox=$selection;
    } else { # Look for MozRepl
       my $up=$ENV{'USERPROFILE'};
       if (-1<index $up,'Documents') {
@@ -3286,7 +3287,7 @@ sub find_firefox_mozrepl {
             }
          }
       }
-      return 'Install MozRepl';
+      $main::install_firefox='Install MozRepl';
    }
 }
 
@@ -3363,7 +3364,7 @@ sub install_firefox {
       }
    }
    my $url='https://addons.mozilla.org/firefox/downloads/file/'.
-        '138898/$mozrepl_file?src=dp-btn-primary';
+        '138898/$main::mozrepl_file?src=dp-btn-primary';
    my $req = HTTP::Request->new(GET => $url);
    $req->header('Accept' => 'text/html');
    my $res = $Ua->request($req);
@@ -3371,7 +3372,7 @@ sub install_firefox {
    if ($res->is_success) {
       print " + request successful.\n"
          if $CPAN::DEBUG;
-      open(CP,">$main::root_dir/$mozrepl_file") || die $!;
+      open(CP,">$main::root_dir/$main::mozrepl_file") || die $!;
       binmode(CP);
       print CP $res->content;
       close CP;
@@ -3977,9 +3978,9 @@ sub MY::makefile {
       unlink "lib/Net/FullAuto/Custom/fa_code.pm";
       unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
    }
-   if ($install_firefox) {
-      $inherited .= "lib/Net/FullAuto/$mozrepl_file:".
-                    "\n\t\$(CP) $main::root_dir/$mozrepl_file \$@\n\n";
+   if ($main::install_firefox) {
+      $inherited .= "lib/Net/FullAuto/$main::mozrepl_file:".
+                    "\n\t\$(CP) $main::root_dir/$main::mozrepl_file \$@\n\n";
    }
 
    $inherited; 

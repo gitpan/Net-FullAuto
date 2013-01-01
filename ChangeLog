@@ -21,6 +21,16 @@
 
 2013-01-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999958 released.
+
+        * Happy New Year!
+
+        * Updated Makefile.PL to correct Firefox install code
+          in Makefile.PL.
+
+
+2013-01-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999957 released.
 
         * Happy New Year!
