@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999959';
+$main::VERSION='0.999960';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1455,8 +1455,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $editor='/bin/mc.exe';
          }
       }
-
-      $main::install_firefox=&find_firefox_mozrepl();
+print "WHAT IS MAIN_FIREFOX111=$main::install_firefox\n";sleep 10;
+      &find_firefox_mozrepl() if 
+         (-1==$main::install_firefox,'Install') &&
+         (-1==$main::install_firefox,'NOT');
 
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
@@ -2601,8 +2603,10 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
 
+print "WHAT IS MAIN_FIREFOX222=$main::install_firefox\n";sleep 10;
 &find_firefox_mozrepl() if $^O eq 'cygwin' &&
-   -1==$main::install_firefox,'Install';
+   ((-1==$main::install_firefox,'Install') &&
+   (-1==$main::install_firefox,'NOT'));
 
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
@@ -3259,12 +3263,12 @@ sub find_firefox_mozrepl {
          );
          $selection=Term::Menus::Menu(\%_askfirefox);
          chomp($selection);
-         $selection='Install Mozilla Firefox'
-            if -1<index $selection,'Install Mozilla';
-         $selection='DO NOT INSTALL'
-            if -1<index $selection,'NO - DO';
+         $selection='Install_Mozilla_Firefox'
+            if -1<index $selection,'Install Mozilla Firefox';
+         $selection='DO_NOT_INSTALL'
+            if -1<index $selection,'*NOT* INSTALL';
          exit if $selection eq ']quit[';
-      } else { $selection='Install Mozilla Firefox' }
+      } else { $selection='Install_Mozilla_Firefox' }
       $main::install_firefox=$selection;
    } else { # Look for MozRepl
       my $up=$ENV{'USERPROFILE'};
@@ -3291,7 +3295,7 @@ sub find_firefox_mozrepl {
             }
          }
       }
-      $main::install_firefox='Install MozRepl';
+      $main::install_firefox='Install_MozRepl';
    }
 }
 
@@ -3983,7 +3987,7 @@ sub MY::makefile {
       unlink "lib/Net/FullAuto/Custom/fa_code.pm";
       unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
    }
-   if ($main::install_firefox) {
+   if (-1<index $main::install_firefox,'Install') {
       $inherited .= "lib/Net/FullAuto/$main::mozrepl_file:".
                     "\n\t\$(CP) $main::root_dir/$main::mozrepl_file \$@\n\n";
    }
