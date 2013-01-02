@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999958';
+$main::VERSION='0.999959';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3259,6 +3259,10 @@ sub find_firefox_mozrepl {
          );
          $selection=Term::Menus::Menu(\%_askfirefox);
          chomp($selection);
+         $selection='Install Mozilla Firefox'
+            if -1<index $selection,'Install Mozilla';
+         $selection='DO NOT INSTALL'
+            if -1<index $selection,'NO - DO';
          exit if $selection eq ']quit[';
       } else { $selection='Install Mozilla Firefox' }
       $main::install_firefox=$selection;
@@ -3337,6 +3341,7 @@ sub install_firefox {
          }
       }
       $href=~s/^.*href=["](.*?)["].*$/$1/;
+      $href=~s/https/http/;
       my $exe_name=substr($href,(rindex $href,'/'));
       $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
       $exe_name=~s/firefox-/Firefox Setup /;
