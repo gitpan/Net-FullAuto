@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999960';
+$main::VERSION='0.999961';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1457,8 +1457,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       }
 print "WHAT IS MAIN_FIREFOX111=$main::install_firefox\n";sleep 10;
       &find_firefox_mozrepl() if 
-         (-1==$main::install_firefox,'Install') &&
-         (-1==$main::install_firefox,'NOT');
+         (-1==index $main::install_firefox,'Install') &&
+         (-1==index $main::install_firefox,'NOT');
 
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
@@ -2605,8 +2605,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
 
 print "WHAT IS MAIN_FIREFOX222=$main::install_firefox\n";sleep 10;
 &find_firefox_mozrepl() if $^O eq 'cygwin' &&
-   ((-1==$main::install_firefox,'Install') &&
-   (-1==$main::install_firefox,'NOT'));
+   ((-1==index $main::install_firefox,'Install') &&
+   (-1==index $main::install_firefox,'NOT'));
 
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
