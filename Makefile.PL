@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999961';
+$main::VERSION='0.999962';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1455,7 +1455,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $editor='/bin/mc.exe';
          }
       }
-print "WHAT IS MAIN_FIREFOX111=$main::install_firefox\n";sleep 10;
       &find_firefox_mozrepl() if 
          (-1==index $main::install_firefox,'Install') &&
          (-1==index $main::install_firefox,'NOT');
@@ -2603,7 +2602,6 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
 
-print "WHAT IS MAIN_FIREFOX222=$main::install_firefox\n";sleep 10;
 &find_firefox_mozrepl() if $^O eq 'cygwin' &&
    ((-1==index $main::install_firefox,'Install') &&
    (-1==index $main::install_firefox,'NOT'));
@@ -4307,8 +4305,8 @@ sub MY::pm_to_blib {
       $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
          "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
          "cygwin_berkeley_db_mode = $cygwin_berkeley_db_mode;/g\' ".
-         "$Config{installsitelib}/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
-         "\t\$(MV) ./tmp_fa_core.pm $Config{installsitelib}".
+         "blib/lib/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+         "\t\$(MV) ./tmp_fa_core.pm blib/lib".
          "/Net/FullAuto/FA_Core.pm\n\n"
          if $^O eq 'cygwin';
    } elsif (!$newline_flag) {
