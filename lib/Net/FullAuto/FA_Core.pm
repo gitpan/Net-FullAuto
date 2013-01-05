@@ -3,7 +3,7 @@ package Net::FullAuto::FA_Core;
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2012, 2013  Brian M. Kelly
+#    Copyright (C) 2012  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -7245,21 +7245,21 @@ my $get_modules=sub {
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       unless (-d "$fadir/Custom") {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                 $m.'mkdir '."$fadir/Custom";
+                 'mkdir '.$m."$fadir/Custom";
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          die $stderr if $stderr;
       }
       unless (-d "$fadir/Custom/$username") {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                 $m.'mkdir '."$fadir/Custom/$username";
+                 'mkdir '.$m."$fadir/Custom/$username";
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          die $stderr if $stderr;
       }
       unless (-d "$fadir/Custom/$username/$type") {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                 $m.'mkdir '."$fadir/Custom/$username/$type";
+                 'mkdir '.$m."$fadir/Custom/$username/$type";
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          die $stderr if $stderr;
@@ -8228,21 +8228,21 @@ my $define_modules_menu_fa_code_sub=sub {
                my $m=($^O eq 'cygwin')?"-m $mode ":'';
                unless (-d "$fadir/Custom") {
                   my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                          $m.'mkdir '."$fadir/Custom";
+                          'mkdir '.$m."$fadir/Custom";
                   my $stdout='';my $stderr='';
                   ($stdout,$stderr)=&setuid_cmd($cmd,5);
                   die $stderr if $stderr;
                }
                unless (-d "$fadir/Custom/$username") {
                   my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                          $m.'mkdir '."$fadir/Custom/$username";
+                          'mkdir '.$m."$fadir/Custom/$username";
                   my $stdout='';my $stderr='';
                   ($stdout,$stderr)=&setuid_cmd($cmd,5);
                   die $stderr if $stderr;
                }
                unless (-d "$fadir/Custom/$username/Code") {
                   my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                          $m.'mkdir '."$fadir/Custom/$username/Code";
+                          'mkdir '.$m."$fadir/Custom/$username/Code";
                   my $stdout='';my $stderr='';
                   ($stdout,$stderr)=&setuid_cmd($cmd,5);
                   die $stderr if $stderr;
@@ -9440,21 +9440,21 @@ sub fa_login
                      my $m=($^O eq 'cygwin')?"-m $mode ":'';
                      unless (-d "$fadir/Custom") {
                         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                $m.'mkdir '."$fadir/Custom";
+                                'mkdir '.$m."$fadir/Custom";
                         my $stdout='';my $stderr='';
                         ($stdout,$stderr)=&setuid_cmd($cmd,5);
                         die $stderr if $stderr;
                      }
                      unless (-d "$fadir/Custom/$username") {
                         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                $m.'mkdir '."$fadir/Custom/$username";
+                                'mkdir '.$m."$fadir/Custom/$username";
                         my $stdout='';my $stderr='';
                         ($stdout,$stderr)=&setuid_cmd($cmd,5);
                         die $stderr if $stderr;
                      }
                      unless (-d "$fadir/Custom/$username/$type") {
                         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                $m.'mkdir '."$fadir/Custom/$username/$type";
+                                'mkdir '.$m."$fadir/Custom/$username/$type";
                         my $stdout='';my $stderr='';
                         ($stdout,$stderr)=&setuid_cmd($cmd,5);
                         die $stderr if $stderr;
@@ -16822,7 +16822,7 @@ sub tmp
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
-         "${m}mkdir ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
+         'mkdir '.$m.$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
       $return_path=$self->{_work_dirs}->{_tmp_mswin}
                   .$tdir.'\\'.$path;
@@ -16833,7 +16833,7 @@ sub tmp
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       ($output,$stderr)=$self->cmd($Net::FullAuto::FA_Core::gbp->('mkdir').
-         "${m}mkdir ".$self->{_work_dirs}->{_tmp}.'/'.$tdir);
+         'mkdir '.$m.$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
       $return_path=$self->{_work_dirs}->{_tmp}.$tdir.'/'.$path;
    } return $return_path;

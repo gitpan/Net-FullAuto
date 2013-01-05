@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999962';
+$main::VERSION='0.999963';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3842,23 +3842,71 @@ print FH '/* program: fullauto'."\n".
 
 close FH;
 
-my $timeout=120;my $selection='';my @selection=();
-eval {
-   $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-   alarm $timeout;
-   my @list=('Install with Setuid Permissions (Recommended Default)',
-             'Install with Setgid Permissions',
-             'Install with Owner Group Permissions',
-             'Install with Full Access Permissions');
-   my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE 'Setuid' IN 2 MINUTES ***\n".
-           "\n   Choose a Permission Setting :\n\n";
-   @selection=&pick(\@list,$banner);
-   alarm 0;
-};
-if ($@) {
-   # timed out
-   print "\n";
-   $selection = 'Setuid';
+if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+   my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
+              "'Full Access' IN 2 MINUTES ***\n".
+              "\n   Owner Group is more secure - but choose".
+              "\n   this only if security is important, and".
+              "\n   you know how to work with OS permissions\n\n".
+              "\n   Choose a Permission Setting :\n\n";
+   my $one='Install with Full Access Permissions (Default)';
+   my $two='Install with Owner Group Permissions';
+   my $menu1 = [
+               $banner,
+               [ $one, sub{ return 'Full Access' } ],
+               [ $two, sub{ return 'Owner Group' } ],
+               #[ "Quit", sub {exit;} ],
+               ];
+   $selection=&menu($menu1);
+} elsif ($^O eq 'cygwin') {
+   my $timeout=120;my $selection='';my @selection=();
+   eval {
+      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+      alarm $timeout;
+      my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
+                 "'Full Access' IN 2 MINUTES ***\n".
+                 "\n   Owner Group is more secure - but choose".
+                 "\n   this only if security is important, and".
+                 "\n   you know how to work with OS permissions\n\n".
+                 "\n   Choose a Permission Setting :\n\n";
+      my $one='Install with Full Access Permissions (Default)';
+      my $two='Install with Owner Group Permissions';
+      my $menu1 = [
+                  $banner,
+                  [ $one, sub{ return 'Full Access' } ],
+                  [ $two, sub{ return 'Owner Group' } ],
+                  #[ "Quit", sub {exit;} ],
+                  ];
+      $selection=&menu($menu1);
+      alarm 0;
+   };
+   exit if $selection eq ']quit[';
+   if ($@) {
+      # timed out
+      print "\n";
+      $selection = 'Owner Group';
+   }
+} else {
+   my $timeout=120;my $selection='';my @selection=();
+   eval {
+      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+      alarm $timeout;
+      my @list=('Install with Setuid Permissions (Recommended Default)',
+                'Install with Setgid Permissions',
+                'Install with Owner Group Permissions',
+                'Install with Full Access Permissions');
+      my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
+                 "'Setuid' IN 2 MINUTES ***\n".
+                 "\n   Choose a Permission Setting :\n\n";
+      $selection=&Term::Menus::pick(\@list,$banner);
+      alarm 0;
+   };
+   exit if $selection eq ']quit[';
+   if ($@) {
+      # timed out
+      print "\n";
+      $selection = 'Setuid';
+   }
 }
 
 my $permission = 'Setuid';
@@ -3868,10 +3916,10 @@ if (-1<index $selection,'Setuid') {
    $permission = 'Setuid';
 } elsif (-1<index $selection,'Setgid') {
    $permission = 'Setgid';
-} elsif (-1<index $selection,'Owner-Group') {
+} elsif (-1<index $selection,'Owner Group') {
    $permission = 'Owner-Group';
    $cygwin_berkeley_db_mode=770 if $^O eq 'cygwin';
-} elsif (-1<index $selection,'Full-Access') {
+} elsif (-1<index $selection,'Full Access') {
    $permission = 'Full-Access';
    $cygwin_berkeley_db_mode=777  if $^O eq 'cygwin';
 } elsif (-1<index $selection,'quit') {
