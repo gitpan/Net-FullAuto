@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999963';
+$main::VERSION='0.999964';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1212,6 +1212,9 @@ BEGIN {
 my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
+$main::cygwin_berkeley_db_mode=777;
+$main::cygwin_berkeley_db_mode=$ENV{FA_BERKELEY}
+   if exists $ENV{FA_BERKELEY};
 $main::mozrepl_file='mozrepl-1.1-fx.xpi';
 $main::install_firefox_without_asking=0;
 $main::install_firefox=0;
@@ -1454,10 +1457,35 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $selection=$1;
             $editor='/bin/mc.exe';
          }
+
+         my $p_one='Install with Full Access Permissions (Default)';
+         my $p_two='Install with Owner Group Permissions';
+         my $p_banner="\n\n   FullAuto Security:\n".
+                      "\n   Owner Group is more secure - but choose".
+                      "\n   this only if security is important, and".
+                      "\n   you know how to work with OS permissions\n\n".
+                      "\n   Choose a Permission Setting :\n\n";
+         my %Menu_select_permissions=(
+
+            Label  => 'Menu_select_permissions',
+            Item_1 => {
+                         Text => $p_one,
+                         Default => "*"
+                      },
+            Item_1 => { Text => $p_two },
+            Banner => $p_banner,
+
+         );
+         $selection=Term::Menus::Menu(\%Menu_select_permissions);
+         chomp($selection);
+         exit if $selection eq ']quit[';
+         $main::cygwin_berkeley_db_mode=$selection;
+
+         &find_firefox_mozrepl() if 
+            (-1==index $main::install_firefox,'Install') &&
+            (-1==index $main::install_firefox,'NOT');
+
       }
-      &find_firefox_mozrepl() if 
-         (-1==index $main::install_firefox,'Install') &&
-         (-1==index $main::install_firefox,'NOT');
 
       my $url='http://www.cygwin.com/setup.exe';
       if ($CPAN::META->has_usable('LWP')) {
@@ -2174,6 +2202,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
+                      'export FA_BERKELEY=\\"'.
+                         $main::cygwin_berkeley_db_mode.'\\";'.
                       'export FA_MOZREPL=\\"'.$main::install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
@@ -2362,6 +2392,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       "cmd /c $cygwin_loc\\bin\\bash -lc ".
                       '"export PERL_MM_USE_DEFAULT=1;'.
                       'export FA_EDITOR=\\"'.$editor.'\\";'.
+                      'export FA_BERKELEY=\\"'.
+                         $main::cygwin_berkeley_db_mode.'\\";'.
                       'export FA_MOZREPL=\\"'.$main::install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
                       #'/usr/bin/cpan -i Net::FullAuto"');
@@ -3052,7 +3084,8 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                if ($PREFIX) {
                   $args=' --prefix="'.$PREFIX.'"';
                }
-               open(FH,"cd ${filename}_$uniq/build_unix;../dist/configure$args|")
+               open(FH,
+                  "cd ${filename}_$uniq/build_unix;../dist/configure$args|")
                   || warn $!;
                while (my $line=<FH>) {
                   print $line;
@@ -3117,7 +3150,8 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
          } else {
             $CPAN::Frontend->mywarn("  LWP not available\n");
          }
-         unless (exists $ENV{'BERKELEYDB_INCLUDE'} && $ENV{'BERKELEYDB_INCLUDE'}) {
+         unless (exists $ENV{'BERKELEYDB_INCLUDE'} &&
+               $ENV{'BERKELEYDB_INCLUDE'}) {
             my $BerkDownload='http://www.oracle.com/technetwork/products/'.
                              'berkeleydb/downloads/index.html';
             my $PackManagers='http://en.wikipedia.org/wiki/'.
@@ -3842,75 +3876,34 @@ print FH '/* program: fullauto'."\n".
 
 close FH;
 
-if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+my $timeout=120;my $selection='';my @selection=();
+eval {
+   $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+   alarm $timeout;
+   my @list=();
+   unless ($^O eq 'cygwin') {
+      @list=('Install with Setuid Permissions (Recommended Default)',
+             'Install with Setgid Permissions',
+             'Install with Owner Group Permissions',
+             'Install with Full Access Permissions');
+   } else {
+      @list=('Install with Full Access Permissions (Default)',
+             'Install with Owner Group Permissions');
+   }
    my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
-              "'Full Access' IN 2 MINUTES ***\n".
-              "\n   Owner Group is more secure - but choose".
-              "\n   this only if security is important, and".
-              "\n   you know how to work with OS permissions\n\n".
+              "'Setuid' IN 2 MINUTES ***\n".
               "\n   Choose a Permission Setting :\n\n";
-   my $one='Install with Full Access Permissions (Default)';
-   my $two='Install with Owner Group Permissions';
-   my $menu1 = [
-               $banner,
-               [ $one, sub{ return 'Full Access' } ],
-               [ $two, sub{ return 'Owner Group' } ],
-               #[ "Quit", sub {exit;} ],
-               ];
-   $selection=&menu($menu1);
-} elsif ($^O eq 'cygwin') {
-   my $timeout=120;my $selection='';my @selection=();
-   eval {
-      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-      alarm $timeout;
-      my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
-                 "'Full Access' IN 2 MINUTES ***\n".
-                 "\n   Owner Group is more secure - but choose".
-                 "\n   this only if security is important, and".
-                 "\n   you know how to work with OS permissions\n\n".
-                 "\n   Choose a Permission Setting :\n\n";
-      my $one='Install with Full Access Permissions (Default)';
-      my $two='Install with Owner Group Permissions';
-      my $menu1 = [
-                  $banner,
-                  [ $one, sub{ return 'Full Access' } ],
-                  [ $two, sub{ return 'Owner Group' } ],
-                  #[ "Quit", sub {exit;} ],
-                  ];
-      $selection=&menu($menu1);
-      alarm 0;
-   };
-   exit if $selection eq ']quit[';
-   if ($@) {
-      # timed out
-      print "\n";
-      $selection = 'Owner Group';
-   }
-} else {
-   my $timeout=120;my $selection='';my @selection=();
-   eval {
-      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-      alarm $timeout;
-      my @list=('Install with Setuid Permissions (Recommended Default)',
-                'Install with Setgid Permissions',
-                'Install with Owner Group Permissions',
-                'Install with Full Access Permissions');
-      my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
-                 "'Setuid' IN 2 MINUTES ***\n".
-                 "\n   Choose a Permission Setting :\n\n";
-      $selection=&Term::Menus::pick(\@list,$banner);
-      alarm 0;
-   };
-   exit if $selection eq ']quit[';
-   if ($@) {
-      # timed out
-      print "\n";
-      $selection = 'Setuid';
-   }
+   $selection=&Term::Menus::pick(\@list,$banner);
+   alarm 0;
+};
+exit if $selection eq ']quit[';
+if ($@) {
+   # timed out
+   print "\n";
+   $selection = 'Setuid';
 }
 
 my $permission = 'Setuid';
-my $cygwin_berkeley_db_mode=0;
 #print "SELECTION = $selection<==\n";sleep 3;
 if (-1<index $selection,'Setuid') {
    $permission = 'Setuid';
@@ -3918,10 +3911,10 @@ if (-1<index $selection,'Setuid') {
    $permission = 'Setgid';
 } elsif (-1<index $selection,'Owner Group') {
    $permission = 'Owner-Group';
-   $cygwin_berkeley_db_mode=770 if $^O eq 'cygwin';
+   $main::cygwin_berkeley_db_mode=770 if $^O eq 'cygwin';
 } elsif (-1<index $selection,'Full Access') {
    $permission = 'Full-Access';
-   $cygwin_berkeley_db_mode=777  if $^O eq 'cygwin';
+   $main::cygwin_berkeley_db_mode=777  if $^O eq 'cygwin';
 } elsif (-1<index $selection,'quit') {
    exit;
 } print "\n"; 
@@ -4154,6 +4147,8 @@ sub MY::install {
       $inherited =~ s/(install ::.*)$/$1 setuid_permissions/m;
    } elsif ($permission eq 'Setgid') {
       $inherited =~ s/(install ::.*)$/$1 setgid_permissions/m;
+   } elsif ($permission eq 'Owner-Group') {
+      $inherited =~ s/(install ::.*)$/$1 owner_group_permissions/m;
    } else {
       $inherited =~ s/(install ::.*)$/$1 full_access_permissions/m;
    }
@@ -4202,15 +4197,13 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
       $link;
-   if (-e $Config{installsitelib}."/Net/FullAuto/FA_Core.pm") {
-      $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
-         "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
-         "cygwin_berkeley_db_mode = 770;/g\' ".
-         "$Config{installsitelib}/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
-         "\t\$(MV) ./tmp_fa_core.pm $Config{installsitelib}".
-         "/Net/FullAuto/FA_Core.pm\n\n"
-         if $^O eq 'cygwin';
-   }
+   $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
+      "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
+      "cygwin_berkeley_db_mode = \$(PERM_OG_);/g\' ".
+      "\$(DESTINSTALLSITESCRIPT)/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+      "\t\$(MV) ./tmp_fa_core.pm \$(DESTINSTALLSITESCRIPT)".
+      "/Net/FullAuto/FA_Core.pm\n\n"
+      if $^O eq 'cygwin';
    $inherited .= "\nfull_access_permissions ::\n".
       "\t\$(NOECHO) \$(ECHO) \"Applying Full-Access Permissions\"\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT)\n".
@@ -4221,15 +4214,13 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
       $link;
-   if (-e $Config{installsitelib}."/Net/FullAuto/FA_Core.pm") {
-      $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
-         "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
-         "cygwin_berkeley_db_mode = 777;/g\' ".
-         "$Config{installsitelib}/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
-         "\t\$(MV) ./tmp_fa_core.pm $Config{installsitelib}".
-         "/Net/FullAuto/FA_Core.pm\n\n"
-         if $^O eq 'cygwin';
-   }
+   $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
+      "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
+      "cygwin_berkeley_db_mode = \$(PERM_WRX);/g\' ".
+      "\$(DESTINSTALLSITESCRIPT)/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+      "\t\$(MV) ./tmp_fa_core.pm \$(DESTINSTALLSITESCRIPT)".
+      "/Net/FullAuto/FA_Core.pm\n\n"
+      if $^O eq 'cygwin';
    $inherited;
 
 }
@@ -4341,7 +4332,7 @@ sub MY::pm_to_blib {
    unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
       $inherited .= "\t\$(SED) \'s/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
          'our \\1'."editor = \"$editor\";/g\' ".
-         "<blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
+         "blib/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm\n".
          "\t\$(MV) tmp_conf.pm blib/lib/Net/FullAuto/Custom/fa_conf.pm\n\n"
          if defined $editor and $editor;
    } else {
@@ -4352,7 +4343,7 @@ sub MY::pm_to_blib {
    unless (-e $Config{installsitelib}."/Net/FullAuto/FA_Core.pm") {
       $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
          "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
-         "cygwin_berkeley_db_mode = $cygwin_berkeley_db_mode;/g\' ".
+         "cygwin_berkeley_db_mode = $main::cygwin_berkeley_db_mode;/g\' ".
          "blib/lib/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
          "\t\$(MV) ./tmp_fa_core.pm blib/lib".
          "/Net/FullAuto/FA_Core.pm\n\n"
