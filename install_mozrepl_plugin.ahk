@@ -24,6 +24,14 @@ SetWorkingDir, %A_ScriptDir%
 DetectHiddenWindows, On
 Run %1% %2%
 ;Run c:\Program Files\Mozilla Firefox\firefox c:\cygwin\fullauto\FullAuto\mozrepl-1.1-fx.xpi
+sleep, 2000
+IfWinExist, Import Wizard
+{
+   WinActivate
+   Send !d
+   Sleep,10
+   Send !n
+}
 WinWaitActive, Mozilla Firefox ahk_class MozillaWindowClass
 WinWaitActive, Software Installation
 Sleep, 4000

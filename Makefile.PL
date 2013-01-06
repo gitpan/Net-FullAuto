@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999965';
+$main::VERSION='0.999966';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3356,6 +3356,7 @@ sub install_firefox {
    } else {
       die "Unable to install Firefox due to no LWP availability";
    }
+   my $fftest='';
    unless ($main::install_firefox eq 'Install MozRepl') {
       my $url='http://www.mozilla.org/en-US/firefox/all.html';
       print "Fetching with LWP:\n  $url\n";
@@ -3384,9 +3385,11 @@ sub install_firefox {
       $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
       $exe_name=~s/firefox-/Firefox Setup /;
       $req = HTTP::Request->new(GET => $href);
-print "DONE WITH GET\n";
+print "DONE WITH GET1\n";
       $req->header('Accept' => 'text/html');
+print "DONE WITH GET2\n";
       $res = $Ua->request($req);
+print "DONE WITH GET3\n";
       if ($res->is_success) {
          print " + request successful.\n"
          if $CPAN::DEBUG;
@@ -3405,6 +3408,30 @@ print "DONE WITH GET\n";
          print CP $res->content;
          close CP;
          `"$main::root_dir/${exe_name}.exe" -ms`;
+         # Let's look for Firefox
+         my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                     'Mozilla\\Mozilla Firefox" 2>&1';
+         $firefox=`$firefox`;
+         chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+         $firefox=~s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
+         $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                  "Mozilla\\Mozilla Firefox\\$firefox\\Main\" 2>&1";
+         open (FF,"$firefox|");
+         while (my $line=<FF>) {
+            $firefox.=$line;
+         }
+         close FF;
+         chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+         $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+         $firefox=~s/\s*$//s;
+         $fftest=substr($firefox,0,2) if 1<length $firefox;
+         $fftest||='';
+         my $selection='';
+         if ($fftest=~/\w:|\/\w/) {
+            $fftest=substr($firefox,0,(rindex $firefox,'\\'));
+         } else {
+            $fftest='';
+         }
       }
    }
    my $url='https://addons.mozilla.org/firefox/downloads/file/'.
@@ -3421,7 +3448,11 @@ print "DONE WITH GET\n";
       binmode(CP);
       print CP $res->content;
       close CP;
-      my $mz=$main::root_dir;
+      my $winrootdir=`/usr/bin/cygpath -lw $main::root_dir`;
+      $winrootdir=~s/\\/\\\\/g;
+      $fftest=~s/\\/\\\\/g;
+      my $mz="\"$fftest\" $winrootdir";
+print "MZ=$mz\n";
       `$Config{installsitebin}/install_mozrepl_plugin $mz`;
    }
 }
