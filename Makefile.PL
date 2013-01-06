@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999964';
+$main::VERSION='0.999965';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1213,8 +1213,10 @@ my $process_id='';my $PREFIX='';
 $process_id=pop @ARGV if $ARGV[$#ARGV-1]=~/^\d+$/;
 my $install_cygwin_without_asking=0;
 $main::cygwin_berkeley_db_mode=777;
-$main::cygwin_berkeley_db_mode=$ENV{FA_BERKELEY}
-   if exists $ENV{FA_BERKELEY};
+if (exists $ENV{FA_BERKELEY} &&
+      (-1<index $ENV{FA_BERKELEY},'Owner Group')) {
+   $main::cygwin_berkeley_db_mode=770;
+}
 $main::mozrepl_file='mozrepl-1.1-fx.xpi';
 $main::install_firefox_without_asking=0;
 $main::install_firefox=0;
@@ -1472,7 +1474,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                          Text => $p_one,
                          Default => "*"
                       },
-            Item_1 => { Text => $p_two },
+            Item_2 => { Text => $p_two },
             Banner => $p_banner,
 
          );
@@ -3354,7 +3356,7 @@ sub install_firefox {
    } else {
       die "Unable to install Firefox due to no LWP availability";
    }
-   unless ($_[0] eq 'Install MozRepl') {
+   unless ($main::install_firefox eq 'Install MozRepl') {
       my $url='http://www.mozilla.org/en-US/firefox/all.html';
       print "Fetching with LWP:\n  $url\n";
       my $req = HTTP::Request->new(GET => $url);
@@ -3382,6 +3384,7 @@ sub install_firefox {
       $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
       $exe_name=~s/firefox-/Firefox Setup /;
       $req = HTTP::Request->new(GET => $href);
+print "DONE WITH GET\n";
       $req->header('Accept' => 'text/html');
       $res = $Ua->request($req);
       if ($res->is_success) {
@@ -3410,13 +3413,16 @@ sub install_firefox {
    $req->header('Accept' => 'text/html');
    my $res = $Ua->request($req);
    my $href='';
+   my $mz="$main::root_dir/$main::mozrepl_file";
    if ($res->is_success) {
       print " + request successful.\n"
          if $CPAN::DEBUG;
-      open(CP,">$main::root_dir/$main::mozrepl_file") || die $!;
+      open(CP,">$mz") || die $!;
       binmode(CP);
       print CP $res->content;
       close CP;
+      my $mz=$main::root_dir;
+      `$Config{installsitebin}/install_mozrepl_plugin $mz`;
    }
 }
 
@@ -3876,31 +3882,37 @@ print FH '/* program: fullauto'."\n".
 
 close FH;
 
-my $timeout=120;my $selection='';my @selection=();
-eval {
-   $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-   alarm $timeout;
-   my @list=();
-   unless ($^O eq 'cygwin') {
-      @list=('Install with Setuid Permissions (Recommended Default)',
-             'Install with Setgid Permissions',
-             'Install with Owner Group Permissions',
-             'Install with Full Access Permissions');
-   } else {
-      @list=('Install with Full Access Permissions (Default)',
-             'Install with Owner Group Permissions');
+my $timeout=120;my $selection='';
+unless (exists $ENV{FA_BERKELEY}) {
+   eval {
+      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+      alarm $timeout;
+      my @list=();
+      unless ($^O eq 'cygwin') {
+         @list=('Install with Setuid Permissions (Recommended Default)',
+                'Install with Setgid Permissions',
+                'Install with Owner Group Permissions',
+                'Install with Full Access Permissions');
+      } else {
+         @list=('Install with Full Access Permissions (Default)',
+                'Install with Owner Group Permissions');
+      }
+      my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
+                 "'Setuid' IN 2 MINUTES ***\n".
+                 "\n   Choose a Permission Setting :\n\n";
+      $selection=&Term::Menus::pick(\@list,$banner);
+      alarm 0;
+   };
+   exit if $selection eq ']quit[';
+   if ($@) {
+      # timed out
+      print "\n";
+      $selection = 'Setuid';
    }
-   my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
-              "'Setuid' IN 2 MINUTES ***\n".
-              "\n   Choose a Permission Setting :\n\n";
-   $selection=&Term::Menus::pick(\@list,$banner);
-   alarm 0;
-};
-exit if $selection eq ']quit[';
-if ($@) {
-   # timed out
-   print "\n";
-   $selection = 'Setuid';
+} elsif ($ENV{FA_BERKELEY}==775) {
+   $selection='Install with Owner Group Permissions';
+} else {
+   $selection='Install with Full Access Permissions (Default)';
 }
 
 my $permission = 'Setuid';
