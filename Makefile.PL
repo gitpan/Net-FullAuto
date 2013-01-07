@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999967';
+$main::VERSION='0.999968';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4243,7 +4243,7 @@ sub MY::install {
    $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
       "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
       "cygwin_berkeley_db_mode = \$(PERM_OG_);/g\' ".
-      "\$(DESTINSTALLSITESCRIPT)/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+      "\$(DESTINSTALLSITELIB)/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
       "\t\$(MV) ./tmp_fa_core.pm \$(DESTINSTALLSITELIB)".
       "/Net/FullAuto/FA_Core.pm\n\n"
       if $^O eq 'cygwin';
@@ -4260,7 +4260,7 @@ sub MY::install {
    $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
       "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
       "cygwin_berkeley_db_mode = \$(PERM_WRX);/g\' ".
-      "\$(DESTINSTALLSITESCRIPT)/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
+      "\$(DESTINSTALLSITELIB)/Net/FullAuto/FA_Core.pm >tmp_fa_core.pm\n".
       "\t\$(MV) ./tmp_fa_core.pm \$(DESTINSTALLSITELIB)".
       "/Net/FullAuto/FA_Core.pm\n\n"
       if $^O eq 'cygwin';
