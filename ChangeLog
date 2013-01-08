@@ -21,6 +21,13 @@
 
 2013-01-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999971 released.
+
+        * Updated fa -V to show custom files in user dir.
+
+
+2013-01-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999970 released.
 
         * Updated fa -V to show custom files in user dir.

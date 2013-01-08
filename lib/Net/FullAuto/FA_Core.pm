@@ -1409,6 +1409,7 @@ sub VERSION
 {
    can_load(modules => { "Term::Menus" => 0 });
    can_load(modules => { "Net::FullAuto" => 0 });
+   my $username=getlogin || getpwuid($<);
    my $term_menus_path=
       substr($INC{'Term/Menus.pm'},0,
       (rindex $INC{'Term/Menus.pm'},'Term'));
@@ -1439,7 +1440,7 @@ sub VERSION
       close(PH);
    }
    my @pl=();my @exe=();my @O=();my %Cust=();my @Dist=();
-   my @Tpm=();my @html=();my @Core=();my @README=();
+   my @Tpm=();my @html=();my @Core=();my @README=();my @CUF=();
    foreach my $file (@falist) {
       chomp $file;
       if ($file=~/\.pm$/) {
@@ -1464,10 +1465,31 @@ sub VERSION
             $path=~s/\/[^\/]+$//;
             opendir(my $dh, $path) || die "can't opendir $path: $!";
             while (my $file=readdir($dh)) {
+               chomp($file);
+               next if $file eq '.';
+               next if $file eq '..';
                $Cust{"$path/$file"}='' if $file!~/^[.]|README$/
                   && -f "$path/$file";
-            }
-            closedir $dh;
+               if (-d "$path/$file" && ($file eq $username)) {
+                  opendir(my $dc, "$path/$file") ||
+                        die "can't opendir $path/$file: $!";
+                  while (my $cfile=readdir($dc)) {
+                     chomp($cfile);
+                     next if $cfile eq '.';
+                     next if $cfile eq '..';
+                     if (-d "$path/$file/$cfile") {
+                        opendir(my $du, "$path/$file/$cfile") ||
+                              die "can't opendir $path/$file/$cfile: $!";
+                        while (my $ufile=readdir($du)) {
+                           chomp($ufile);
+                           next if $ufile eq '.';
+                           next if $ufile eq '..';
+                           push @CUF,"$path/$file/$cfile/$ufile";
+                        } close $du;
+                     }
+                  } close $dc;
+               }
+            } closedir $dh;
          }
          push @README, $file;
       }
@@ -1480,10 +1502,11 @@ sub VERSION
    print '',(join "\n",@O),"\n" if -1<$#O;
    print '',(join "\n",@Tpm),"\n",
          (join "\n",@html),"\n",
-         (join "\n",@README),"\n\n",
+         (join "\n",@Core),"\n\n",
          (join "\n",sort @Dist),"\n\n",
+         (join "\n",@README),"\n\n",
          (join "\n",sort keys %Cust),"\n\n",
-         (join "\n",reverse @Core),"\n";
+         (join "\n",sort @CUF),"\n";
    exit;
 
 }
@@ -9335,6 +9358,7 @@ sub fa_login
                &release_fa_lock(9361);
                &cleanup();
             } elsif (defined $set) {
+print "HELLO\n";
                $default_modules->{'set'}||='none';
                my $current_default_set=$default_modules->{'set'};
                my $selection=Menu($set_menu_sub->());
@@ -10283,6 +10307,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         &release_fa_lock(6543);
                         die $stderr;
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
+# TEST HERE FOR NO LOCALHOST SSH CONNECTIVITY
                         my $kill_arg=($^O eq 'cygwin')?'f':9;
                         ($stdout,$stderr)=&kill($cmd_pid,$kill_arg)
                            if &testpid($cmd_pid);
