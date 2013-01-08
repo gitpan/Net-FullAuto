@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-01-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999969 released.
+
+        * Fix for permissions in Makefile.PL.
+
+
 2013-01-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999968 released.

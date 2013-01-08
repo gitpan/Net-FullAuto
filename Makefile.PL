@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999968';
+$main::VERSION='0.999969';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3947,7 +3947,6 @@ unless (exists $ENV{FA_BERKELEY}) {
 }
 
 my $permission = 'Setuid';
-#print "SELECTION = $selection<==\n";sleep 3;
 if (-1<index $selection,'Setuid') {
    $permission = 'Setuid';
 } elsif (-1<index $selection,'Setgid') {
@@ -3960,7 +3959,7 @@ if (-1<index $selection,'Setuid') {
    $main::cygwin_berkeley_db_mode=777  if $^O eq 'cygwin';
 } elsif (-1<index $selection,'quit') {
    exit;
-} print "\n"; 
+} print "\n";
 
 if ($^O eq 'cygwin') {
    open(FH,">bin/fullauto.exe");
@@ -3969,7 +3968,6 @@ if ($^O eq 'cygwin') {
    install_script('bin/fullauto.exe');
    install_script('bin/install_mozrepl_plugin.exe');
    unlink "bin/fullauto.exe";
-   $permission = 'Owner-Group';
 } else {
    open(FH,">bin/fullauto");
    print FH "\n";
