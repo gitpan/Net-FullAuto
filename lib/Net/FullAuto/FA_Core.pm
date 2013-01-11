@@ -2890,12 +2890,13 @@ sub acquire_fa_lock
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 
    my $lock_id=(defined $_[0] && $_[0])?$_[0]:'1234';
-   my $maxnumberallowed=(defined $_[1] && $_[1])?$_[1]:'';
-   my $killafterseconds=(defined $_[2] && $_[2])?$_[2]:'';
-   my $enable=(defined $_[3] && $_[3])?$_[3]:'';
-   my $lock_description=(defined $_[4] && $_[4])?$_[4]:'';
-   my $wait_for_newlock=(defined $_[5] && $_[5])?$_[5]:'';
-   my $pollingmillisecs=(defined $_[6] && $_[6])?$_[6]:'';
+   my $lock_description=(defined $_[1] && $_[1])?$_[1]:'';
+   my $cache=(defined $_[2] && $_[2])?$_[2]:'';
+   my $maxnumberallowed=(defined $_[3] && $_[3])?$_[3]:'';
+   my $killafterseconds=(defined $_[4] && $_[4])?$_[4]:'';
+   my $enable=(defined $_[5] && $_[5])?$_[5]:'';
+   my $wait_for_newlock=(defined $_[6] && $_[6])?$_[6]:'';
+   my $pollingmillisecs=(defined $_[7] && $_[7])?$_[7]:'';
 
    my $locks='';my $getnewlock=0;my $newlock={};my $queue='';
 
@@ -3059,10 +3060,13 @@ sub acquire_fa_lock
                   $expired_flag=0;
                   last;
                } elsif ($letoct eq '9876') {
-                  &handle_error("FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
+                  my $die="FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
                      ."          Waiting period expired while waiting "
                      ."for lock:\n\n          $lock_description\n\n"
-                     ."       Called by " . join ' ', @topcaller)
+                     ."       Called by " . join ' ', @topcaller;
+                  $cache->set($cache->{'key'}, [1,"$die\n\n"])
+                     if $cache;
+                  &handle_error($die);
                }
             }
          }
@@ -3074,10 +3078,13 @@ sub acquire_fa_lock
                $max="          Maximum Number Allowed => "
                    ."$maxnumberallowed\n\n";
             }
-            &handle_error("FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
+            my $die="FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
                ."          Waiting period expired while waiting "
                ."for lock:\n\n          $lock_description\n\n$max"
-               ."       Called by " . join ' ', @topcaller)
+               ."       Called by " . join ' ', @topcaller;
+            $cache->set($cache->{'key'}, [1,"$die\n\n"])
+               if $cache;
+            &handle_error($die);
          }
       }
    } else {
@@ -5181,13 +5188,6 @@ sub get_prompt {
 sub clean_filehandle
 {
 
-my $onemore=0;
-#my $logreset=1;
-#if ($Net::FullAuto::FA_Core::log) { $logreset=0 }
-#else { $Net::FullAuto::FA_Core::log=1 }
-   #&acquire_semaphore(7755,
-   #   "clean_filehandle() at Line: ".__LINE__,1);
-   #&acquire_fa_lock(7755);
    my @topcaller=caller;
    print "\nINFO: main::clean_filehandle() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
@@ -5331,20 +5331,16 @@ my $onemore=0;
          }
       };
       if ($@) {
-         if (!$onemore) {
-            if (wantarray) {
-               &release_fa_lock(7755);
-               return '',$@;
-            } else {
-               &release_fa_lock(7755);
-               &Net::FullAuto::FA_Core::handle_error($@.
-                 "\n       from &main::clean_filehandle(): Line ".__LINE__.
-                 "\n       Reminder: Return output to list (\$stdout,\$stderr)".
-                 "\n       if you don't want &clean_filehandle() to die",
-                 '__cleanup__');
-            }
+         if (wantarray) {
+            &release_fa_lock(7755);
+            return '',$@;
          } else {
-            $onemore=1;
+            &release_fa_lock(7755);
+            &Net::FullAuto::FA_Core::handle_error($@.
+               "\n       from &main::clean_filehandle(): Line ".__LINE__.
+               "\n       Reminder: Return output to list (\$stdout,\$stderr)".
+               "\n       if you don't want &clean_filehandle() to die",
+               '__cleanup__');
          }
       } elsif ($closederror) {
          if (wantarray) {
@@ -23265,7 +23261,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  if $stderr;
                               # Let's look for MozRepl
                               my $have_mozrepl=0;
-                              my $up=$ENV{'USERPROFILE'};
+                              my $up=$ENV{'USERPROFILE'}||'';
                               if (-1<index $up,'Documents') {
                                  $up.="\\Application Data\\Mozilla\\".
                                       "Firefox\\Profiles\\";
@@ -26493,29 +26489,12 @@ print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIPTTTTTTTTTT=$growou
                               } else {
                                  next FETCH;                                 
                               }
+                           } elsif ($growoutput=~/^stdout:\s*stdout:/s) {
+                              $command_stripped_from_output=1;
                            }
 
-                           #if (substr($test_stripped_output,-$lslc) eq
-                           #      $stripped_live_command) {
-                           #   my @slc=split '',$stripped_live_command;
-                           #   my @gop=split '',$growoutput;
-                           #   GS: foreach my $s (shift @slc) {
-                           #      my $g=shift @gop;
-                           #      my $c=0;
-                           #      while (1) {
-                           #         if ($g eq $s) {
-                           #            next GS;
-                           #         } elsif (-1<$#gop) {
-                           #            $g=shift @gop;
-                           #         } last if $c++==100;
-                           #      }
-                           #   }
-                           #   $growoutput=join '', @gop;
 print $Net::FullAuto::FA_Core::MRLOG "FIRST_FifTEENe and GO=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                           #   $command_stripped_from_output=1;
-                           #   next FETCH;
-                           #}
                         }
                      }
 print "DONE TRIMMING GROWOUTPUT=$growoutput\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;

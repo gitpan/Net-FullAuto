@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999971';
+$main::VERSION='0.999972';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3919,17 +3919,20 @@ unless (exists $ENV{FA_BERKELEY}) {
       $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;
       my @list=();
+      my $banner_type='';
       unless ($^O eq 'cygwin') {
          @list=('Install with Setuid Permissions (Recommended Default)',
                 'Install with Setgid Permissions',
                 'Install with Owner Group Permissions',
                 'Install with Full Access Permissions');
+         $banner_type='Setuid';
       } else {
          @list=('Install with Full Access Permissions (Default)',
                 'Install with Owner Group Permissions');
+         $banner_type='Full-Access';
       }
       my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
-                 "'Setuid' IN 2 MINUTES ***\n".
+                 "\'$banner_type\' IN 2 MINUTES ***\n".
                  "\n   Choose a Permission Setting :\n\n";
       $selection=&Term::Menus::pick(\@list,$banner);
       alarm 0;
@@ -3940,9 +3943,9 @@ unless (exists $ENV{FA_BERKELEY}) {
       print "\n";
       $selection = 'Setuid';
    }
-} elsif ($ENV{FA_BERKELEY}==775) {
+} elsif ($ENV{FA_BERKELEY}==770) {
    $selection='Install with Owner Group Permissions';
-} else {
+} elsif ($ENV{FA_BERKELEY}==777) {
    $selection='Install with Full Access Permissions (Default)';
 }
 

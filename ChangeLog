@@ -19,6 +19,18 @@
 ################################################################
 
 
+2013-01-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999972 released.
+
+        * Fix for permissions in Makefile.PL.
+
+        * Fix for output processing in FA_Core.pm.
+
+	* Added cache output for acquire_fa_lock() in
+          FA_Core.pm.
+
+
 2013-01-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999971 released.
