@@ -3,7 +3,7 @@ package Net::FullAuto;
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2011, 2012, 2013  Brian M. Kelly
+#    Copyright (C) 2000-2013  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.999972';
+our $VERSION='0.999973';
 
 
 use 5.005;

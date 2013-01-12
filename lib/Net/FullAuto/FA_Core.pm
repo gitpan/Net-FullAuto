@@ -3,7 +3,7 @@ package Net::FullAuto::FA_Core;
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2012  Brian M. Kelly
+#    Copyright (C) 2000-2013  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -1391,7 +1391,7 @@ my $version=<<VERSION;
 This is Net::FullAuto, v$Net::FullAuto::VERSION
 (See  fullauto -V  or  fa -V  for more detail)
 
-Copyright 2000-2012, Brian M. Kelly
+Copyright 2000-2013, Brian M. Kelly
 
 FullAuto may be copied only under the terms of the GNU General Public License,
 which may be found in the FullAuto source distribution.
@@ -3045,12 +3045,21 @@ sub acquire_fa_lock
             } else {
                $polling=~s/^(\d+)(\d\d\d)/$1.$2/;
             }
-#my $count=0;
-#print "\n";
+            my $pollcount=0;my $dotcount=0;
+            my @dots=('.     ','. .   ','. . . ');
+            print "\n";
             while (time<$expires) {
-#print "  POLLING=$count and LOCKID=$letoct\n";
-#$count++;
+               $dotcount=0 if 2<$dotcount;
+               STDOUT->autoflush(1);
+               printf("\r% 0s","Waiting for another process with lock ID ".
+                      "[$lock_id] to finish (".$pollcount++.") ".
+                      $dots[$dotcount]);
+               STDOUT->autoflush(0);
                select(undef,undef,undef,$polling);
+               $cache->set($cache->{'key'}, [0,
+                  "Waiting for another process with lock ID [$lock_id] ".
+                  "to finish (".$pollcount++.") $dots[$dotcount++]"])
+                  if $cache;
                $expired_flag=1;
                $status=$Net::FullAuto::FA_Core::bdb_locks->db_get(
                   $letoct,$locks);
@@ -3064,7 +3073,7 @@ sub acquire_fa_lock
                      ."          Waiting period expired while waiting "
                      ."for lock:\n\n          $lock_description\n\n"
                      ."       Called by " . join ' ', @topcaller;
-                  $cache->set($cache->{'key'}, [1,"$die\n\n"])
+                  $cache->set($cache->{'key'}, [1,$die])
                      if $cache;
                   &handle_error($die);
                }
@@ -3077,12 +3086,12 @@ sub acquire_fa_lock
             if ($letoct==9876) {
                $max="          Maximum Number Allowed => "
                    ."$maxnumberallowed\n\n";
-            }
+            } else { print "\n" }
             my $die="FATAL ERROR: FullAuto ACQUIRE Lock\n\n"
                ."          Waiting period expired while waiting "
                ."for lock:\n\n          $lock_description\n\n$max"
                ."       Called by " . join ' ', @topcaller;
-            $cache->set($cache->{'key'}, [1,"$die\n\n"])
+            $cache->set($cache->{'key'}, [1,$die])
                if $cache;
             &handle_error($die);
          }
@@ -13230,7 +13239,8 @@ sub ftp
       (join ' ',@topcaller),"\n";# if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "File_Transfer::ftp() CALLER=",
       (join ' ',@topcaller),
-      "\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      "\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my ($host1,$host2,$ftpcmd,$cache) = @_;
    $ftpcmd=~s/^\s*//;
    my $output='';my $stderr='';
@@ -24226,8 +24236,9 @@ sub ftpcmd
          $gfp='' if (-1==index $gfp,'/');
       }
       ($output,$stderr)=&ftpcmd($handle,"${ex}ls$gfp",$cache);
-      print "\nINFO: Rem_Command::ftpcmd() (S)FTP OUTPUT FROM (!)ls cmd:\n       ",
-         "OUTPUT=$output<== and STDERR=$stderr<==\n\n"
+      print "\nINFO: Rem_Command::ftpcmd() (S)FTP OUTPUT ",
+            "FROM (!)ls cmd:\n       OUTPUT=$output<== ",
+            "and STDERR=$stderr<==\n\n"
          if $Net::FullAuto::FA_Core::debug;
       print $Net::FullAuto::FA_Core::MRLOG
          "\nRem_Command::ftpcmd() (S)FTP OUTPUT FROM (!)ls cmd:\n       ",
