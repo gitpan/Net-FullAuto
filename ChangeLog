@@ -21,6 +21,13 @@
 
 2013-01-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999976 released.
+
+        * New code for permissions in Makefile.PL.
+
+
+2013-01-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999975 released.
 
         * Added temp code for permissions in Makefile.PL.

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999975';
+$main::VERSION='0.999976';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -314,7 +314,7 @@ END
          },
          Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
             "      Net::FullAuto INSTALLATION PROGRAM\n\n".
-            "      Copyright (C) 2011, 2012  Brian M. Kelly\n\n".
+            "      Copyright (C) 2000-2013  Brian M. Kelly\n\n".
             "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
             "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
             "   select  2.  This is free software, and you are welcome to\n".
@@ -3914,8 +3914,6 @@ print FH '/* program: fullauto'."\n".
 close FH;
 
 my $timeout=120;my $selection='';
-print "FA_BERKELEY=$ENV{FA_BERKELEY}<==\n" if exists $ENV{FA_BERKELEY}; 
-print "JUST CHECKED FA_BERKELEY\n";sleep 10;
 unless (exists $ENV{FA_BERKELEY}) {
    eval {
       $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
@@ -3945,9 +3943,9 @@ unless (exists $ENV{FA_BERKELEY}) {
       print "\n";
       $selection = 'Setuid';
    }
-} elsif ($ENV{FA_BERKELEY} eq '770') {
+} elsif (-1<index $ENV{FA_BERKELEY},'Owner Group') {
    $selection='Install with Owner Group Permissions';
-} elsif ($ENV{FA_BERKELEY} eq '777') {
+} elsif (-1<index $ENV{FA_BERKELEY},'Full Access') {
    $selection='Install with Full Access Permissions (Default)';
 }
 
