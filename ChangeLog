@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-01-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999974 released.
+
+        * Fix for MozRepl install in Makefile.PL.
+
+
 2013-01-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999973 released.

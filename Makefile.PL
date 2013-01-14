@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999973';
+$main::VERSION='0.999974';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3435,7 +3435,7 @@ print "DONE WITH GET3\n";
       }
    }
    my $url='https://addons.mozilla.org/firefox/downloads/file/'.
-        '138898/$main::mozrepl_file?src=dp-btn-primary';
+        "138898/$main::mozrepl_file?src=dp-btn-primary";
    my $req = HTTP::Request->new(GET => $url);
    $req->header('Accept' => 'text/html');
    my $res = $Ua->request($req);
@@ -3914,6 +3914,7 @@ print FH '/* program: fullauto'."\n".
 close FH;
 
 my $timeout=120;my $selection='';
+print "FA_BERKELEY=$ENV{FA_BERKELEY}<==\n" if exists $ENV{FA_BERKELEY}; 
 unless (exists $ENV{FA_BERKELEY}) {
    eval {
       $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
@@ -3943,9 +3944,9 @@ unless (exists $ENV{FA_BERKELEY}) {
       print "\n";
       $selection = 'Setuid';
    }
-} elsif ($ENV{FA_BERKELEY}==770) {
+} elsif ($ENV{FA_BERKELEY} eq '770') {
    $selection='Install with Owner Group Permissions';
-} elsif ($ENV{FA_BERKELEY}==777) {
+} elsif ($ENV{FA_BERKELEY} eq '777') {
    $selection='Install with Full Access Permissions (Default)';
 }
 
