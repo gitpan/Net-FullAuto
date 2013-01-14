@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999974';
+$main::VERSION='0.999975';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3915,6 +3915,7 @@ close FH;
 
 my $timeout=120;my $selection='';
 print "FA_BERKELEY=$ENV{FA_BERKELEY}<==\n" if exists $ENV{FA_BERKELEY}; 
+print "JUST CHECKED FA_BERKELEY\n";sleep 10;
 unless (exists $ENV{FA_BERKELEY}) {
    eval {
       $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
