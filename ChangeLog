@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-01-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999977 released.
+
+        * Fixed Firefox download in Makefile.PL.
+
+
 2013-01-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999976 released.

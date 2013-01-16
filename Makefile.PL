@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999976';
+$main::VERSION='0.999977';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3358,7 +3358,7 @@ sub install_firefox {
    }
    my $fftest='';
    unless ($main::install_firefox eq 'Install MozRepl') {
-      my $url='http://www.mozilla.org/en-US/firefox/all.html';
+      my $url='http://www.mozilla.org/en-US/firefox/all/';
       print "Fetching with LWP:\n  $url\n";
       my $req = HTTP::Request->new(GET => $url);
       $req->header('Accept' => 'text/html');
@@ -3368,8 +3368,14 @@ sub install_firefox {
          print " + request successful.\n"
             if $CPAN::DEBUG;
          my $count=0;
-         foreach my $line (split "\n", $res->content) {
-            if ((-1<index $line, 'English (US)') ||
+         my $content = $res->decoded_content();
+         if (utf8::is_utf8($content)) {
+            binmode STDOUT,':utf8';
+         } else {
+            binmode STDOUT,':raw';
+         }
+         foreach my $line (split "\n", $content) {
+            if ((-1<index $line, 'english (us) english (us)') ||
                   ((0<$count) && ($count<5))) {
                if ($count==3) {
                   $href=$line;
@@ -3381,8 +3387,9 @@ sub install_firefox {
       }
       $href=~s/^.*href=["](.*?)["].*$/$1/;
       $href=~s/https/http/;
+      $href=~s/&amp;/&/g;
       my $exe_name=substr($href,(rindex $href,'/'));
-      $exe_name=~s/^.*?=(.*?)[&].*$/$1/;
+      $exe_name=~s/^.*?product=(.*?)[&].*$/$1/;
       $exe_name=~s/firefox-/Firefox Setup /;
       $req = HTTP::Request->new(GET => $href);
 print "DONE WITH GET1\n";
