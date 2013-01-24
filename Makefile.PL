@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999977';
+$main::VERSION='0.999978';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -133,7 +133,8 @@ END
                    "cmd /c $cygwin_query\\bin\\bash -lc ".
                    '"id"';
             my $groups=`$getid`;
-            unless (-1<index $groups,"(Administrators)") {
+            if ((-1==index $groups,"(Administrators)") && 
+                  ($ENV{'USERNAME'} ne 'Administrator')) {
                print "\n\n".
                print "   Fatal Error! - The User $ENV{'USERNAME'} needs to\n".
                      "   be a member of the Administrator's group in order\n".
@@ -4193,6 +4194,7 @@ sub MY::install {
    use Config;
 
    my $inherited = shift->SUPER::install(@_);
+   my $cygwin_loc=main::get_cygwin_location() if $^O eq 'cygwin';
 
    if ($permission eq 'Setuid') {
       $inherited =~ s/(install ::.*)$/$1 setuid_permissions/m;
@@ -4247,6 +4249,7 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) $cygwin_loc\/var\n".
       $link;
    $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
       "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
@@ -4264,6 +4267,7 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) $cygwin_loc\/var\n".
       $link;
    $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
       "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.

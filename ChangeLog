@@ -19,6 +19,18 @@
 ################################################################
 
 
+2013-01-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999978 released.
+
+        * Added lines to change /var to proper permissions
+          in Makefile.PL.
+
+        * Added file test for Firefox extensions directory.
+
+        * Added null to define $login_id in getpasswd.
+
+
 2013-01-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999977 released.

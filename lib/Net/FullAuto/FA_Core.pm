@@ -5885,7 +5885,7 @@ sub getpasswd
       }
    }
      
-   my $login_id=$_[1];
+   my $login_id=$_[1]||'';
    my $force=0;my $su_login=0;
    my $ms_domain='';my $errmsg='';
    my $track='';my $prox='';
@@ -23293,13 +23293,15 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  HM: foreach my $profile (@dirs) {
                                     next if $profile eq '.';
                                     next if $profile eq '..';
-                                    opendir(DIR,$up."/$profile/extensions");
-                                    my @files = readdir(DIR);
-                                    closedir(DIR);
-                                    foreach my $file (@files) {
-                                       if (-1<index $file,'mozrepl') {
-                                          $have_mozrepl=1;
-                                          last HM;
+                                    if (-d $up."/$profile/extensions") {
+                                       opendir(DIR,$up."/$profile/extensions");
+                                       my @files = readdir(DIR);
+                                       closedir(DIR);
+                                       foreach my $file (@files) {
+                                          if (-1<index $file,'mozrepl') {
+                                             $have_mozrepl=1;
+                                             last HM;
+                                          }
                                        }
                                     }
                                  }
