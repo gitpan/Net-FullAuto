@@ -1,5 +1,5 @@
 ---
-abstract: 'Perl Based Secure Distributed Computing Network Process'
+abstract: Perl Based Secure Distributed Computing Network Process
 author:
   - 'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>'
 build_requires:
@@ -20,7 +20,7 @@ provides:
     version: 0
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.999978
+    version: 0.999979
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
     version: 0
@@ -86,4 +86,4 @@ requires:
   perl: 5.006
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
-version: 0.999978
+version: 0.999979

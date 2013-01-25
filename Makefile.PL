@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999978';
+$main::VERSION='0.999979';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3197,13 +3197,13 @@ if ($get_BerkeleyDB) {
             if (-f '/etc/redhat-release' || -f '/etc/fedora-release') {
                $ENV{LD_RUN_PATH}=$ENV{LD_LIBRARY_PATH};
             }
-            if (eval '$>' and lc(`sudo -V`) =~ /version/) {
-               system(
-                  'sudo',$^X,"-MCPANPLUS","-e","install $p");
-               eval "use $p;1" ||
-                   system('sudo', $^X, "-MCPAN", "-e",
-                     "CPAN::Shell->force('install',$p)")
-            }
+            #if (eval '$>' and lc(`sudo -V`) =~ /version/) {
+            #   system(
+            #      'sudo',$^X,"-MCPANPLUS","-e","install $p");
+            #   eval "use $p;1" ||
+            #       system('sudo', $^X, "-MCPAN", "-e",
+            #         "CPAN::Shell->force('install',$p)")
+            #}
             eval {
                require CPANPLUS::Shell;
                my $u=CPANPLUS::Shell->new();

@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-01-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999979 released.
+
+        * Removed sudo from BerkeleyDB install in Makefile.PL
+
+
 2013-01-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999978 released.
