@@ -21,6 +21,14 @@
 
 2013-01-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999980 released.
+
+        * Added Berkeley DB recover when new process discovers
+          older process with deadlock.
+
+
+2013-01-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999979 released.
 
         * Removed sudo from BerkeleyDB install in Makefile.PL

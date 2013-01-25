@@ -1593,7 +1593,7 @@ sub ls_timestamp
 
 }
 
-sub find_berkeleydb_recover {
+sub find_berkeleydb_utils {
 
    my @topcaller=caller;
    my $hlab="localhost - ".hostname;
@@ -1608,6 +1608,7 @@ sub find_berkeleydb_recover {
       (join ' ',@topcaller),"\n\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   my $db_util=$_[0];
    my $berkeleydb_perl_module_lib='';
    can_load(modules => { "BerkeleyDB" => 0 });
    my $berkeleydb_path=$INC{'BerkeleyDB.pm'};
@@ -1620,15 +1621,15 @@ sub find_berkeleydb_recover {
             $Net::FullAuto::FA_Core::gbp->('grep')."grep \"Berkeley DB.*:\"";
    my $bver=`$bcmd`;
    $bver=~s/^.*DB\s+(.*?)\.\d+:.*$/$1/s;
-   if ($^O eq 'cygwin' && -f "/bin/db${bver}_recover.exe") {
-      return "/bin/db${bver}_recover.exe";
+   if ($^O eq 'cygwin' && -f "/bin/db${bver}_$db_util.exe") {
+      return "/bin/db${bver}_$db_util.exe";
    } elsif ((defined $fa_conf::berkeleydb) &&
          ($fa_conf::berkeleydb) && (-d $fa_conf::berkeleydb)) {
       if (-1<index $fa_conf::berkeleydb,$bver) {
          if (-d $fa_conf::berkeleydb.'/bin') {
-            return $fa_conf::berkeleydb.'/bin/db_recover';
-         } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
-            return $fa_conf::berkeleydb.'/db_recover';
+            return $fa_conf::berkeleydb.'/bin/db_'.$db_util;
+         } elsif (-f $fa_conf::berkeleydb.'/db_'.$db_util) {
+            return $fa_conf::berkeleydb.'/db_'.$db_util;
          }
       } elsif (-d $fa_conf::berkeleydb.'/include') {
          if (-f $fa_conf::berkeleydb.'/include/db.h') {
@@ -1641,28 +1642,28 @@ sub find_berkeleydb_recover {
             foreach my $line (@finc) {
                if ($line=~/^.*VERSION.*$bver.*$/) {
                   if (-d $fa_conf::berkeleydb.'/bin') {
-                     return $fa_conf::berkeleydb.'/bin/db_recover';
-                  } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
-                     return $fa_conf::berkeleydb.'/db_recover';
+                     return $fa_conf::berkeleydb.'/bin/db_'.$db_util;
+                  } elsif (-f $fa_conf::berkeleydb.'/db_'.$db_util) {
+                     return $fa_conf::berkeleydb.'/db_'.$db_util;
                   }
                }
             }
             &handle_error("Cannot Locate BerkeleyDB installation");
          } elsif (-d $fa_conf::berkeleydb.'/bin') {
-            return $fa_conf::berkeleydb.'/bin/db_recover';
-         } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
-            return $fa_conf::berkeleydb.'/db_recover';
+            return $fa_conf::berkeleydb.'/bin/db_'.$db_util;
+         } elsif (-f $fa_conf::berkeleydb.'/db_'.$db_util) {
+            return $fa_conf::berkeleydb.'/db_'.$db_util;
          } else {
-            &handle_error("Cannot Locate BerkeleyDB db_recover utility");
+            &handle_error("Cannot Locate BerkeleyDB db_$db_util utility");
          }
       } elsif (-d $fa_conf::berkeleydb.'/bin') {
-         return $fa_conf::berkeleydb.'/bin/db_recover';
-      } elsif (-f $fa_conf::berkeleydb.'/db_recover') {
-         return $fa_conf::berkeleydb.'/db_recover';
-      } elsif ($^O eq 'cygwin' && (-f "/bin/db${bver}_recover.exe")) {
-         return "/bin/db${bver}_recover.exe";
+         return $fa_conf::berkeleydb.'/bin/db_'.$db_util;
+      } elsif (-f $fa_conf::berkeleydb.'/db_'.$db_util) {
+         return $fa_conf::berkeleydb.'/db_'.$db_util;
+      } elsif ($^O eq 'cygwin' && (-f "/bin/db${bver}_$db_util.exe")) {
+         return "/bin/db${bver}_$db_util.exe";
       } else {
-         &handle_error("Cannot Locate BerkeleyDB db_recover utility");
+         &handle_error("Cannot Locate BerkeleyDB db_$db_util utility");
       }
    } else {
       my @output=();
@@ -1760,7 +1761,7 @@ sub find_berkeleydb_recover {
          print CH @new;
          close CH;
       }
-      return $berkeleydb.'/bin/db_recover';
+      return $berkeleydb.'/bin/db_'.$db_util;
    }
 }
 
@@ -2922,6 +2923,19 @@ sub acquire_fa_lock
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
+      if (exists $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}) {
+         my @db_info=split '|',$ENV{FA_ACQUIRING_BERKELEY_DB_LOCK};
+         if (time>$db_info[1]+5) {
+            my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('deadlock');
+            my $out=`$d -ao -h $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks'`;
+            if ($out) {
+               $d=~s/deadlock/recover/;
+               my $out=
+                    `$d -h $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks'`;
+               &handle_error($out) if $out;
+            }
+         }
+      }
       unless ($Net::FullAuto::FA_Core::dbenv_locks) {
          $Net::FullAuto::FA_Core::dbenv_locks = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks',
@@ -2930,6 +2944,7 @@ sub acquire_fa_lock
             "cannot open environment for DB: $BerkeleyDB::Error\n");
          $Net::FullAuto::FA_Core::dbenv_locks->set_flags(DB_CDB_ALLDB,1);
       }
+      $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}="$$|".time;
       $Net::FullAuto::FA_Core::bdb_locks = BerkeleyDB::Btree->new(
          -Filename => "${Net::FullAuto::FA_Core::progname}_locks.db",
          -Flags    => DB_CREATE,
@@ -2937,6 +2952,7 @@ sub acquire_fa_lock
          -Env      => $Net::FullAuto::FA_Core::dbenv_locks
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n");
+      delete $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}; 
       if ($mkdflag && $^O eq 'cygwin') {
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
@@ -5885,7 +5901,7 @@ sub getpasswd
       }
    }
      
-   my $login_id=$_[1]||'';
+   my $login_id=$_[1];
    my $force=0;my $su_login=0;
    my $ms_domain='';my $errmsg='';
    my $track='';my $prox='';
@@ -6064,7 +6080,7 @@ sub getpasswd
          $bdb = BerkeleyDB::Btree->new(
             -Filename => 
                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+            -Flags    => DB_CREATE|DB_RECOVER,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -6400,7 +6416,7 @@ sub getpasswd
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+            -Flags    => DB_CREATE|DB_RECOVER,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7072,7 +7088,7 @@ $main::get_default_modules=sub {
             BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_defaults.db",
-         -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+         -Flags    => DB_CREATE|DB_RECOVER,
          -Env      => $Net::FullAuto::FA_Core::dbenv_once
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7139,7 +7155,7 @@ $main::get_default_modules=sub {
                BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_sets.db",
-            -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+            -Flags    => DB_CREATE|DB_RECOVER,
             -Env      => $Net::FullAuto::FA_Core::dbenv_once
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7223,7 +7239,7 @@ my $set_default_sub=sub {
    unless ($BerkeleyDB::Error=~/Successful/) {
       $bdb = BerkeleyDB::Btree->new(
          -Filename => "${progname}_sets.db",
-         -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+         -Flags    => DB_CREATE|DB_RECOVER,
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7591,7 +7607,7 @@ my $default_sets_banner_sub=sub {
       $sbdb = BerkeleyDB::Btree->new(
          -Filename => $progname."_sets.db",
          -Flags    =>
-            DB_CREATE|DB_RECOVER_FATAL,
+            DB_CREATE|DB_RECOVER,
          -Env      => $sdbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -8042,7 +8058,7 @@ my $define_modules_commit_sub=sub {
             unless ($BerkeleyDB::Error=~/Successful/) {
                $bdb = BerkeleyDB::Btree->new(
                   -Filename => "${progname}_sets.db",
-                  -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                  -Flags    => DB_CREATE|DB_RECOVER,
                   -Env      => $dbenv
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
@@ -8387,7 +8403,7 @@ my $delete_sets_menu_sub=sub {
                                  -Filename => $progname.
                                               "_defaults.db",
                                  -Flags    =>
-                                    DB_CREATE|DB_RECOVER_FATAL,
+                                    DB_CREATE|DB_RECOVER,
                                  -Env      => $dbenv
                               );
                               unless ($BerkeleyDB::Error=~/Successful/) {
@@ -8443,7 +8459,7 @@ my $delete_sets_menu_sub=sub {
                               $sbdb = BerkeleyDB::Btree->new(
                                  -Filename => $progname."_sets.db",
                                  -Flags    =>
-                                     DB_CREATE|DB_RECOVER_FATAL,
+                                     DB_CREATE|DB_RECOVER,
                                  -Env      => $sdbenv
                               );
                               unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9187,7 +9203,7 @@ sub fa_login
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+            -Flags    => DB_CREATE|DB_RECOVER,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9394,7 +9410,7 @@ print "HELLO\n";
                   unless ($BerkeleyDB::Error=~/Successful/) {
                      $bdb = BerkeleyDB::Btree->new(
                         -Filename => "${progname}_defaults.db",
-                        -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                        -Flags    => DB_CREATE|DB_RECOVER,
                         -Env      => $dbenv
                      );
                      unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9426,7 +9442,7 @@ print "HELLO\n";
                   unless ($BerkeleyDB::Error=~/Successful/) {
                      $bdb = BerkeleyDB::Btree->new(
                         -Filename => "${progname}_defaults.db",
-                        -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                        -Flags    => DB_CREATE|DB_RECOVER,
                         -Env      => $dbenv
                      );
                      unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9570,7 +9586,7 @@ print "HELLO\n";
                $bdb = BerkeleyDB::Btree->new(
                   -Filename =>
                      "${Net::FullAuto::FA_Core::progname}_plans.db",
-                  -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                  -Flags    => DB_CREATE|DB_RECOVER,
                   -Compare  => sub { $_[0] <=> $_[1] },
                   -Env      => $dbenv
                );
@@ -9718,7 +9734,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Flags    => DB_CREATE|DB_RECOVER,
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
@@ -10418,7 +10434,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                   $bdb = BerkeleyDB::Btree->new(
                      -Filename =>
                        "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-                     -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                     -Flags    => DB_CREATE|DB_RECOVER,
                      -Env      => $dbenv
                   );
                   unless ($BerkeleyDB::Error=~/Successful/) {
@@ -10657,7 +10673,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Flags    => DB_CREATE|DB_RECOVER,
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
@@ -11373,7 +11389,7 @@ sub passwd_db_update
       $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+         -Flags    => DB_CREATE|DB_RECOVER,
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -11505,7 +11521,7 @@ sub su_scrub
       $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+         -Flags    => DB_CREATE|DB_RECOVER,
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -11694,7 +11710,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+               -Flags    => DB_CREATE|DB_RECOVER,
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
@@ -12619,7 +12635,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+            -Flags    => DB_CREATE|DB_RECOVER,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -13908,7 +13924,7 @@ print "FTR_RETURN3\n";
                            $bdb = BerkeleyDB::Btree->new(
                                 -Filename =>
                                    "${pn}_${kind}_passwds.db",
-                                -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                                -Flags    => DB_CREATE|DB_RECOVER,
                                 -Env      => $dbenv
                            );
                            unless ($BerkeleyDB::Error=~/Successful/) {
@@ -23293,15 +23309,13 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  HM: foreach my $profile (@dirs) {
                                     next if $profile eq '.';
                                     next if $profile eq '..';
-                                    if (-d $up."/$profile/extensions") {
-                                       opendir(DIR,$up."/$profile/extensions");
-                                       my @files = readdir(DIR);
-                                       closedir(DIR);
-                                       foreach my $file (@files) {
-                                          if (-1<index $file,'mozrepl') {
-                                             $have_mozrepl=1;
-                                             last HM;
-                                          }
+                                    opendir(DIR,$up."/$profile/extensions");
+                                    my @files = readdir(DIR);
+                                    closedir(DIR);
+                                    foreach my $file (@files) {
+                                       if (-1<index $file,'mozrepl') {
+                                          $have_mozrepl=1;
+                                          last HM;
                                        }
                                     }
                                  }
