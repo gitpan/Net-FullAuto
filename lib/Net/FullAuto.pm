@@ -21,7 +21,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.999981';
+our $VERSION='0.999982';
 
 
 use 5.005;
@@ -38,7 +38,9 @@ BEGIN {
       if ($_ eq '--password') {
          $args.='--password ';
          shift @ARGS;
-         $args.='******** ';
+         $args.='******** '
+            if ($ARGS[0] && ((length $ARGS[0]<3) || 
+            (unpack('a2',$ARGS[0]) ne '--')));
          next;
       } elsif ($_ eq '--quiet' ||
                $_ eq '--version' ||

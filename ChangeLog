@@ -21,6 +21,16 @@
 
 2013-01-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999982 released.
+
+        * Fixed installation of mozrepl in Makefile.PL.
+
+        * Added code to correctly handle password in
+          FullAuto.pm.
+
+
+2013-01-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999981 released.
 
         * Fixed changing permissions on /var for cygwin.
