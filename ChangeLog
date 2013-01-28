@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-01-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999981 released.
+
+        * Fixed changing permissions on /var for cygwin.
+
+
 2013-01-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999980 released.

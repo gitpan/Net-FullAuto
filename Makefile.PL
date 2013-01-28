@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999980';
+$main::VERSION='0.999981';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -58,13 +58,20 @@ END
       my $cygwin_query=
             `REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin\\setup 2>&1`;
       my $showcq=$cygwin_query;
+      my $sep='\\';
+      if (-1<index $showcq,'Invalid key name') {
+         $cygwin_query=
+            `REG QUERY HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Cygwin\\\\setup 2>&1`;
+         $showcq=$cygwin_query;
+         $sep='\\\\';
+      }
       $showcq=~s/^/   /mg;chomp $showcq;
       my $cygwin_query_success=0;
       if (-1<index $cygwin_query,'REG_SZ') {
          $cygwin_query_success=1;
       } else {
-         my $rcmd='REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
-                  'Wow6432Node\\Cygwin\\setup 2>&1';
+         my $rcmd="REG QUERY HKEY_LOCAL_MACHINE${sep}SOFTWARE$sep".
+                  "Wow6432Node${sep}Cygwin${sep}setup 2>&1";
          $cygwin_query=`$rcmd`;
          $showcq=$cygwin_query;
          $showcq=~s/^/   /mg;chomp $showcq;
@@ -82,13 +89,14 @@ END
                # The cygwin directory indicated in the Registry does not
                # exist - let's delete the Registry entry
                if (-1<$cygwin_query,'Wow6432') {
-                  my $rcmd='REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
-                           'Wow6432Node\\Cygwin /f 2>&1';
-                  $regout=`$rcmd`;
+                  my $rcmd="REG DELETE HKEY_LOCAL_MACHINE${sep}SOFTWARE${sep}".
+                           "Wow6432Node${sep}Cygwin /f 2>&1";
+                  my $regout=`$rcmd`;
                   return 0;
                } else {
-                  my $regout=
-                     `REG DELETE HKEY_LOCAL_MACHINE\\SOFTWARE\\Cygwin /f 2>&1`;
+                  my $rcmd='REG DELETE HKEY_LOCAL_MACHINE'.
+                           "${sep}SOFTWARE${sep}Cygwin /f 2>&1";
+                  my $regout=`$rcmd`;
                   return 0;
                }
             }
@@ -111,10 +119,15 @@ END
             }
             <STDIN>;
             exit 1;
-         } 
-         my $getver='SET CYGWIN=nodosfilewarning & '.
-                "cmd /c $cygwin_query\\bin\\bash -lc ".
+         }
+         my $getver='';
+         if ($^O eq 'cygwin') {
+            $getver='cygcheck -c cygwin 2>&1';
+         } else {
+            $getver='SET CYGWIN=nodosfilewarning & '.
+                "cmd /c $cygwin_query${sep}bin${sep}bash -lc ".
                 '"cygcheck -c cygwin" 2>&1';
+         }
          my $cygver=`$getver`;
          if ($cygver=~/(1.7.11-1)/) {
             print "\n\n   Fatal Error! - The current Cygwin version: $1\n".
@@ -129,9 +142,14 @@ END
             exit 1;
          }
          if (-e "$cygwin_query/bin/bash.exe") {
-            my $getid='SET CYGWIN=nodosfilewarning & '.
-                   "cmd /c $cygwin_query\\bin\\bash -lc ".
+            my $getid='';
+            if ($^O eq 'cygwin') {
+               $getid='id 2>&1';
+            } else {
+               $getid='SET CYGWIN=nodosfilewarning & '.
+                   "cmd /c $cygwin_query${sep}bin${sep}bash -lc ".
                    '"id"';
+            }
             my $groups=`$getid`;
             if ((-1==index $groups,"(Administrators)") && 
                   ($ENV{'USERNAME'} ne 'Administrator')) {
@@ -4194,7 +4212,6 @@ sub MY::install {
    use Config;
 
    my $inherited = shift->SUPER::install(@_);
-   my $cygwin_loc=main::get_cygwin_location() if $^O eq 'cygwin';
 
    if ($permission eq 'Setuid') {
       $inherited =~ s/(install ::.*)$/$1 setuid_permissions/m;
@@ -4218,7 +4235,8 @@ sub MY::install {
       }
 
       if ($lnpath) {
-         $link="\t\$(NOECHO) $lnpath -f -s \$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT) ".
+         $link="\t\$(NOECHO) $lnpath -f -s ".
+               "\$(DESTINSTALLSITESCRIPT)\/fullauto\$(EXE_EXT) ".
                "\$(DESTINSTALLSITESCRIPT)\/fa\n"; 
       }
 
@@ -4249,7 +4267,7 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) $cygwin_loc\/var\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_OG_) /var\n".
       $link;
    $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
       "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
@@ -4267,7 +4285,7 @@ sub MY::install {
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_R+X) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/*\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\n".
       "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) \$(DESTINSTALLSITELIB)\/Net\/FullAuto\/Custom\/*\n".
-      "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) $cygwin_loc\/var\n".
+      "\t\$(NOECHO) \$(CHMOD) \$(PERM_WRX) /var\n".
       $link;
    $inherited .= "\t\$(SED) \'s/^[ ]*our[ ]*\\(.\\)".
       "cygwin_berkeley_db_mode[ ]*[=].*/".'our \\1'.
