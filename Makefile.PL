@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999982';
+$main::VERSION='0.999983';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4096,8 +4096,7 @@ sub MY::makefile {
       unlink "lib/Net/FullAuto/Custom/fa_code.pm";
       unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
    }
-   #if (-1<index $main::install_firefox,'Install') {
-   if ($^O eq 'cygwin') { 
+   if (-1<index $main::install_firefox,'Install') {
       $inherited .= "$main::mozrepl_file:".
                     "\n\t\$(CP) $main::root_dir/$main::mozrepl_file \$@\n\n";
    }
@@ -4219,11 +4218,19 @@ sub MY::install {
    } elsif ($permission eq 'Setgid') {
       $inherited =~ s/(install ::.*)$/$1 setgid_permissions/m;
    } elsif ($permission eq 'Owner-Group') {
-      $inherited =~
-         s/(install ::.*)$/$1 owner_group_permissions $main::mozrepl_file/m;
+      if (-1<index $main::install_firefox,'Install') {
+         $inherited =~
+            s/(install ::.*)$/$1 owner_group_permissions $main::mozrepl_file/m;
+      } else {
+         $inherited =~ s/(install ::.*)$/$1 owner_group_permissions/m;
+      }
    } else {
-      $inherited =~
-         s/(install ::.*)$/$1 full_access_permissions $main::mozrepl_file/m;
+      if (-1<index $main::install_firefox,'Install') {
+         $inherited =~
+            s/(install ::.*)$/$1 full_access_permissions $main::mozrepl_file/m;
+      } else {
+         $inherited =~ s/(install ::.*)$/$1 full_access_permissions/m;
+      }
    }
 
    my $link='';
