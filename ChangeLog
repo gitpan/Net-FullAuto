@@ -21,6 +21,14 @@
 
 2013-02-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999985 released.
+
+        * Fixed mirror() when no time in Linux and daylight
+          savings time - now MUCH faster.
+
+
+2013-02-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999984 released.
 
         * Fixed mirror() when no time in Linux and daylight

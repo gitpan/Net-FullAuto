@@ -343,14 +343,9 @@ BEGIN {
       $Net::FullAuto::FA_Core::cmdinfo={}
          unless $Net::FullAuto::FA_Core::cmdinfo;
       my $object=($handle)?$handle:$Net::FullAuto::FA_Core::cmdinfo;
-      #my $test='';
-      #my $evalu="\$test=\$Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}";
-      #eval $evalu;
-#print "TEST=$test and CMD=$cmd<==\n";
       unless (exists $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}) {
          my $stdout='';my $stderr='';
          if ($handle) {
-print "WE ARE HERE and KEYS=".(join " ",keys %{$handle})."\n";
             unless (exists $handle->{_shell}) {
                ($stdout,$stderr)=$handle->cmd('env');
                if ($stdout=~/^SHELL=(.*)$/m) {
@@ -370,22 +365,16 @@ print "WE ARE HERE and KEYS=".(join " ",keys %{$handle})."\n";
                }
             }
          } elsif (-e "/usr/bin/$cmd") {
-            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/bin/\"";
-            #eval $comand;
             $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                "/usr/bin/";
             sftport("/usr/bin/") if $cmd eq 'sftp'; 
             return "/usr/bin/";
          } elsif (-e "/bin/$cmd") {
-            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/bin/\"";
-            #eval $comand;
             $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                "/bin/";
             sftport("/bin/") if $cmd eq 'sftp';
             return "/bin/";
          } elsif (-e "/usr/local/bin/$cmd") {
-            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/local/bin/\"";
-            #eval $comand;
             $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                "/usr/local/bin/";
             sftport("/usr/local/bin/") if $cmd eq 'sftp';
@@ -393,35 +382,27 @@ print "WE ARE HERE and KEYS=".(join " ",keys %{$handle})."\n";
          } elsif ($^O eq 'cygwin' && (exists $ENV{'WINDIR'}) &&
                ((-e $win2unix->($ENV{'WINDIR'}).'/system32/'.$cmd)
                || (-e $win2unix->($ENV{'WINDIR'}).'/system32/'.$cmd.'.exe'))) {
-            my $comand='';
             if (-e $win2unix->($ENV{'WINDIR'}).'/system32/'.$cmd) {
-               $comand="\$Net::FullAuto::FA_Core::$cmd=\"".
-                       $win2unix->($ENV{'WINDIR'})."/system32/$cmd\"";
+               $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+                  $win2unix->($ENV{'WINDIR'})."/system32/$cmd";
             } else {
-               $comand="\$Net::FullAuto::FA_Core::$cmd=\"".
-                       $win2unix->($ENV{'WINDIR'})."/system32/${cmd}.exe\"";
+               $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+                  $win2unix->($ENV{'WINDIR'})."/system32/${cmd}.exe";
             }
-            eval $comand;
             sftport("$win2unix->($ENV{'WINDIR'}).'/system32/'")
                if $cmd eq 'sftp';
             return $win2unix->($ENV{'WINDIR'}).'/system32/';
          } elsif (-e "/etc/$cmd") {
             $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                "/etc/";
-            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/etc/\"";
-            #eval $comand;
             sftport("/etc/") if $cmd eq 'sftp';
             return "/etc/";
          } elsif (-e "/usr/sbin/$cmd") {
-            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/sbin/\"";
-            #eval $comand;
             $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                "/usr/sbin/";
             sftport("/usr/sbin/") if $cmd eq 'sftp';
             return "/usr/sbin/";
          } elsif (-e "/sbin/$cmd") {
-            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/sbin/\"";
-            #eval $comand;
             $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                "/sbin/";
             sftport("/sbin/") if $cmd eq 'sftp';
@@ -21432,7 +21413,7 @@ sub build_mirror_hashes
                $skip=1;next;
             } my $dchmod='';my $dtime='';my $dyear='';my $dsize='';
             my $dtime1='';my $dtime2='';my $dtime3='';
-            my $y=qr(\d\d\d\d|0);
+            my $y=qr(\d\d\d\d|0);my $k=qr(\s+\d+\s+\d+|\s+--\s+--);
             if (exists ${$destFH->{_dhash}}{$key}[1]{$file}) {
                if ((!$Net::FullAuto::FA_Core::cron &&
                      $Net::FullAuto::FA_Core::debug) || $verbose) {
@@ -21452,7 +21433,7 @@ sub build_mirror_hashes
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]=~
-                  /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
+                  /^(\d+\s+)(\d+)($k)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
                $dtime1=$1||0;$dtime2=$2||0;$dtime3=$3||0;
                $dyear=$4||0;$dsize=$5||0;$dchmod=$6||0;
                $dtime2="0$dtime2" if length $dtime2==1;
@@ -21460,25 +21441,13 @@ sub build_mirror_hashes
                $dchmod||='';
             }
             ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]=~
-               /^(\d+\s+)(\d+)(\s+\d+\s+\d+|\s+--\s+--)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
+               /^(\d+\s+)(\d+)($k)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
             my $btime1=$1||0;my $btime2=$2||0;
             my $btime3=$3||0;
             my $byear=$4||0;my $bsize=$5||0;my $bchmod=$6||0;
             $btime2="0$btime2" if length $btime2==1;
             my $btime=$btime1.$btime2.$btime3;
             $bchmod||='';
-            unless ($base_uname) {
-               $base_uname=$baseFH->{_uname};
-               if ($base_uname eq 'cygwin') {
-                  my $key_dir=($key ne '/')?"$key/":'';
-                  ($stdout,$stderr)=$baseFH->cmd("stat \"$key_dir$file\"");
-                  my $isto=(index $stdout,'Modify: ')+19;
-                  $stdout=unpack("x$isto a2",$stdout);
-                  my $st=unpack('x6 a2',
-                         ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]);
-                  $base_windows_daylight_savings=1 if $st!=$stdout;
-               }
-            }
             if ((!$Net::FullAuto::FA_Core::cron &&
                   $Net::FullAuto::FA_Core::debug) || $verbose) {
                print "mirror() BASE_FILE_DATA_STRING=",
@@ -21633,17 +21602,6 @@ sub build_mirror_hashes
                my ($dmndy,$dhr,$dmt)
                   =unpack('a5 x1 a2 x1 a2',$dtime);
                if ($btime ne $dtime) {
-                  $dest_uname=$destFH->{_uname} unless $dest_uname;
-                  if ($dest_uname eq 'cygwin') {
-                     my $key_dir=($key ne '/')?"$key/":'';
-                     ($stdout,$stderr)=$destFH->cmd(
-                        "stat \"$key_dir$file\"");
-                     my $isto=(index $stdout,'Modify: ')+19;
-                     $stdout=unpack("x$isto a2",$stdout);
-                     my $st=unpack('x6 a2',
-                            ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]);
-                     $dest_windows_daylight_savings=($st ne $stdout)?1:0;
-                  }
                   my $btim=unpack('x6 a2',$btime);
                   my $dtim=unpack('x6 a2',$dtime);
                   my $testdhr=$dtime;
@@ -21685,7 +21643,29 @@ sub build_mirror_hashes
                   }
                   my $dff=$btim-$dtim;
                   $dff*=-1 if $dff<0;
-                  my $bddd=$base_windows_daylight_savings-$dest_windows_daylight_savings;
+                  $dest_uname=$destFH->{_uname} unless $dest_uname;
+                  if ($dest_uname eq 'cygwin' && $dff==1) {
+                     my $key_dir=($key ne '/')?"$key/":'';
+                     ($stdout,$stderr)=$destFH->cmd(
+                        "stat \"$key_dir$file\"");
+                     my $isto=(index $stdout,'Modify: ')+19;
+                     $stdout=unpack("x$isto a2",$stdout);
+                     my $st=unpack('x6 a2',
+                            ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]);
+                     $dest_windows_daylight_savings=($st ne $stdout)?1:0;
+                  }
+                  $base_uname=$baseFH->{_uname} unless $base_uname;
+                  if ($base_uname eq 'cygwin' && $dff==1) {
+                     my $key_dir=($key ne '/')?"$key/":'';
+                     ($stdout,$stderr)=$baseFH->cmd("stat \"$key_dir$file\"");
+                     my $isto=(index $stdout,'Modify: ')+19;
+                     $stdout=unpack("x$isto a2",$stdout);
+                     my $st=unpack('x6 a2',
+                            ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]);
+                     $base_windows_daylight_savings=($st ne $stdout)?1:0;
+                  }
+                  my $bddd=$base_windows_daylight_savings-
+                        $dest_windows_daylight_savings;
                   $bddd*=-1 if $bddd<0;
                   if ((!$btim && !$dtim) || ($dff==1 && $bddd==1)) {
                      delete ${$destFH->{_dhash}}{$key}[1]{$file}
