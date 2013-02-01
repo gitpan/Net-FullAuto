@@ -339,23 +339,55 @@ BEGIN {
    our $gbp=sub { # Get Bin Path
 
       my $cmd=$_[0];
-      my $test='';
-      my $evalu="\$test=\$Net::FullAuto::FA_Core::$cmd";
-      eval $evalu;
-      unless ($test) {
-         if (-e "/usr/bin/$cmd") {
-            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/bin/\"";
-            eval $comand;
+      my $handle=$_[1];
+      $Net::FullAuto::FA_Core::cmdinfo={}
+         unless $Net::FullAuto::FA_Core::cmdinfo;
+      my $object=($handle)?$handle:$Net::FullAuto::FA_Core::cmdinfo;
+      #my $test='';
+      #my $evalu="\$test=\$Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}";
+      #eval $evalu;
+#print "TEST=$test and CMD=$cmd<==\n";
+      unless (exists $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}) {
+         my $stdout='';my $stderr='';
+         if ($handle) {
+print "WE ARE HERE and KEYS=".(join " ",keys %{$handle})."\n";
+            unless (exists $handle->{_shell}) {
+               ($stdout,$stderr)=$handle->cmd('env');
+               if ($stdout=~/^SHELL=(.*)$/m) {
+                  my $shell=$1;chomp $shell;
+                  $handle->{_shell}=$shell;
+               }
+            }
+            if ((-1<index $handle->{_shell}, 'bash') ||
+                  (-1<index $handle->{_shell}, 'ksh')) {
+               ($stdout,$stderr)=$handle->cmd(
+                  "if [ -f /bin/$cmd ];then echo \"FOUND\";fi");
+               print "STDOUT=$stdout<==\n";
+               if (-1<index $stdout,'FOUND') {
+                  $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+                     "/bin/";
+                  return "/bin/";
+               }
+            }
+         } elsif (-e "/usr/bin/$cmd") {
+            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/bin/\"";
+            #eval $comand;
+            $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+               "/usr/bin/";
             sftport("/usr/bin/") if $cmd eq 'sftp'; 
             return "/usr/bin/";
          } elsif (-e "/bin/$cmd") {
-            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/bin/\"";
-            eval $comand;
+            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/bin/\"";
+            #eval $comand;
+            $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+               "/bin/";
             sftport("/bin/") if $cmd eq 'sftp';
             return "/bin/";
          } elsif (-e "/usr/local/bin/$cmd") {
-            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/local/bin/\"";
-            eval $comand;
+            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/local/bin/\"";
+            #eval $comand;
+            $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+               "/usr/local/bin/";
             sftport("/usr/local/bin/") if $cmd eq 'sftp';
             return "/usr/local/bin/";
          } elsif ($^O eq 'cygwin' && (exists $ENV{'WINDIR'}) &&
@@ -374,26 +406,29 @@ BEGIN {
                if $cmd eq 'sftp';
             return $win2unix->($ENV{'WINDIR'}).'/system32/';
          } elsif (-e "/etc/$cmd") {
-            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/etc/\"";
-            eval $comand;
+            $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+               "/etc/";
+            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/etc/\"";
+            #eval $comand;
             sftport("/etc/") if $cmd eq 'sftp';
             return "/etc/";
          } elsif (-e "/usr/sbin/$cmd") {
-            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/sbin/\"";
-            eval $comand;
+            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/usr/sbin/\"";
+            #eval $comand;
+            $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+               "/usr/sbin/";
             sftport("/usr/sbin/") if $cmd eq 'sftp';
             return "/usr/sbin/";
          } elsif (-e "/sbin/$cmd") {
-            my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/sbin/\"";
-            eval $comand;
+            #my $comand="\$Net::FullAuto::FA_Core::$cmd=\"/sbin/\"";
+            #eval $comand;
+            $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+               "/sbin/";
             sftport("/sbin/") if $cmd eq 'sftp';
             return "/sbin/";
          }
       } else {
-         my $ret="\$Net::FullAuto::FA_Core::$cmd";
-         $ret=eval $ret;
-         $ret||='';
-         return $ret;
+         return $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd};
       }
    };
 
@@ -16933,7 +16968,7 @@ sub mirror
    $args{Cache}||='';
    my $cache=$args{Cache};
 
-print "WHAT IS CACHE=$cache\n";
+print "WHAT IS CACHE=$cache\n" if $cache;
 print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
 #print $Net::FullAuto::FA_Core::MRLOG "CACHEEEEEEEEEEEEEEEEEEEEEEEEEE=",$cache->{'key'},"\n";
    
@@ -18147,7 +18182,8 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                         $gnu_tar_input_file_flag=1; 
                      }
                   }
-                  my $cppath='';my $diffpath='';
+                  #my $cppath='';
+                  #my $diffpath='';
                   while (my $key=shift @basekeys) {
                      my @files=();
                      foreach my $file
@@ -18246,26 +18282,28 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                        $stderr,'-1');
                                  }
                                  if ($same_host_as_Master{$destFH->{_ip}}) {
-                                    unless ($cppath) {
-                                       if (-e '/usr/bin/cp') {
-                                          $cppath='/usr/bin/';
-                                       } elsif (-e '/bin/cp') {
-                                          $cppath='/bin/';
-                                       } elsif (-e '/usr/local/bin/cp') {
-                                          $cppath='/usr/local/bin/';
-                                       }
-                                    }
-                                    unless ($diffpath) {
-                                       if (-e '/usr/bin/diff') {
-                                          $diffpath='/usr/bin/';
-                                       } elsif (-e '/bin/diff') {
-                                          $diffpath='/bin/';
-                                       } elsif (-e '/usr/local/bin/diff') {
-                                          $diffpath='/usr/local/bin/';
-                                       }
-                                    }
+                                    #unless ($cppath) {
+                                    #   if (-e '/usr/bin/cp') {
+                                    #      $cppath='/usr/bin/';
+                                    #   } elsif (-e '/bin/cp') {
+                                    #      $cppath='/bin/';
+                                    #   } elsif (-e '/usr/local/bin/cp') {
+                                    #      $cppath='/usr/local/bin/';
+                                    #   }
+                                    #}
+                                    #unless ($diffpath) {
+                                    #   if (-e '/usr/bin/diff') {
+                                    #      $diffpath='/usr/bin/';
+                                    #   } elsif (-e '/bin/diff') {
+                                    #      $diffpath='/bin/';
+                                    #   } elsif (-e '/usr/local/bin/diff') {
+                                    #      $diffpath='/usr/local/bin/';
+                                    #   }
+                                    #}
                                     ($output,$stderr)=
-                                       $baseFH->cmd("${cppath}cp -fp ".
+                                       $baseFH->cmd(
+                                       $Net::FullAuto::FA_Core::gbp->(
+                                       'cp',$baseFH)."cp -fp ".
                                        "$args{DestDir}/$dir$file ".
                                        $baseFH->{_cwd}. 
                                        "FA_Diff_Report_Zip/$args{ZipBDir}".
@@ -18275,7 +18313,9 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                           $stderr,'-1');
                                     }
                                     ($output,$stderr)=
-                                       $baseFH->cmd("${diffpath}diff ".
+                                       $baseFH->cmd(
+                                       $Net::FullAuto::FA_Core::gbp->(
+                                       'diff',$baseFH)."diff ".
                                        $baseFH->{_cwd}.
                                        "FA_Diff_Report_Zip/$args{ZipBDir}".
                                        "/$dir/$file ".$baseFH->{_cwd}.
@@ -18358,7 +18398,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                                     if $Net::FullAuto::FA_Core::log &&
                                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            ($output,$stderr)=$baseFH->cmd(
-                              $Net::FullAuto::FA_Core::gbp->('tar').
+                              $Net::FullAuto::FA_Core::gbp->('tar',$baseFH).
                               $tar_cmd,500);
                            &Net::FullAuto::FA_Core::handle_error(
                               $stderr,'-1') if $stderr &&
@@ -18377,15 +18417,15 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            && ${$baseFH->{_bhash}}{$key}[0] eq 'ALL') {
                         # this block handles empty directories
                         $activity=1;
-                        unless ($cppath) {
-                           if (-e '/usr/bin/cp') {
-                              $cppath='/usr/bin/';
-                           } elsif (-e '/bin/cp') {
-                              $cppath='/bin/';
-                           } elsif (-e '/usr/local/bin/cp') {
-                              $cppath='/usr/local/bin/';
-                           }
-                        }
+                        #unless ($cppath) {
+                        #   if (-e '/usr/bin/cp') {
+                        #      $cppath='/usr/bin/';
+                        #   } elsif (-e '/bin/cp') {
+                        #      $cppath='/bin/';
+                        #   } elsif (-e '/usr/local/bin/cp') {
+                        #      $cppath='/usr/local/bin/';
+                        #   }
+                        #}
                         if ($^O eq 'cygwin') {
                            if (exists
                                  $Net::FullAuto::FA_Core::cygpathw{$dir}) {
@@ -18401,7 +18441,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            }
                         }
                         ($output,$stderr)=$baseFH->cmd(
-                           "${cppath}cp -Rfp $dir/$key $bcurdir");
+                           $Net::FullAuto::FA_Core::gbp->('cp',$baseFH).
+                           "cp -Rfp $dir/$key $bcurdir");
                         &Net::FullAuto::FA_Core::handle_error(
                            $stderr,'-1') if $stderr;
                         my $tar_cmd='';
@@ -18417,7 +18458,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                         }
                         $tar_cmd.="-C \"$bcurdir\" \"$key\"";
                         ($output,$stderr)=$baseFH->cmd(
-                           $Net::FullAuto::FA_Core::gbp->('tar').$tar_cmd);
+                           $Net::FullAuto::FA_Core::gbp->('tar',$baseFH).
+                           $tar_cmd);
                         &Net::FullAuto::FA_Core::handle_error(
                            $stderr,'-1') if $stderr &&
                            $stderr!~/\[A(?:\[C)+\[K1/;
@@ -18758,7 +18800,10 @@ ${$baseFH->{_unaltered_basehash}}{$key}[1]{$file}||='';
                   }
                }
             }
-print $Net::FullAuto::FA_Core::MRLOG "WHAT THE HECK1 IS ACTIVITY=$activity\n";
+print $Net::FullAuto::FA_Core::MRLOG "WHAT THE HECK1 IS ACTIVITY=$activity\n"
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
             my $nodif="\n       THERE ARE NO DIFFERENCES "
                      ."BETWEEN THE BASE AND TARGET\n\n";
             if ((!$activity) && ((!$Net::FullAuto::FA_Core::cron && $verbose)
@@ -19160,7 +19205,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO TOUCH TIME=$time and FILE=$file\n
                         $stderr,'-1') if $stderr;
                   }
                }
-print $Net::FullAuto::FA_Core::MRLOG "WHAT THE HECK2 IS ACTIVITY=$activity\n";
+print $Net::FullAuto::FA_Core::MRLOG "WHAT THE HECK2 IS ACTIVITY=$activity\n"
+   if defined $Net::FullAuto::FA_Core::MRLOG;
                $nodif="\n       THERE ARE NO DIFFERENCES "
                      ."BETWEEN THE BASE AND TARGET\n\n";
                if ((!$activity) && ((!$Net::FullAuto::FA_Core::cron && $verbose)
@@ -21414,7 +21460,7 @@ sub build_mirror_hashes
                $dchmod||='';
             }
             ${${$baseFH->{_bhash}}{$key}[1]{$file}}[1]=~
-               /^(\d+\s+)(\d+)(\s+\d+\s+\d+)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
+               /^(\d+\s+)(\d+)(\s+\d+\s+\d+|\s+--\s+--)\s+($y)\s+(\d+)\s*(\d*)*\s*$/;
             my $btime1=$1||0;my $btime2=$2||0;
             my $btime3=$3||0;
             my $byear=$4||0;my $bsize=$5||0;my $bchmod=$6||0;
@@ -21587,53 +21633,61 @@ sub build_mirror_hashes
                my ($dmndy,$dhr,$dmt)
                   =unpack('a5 x1 a2 x1 a2',$dtime);
                if ($btime ne $dtime) {
-                  unless ($dest_uname) {
-                     $dest_uname=$destFH->{_uname};
-                     if ($dest_uname eq 'cygwin') {
-                        my $key_dir=($key ne '/')?"$key/":'';
-                        ($stdout,$stderr)=$destFH->cmd(
-                           "stat \"$key_dir$file\"");
-                        my $isto=(index $stdout,'Modify: ')+19;
-                        $stdout=unpack("x$isto a2",$stdout);
-                        my $st=unpack('x6 a2',
-                               ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]);
-                        $dest_windows_daylight_savings=1 if $st!=$stdout;
-                     }
+                  $dest_uname=$destFH->{_uname} unless $dest_uname;
+                  if ($dest_uname eq 'cygwin') {
+                     my $key_dir=($key ne '/')?"$key/":'';
+                     ($stdout,$stderr)=$destFH->cmd(
+                        "stat \"$key_dir$file\"");
+                     my $isto=(index $stdout,'Modify: ')+19;
+                     $stdout=unpack("x$isto a2",$stdout);
+                     my $st=unpack('x6 a2',
+                            ${${$destFH->{_dhash}}{$key}[1]{$file}}[1]);
+                     $dest_windows_daylight_savings=($st ne $stdout)?1:0;
                   }
                   my $btim=unpack('x6 a2',$btime);
                   my $dtim=unpack('x6 a2',$dtime);
-                  my $btme=$btime;
-                  my $dtme=$dtime;
-                  substr($btme,6,2)='';
-                  substr($dtme,6,2)='';
-                  my $testnum='';
-                  if ($dtim<$btim) {
-                     $testnum=$btim-$dtim;
-                  } else { $testnum=$dtim-$btim }
-                  ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
                   my $testdhr=$dtime;
                   my $testbhr=$btime;
-                  if ($dhr eq '23') {
-                     substr($testdhr,6,2)='01';
+                  if ($btim eq '--' || $dtim eq '--') {
+                     substr($testdhr,6,2)='12';
+                     substr($testbhr,6,2)='12';
+                     substr($testdhr,9,2)='00';
+                     substr($testbhr,9,2)='00';
+                     substr($btime,6,2)='12';
+                     substr($dtime,6,2)='12';
+                     substr($btime,9,2)='00';
+                     substr($dtime,9,2)='00';
+                     $dtim=0;$btim=0;
                   } else {
-                     my $ddhr=$dhr+1;
-                     $ddhr='0'.$ddhr if length $ddhr==1;
-                     substr($testdhr,6,2)=$ddhr;
+                     my $btme=$btime;
+                     my $dtme=$dtime;
+                     substr($btme,6,2)='';
+                     substr($dtme,6,2)='';
+                     my $testnum='';
+                     if ($dtim<$btim) {
+                        $testnum=$btim-$dtim;
+                     } else { $testnum=$dtim-$btim }
+                     ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
+                     if ($dhr eq '23') {
+                        substr($testdhr,6,2)='01';
+                     } else {
+                        my $ddhr=$dhr+1;
+                        $ddhr='0'.$ddhr if length $ddhr==1;
+                        substr($testdhr,6,2)=$ddhr;
+                     }
+                     if ($bhr eq '23') {
+                        substr($testbhr,6,2)='01';
+                     } else {
+                        my $bbhr=$bhr+1;
+                        $bbhr='0'.$bbhr if length $bbhr==1;
+                        substr($testbhr,6,2)=$bbhr;
+                     }
                   }
-                  if ($bhr eq '23') {
-                     substr($testbhr,6,2)='01';
-                  } else {
-                     my $bbhr=$bhr+1;
-                     $bbhr='0'.$bbhr if length $bbhr==1;
-                     substr($testbhr,6,2)=$bbhr;
-                  }
-#print "DESTDLS=$dest_windows_daylight_savings and TESTBHR=$testbhr and DTIME=$dtime<==\n";sleep 2;
-                  if ((!($base_windows_daylight_savings &&
-                        $dest_windows_daylight_savings)) &&
-                        (($base_windows_daylight_savings &&
-                        ($testbhr eq $dtime)) ||
-                        ($dest_windows_daylight_savings &&
-                        ($testbhr eq $dtime)))) {
+                  my $dff=$btim-$dtim;
+                  $dff*=-1 if $dff<0;
+                  my $bddd=$base_windows_daylight_savings-$dest_windows_daylight_savings;
+                  $bddd*=-1 if $bddd<0;
+                  if ((!$btim && !$dtim) || ($dff==1 && $bddd==1)) {
                      delete ${$destFH->{_dhash}}{$key}[1]{$file}
                         if $dest_dir_status ne 'DIR_NOT_ON_DEST';
                      $skip=1;
@@ -22084,9 +22138,9 @@ sub build_base_dest_hashes
                      }
                   }
                } else { $mn=unpack('a2',$line) }
-if ($key=~/bcbsa_assets/) {
-#print "MSWin_LINE=$line and KEY=$key and MN=$mn and file=$file and MT=$mt and SIZE=$size\n";sleep 2;
-}
+#if ($key=~/bcbsa_assets/ and ($file=~/Print_Pre/)) {
+#print "MSWin_LINE=$line and KEY=$key and HR=$hr and MN=$mn and file=$file and MT=$mt and SIZE=$size\n";sleep 2;
+#}
                next if $mn eq '' || $mn eq '  '
                               || unpack('a1',$size) eq '<';
                foreach my $pid_ts (@FA_Core::pid_ts) {
@@ -22479,7 +22533,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                   $mn=$Net::FullAuto::FA_Core::month{$mn} if length $mn==3;
                   $fileyr=0;$hr=0;$mt=0;
                   if (length $tm==4) {
-                     $fileyr=$tm;$hr=12;$mt='00';
+                     $fileyr=$tm;$hr='--';$mt='--';
                   } elsif ($yr) {
                      ($hr,$mt)=unpack('a2 @3 a2',$tm);
                      $fileyr=$yr;
@@ -22576,7 +22630,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                                     if length $mn==3;
                                  $fileyr=0;my $hr=0;my $mt='';
                                  if (length $tm==4) {
-                                    $fileyr=$tm;$hr=12;$mt='00';
+                                    $fileyr=$tm;$hr='--';$mt='--';
                                  } else {
                                     ($hr,$mt)=unpack('a2 @3 a2',$tm);
                                     my $yr=unpack('x1 a2',
@@ -22603,22 +22657,10 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                                  }
                                  $file=~s/\s*$//g;
                                  next if !$file;
-                              #} else {
-                                 #$size=~s/^\s*//;
-                                 #my $testyr=100+$yr;
-                                 #$fileyr=$Net::FullAuto::FA_Core::curyear;
-                                 #if ($testyr <
-                                 #      $Net::FullAuto::FA_Core::thisyear) {
-                                    #$hr=12;$mt='00';
-                                 #  $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                                 #} #elsif ($hr<13) {
-                                 #   $hr=$Net::FullAuto::FA_Core::hours{
-                                 #      $hr.lc($pm)};
-                                 #}
                               } $chmod=" $chmod" if $chmod;
                               my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
-#if ($key eq '/') {
-#print "GOOOOOOODDDDDFILE===$file and KEY=$key\n";<STDIN>;
+#if ($file eq 'Print_Preview.gif') {
+#print "GOOOOOOODDDDDFILE===$file and KEY=$key and HR=$hr\n";<STDIN>;
 #}
                               ${$cmd_handle->{"_${bd}hash"}}{$key}[1]{$file}=
                                  [ '',"$dt $dy $hr $mt $fileyr $size$chmod" ];
@@ -22649,9 +22691,12 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                         }
                      }
                   }
-               } elsif ($hr=~/^\d\d$/) {
+               } elsif ($hr=~/^\d\d$|^--$/) {
                   $chmod=" $chmod" if $chmod;
 #print "ALL GOING==>$mn $dy $hr $mt $fileyr $size$chmod<== and FILE=$file and FILEYR=$fileyr<--\n";
+#if ($file eq 'Print_Preview.gif') {
+#print "GOOOOOOODDDDDFILE222===$file and KEY=$key and STRING=$mn $dy $hr $mt $fileyr $size$chmod\n";<STDIN>;
+#}
                   ${$cmd_handle->{"_${bd}hash"}}{$key}[1]{$file}=
                      [ '',"$mn $dy $hr $mt $fileyr $size$chmod" ];
                   $num_of_included++;
@@ -22680,7 +22725,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                         if length $mn==3;
                      my ($hr,$mt)='';
                      if (length $tm==4) {
-                        $fileyr=$tm;$hr=12;$mt='00';
+                        $fileyr=$tm;$hr='--';$mt='--';
                      } elsif (!$fileyr) {
                         ($hr,$mt)=unpack('a2 @3 a2',$tm);
                         $yr=unpack('x1 a2',$Net::FullAuto::FA_Core::thisyear);
@@ -22701,21 +22746,10 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                      }
                      $file=~s/\s*$//g;
                      $file=s/ -> .*$// if -1<index $file,' -> ';
-                  #} else {
-                  #   $size=~s/^\s*//;
-                  #   my $testyr="1$yr";
-                  #   $fileyr=$Net::FullAuto::FA_Core::curyear;
-                  #   if ($testyr<$Net::FullAuto::FA_Core::thisyear) {
-                  #      #$hr=12;$mt='00';
-                  #      $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
-                  #   } #elsif ($hr<13) {
-                  #      $hr=$Net::FullAuto::FA_Core::hours{$hr.lc($pm)};
-#print "DO WE HAVE PM HERE????=$pm<==\n";<STDIN>;
-                     #}
                   } $chmod=" $chmod" if $chmod;
                   my $dt=(3==length $mn)?$Net::FullAuto::FA_Core::month{$mn}:$mn;
-#if ($key eq '/') {
-#print "GOOOOOOODDDDDFILE222===$file and KEY=$key\n";<STDIN>;
+#if ($file eq 'Print_Preview.gif') {
+#print "GOOOOOOODDDDDFILE222===$file and KEY=$key and HR=$hr\n";<STDIN>;
 #}
                   ${$cmd_handle->{"_${bd}hash"}}{$key}[1]{$file}=
                      [ '',"$mn $dy $hr $mt $fileyr $size$chmod" ];

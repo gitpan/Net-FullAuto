@@ -19,13 +19,21 @@
 ################################################################
 
 
+2013-02-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999984 released.
+
+        * Fixed mirror() when no time in Linux and daylight
+          savings time.
+
+        * Added gbp lookup for mirror().
+
+
 2013-01-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999983 released.
 
         * Fixed installation of mozrepl in Makefile.PL.
-
-        * Added gbp lookup for mirror().
 
 
 2013-01-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
