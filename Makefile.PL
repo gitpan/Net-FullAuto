@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999985';
+$main::VERSION='0.999986';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1609,7 +1609,25 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          }
          close(CP) || die $!;
          chmod 0755, "$main::root_dir\\setup.exe";
-         
+        
+         my $mirror_url='http://www.cygwin.com/mirrors.html';
+         $req = HTTP::Request->new(GET => $mirror_url);
+         $req->header('Accept' => 'text/html');
+         $res = $Ua->request($req);
+         my $href='';my @urls=();
+         $mirror_url='http://cygwin.mirrors.pair.com';
+         if ($res->is_success) {
+            print " + request successful.\n"
+               if $CPAN::DEBUG;
+            my $mirrors=$res->content;
+            foreach my $href ($mirrors=~/href="(.*?)"/mg) {
+               next if -1==index $href,'://';
+               next if -1<index $href,'html';
+               next if -1==index $href,'http';
+               push @urls, $href;
+            }
+            $mirror_url=$urls[int(rand($#urls))];
+         }
          my $setup_cmd='';
          my $drlet=substr($main::root_dir,0,2);
          if ($selection!~/[Ww]ordpad|MINIMAL/s) {
@@ -1623,19 +1641,19 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .$selection.' -X -A -q '."-R $main::root_dir "
-                      .'-s http://cygwin.mirrors.pair.com';
+                      .'-s '.$mirror_url;
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
                       .' -X -A -q '."-R $main::root_dir "
-                      .'-s http://cygwin.mirrors.pair.com';
+                      .'-s '.$mirror_url;
          } else {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P openssh,ncurses,inetutils,procps,vim '
                       .'-X -A -q '."-R $main::root_dir ".'-s '
-                      .'http://cygwin.mirrors.pair.com';
+                      .$mirror_url;
          }
          
          my $wver=&windows_ver;
@@ -1954,17 +1972,63 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $clo=~s/\\/\\\\/g;
             my $srvcmd='SET CYGWIN=nodosfilewarning & '.
                        "cmd /c $clo\\\\bin\\\\bash -lc ".
-                       '"/usr/bin/cygrunsrv -L"';
+                       '"/usr/bin/cygrunsrv -L 2>&1"';
             my $cygsrvs=`$srvcmd 2>&1`;
-            if (-1==index $cygsrvs,'sshd') {
+            if (-1<index $cygsrvs,'system cannot find') {
+               $url='http://www.cygwin.com/mirrors.html';
+               $req = HTTP::Request->new(GET => $url);
+               $req->header('Accept' => 'text/html');
+               $res = $Ua->request($req);
+               my $href='';my @urls=();my $mirror_url2='';
+               if ($res->is_success) {
+                  print " + request successful.\n"
+                     if $CPAN::DEBUG;
+                  my $mirrors=$res->content;
+                  foreach my $href ($mirrors=~/href="(.*?)"/mg) {
+                     next if -1==index $href,'://';
+                     next if -1<index $href,'html';
+                     next if -1==index $href,'http';
+                     next if -1<index $href,$mirror_url;
+                     push @urls, $href;
+                  }
+                  $mirror_url2=$urls[int(rand($#urls))];
+                  $setup_cmd=~s/-s .*$/-s $mirror_url2/; 
+                  system($setup_cmd);
+                  my $srvcmd='SET CYGWIN=nodosfilewarning & '.
+                             "cmd /c $clo\\\\bin\\\\bash -lc ".
+                             '"/usr/bin/cygrunsrv -L 2>&1"';
+                  my $cygsrvs=`$srvcmd 2>&1`;
+                  if (-1<index $cygsrvs,'system cannot find') {
+                     print "\n\n".
+                        "   Fatal Error! - Cannot install Cygwin\n".
+                        "   There were two attempts from two different\n\n".
+                        "   Cygwin mirror sites:\n\n".
+                        "   $mirror_url\n".
+                        "   $mirror_url2\n\n";
+                        "   PRESS ANY KEY to Exit Setup\n\n";
+                     <STDIN>;
+                     exit 1;
+                  }
+               } else {
+                  print "\n\n".
+                     "   Fatal Error! - Cannot install Cygwin\n".
+                     "   There were two attempts from two different\n\n".
+                     "   Cygwin mirror sites:\n\n".
+                     "   $mirror_url\n".
+                     "   $mirror_url2\n\n";
+                     "   PRESS ANY KEY to Exit Setup\n\n";
+                  <STDIN>;
+                  exit 1;
+               }
+            } elsif (-1==index $cygsrvs,'sshd') {
                if ($domain_user) {
-                  system('export CYGWIN=nodosfilewarning & '.
-                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                  system('SET CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\bin\\bash -lc ".
                          '"/usr/bin/mkpasswd -u \"'.$domain_user.'\" '.
                          '-d \"'.$domain.'\" >> /etc/passwd"');
                   unless ($main::domain_gr_flag) {
-                     system('export CYGWIN=nodosfilewarning & '.
-                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                     system('SET CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\bin\\bash -lc ".
                          '"/usr/bin/mkgroup -d \"'.$domain.'\" '.
                          '-g  \"Domain Users\" '.
                          '>> /etc/group"');
@@ -1999,6 +2063,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                system('SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $cygwin_loc\\bin\\bash -lc ".
                     '"net stop cygserver 2>&1"');
+print "REBASE ONE\n";
                system('SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $cygwin_loc\\bin\\dash -lc ".
                     '"/bin/rebaseall -v"');
@@ -2006,30 +2071,30 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                     "cmd /c $cygwin_loc\\bin\\dash -lc ".
                     '"/bin/perlrebase"');
                my $netstart='SET CYGWIN=nodosfilewarning & '.
-                    "cmd /c $clo\\\\bin\\\\bash -lc ".
+                    "cmd /c $clo\\bin\\bash -lc ".
                     '"net start sshd 2>&1"';
                my $netout=`$netstart`;
                if (-1<index $netout,'System error') {
                   my $netdel='SET CYGWIN=nodosfilewarning & '.
-                    "cmd /c $clo\\\\bin\\\\bash -lc ".
+                    "cmd /c $clo\\bin\\bash -lc ".
                     '"net user sshd /DELETE 2>&1"';
                   my $ndout=`$netdel`;
                   my $cygdel='SET CYGWIN=nodosfilewarning & '.
-                    "cmd /c $clo\\\\bin\\\\bash -lc ".
+                    "cmd /c $clo\\bin\\bash -lc ".
                     '"net user cyg_server /DELETE 2>&1"';
                   my $cgout=`$cygdel`;
                   my $netrm='SET CYGWIN=nodosfilewarning & '.
-                    "cmd /c $clo\\\\bin\\\\bash -lc ".
+                    "cmd /c $clo\\bin\\bash -lc ".
                     '"/usr/bin/cygrunsrv -R sshd 2>&1"';
                   my $rmout=`$netrm`;
                   if ($domain_user) {
-                     system('export CYGWIN=nodosfilewarning & '.
-                         "cmd /c $clo\\\\bin\\\\bash -lc ".
+                     system('SET CYGWIN=nodosfilewarning & '.
+                         "cmd /c $clo\\bin\\bash -lc ".
                          '"/usr/bin/mkpasswd -u \"'.$domain_user.'\" '.
                          '-d \"'.$domain.'\" >> /etc/passwd"');
                      unless ($main::domain_gr_flag) {
-                        system('export CYGWIN=nodosfilewarning & '.
-                            "cmd /c $clo\\\\bin\\\\bash -lc ".
+                        system('SET CYGWIN=nodosfilewarning & '.
+                            "cmd /c $clo\\bin\\bash -lc ".
                             '"/usr/bin/mkgroup -d \"'.$domain.'\" '.
                             '-g  \"Domain Users\" '.
                             '>> /etc/group"');
@@ -2056,6 +2121,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                     "cmd /c $cygwin_loc\\bin\\bash -lc ".
                     '"net start cygserver 2>&1"');
             } else {
+print "REBASE TWO\n";
                system('SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $cygwin_loc\\bin\\dash -lc ".
                     '"/bin/rebaseall -v"');
@@ -3411,11 +3477,8 @@ sub install_firefox {
       $exe_name=~s/^.*?product=(.*?)[&].*$/$1/;
       $exe_name=~s/firefox-/Firefox Setup /;
       $req = HTTP::Request->new(GET => $href);
-print "DONE WITH GET1\n";
       $req->header('Accept' => 'text/html');
-print "DONE WITH GET2\n";
       $res = $Ua->request($req);
-print "DONE WITH GET3\n";
       if ($res->is_success) {
          print " + request successful.\n"
          if $CPAN::DEBUG;
@@ -3466,7 +3529,9 @@ print "DONE WITH GET3\n";
    $req->header('Accept' => 'text/html');
    my $res = $Ua->request($req);
    my $href='';
-   my $mz="$main::root_dir/$main::mozrepl_file";
+   my $cygwin_loc=get_cygwin_location();
+   my $clo=$cygwin_loc;
+   my $mz="$clo\\$main::mozrepl_file";
    if ($res->is_success) {
       print " + request successful.\n"
          if $CPAN::DEBUG;
@@ -3474,12 +3539,10 @@ print "DONE WITH GET3\n";
       binmode(CP);
       print CP $res->content;
       close CP;
-      my $winrootdir=`/usr/bin/cygpath -lw $main::root_dir`;
-      $winrootdir=~s/\\/\\\\/g;
-      $fftest=~s/\\/\\\\/g;
-      my $mz="\"$fftest\" $winrootdir";
-print "MZ=$mz\n";
-      `$Config{installsitebin}/install_mozrepl_plugin $mz`;
+      my $ff=$fftest.'\\firefox';
+      my $output=
+            `$main::PARdir\\inc\\bin\\install_mozrepl_plugin "$ff" $mz 2>&1`;
+      print "OUTPUT=$output\n" if $output;
    }
 }
 
@@ -4097,8 +4160,9 @@ sub MY::makefile {
       unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
    }
    if (-1<index $main::install_firefox,'Install') {
-      $inherited .= "$main::mozrepl_file:".
-                    "\n\t\$(CP) $main::root_dir/$main::mozrepl_file \$@\n\n";
+      my $cygwin_loc=get_cygwin_location();
+      $inherited .= "lib/Net/FullAuto/$main::mozrepl_file:".
+                    "\n\t\$(CP) $cygwin_loc/$main::mozrepl_file \$@\n\n";
    }
 
    $inherited; 
@@ -4219,15 +4283,17 @@ sub MY::install {
       $inherited =~ s/(install ::.*)$/$1 setgid_permissions/m;
    } elsif ($permission eq 'Owner-Group') {
       if (-1<index $main::install_firefox,'Install') {
+         my $mz='lib/Net/FullAuto/'.$main::mozrepl_file;
          $inherited =~
-            s/(install ::.*)$/$1 owner_group_permissions $main::mozrepl_file/m;
+            s/(install ::.*)$/$1 owner_group_permissions $mz/m;
       } else {
          $inherited =~ s/(install ::.*)$/$1 owner_group_permissions/m;
       }
    } else {
       if (-1<index $main::install_firefox,'Install') {
+         my $mz='lib/Net/FullAuto/'.$main::mozrepl_file;
          $inherited =~
-            s/(install ::.*)$/$1 full_access_permissions $main::mozrepl_file/m;
+            s/(install ::.*)$/$1 full_access_permissions $mz/m;
       } else {
          $inherited =~ s/(install ::.*)$/$1 full_access_permissions/m;
       }
