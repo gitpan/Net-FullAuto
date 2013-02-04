@@ -23,28 +23,39 @@
 SetWorkingDir, %A_ScriptDir%
 DetectHiddenWindows, On
 Run %1% %2%
-;Run c:\Program Files\Mozilla Firefox\firefox c:\cygwin\fullauto\FullAuto\mozrepl-1.1-fx.xpi
-sleep, 2000
-IfWinExist, Import Wizard
-{
-   WinActivate
-   Send !d
-   Sleep,10
-   Send !n
+WinWaitActive, Import Wizard,,2
+Loop {
+   IfWinActive, Software Installation
+   {
+      Sleep, 3000
+      Send, {Enter}
+   } else IfWinActive, Mozilla Firefox ahk_class MozillaWindowClass
+   {
+      Break
+   } else IfWinActive, Import Wizard
+   {
+      Send !d
+      Sleep,10
+      Send !n
+   }
 }
 WinWaitActive, Mozilla Firefox ahk_class MozillaWindowClass
-WinWaitActive, Software Installation
-Sleep, 4000
-Send, {Enter}
-WinWaitActive, Mozilla Firefox ahk_class MozillaWindowClass
-Send, {Enter up}{Tab}
-Sleep, 1000
-Send, {	}{Tab up}{Tab}
-Sleep, 2000
-Send, {	}{Tab up}{Enter}
-Sleep, 2000
-Send, { }
-Send, {Enter up}
-WinWaitActive, Mozilla Firefox ahk_class MozillaWindowClass
+;Send, {Enter up}{Tab}
+;Sleep, 1000
+;Send, {	}{Tab up}{Tab}
+;Sleep, 2000
+;Send, {	}{Tab up}{Enter}
+;Sleep, 2000
+;Send, { }
+;Send, {Enter up}
 WinClose, Mozilla Firefox ahk_class MozillaWindowClass
+Loop {
+   Sleep, 1000
+   IfwinNotActive, Mozilla Firefox ahk_class MozillaWindowClass
+   {
+      Send, {Enter}
+      Break
+   }
+   Send, {Enter}
+}
 ExitApp

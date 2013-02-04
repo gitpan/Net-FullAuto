@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999986';
+$main::VERSION='0.999987';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4160,7 +4160,7 @@ sub MY::makefile {
       unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
    }
    if (-1<index $main::install_firefox,'Install') {
-      my $cygwin_loc=get_cygwin_location();
+      my $cygwin_loc=main::get_cygwin_location();
       $inherited .= "lib/Net/FullAuto/$main::mozrepl_file:".
                     "\n\t\$(CP) $cygwin_loc/$main::mozrepl_file \$@\n\n";
    }
