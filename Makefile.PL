@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999988';
+$main::VERSION='0.999989';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -162,6 +162,20 @@ END
                <STDIN>;
                exit 1;
             }
+         }
+         if ($_[0]) {
+            my $getpath='';
+            $cygwin_query=~s/\\/\\\\/g;
+            if ($^O eq 'cygwin') {
+               $getpath="/usr/bin/cygpath -u $cygwin_query 2>&1";
+            } else {
+               $getpath='SET CYGWIN=nodosfilewarning & '.
+                   "cmd /c $cygwin_query${sep}bin${sep}bash -lc ".
+                   "\"/usr/bin/cygpath -u $cygwin_query\" 2>&1";
+            }
+            $cygwin_query=`$getpath`;
+            chomp $cygwin_query;
+            return '' if $cygwin_query eq '/';
          }
          return $cygwin_query;
       } return 0
@@ -4160,9 +4174,9 @@ sub MY::makefile {
       unlink "blib/lib/Net/FullAuto/Custom/fa_code.pm";
    }
    if (-1<index $main::install_firefox,'Install') {
-      my $cygwin_loc=main::get_cygwin_location();
+      my $cygwin_loc=main::get_cygwin_location(1);
       $cygwin_loc=~s/\\/\//;
-      $inherited .= "lib/Net/FullAuto/$main::mozrepl_file:".
+      $inherited .= "$Config{installsitelib}/Net/FullAuto/$main::mozrepl_file:".
                     "\n\t\$(CP) $cygwin_loc/$main::mozrepl_file \$@\n\n";
    }
 
@@ -4284,7 +4298,7 @@ sub MY::install {
       $inherited =~ s/(install ::.*)$/$1 setgid_permissions/m;
    } elsif ($permission eq 'Owner-Group') {
       if (-1<index $main::install_firefox,'Install') {
-         my $mz='lib/Net/FullAuto/'.$main::mozrepl_file;
+         my $mz="$Config{installsitelib}/Net/FullAuto/$main::mozrepl_file";
          $inherited =~
             s/(install ::.*)$/$1 owner_group_permissions $mz/m;
       } else {
@@ -4292,7 +4306,7 @@ sub MY::install {
       }
    } else {
       if (-1<index $main::install_firefox,'Install') {
-         my $mz='lib/Net/FullAuto/'.$main::mozrepl_file;
+         my $mz="$Config{installsitelib}/Net/FullAuto/$main::mozrepl_file";
          $inherited =~
             s/(install ::.*)$/$1 full_access_permissions $mz/m;
       } else {
