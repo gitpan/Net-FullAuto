@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999990';
+$main::VERSION='0.999991';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -2549,7 +2549,6 @@ print "REBASE TWO\n";
          }
          close(CD);
          &install_firefox() if -1<index $main::install_firefox,'Install';
-print "WE ARE DONE\n";sleep 20;
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
                "\n\n   Please report any bugs and send any",

@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-02-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999991 released.
+
+        * Removed error message from Makefile.PL.
+
+
 2013-02-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999990 released.
