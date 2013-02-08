@@ -25,8 +25,9 @@ DetectHiddenWindows, On
 Run %1% %2%
 WinWaitActive, Import Wizard,,2
 Loop {
-   IfWinActive, Software Installation
+   IfWinExist, Software Installation
    {
+      Winactivate
       Sleep, 3000
       Send, {Enter}
    } else IfWinActive, Mozilla Firefox ahk_class MozillaWindowClass
@@ -40,22 +41,10 @@ Loop {
    }
 }
 WinWaitActive, Mozilla Firefox ahk_class MozillaWindowClass
-;Send, {Enter up}{Tab}
-;Sleep, 1000
-;Send, {	}{Tab up}{Tab}
-;Sleep, 2000
-;Send, {	}{Tab up}{Enter}
-;Sleep, 2000
-;Send, { }
-;Send, {Enter up}
 WinClose, Mozilla Firefox ahk_class MozillaWindowClass
-Loop {
-   Sleep, 1000
-   IfwinNotActive, Mozilla Firefox ahk_class MozillaWindowClass
-   {
-      Send, {Enter}
-      Break
-   }
+Sleep, 1000
+IfWinExist, Mozilla Firefox ahk_class MozillaWindowClass and IfWinNotActive, Mozilla Firefox ahk_class MozillaWindowClass
+{
    Send, {Enter}
 }
 ExitApp

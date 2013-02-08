@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-02-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999990 released.
+
+        * Another Fix for installation of mozrepl in Makefile.PL.
+
+
 2013-02-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999989 released.

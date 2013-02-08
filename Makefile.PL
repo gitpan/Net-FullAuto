@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999989';
+$main::VERSION='0.999990';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -2307,7 +2307,6 @@ print "REBASE TWO\n";
                          $main::cygwin_berkeley_db_mode.'\\";'.
                       'export FA_MOZREPL=\\"'.$main::install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
-                      #'/usr/bin/echo y|/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
                       "REEDFISH/Net-FullAuto-$main::VERSION.tar.gz\"");
             } else {
@@ -2497,7 +2496,6 @@ print "REBASE TWO\n";
                          $main::cygwin_berkeley_db_mode.'\\";'.
                       'export FA_MOZREPL=\\"'.$main::install_firefox.'\\";'.
                       'export PARdir=\\"'.$pardir.'\\";'.
-                      #'/usr/bin/cpan -i Net::FullAuto"');
                       '/usr/bin/echo y|/usr/bin/cpan -i '.
                       "REEDFISH/Net-FullAuto-$main::VERSION.tar.gz\"");
             }
@@ -2551,6 +2549,7 @@ print "REBASE TWO\n";
          }
          close(CD);
          &install_firefox() if -1<index $main::install_firefox,'Install';
+print "WE ARE DONE\n";sleep 20;
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
                "\n\n   Please report any bugs and send any",
