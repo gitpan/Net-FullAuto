@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-02-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999992 released.
+
+        * Added full command line to top of log file.
+
+
 2013-02-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999991 released.

@@ -9302,7 +9302,10 @@ sub fa_login
                }
                $MRLOG->autoflush(1);
                print $MRLOG "\n\n#### NEW PROCESS - ",
-                  scalar localtime(time)," #####\n\n";
+                  scalar localtime(time)," #####\n\n",
+                  "#### COMMAND - $0 ",
+                  (join " ",map { (-1<index $_,' ')?"\"$_\"":$_ } @ARGV),
+                  " ####\n\n";
             } elsif ($log) {
                $MRLOG=*MRLOG;
                my $olog="$home_dir/FAlog${$}d".
@@ -9318,7 +9321,10 @@ sub fa_login
                      if $cache;
                }
                print $MRLOG "\n\n#### NEW PROCESS - ",
-                  scalar localtime(time)," #####\n\n";
+                  scalar localtime(time)," #####\n\n",
+                  "#### COMMAND - $0 ",
+                  (join " ",map { (-1<index $_,' ')?"\"$_\"":$_ } @ARGV),
+                  " ####\n\n";
             }
 
          }

@@ -14,13 +14,13 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 326f0d0f1a66acd31e98c3a7f5b5d908f25cc410 ChangeLog
+SHA1 01dc7bb2a1186285943ca00e340a61e2255f0c4c ChangeLog
 SHA1 5437f164ae11b18bb58a8576204254a1b4a9334b LICENSE
 SHA1 d910f2158f397101c20143f72890951dbff888b5 MANIFEST
-SHA1 f506d8e6fc8f89d88c5ee9be51c0c5db3f32f40c META.yml
-SHA1 708c8a2a5a684b99f8d94a09d78f8aacd04601ac MYMETA.json
-SHA1 581232c3c0ca15af7e7eea29dbf7384cb4c6ef99 MYMETA.yml
-SHA1 4ceff98d8f311507cdb4156a98a05751bd7fb2d7 Makefile.PL
+SHA1 a264aec3dde2e0fea39b2779d3e0ac9bac334fb2 META.yml
+SHA1 fb61e788c4d71101aa670be200dbd4ade19ab79e MYMETA.json
+SHA1 3d98b44cbd8b1e1695346868ec1da69fde6b3371 MYMETA.yml
+SHA1 abb2d58ea53d73afc0690f678d2edabc16f57ec4 Makefile.PL
 SHA1 38228eb2b6a24938b795a73e324f9f51a2a13756 README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 6671adf9bf15b05200f2eb0ce2ac8b257a9e6050 bin/fullauto.pl
@@ -39,7 +39,7 @@ SHA1 d3a4c720c6ec7f8fce7df37002fbc9177fb77050 inc/Module/Install/Scripts.pm
 SHA1 5457015ea5a50e93465bf2dafa29feebd547f85b inc/Module/Install/Win32.pm
 SHA1 051e7fa8063908befa3440508d0584a2497b97db inc/Module/Install/WriteAll.pm
 SHA1 225dc1fa8a31e86954f43fb8e6a2060c9c54e6f8 install_mozrepl_plugin.ahk
-SHA1 5d26c03e76426151752b1798fc710bec006d9f44 lib/Net/FullAuto.pm
+SHA1 1a754be624be9ca1800d626e2de347e6891cb586 lib/Net/FullAuto.pm
 SHA1 da4cad3f90b32301fad4f5a910b67b37c5105b49 lib/Net/FullAuto/Custom/BackUp/README
 SHA1 966d316495dc2c924ba00e0eaa065391a8c967c5 lib/Net/FullAuto/Custom/README
 SHA1 931b73137675e23ff80148d72aa09415fdb164af lib/Net/FullAuto/Distro/fa_code.pm
@@ -50,13 +50,13 @@ SHA1 652187d2e9b92347b5ce4622086b2314ad9962ee lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 35b0f57527b9813d39d63df1e3db84fdc13e9514 lib/Net/FullAuto/Distro/fa_menu.pm
 SHA1 e0f261e25b722eb59848bcd0a9ee2936a6cc5d87 lib/Net/FullAuto/Distro/fa_menu_demo.pm
 SHA1 c61c03f9beda14559fdf07e569e813a2bd553a53 lib/Net/FullAuto/Distro/fullautologo.jpg
-SHA1 ee4a83206e1eaa600e9ab4321d993d034ba97295 lib/Net/FullAuto/FA_Core.pm
+SHA1 55879172b08674bca735aa56a6b8a5b4cd389fd9 lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.12 (Cygwin)
 
-iEYEARECAAYFAlEVKUMACgkQJM3IZYB6aOoeWgCdHaT4o2gwINKr855+1GWH1kz2
-X40Anij+5UP2QGuWT74trj2f+HBWKOks
-=fx0Z
+iEYEARECAAYFAlEWgCcACgkQJM3IZYB6aOp0VwCbBBvqHdBqtzYQO47HkimMqBAg
+MPMAn3P/C0peuPjUhiItsCXkWYXwePVg
+=dxGW
 -----END PGP SIGNATURE-----
