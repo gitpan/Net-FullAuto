@@ -21,6 +21,14 @@
 
 2013-02-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999995 released.
+
+        * Added $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME}=0 to
+          Makefile.PL.
+
+
+2013-02-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999994 released.
 
         * Fixed mozrepel install for Cygwin CPAN install.

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999994';
+$main::VERSION='0.999995';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3450,6 +3450,7 @@ sub find_firefox_mozrepl {
 sub install_firefox {
 
    my $Ua;
+   $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME}=0;
    if ($CPAN::META->has_usable('LWP')) {
       FA::LWP::UserAgent->config;
       eval { $Ua = FA::LWP::UserAgent->new(
