@@ -21,6 +21,13 @@
 
 2013-02-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999993 released.
+
+        * Added temporary mozrepel error checking.
+
+
+2013-02-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999992 released.
 
         * Added full command line to top of log file.

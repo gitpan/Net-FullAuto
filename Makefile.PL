@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999992';
+$main::VERSION='0.999993';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -2548,6 +2548,7 @@ print "REBASE TWO\n";
             }
          }
          close(CD);
+print "INSTALL_FIREFOX=$main::install_firefox\n";sleep 10;
          &install_firefox() if -1<index $main::install_firefox,'Install';
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
@@ -3454,7 +3455,7 @@ sub install_firefox {
       die "Unable to install Firefox due to no LWP availability";
    }
    my $fftest='';
-   unless ($main::install_firefox eq 'Install MozRepl') {
+   unless ($main::install_firefox eq 'Install_MozRepl') {
       my $url='http://www.mozilla.org/en-US/firefox/all/';
       print "Fetching with LWP:\n  $url\n";
       my $req = HTTP::Request->new(GET => $url);
