@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-02-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999994 released.
+
+        * Fixed mozrepel install for Cygwin CPAN install.
+
+
 2013-02-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999993 released.

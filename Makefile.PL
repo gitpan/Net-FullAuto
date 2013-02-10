@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999993';
+$main::VERSION='0.999994';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -2135,10 +2135,10 @@ print "REBASE ONE\n";
                     "cmd /c $cygwin_loc\\bin\\bash -lc ".
                     '"net start cygserver 2>&1"');
             } else {
-print "REBASE TWO\n";
-               system('SET CYGWIN=nodosfilewarning & '.
-                    "cmd /c $cygwin_loc\\bin\\dash -lc ".
-                    '"/bin/rebaseall -v"');
+#print "REBASE TWO\n";
+#               system('SET CYGWIN=nodosfilewarning & '.
+#                    "cmd /c $cygwin_loc\\bin\\dash -lc ".
+#                    '"/bin/rebaseall -v"');
                system('SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $cygwin_loc\\bin\\dash -lc ".
                     '"/bin/perlrebase"');
@@ -2548,7 +2548,6 @@ print "REBASE TWO\n";
             }
          }
          close(CD);
-print "INSTALL_FIREFOX=$main::install_firefox\n";sleep 10;
          &install_firefox() if -1<index $main::install_firefox,'Install';
          print "\n\n   FullAuto Installation has completed",
                "\n\n   Thank you!",
@@ -2824,7 +2823,6 @@ if (-e "/bin/grep") {
 my $get_BerkeleyDB=0;
 eval { require BerkeleyDB };
 $get_BerkeleyDB=1 if $@;
-#if ($get_BerkeleyDB) {
 if ($get_BerkeleyDB && $^O ne 'cygwin') {
    # Let's find if Berkeley DB is already on the system
    my $findpath='';
@@ -3033,9 +3031,9 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         );
                         if (!$end_flag && ($status_line eq '404')) {
                            $source=$last_known_good_location;
-                           $end_flag=1;
+                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
                            $source=~
-                              s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+                              s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
                            $file=$2;
                            $file=substr($file,(index $file,'/')+1,-7);
                            $ver=$file;
@@ -3089,9 +3087,9 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         );
                         if (!$end_flag && ($status_line eq '404')) {
                            $source=$last_known_good_location;
-                           $end_flag=1;
+                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
                            $source=~
-                              s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+                              s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
                            $file=$2;
                            $file=substr($file,(index $file,'/')+1,-7);
                            $ver=$file;
@@ -3294,13 +3292,6 @@ if ($get_BerkeleyDB) {
             if (-f '/etc/redhat-release' || -f '/etc/fedora-release') {
                $ENV{LD_RUN_PATH}=$ENV{LD_LIBRARY_PATH};
             }
-            #if (eval '$>' and lc(`sudo -V`) =~ /version/) {
-            #   system(
-            #      'sudo',$^X,"-MCPANPLUS","-e","install $p");
-            #   eval "use $p;1" ||
-            #       system('sudo', $^X, "-MCPAN", "-e",
-            #         "CPAN::Shell->force('install',$p)")
-            #}
             eval {
                require CPANPLUS::Shell;
                my $u=CPANPLUS::Shell->new();
@@ -3427,7 +3418,32 @@ sub find_firefox_mozrepl {
             }
          }
       }
-      $main::install_firefox='Install_MozRepl';
+      unless ($main::install_firefox_without_asking) {
+         # Ask if we should install
+         my $one="YES - Install MozRepl Plugin for Firefox\n\n";
+         my %_askfirefox=(
+
+            Label => '_askfirefox',
+            Item_1 =>  {
+                           Text   => "]C[",
+                           Convey => [ $one,'NO  - DO *NOT* INSTALL MozRepl' ],
+                        },
+            Banner=> "   Mozilla Firefox has an available add-on ".
+                     "called MozRepl.\n\n   With Firefox equipped ".
+                     "with MozRepl, FullAuto can do\n   extremely ".
+                     "powerful WEB Automation!\n\n   Would you ".
+                     "like the FullAuto installer to install ".
+                     "the\n   MozRepl plugin?\n",
+         );
+         $selection=Term::Menus::Menu(\%_askfirefox);
+         chomp($selection);
+         $selection='Install_MozRepl'
+            if -1<index $selection,'Install MozRepl Plugin';
+         $selection='DO_NOT_INSTALL'
+            if -1<index $selection,'*NOT* INSTALL';
+         exit if $selection eq ']quit[';
+      } else { $selection='Install_MozRepl' }
+      $main::install_firefox=$selection;
    }
 }
 
@@ -3450,7 +3466,6 @@ sub install_firefox {
             if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
       }
       $Ua->ssl_opts( SSL_verify_mode => 'SSL_VERIFY_NONE' );
-      #$Ua->ssl_opts( SSL_ca_file => Mozilla::CA::SSL_ca_file() );
    } else {
       die "Unable to install Firefox due to no LWP availability";
    }
@@ -3882,9 +3897,10 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
                "\n       perform this step, type 'N' and setup will".
                "\n       continue WITHOUT modifying the Windows registry.)".
                "\n\n";
-         print "Type <Y> if you wish to FullAuto setup to modify the registry,\n".
-               "or 'N' to proceed without this step . . . [N] ";$
-         a=<STDIN>;
+         print "Type <Y> if you wish to FullAuto setup to modify ",
+               "the registry,\nor 'N' to proceed without this step ",
+               ". . . [N] ";
+         $a=<STDIN>;
          alarm 0;
       };
       if ($@) {
@@ -4073,6 +4089,7 @@ if ($^O eq 'cygwin') {
    install_script('bin/fullauto.exe');
    install_script('bin/install_mozrepl_plugin.exe');
    unlink "bin/fullauto.exe";
+   &install_firefox() if -1<index $main::install_firefox,'Install';
 } else {
    open(FH,">bin/fullauto");
    print FH "\n";
