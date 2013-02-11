@@ -21,6 +21,13 @@
 
 2013-02-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999997 released.
+
+        * Another Fix for installation of mozrepl in Makefile.PL.
+
+
+2013-02-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999996 released.
 
         * Added flag file for first pass DB locking.
