@@ -450,88 +450,89 @@ BEGIN {
 
    );
 
+   our $locks = {
+
+      1234 => {
+                  MaxNumberAllowed => 1,
+                  KillAfterSeconds => 300,
+                  Enable           => 1,
+                  Lock_Description =>
+                     'DEFAULT Lock - used when a unique'.
+                     " key is not supplied.\n          ".
+                     'Used internally mostly to protect'.
+                     ' short duration input I/O.',
+                  Wait_For_NewLock => 60,
+                  PollingMilliSecs => 1000,
+              },
+      7755 => {
+                  MaxNumberAllowed => 1,
+                  KillAfterSeconds => 300,
+                  Enable           => 1,
+                  Lock_Description =>
+                     'clean_filehandle() Lock - '.
+                     "used to prevent more than\n          ".
+                     'one FullAuto instance using'.
+                     ' this routine at a time.',
+                  Wait_For_NewLock => 60,
+                  PollingMilliSecs => 500,
+              },
+      9361 => {
+                  MaxNumberAllowed => 1,
+                  KillAfterSeconds => 300,
+                  Enable           => 1,
+                  Lock_Description =>
+                     'getpasswd() Lock - '.
+                     'used to protect password'.
+                     ' retrieval.',
+                  Wait_For_NewLock => 60,
+                  PollingMilliSecs => 500,
+              },
+      9854 => {
+                  MaxNumberAllowed => 1,
+                  KillAfterSeconds => 300,
+                  Enable           => 1,
+                  Lock_Description =>
+                     'Password Input Lock',
+                  Wait_For_NewLock => 60,
+                  PollingMilliSecs => 500,
+              },
+      9876 => {
+                  MaxNumberAllowed => 2,
+                  KillAfterSeconds => 300,
+                  Enable           => 1,
+                  Lock_Description =>
+                     'FullAuto Capacity '.
+                     'Lock - dictates the '.
+                     "maximum\n          number of FullAuto".
+                     ' invocations running in '.
+                     'parallel.',
+                  Wait_For_NewLock => 60,
+                  PollingMilliSecs => 500,
+              },
+      6543 => {
+                  MaxNumberAllowed => 1,
+                  KillAfterSeconds => 300,
+                  Enable           => 1,
+                  Lock_Description =>
+                     'Local Host Login Lock',
+                  Wait_For_NewLock => 60,
+                  PollingMilliSecs => 500,
+              },
+      8712 => {
+                  MaxNumberAllowed => 1,
+                  KillAfterSeconds => 300,
+                  Enable_This_Lock => 1,
+                  Lock_Description =>
+                     '/bin/mount Lock',
+                  Wait_For_NewLock => 60,
+                  PollingMilliSecs => 500,
+              },
+   };
+
    use Fcntl qw(S_IMODE);
    our $fa_perm=S_IMODE((CORE::stat($main::netfull))[2]);
 
 }
-
-our $locks = {
-
-   1234 => {
-               MaxNumberAllowed => 1,
-               KillAfterSeconds => 300,
-               Enable           => 1,
-               Lock_Description =>
-                  'DEFAULT Lock - used when a unique'.
-                  " key is not supplied.\n          ".
-                  'Used internally mostly to protect'.
-                  ' short duration input I/O.',
-               Wait_For_NewLock => 60,
-               PollingMilliSecs => 1000,
-           },
-   7755 => {
-               MaxNumberAllowed => 1,
-               KillAfterSeconds => 300,
-               Enable           => 1,
-               Lock_Description =>
-                  'clean_filehandle() Lock - '.
-                  "used to prevent more than\n          ".
-                  'one FullAuto instance using'.
-                  ' this routine at a time.',
-               Wait_For_NewLock => 60,
-               PollingMilliSecs => 500,
-           },
-   9361 => {
-               MaxNumberAllowed => 1,
-               KillAfterSeconds => 300,
-               Enable           => 1,
-               Lock_Description =>
-                  'getpasswd() Lock - '.
-                  'used to protect password'.
-                  ' retrieval.',
-               Wait_For_NewLock => 60,
-               PollingMilliSecs => 500,
-           },
-   9854 => {
-               MaxNumberAllowed => 1,
-               KillAfterSeconds => 300,
-               Enable           => 1,
-               Lock_Description =>
-                  'Password Input Lock',
-               Wait_For_NewLock => 60,
-               PollingMilliSecs => 500,
-           },
-   9876 => {
-               MaxNumberAllowed => 2,
-               Enable           => 1,
-               Lock_Description =>
-                  'FullAuto Capacity '.
-                  'Lock - dictates the '.
-                  "maximum\n          number of FullAuto".
-                  ' invocations running in '.
-                  'parallel.',
-               Wait_For_NewLock => 60,
-               PollingMilliSecs => 500,
-           },
-   6543 => {
-               MaxNumberAllowed => 1,
-               KillAfterSeconds => 300,
-               Enable           => 1,
-               Lock_Description =>
-                  'Local Host Login Lock',
-               Wait_For_NewLock => 60,
-               PollingMilliSecs => 500,
-           },
-   8712 => {
-               MaxNumberAllowed => 1,
-               KillAfterSeconds => 300,
-               Enable_This_Lock => 1,
-               Lock_Description =>
-                  '/bin/mount Lock',
-               Wait_For_NewLock => 60,
-               PollingMilliSecs => 500,
-           },
-};
 
 # Globally Scoped Variables, but Intentionally NOT Initialized.
 # Getopt::Long needs it this way for some args to work properly. 
@@ -1358,7 +1359,8 @@ $SIG{ INT } = sub{
                        "\n=============================\n\n",
                        if $Net::FullAuto::FA_Core::log &&
                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-
+                    unlink $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}
+                       if exists $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK};
                     &release_fa_lock(6543);
                     $cleanup=1;&cleanup('','INT') };
 our $alarm_sounded=0;
@@ -2939,19 +2941,27 @@ sub acquire_fa_lock
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       }
-      if (exists $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}) {
-         my @db_info=split '|',$ENV{FA_ACQUIRING_BERKELEY_DB_LOCK};
+      my $ff=$Hosts{"__Master_${$}__"}{'FA_Secure'}."Locks/lock_$letoct.flag";
+      if (-e $ff) {
+         open (FF,"<$ff") || &handle_error("FATAL ERROR: Cannot open $ff");
+         my $db_info=<FF>;
+         close FF;
+         $db_info=~s/\s*$//;
+         my @db_info=split '|',$db_info;
          if (time>$db_info[1]+5) {
-            my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('deadlock');
-            my $out=`$d -ao -h $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks'`;
-            if ($out) {
-               $d=~s/deadlock/recover/;
-               my $out=
-                    `$d -h $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks'`;
-               &handle_error($out) if $out;
-            }
+            my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+            my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks';
+            my $out=`$cmd`;
+            &handle_error($out) if $out;
+            unlink $ff;
          }
       }
+      $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}=$ff;
+      open (FF,">$ff") || &handle_error("FATAL ERROR: Cannot open $ff");
+      my $ltime=time +
+            $Net::FullAuto::FA_Core::locks->{$letoct}->{'KillAfterSeconds'};
+      print FF "$$|$ltime";
+      close FF;
       unless ($Net::FullAuto::FA_Core::dbenv_locks) {
          $Net::FullAuto::FA_Core::dbenv_locks = BerkeleyDB::Env->new(
             -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks',
@@ -2960,7 +2970,6 @@ sub acquire_fa_lock
             "cannot open environment for DB: $BerkeleyDB::Error\n");
          $Net::FullAuto::FA_Core::dbenv_locks->set_flags(DB_CDB_ALLDB,1);
       }
-      $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}="$$|".time;
       $Net::FullAuto::FA_Core::bdb_locks = BerkeleyDB::Btree->new(
          -Filename => "${Net::FullAuto::FA_Core::progname}_locks.db",
          -Flags    => DB_CREATE,
@@ -2968,6 +2977,7 @@ sub acquire_fa_lock
          -Env      => $Net::FullAuto::FA_Core::dbenv_locks
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n");
+      unlink $ff;
       delete $ENV{FA_ACQUIRING_BERKELEY_DB_LOCK}; 
       if ($mkdflag && $^O eq 'cygwin') {
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
