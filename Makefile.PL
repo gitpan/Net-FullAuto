@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999997';
+$main::VERSION='0.999998';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3571,11 +3571,11 @@ sub install_firefox {
       my $ff=$fftest.'\\firefox';
       if ($^O eq 'cygwin') {
          my $output=
-            `$main::PARdir/inc/bin/install_mozrepl_plugin "$ff" $mz 2>&1`;
+            `$main::PARdir/bin/install_mozrepl_plugin "$ff" $mz 2>&1`;
          print "OUTPUT=$output\n" if $output;
       } else {
          my $output=
-            `$main::PARdir\\inc\\bin\\install_mozrepl_plugin "$ff" $mz 2>&1`;
+            `$main::PARdir\\bin\\install_mozrepl_plugin "$ff" $mz 2>&1`;
          print "OUTPUT=$output\n" if $output;
       }
    }
