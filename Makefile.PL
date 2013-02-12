@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999998';
+$main::VERSION='0.999999';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -153,14 +153,14 @@ END
             my $groups=`$getid`;
             if ((-1==index $groups,"(Administrators)") && 
                   ($ENV{'USERNAME'} ne 'Administrator')) {
-               print "\n\n".
-               print "   Fatal Error! - The User $ENV{'USERNAME'} needs to\n".
-                     "   be a member of the Administrator's group in order\n".
-                     "   to install FullAuto or OpenSSH.\n\n".
-                     "   Please contact your Windows System Administrator\n".
-                     "   to resolve.\n\n    PRESS ANY KEY to Exit Setup\n\n";
+               print "\n\n",
+                     "   Fatal Error! - The User $ENV{'USERNAME'} needs to\n",
+                     "   be a member of the Administrator's group in order\n",
+                     "   to install FullAuto or OpenSSH.\n\n",
+                     "   Please contact your Windows System Administrator\n",
+                     "   to resolve.\n\n   PRESS ANY KEY to Exit Setup\n\n";
                <STDIN>;
-               exit 1;
+               exit;
             }
          }
          if ($_[0]) {
@@ -3551,6 +3551,31 @@ sub install_firefox {
             $fftest='';
          }
       }
+   } else {
+      # Let's look for Firefox
+      my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+                  'Mozilla\\Mozilla Firefox" 2>&1';
+      $firefox=`$firefox`;
+      chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+      $firefox=~s/^.*CurrentVersion\s*REG_SZ\s*(.*?)\n.*$/$1/s;
+      $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
+               "Mozilla\\Mozilla Firefox\\$firefox\\Main\" 2>&1";
+      open (FF,"$firefox|");
+      while (my $line=<FF>) {
+         $firefox.=$line;
+      }
+      close FF;
+      chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
+      $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+      $firefox=~s/\s*$//s;
+      $fftest=substr($firefox,0,2) if 1<length $firefox;
+      $fftest||='';
+      my $selection='';
+      if ($fftest=~/\w:|\/\w/) {
+         $fftest=substr($firefox,0,(rindex $firefox,'\\'));
+      } else {
+         $fftest='';
+      }
    }
    my $url='https://addons.mozilla.org/firefox/downloads/file/'.
         "138898/$main::mozrepl_file?src=dp-btn-primary";
@@ -3570,12 +3595,13 @@ sub install_firefox {
       close CP;
       my $ff=$fftest.'\\firefox';
       if ($^O eq 'cygwin') {
+         $mz=~s/\\/\\\\/g;
          my $output=
-            `$main::PARdir/bin/install_mozrepl_plugin "$ff" $mz 2>&1`;
+            `$main::PARdir/bin/install_mozrepl_plugin \"$ff\" $mz 2>&1`;
          print "OUTPUT=$output\n" if $output;
       } else {
          my $output=
-            `$main::PARdir\\bin\\install_mozrepl_plugin "$ff" $mz 2>&1`;
+            `$main::PARdir\\bin\\install_mozrepl_plugin \"$ff\" $mz 2>&1`;
          print "OUTPUT=$output\n" if $output;
       }
    }

@@ -23313,6 +23313,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                               my $winff=$firefox;
                               ($firefox,$stderr)=&Net::FullAuto::FA_Core::cmd(
                                  "cygpath \"$firefox\"");
+                              $Net::FullAuto::FA_Core::firefox=$firefox;
                               &Net::FullAuto::FA_Core::handle_error($stderr)
                                  if $stderr;
                               # Let's look for MozRepl
@@ -23366,10 +23367,10 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  $winff=~s/\\/\\\\/g;
                                  my $progpath=substr($0,0,(rindex $0,'/')+1);
                                  my $mc=$progpath.'install_mozrepl_plugin '.
-                                       $winff." ${cdr}mozrepl-1.1-fx.xpi";  
+                                       "\"$winff\""." ${cdr}mozrepl-1.1-fx.xpi";
                                  my $mystdout='';
                                  IO::CaptureOutput::capture sub {
-                                    #system($mc);
+                                    system($mc);
                                  }, \$mystdout;
                               }
                               my $fcmd="\"${firefox}\" -new-instance -repl ".
