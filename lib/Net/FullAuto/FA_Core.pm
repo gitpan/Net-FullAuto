@@ -6103,10 +6103,14 @@ sub getpasswd
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
+         my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+         my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $out=`$cmd`;
+         &handle_error($out) if $out;
          $bdb = BerkeleyDB::Btree->new(
             -Filename => 
                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER,
+            -Flags    => DB_CREATE,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -6439,10 +6443,14 @@ sub getpasswd
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
+         my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+         my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $out=`$cmd`;
+         &handle_error($out) if $out;
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER,
+            -Flags    => DB_CREATE,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7110,11 +7118,15 @@ $main::get_default_modules=sub {
       -Env      => $Net::FullAuto::FA_Core::dbenv_once
    );
    unless ($BerkeleyDB::Error=~/Successful/) {
+      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+      my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Defaults';
+      my $out=`$cmd`;
+      &handle_error($out) if $out;
       $Net::FullAuto::FA_Core::bdb_once =
             BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_defaults.db",
-         -Flags    => DB_CREATE|DB_RECOVER,
+         -Flags    => DB_CREATE,
          -Env      => $Net::FullAuto::FA_Core::dbenv_once
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7177,11 +7189,15 @@ $main::get_default_modules=sub {
          -Env      => $Net::FullAuto::FA_Core::dbenv_once
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
+         my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+         my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
+         my $out=`$cmd`;
+         &handle_error($out) if $out;
          $Net::FullAuto::FA_Core::bdb_once =
                BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_sets.db",
-            -Flags    => DB_CREATE|DB_RECOVER,
+            -Flags    => DB_CREATE,
             -Env      => $Net::FullAuto::FA_Core::dbenv_once
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7263,9 +7279,13 @@ my $set_default_sub=sub {
       -Env      => $dbenv
    );
    unless ($BerkeleyDB::Error=~/Successful/) {
+      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+      my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
+      my $out=`$cmd`;
+      &handle_error($out) if $out;
       $bdb = BerkeleyDB::Btree->new(
          -Filename => "${progname}_sets.db",
-         -Flags    => DB_CREATE|DB_RECOVER,
+         -Flags    => DB_CREATE,
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -7630,10 +7650,13 @@ my $default_sets_banner_sub=sub {
          -Env      => $sdbenv
       );
    unless ($BerkeleyDB::Error=~/Successful/) {
+      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+      my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
+      my $out=`$cmd`;
+      &handle_error($out) if $out;
       $sbdb = BerkeleyDB::Btree->new(
          -Filename => $progname."_sets.db",
-         -Flags    =>
-            DB_CREATE|DB_RECOVER,
+         -Flags    => DB_CREATE,
          -Env      => $sdbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -8082,9 +8105,13 @@ my $define_modules_commit_sub=sub {
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
+               my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+               my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
+               my $out=`$cmd`;
+               &handle_error($out) if $out;
                $bdb = BerkeleyDB::Btree->new(
                   -Filename => "${progname}_sets.db",
-                  -Flags    => DB_CREATE|DB_RECOVER,
+                  -Flags    => DB_CREATE,
                   -Env      => $dbenv
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
@@ -8425,11 +8452,17 @@ my $delete_sets_menu_sub=sub {
                               -Env      => $dbenv
                            );
                            unless ($BerkeleyDB::Error=~/Successful/) {
+                              my $d=
+                                 &Net::FullAuto::FA_Core::find_berkeleydb_utils(
+                                 'recover');
+                              my $cmd="$d -h ".
+                                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                                 'Defaults';
+                              my $out=`$cmd`;
+                              &handle_error($out) if $out;
                               $bdb = BerkeleyDB::Btree->new(
-                                 -Filename => $progname.
-                                              "_defaults.db",
-                                 -Flags    =>
-                                    DB_CREATE|DB_RECOVER,
+                                 -Filename => $progname."_defaults.db",
+                                 -Flags    => DB_CREATE,
                                  -Env      => $dbenv
                               );
                               unless ($BerkeleyDB::Error=~/Successful/) {
@@ -8482,10 +8515,16 @@ my $delete_sets_menu_sub=sub {
                               -Env      => $sdbenv
                            );
                            unless ($BerkeleyDB::Error=~/Successful/) {
+                              my $d=
+                                 &Net::FullAuto::FA_Core::find_berkeleydb_utils(
+                                 'recover');
+                              my $cmd="$d -h ".
+                                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Sets';
+                              my $out=`$cmd`;
+                              &handle_error($out) if $out;
                               $sbdb = BerkeleyDB::Btree->new(
                                  -Filename => $progname."_sets.db",
-                                 -Flags    =>
-                                     DB_CREATE|DB_RECOVER,
+                                 -Flags    => DB_CREATE,
                                  -Env      => $sdbenv
                               );
                               unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9226,10 +9265,14 @@ sub fa_login
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
+         my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+         my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $out=`$cmd`;
+         &handle_error($out) if $out;
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER,
+            -Flags    => DB_CREATE,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9440,9 +9483,15 @@ print "HELLO\n";
                      -Env      => $dbenv
                   );
                   unless ($BerkeleyDB::Error=~/Successful/) {
+                     my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils(
+                        'recover');
+                     my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                        'Defaults';
+                     my $out=`$cmd`;
+                     &handle_error($out) if $out;
                      $bdb = BerkeleyDB::Btree->new(
                         -Filename => "${progname}_defaults.db",
-                        -Flags    => DB_CREATE|DB_RECOVER,
+                        -Flags    => DB_CREATE,
                         -Env      => $dbenv
                      );
                      unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9472,9 +9521,15 @@ print "HELLO\n";
                      -Env      => $dbenv
                   );
                   unless ($BerkeleyDB::Error=~/Successful/) {
+                     my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils(
+                        'recover');
+                     my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                        'Defaults';
+                     my $out=`$cmd`;
+                     &handle_error($out) if $out;
                      $bdb = BerkeleyDB::Btree->new(
                         -Filename => "${progname}_defaults.db",
-                        -Flags    => DB_CREATE|DB_RECOVER,
+                        -Flags    => DB_CREATE,
                         -Env      => $dbenv
                      );
                      unless ($BerkeleyDB::Error=~/Successful/) {
@@ -9615,10 +9670,14 @@ print "HELLO\n";
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
+               my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+               my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
+               my $out=`$cmd`;
+               &handle_error($out) if $out;
                $bdb = BerkeleyDB::Btree->new(
                   -Filename =>
                      "${Net::FullAuto::FA_Core::progname}_plans.db",
-                  -Flags    => DB_CREATE|DB_RECOVER,
+                  -Flags    => DB_CREATE,
                   -Compare  => sub { $_[0] <=> $_[1] },
                   -Env      => $dbenv
                );
@@ -9763,10 +9822,14 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
+            my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+            my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+            my $out=`$cmd`;
+            &handle_error($out) if $out;
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE|DB_RECOVER,
+               -Flags    => DB_CREATE,
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
@@ -10463,10 +10526,16 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                   -Env      => $dbenv
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
+                  my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils(
+                     'recover');
+                  my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.
+                     'Passwds';
+                  my $out=`$cmd`;
+                  &handle_error($out) if $out;
                   $bdb = BerkeleyDB::Btree->new(
                      -Filename =>
                        "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-                     -Flags    => DB_CREATE|DB_RECOVER,
+                     -Flags    => DB_CREATE,
                      -Env      => $dbenv
                   );
                   unless ($BerkeleyDB::Error=~/Successful/) {
@@ -10702,10 +10771,14 @@ print $Net::FullAuto::FA_Core::MRLOG
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
+            my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+            my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+            my $out=`$cmd`;
+            &handle_error($out) if $out;
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE|DB_RECOVER,
+               -Flags    => DB_CREATE,
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
@@ -11418,10 +11491,14 @@ sub passwd_db_update
       -Env      => $dbenv
    );
    unless ($BerkeleyDB::Error=~/Successful/) {
+      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+      my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+      my $out=`$cmd`;
+      &handle_error($out) if $out;
       $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE|DB_RECOVER,
+         -Flags    => DB_CREATE,
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -11550,10 +11627,14 @@ sub su_scrub
       -Env      => $dbenv
    );
    unless ($BerkeleyDB::Error=~/Successful/) {
+      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+      my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+      my $out=`$cmd`;
+      &handle_error($out) if $out;
       $bdb = BerkeleyDB::Btree->new(
          -Filename =>
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-         -Flags    => DB_CREATE|DB_RECOVER,
+         -Flags    => DB_CREATE,
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
@@ -11739,10 +11820,14 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
+            my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+            my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+            my $out=`$cmd`;
+            &handle_error($out) if $out;
             $bdb = BerkeleyDB::Btree->new(
                -Filename =>
                   "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-               -Flags    => DB_CREATE|DB_RECOVER,
+               -Flags    => DB_CREATE,
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
@@ -12664,10 +12749,14 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
+         my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+         my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $out=`$cmd`;
+         &handle_error($out) if $out;
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
-            -Flags    => DB_CREATE|DB_RECOVER,
+            -Flags    => DB_CREATE,
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
@@ -13953,10 +14042,16 @@ print "FTR_RETURN3\n";
                              -Env      => $dbenv
                         );
                         unless ($BerkeleyDB::Error=~/Successful/) {
+                           my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils(
+                              'recover');
+                           my $cmd="$d -h ".
+                              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+                           my $out=`$cmd`;
+                           &handle_error($out) if $out;
                            $bdb = BerkeleyDB::Btree->new(
                                 -Filename =>
                                    "${pn}_${kind}_passwds.db",
-                                -Flags    => DB_CREATE|DB_RECOVER,
+                                -Flags    => DB_CREATE,
                                 -Env      => $dbenv
                            );
                            unless ($BerkeleyDB::Error=~/Successful/) {
