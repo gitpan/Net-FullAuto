@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999901';
+$main::VERSION='0.99999902';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -820,6 +820,9 @@ END
       '','2.24');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
+   ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
+   &fa_err_exit($stderr,'Mozilla::CA') if $stderr;
+   print $stdout if $stdout;
 };
 
 sub ws_info {
@@ -1228,6 +1231,7 @@ use File::stat;
 CPAN::HandleConfig->load;
 use POSIX qw/strftime/;
 
+require Mozilla::CA;
 require Term::Menus;
 require Term::ReadKey;
 require Term::RawInput;
@@ -2294,6 +2298,13 @@ print "REBASE ONE\n";
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
+               system('export CYGWIN=nodosfilewarning & '.
+                      "cmd /c $clo\\\\bin\\\\bash -lc ".
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Mozilla::CA;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Mozilla::CA\')}\""');
                my $par_dir='export CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/cygpath -lm \"'.$main::PARdir.'\""';
@@ -2483,6 +2494,13 @@ print "REBASE ONE\n";
                       ' or do {require CPAN and '.
                       'CPAN::Shell-^^^>notest(\'install\','.
                       '\'Term::Menus\')}\""');
+               system('SET CYGWIN=nodosfilewarning & '.
+                      "cmd /c $cygwin_loc\\bin\\bash -lc ".
+                      '"/usr/bin/perl -e \"eval { '.
+                      'require Mozilla::CA;1 }'.
+                      ' or do {require CPAN and '.
+                      'CPAN::Shell-^^^>notest(\'install\','.
+                      '\'Mozilla::CA\')}\""');
                my $par_dir='SET CYGWIN=nodosfilewarning & '.
                       "cmd /c $clo\\\\bin\\\\bash -lc ".
                       '"/usr/bin/cygpath -lm \"'.$main::PARdir.'\""';
