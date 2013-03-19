@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999902';
+$main::VERSION='0.99999903';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1520,7 +1520,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          exit if $selection eq ']quit[';
          $main::cygwin_berkeley_db_mode=$selection;
 
-         &find_firefox_mozrepl() if 
+         &find_windows_app() if 
             (-1==index $main::install_firefox,'Install') &&
             (-1==index $main::install_firefox,'NOT');
 
@@ -1657,20 +1657,20 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
-                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
-                      .$selection.' -X -A -q '."-R $main::root_dir "
+                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
+                      .'libmpfr4'.$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
-                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip'
-                      .' -X -A -q '."-R $main::root_dir "
+                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
+                      .'libmpfr4 -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
          } else {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup.exe -P openssh,ncurses,inetutils,procps,vim '
-                      .'-X -A -q '."-R $main::root_dir ".'-s '
+                      .'setup.exe -P openssh,ncurses,inetutils,procps,vim,'
+                      .'libmpfr4 -X -A -q '."-R $main::root_dir ".'-s '
                       .$mirror_url;
          }
          
@@ -2751,7 +2751,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    chmod 0755, $Config{installsitelib}."/Net/FullAuto/Distro"; 
 }
 
-&find_firefox_mozrepl() if $^O eq 'cygwin' &&
+&find_windows_app() if $^O eq 'cygwin' &&
    ((-1==index $main::install_firefox,'Install') &&
    (-1==index $main::install_firefox,'NOT'));
 
@@ -3358,7 +3358,7 @@ if ($@) {
    die $die;
 }
 
-sub find_firefox_mozrepl {
+sub find_windows_app {
 
    # Let's look for Firefox
    my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.

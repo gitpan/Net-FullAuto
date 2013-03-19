@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-03-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999903 released.
+
+        * Added lib libmpfr4 to install with Cygwin.
+
+
 2013-02-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999902 released.

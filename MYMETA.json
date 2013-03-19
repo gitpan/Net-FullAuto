@@ -4,7 +4,7 @@
       "Brian M. Kelly <Brian.Kelly@fullautosoftware.net>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "CPAN::Meta::Converter version 2.112150, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "CPAN::Meta::Converter version 2.112621, CPAN::Meta::Converter version 2.112621",
    "license" : [
       "unknown"
    ],
@@ -68,7 +68,7 @@
       },
       "Net::FullAuto" : {
          "file" : "lib/Net/FullAuto.pm",
-         "version" : "0.99999902"
+         "version" : "0.99999903"
       },
       "Net::FullAuto::FA_Core" : {
          "file" : "lib/Net/FullAuto/FA_Core.pm",
@@ -117,5 +117,5 @@
          "http://opensource.org/licenses/gpl-3.0.html"
       ]
    },
-   "version" : "0.99999902"
+   "version" : "0.99999903"
 }
