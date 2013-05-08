@@ -12669,6 +12669,18 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
 
 }
 
+sub tmp
+{
+   my @topcaller=caller;
+   print "PARENTTMPCALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
+   print $Net::FullAuto::FA_Core::MRLOG "PARENTTMPCALLER=",
+      (join ' ',@topcaller), "\nand ARGS=@_\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   return File_Transfer::tmp(@_);
+}
+
 sub print
 {
 my @topcaller=caller;
@@ -18107,6 +18119,9 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                $base_fdr!~/^[\/|\\][\/|\\]/ ||
                !$bms_share || !$#{$baseFH->{_hostlabel}}) {
             my $base__dir=$base_fdr;
+            if ($base__dir!~/[^\/]\/$/ && $base__dir ne '/') {
+               $base__dir.='/';
+            }
             my $bcurdir=$baseFH->{_work_dirs}->{_tmp};
             my $aix_tar_input_variable_flag=0;
             my $aix_tar_input_variable1='';
@@ -18261,6 +18276,11 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                   my @basekeys=sort keys %{$baseFH->{_bhash}};
                   my $f_cnt=0;
                   ($output,$stderr)=$baseFH->cmd("tar --help");
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE12 and TAROOUT=$output\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                   if ($stderr) {
                      if (-1<index $stderr,'-LInputList') {
                         $aix_tar_input_variable_flag=1;
@@ -18270,7 +18290,8 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                         &Net::FullAuto::FA_Core::handle_error($stderr,'-5');
                      }
                   } elsif ($output) {
-                     if (-1<index $output,'-T, --files-from=NAME') {
+                     if (-1<index $output,'GNU' ||
+                           -1<index $output,'-T, --files-from=NAME') {
                         $gnu_tar_input_file_flag=1; 
                      }
                   }
@@ -18289,7 +18310,7 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                         }
                      } my $tar_cmd='';my $save_dir='';my $zdir_flag=0;
                      foreach my $file (sort @files) {
-print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         $activity=1;
                         my $base___dir='';
                         my $dir= ($key eq '/') ? '' : "$key/";
@@ -18319,13 +18340,23 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2" if $Net::FullAuto::FA_Core::log
                               }
                               $Net::FullAuto::FA_Core::cygpathu{$base_fdr}=$bcd;
                            }
-print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2 and DIR=$dir and BCD=$bcd" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2 and DIR=$dir and BCD=$bcd\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            $dir=~s/^(\/usr)*$bcd\/*//;
-print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir and BASE__DIR=$base__dir<==\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         }
                         my $dirt='';
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE10\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                         if (exists $Net::FullAuto::FA_Core::file_rename{
                               "$dir$file"}) {
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE9\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                            my $cmd="cp -Rpv \"$base__dir$dir$file\" "
                               ."\"$bcurdir"
                               .$Net::FullAuto::FA_Core::file_rename{
@@ -18341,10 +18372,16 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            $dir='';
                            if ($gnu_tar_input_file_flag) {
                               $gnu_tar_input_file2=
-                                 $baseFH->tmp('tarlist2.txt')
+                                 $baseFH->tmp(
+                                 'tarlist2.txt')
                                  if !$gnu_tar_input_file2;
                               $gnu_tar_input_list2.="$file\n";
                               $tmp_dir=$bcurdir;
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE11 and FILE=$file\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                               push @dirt, $file;
                            } elsif ($aix_tar_input_variable_flag) {
                               $aix_tar_input_variable2.="${bcurdir}$file\n";
@@ -18446,7 +18483,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                            }
                         } elsif ($gnu_tar_input_file_flag) {
                            $gnu_tar_input_file1=
-                              $baseFH->tmp('tarlist1.txt')
+                              $baseFH->tmp(
+                              'tarlist1.txt')
                               if !$gnu_tar_input_file1;
                            $gnu_tar_input_list1.="$dir$file\n";
                         } elsif ($aix_tar_input_variable1) {
@@ -18518,7 +18556,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                         #      $cppath='/usr/local/bin/';
                         #   }
                         #}
-                        if ($^O eq 'cygwin') {
+                        if (0) {
+                        #if ($^O eq 'cygwin') {
                            if (exists
                                  $Net::FullAuto::FA_Core::cygpathw{$dir}) {
                               $dir=$Net::FullAuto::FA_Core::cygpathw{$dir};
@@ -18531,6 +18570,13 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                               $Net::FullAuto::FA_Core::cygpathw{$dir}=$cdr;
                               $dir=$cdr;
                            }
+                        }
+                        if ($^O eq 'cygwin' && (-1<index $dir,'\\')) {
+                           my $cdr='';
+                           ($cdr,$stderr)=&Net::FullAuto::FA_Core::cmd(
+                              $localhost,"cygpath \"$dir\"");
+                           &handle_error($stderr,'-1') if $stderr;
+                           $dir=$cdr;
                         }
                         ($output,$stderr)=$baseFH->cmd(
                            $Net::FullAuto::FA_Core::gbp->('cp',$baseFH).
@@ -18618,6 +18664,11 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                      foreach my $fil (@files) {
                         $fil=~s/%/\\%/g;
                         $farg.=$fil;
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE20 =$farg<= and $filearg<=\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                         if (1601 < length
                               "echo \"$farg\" >> \$gnu_tar_input_file1") {
                            chomp $filearg;
@@ -18629,6 +18680,11 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY2AFTER and DIR=$dir\n" if $Net::Fu
                         } $filearg=$farg;
                      }
                      if ($filearg) {
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE21 =$filearg<=\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                         chomp $filearg;
                         ($output,$stderr)=$baseFH->cmd(
                            "echo \"$filearg\" >> $gnu_tar_input_file1");
@@ -20163,7 +20219,16 @@ my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_P
          foreach my $file (keys %Net::FullAuto::FA_Core::rename_file) {
             my $cmd="mv \"$file\" ".
                     "\"$Net::FullAuto::FA_Core::rename_file{$file}\"";
-            my ($output,$stderr)=$destFH->cmd($cmd);
+            sleep 10;
+my ($output,$stderr)=$destFH->cmd('pwd');
+print $Net::FullAuto::FA_Core::MRLOG "BIGGOPWD=$output\n";
+($output,$stderr)=$destFH->cmd("tar tvf ${d_fdr}transfer".
+         "$Net::FullAuto::FA_Core::tran[3].tar");
+print "GOT BIGGO=$output<==\n";<STDIN>;
+print $Net::FullAuto::FA_Core::MRLOG "TAR TVF OUT=$output\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
@@ -20171,6 +20236,7 @@ my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_P
          foreach my $file (keys %Net::FullAuto::FA_Core::renamefile) {
             my $cmd="mv \"$file\" ".
                     "\"$Net::FullAuto::FA_Core::renamefile{$file}\"";
+            sleep 10;
             my ($output,$stderr)=$destFH->cmd($cmd);
             $Net::FullAuto::FA_Core::savetran=1 if $stderr;
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
@@ -21482,6 +21548,11 @@ sub build_mirror_hashes
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #print "HERE1=$key\n";
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE3\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                ${$baseFH->{_bhash}}{$key}[3]='NOT_ON_DEST';
                $dest_dir_status='DIR_NOT_ON_DEST';
                $deploy_info.="DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
@@ -21581,6 +21652,11 @@ sub build_mirror_hashes
                   $deploy_info.="DEPLOY FILE $file - DIR_NOT_ON_DEST\n";
                   $debug_info.="DEPLOY FILE $file - DIR_NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE7\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                      my $tmp_file_name="X_".time."_"
                                        .$Net::FullAuto::FA_Core::increment++
                                        ."_X.mvx";
@@ -21591,6 +21667,11 @@ sub build_mirror_hashes
                   $deploy_info.="DEPLOY FILE $key/$file - DIR_NOT_ON_DEST\n";
                   $debug_info.="DEPLOY FILE $key/$file - DIR_NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE8\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                      my $tmp_file_name="X_".time."_"
                                        .$Net::FullAuto::FA_Core::increment++
                                        ."_X.mvx";
@@ -21600,6 +21681,10 @@ sub build_mirror_hashes
                         "$key/$file";
                   }
                }
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE4\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
 #print "HERE3=$key\n";
 #print "DESTKEYS=",keys %{$destFH->{_dhash}},"\n";<STDIN>;
                ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
@@ -21614,6 +21699,11 @@ sub build_mirror_hashes
                         "FILE=$file because DIR_NOT_ON_DEST\n"])
                      if $cache;
                }
+
+print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
                print $Net::FullAuto::FA_Core::MRLOG
                   "mirror() DEPLOY NEEDED for KEY=$key and ",
                   "FILE=$file because DIR_NOT_ON_DEST\n"
@@ -23435,13 +23525,16 @@ print $Net::FullAuto::FA_Core::MRLOG "TELNET_CMD_HANDLE_LINE=$line\n"
                                  HM: foreach my $profile (@dirs) {
                                     next if $profile eq '.';
                                     next if $profile eq '..';
-                                    opendir(DIR,$up."/$profile/extensions");
-                                    my @files = readdir(DIR);
-                                    closedir(DIR);
-                                    foreach my $file (@files) {
-                                       if (-1<index $file,'mozrepl') {
-                                          $have_mozrepl=1;
-                                          last HM;
+                                    if (-e $up."/$profile/extensions") {
+                                       opendir(DIR,$up."/$profile/extensions");
+                                       my @files = readdir(DIR);
+                                       closedir(DIR);
+                                       foreach my $file (@files) {
+                                          if (-1<index $file,'mozrepl') {
+                                             $have_mozrepl=1;
+                                             last HM;
+                                          }
+
                                        }
                                     }
                                  }
@@ -26113,6 +26206,9 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   $output=~s/[ ]*\015//g;
                   $output=~tr/\0-\11\13-\37\177-\377//d;
+                  if (-1<index $output,'[A') {
+                     $output=~s/^(.*2[>][&]1\s*)\[A\s*$/$1/s;
+                  }
                   print $Net::FullAuto::FA_Core::MRLOG
                      "\nCMD RAW OUTPUT: ==>$output<== at Line ",__LINE__,"\n\n"
                      if $Net::FullAuto::FA_Core::log &&
@@ -26908,6 +27004,12 @@ print $Net::FullAuto::FA_Core::MRLOG "cmd() STDERRBOTTOM=$stderr<== and LASTLINE
                &Net::FullAuto::FA_Core::handle_error($stderr) if !$wantarray;
             }
             $stderr='' if $stderr eq '_funkyPrompt_';
+            if (-1<index $stderr,'_funkyPrompt_') {
+               my $test_stderr=$stderr;
+               $test_stderr=~s/_funkyPrompt_//g;
+               $test_stderr=~s/^\s*$//;
+               $stderr='' unless $test_stderr;
+            }
          }
       };
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEXXXXXXXXXXX\n";
