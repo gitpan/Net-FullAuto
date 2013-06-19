@@ -18,6 +18,12 @@
 #
 ################################################################
 
+2013-06-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999903 released.
+
+        * New version to work with updated Term::Menus.
+
 
 2013-05-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 

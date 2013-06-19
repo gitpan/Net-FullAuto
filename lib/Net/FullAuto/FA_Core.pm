@@ -35,6 +35,11 @@ package Net::FullAuto::FA_Core;
 #
 #  gpg --gen-key (then follow onscreen instructions)
 #
+#  Export Public Key:  http://www.gnupg.org/gph/en/manual/x56.html
+#                      http://keyserver.ubuntu.com:11371
+#                      http://pgp.mit.edu
+#                      https://keyserver.pgp.com
+#
 #  http://irtfweb.ifa.hawaii.edu/~lockhart/gpg/gpg-cs.html (gpg cheatsheet)
 #
 ## For running CPAN with sudo
@@ -43,10 +48,22 @@ package Net::FullAuto::FA_Core;
 #
 ## For compiling into MSWin32 setup executable with PAR::Packager
 #
-#  pp -c -o "Setup FullAuto MSWin32-x86.exe" 
-#     -l C:\strawberry\perl\bin\libgcc_s_sjlj-1.dll Makefile.PL
-#     -a bin -a ChangeLog -a inc -a lib -a t -a META.yml
-#     -a LICENSE -a MANIFEST -a README --icon FA_Setup.ico
+#  pp -o "Setup-FullAuto-v.99999904-MSWin32-x86.exe"
+#     -l C:\strawberry\perl\bin\libgcc_s_sjlj-1.dll
+#     -l C:\strawberry\c\bin\libeay32_.dll
+#     -l C:\strawberry\c\bin\libz_.dll
+#     -l C:\strawberry\c\bin\libz.dll
+#     -l C:\strawberry\c\bin\ssleay32_.dll Makefile.PL
+#     -M Module::Build -M Task::Weaken -M YAML
+#     -M IO::CaptureOutput -M ExtUtils::Depends
+#     -M ExtUtils::MakeMaker -M B::Utils
+#     -M Data::Dump::Streamer -M LWP -M IO::Socket::SSL
+#     -M LWP::Protocol::https -M Mozilla::CA
+#     -M Term::RawInput -M JSON -M Term::Menus
+#     -M Win32::API -M Win32::DriveInfo -M DBD::SQLite
+#     -a bin -a ChangeLog -a inc -a Module -a lib -a t
+#     -a META.yml -a LICENSE -a MANIFEST -a README
+#     -a UNINSTALL_CYGWIN --icon FA_Setup.ico
 #
 #  http://download.oracle.com/berkeley-db/db-5.1.19.tar.gz
 #
