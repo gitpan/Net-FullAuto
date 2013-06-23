@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999905';
+$main::VERSION='0.99999906';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -817,7 +817,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.31');
+      '','2.32');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
@@ -1869,6 +1869,93 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                   <STDIN>;exit 1;
                }
             } else {
+               my $netuser=`net user`;
+               $netuser=~s/^.*----(.*)The command comp.*$/$1/s;
+               $netuser=~s/^\s*//s;
+               $netuser=~s/\s*$//s;
+               $netuser=~s/\n/         /g;
+               my @netuser=split /    \s*/, $netuser;
+               @netuser=grep { $_ ne 'sshd' } @netuser;
+               my %sshd_account=();
+               if (grep { 'cyg_server' eq $_ } @netuser) {
+                  my $cs_info=`net user cyg_server`;
+                  my $pwls='';my $ll='';
+                  ($pwls=$cs_info)
+                     =~s/^.*(Password last set\s*.*?(?:PM|AM)).*/$1/s;
+                  ($ll=$cs_info)
+                     =~s/^.*(Last logon\s*.*?(?:PM|AM)).*/$1/s;
+                  %sshd_account=(
+
+                     Label => 'sshd_account',
+                     Item_1 => {
+
+                        Text => 'Remove and recreate local \'cyg_server\''.
+                                ' account.'.
+                                "\n                 ( Recommended )\n\n",
+                        Default => "*",
+                     },
+                     Item_2 => {
+
+                        Text => 'Use the pre-existing local \'cyg_server\''.
+                                " account.\n\n",
+
+                     },
+                     Item_3 => {
+
+                        Text => 'Use or create a different local account.',
+
+                     },
+                     Banner => "\n   Cygwin's sshd service requires a".
+                               "\n   dedicated Windows user account.".
+                               "\n   A pre-existing local \'cyg_server\' ID ".
+                               "\n   was found with the following properies:".
+                               "\n\n      $pwls\n      $ll".
+                               "\n\n   Please select an action:",
+
+
+                  );
+               }
+               my $selection=Menu(\%sshd_account);
+               if (-1<index $selection, 'Remove') {
+                  my $ndout=`net user sshd /DELETE 2>&1`;
+                  my $cgout=`net user cyg_server /DELETE 2>&1`;
+               } elsif (-1==index $selection, 'pre-existing') {
+                  @netuser=grep { $_ ne 'cyg_server' } @netuser;
+                  %sshd_account=(
+
+                     Label => 'sshd_account',
+                     Item_1 => {
+
+                        Text => 'Create a new dedicated Windows user account'.
+                                "\n                   (You will be prompted)".
+                                "\n\n",
+
+                     },
+                     Item_2 => {
+
+                        Text => 'Use the pre-existing \']C[\' local account.',
+                        Convey => \@netuser,
+
+                     },
+                     Banner => "\n   Cygwin's sshd service requires a".
+                               "\n   dedicated Windows user account.".
+                               "\n   You can select a pre-existing one,".
+                               "\n   or elect to use a different one.".
+                               "\n\n   Please select an action:",
+
+
+                  );
+                  $selection=Menu(\%sshd_account);
+                  chomp($selection);
+                  exit if $selection eq ']quit[';
+                  if (-1<index $selection,'pre-exist') {
+                     $selection=~s/^.*?['](.*?)['].*$/$1/;
+                     $sshd_account=$selection;
+                  } else {
+
+
+                  }
+               }
 # Check if cyg_server exists but is bad
 # Then either remove and ask or just ask if cyg_server or other id
             }
@@ -3978,7 +4065,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.31;
+#requires        'Term::Menus'               => 2.32;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

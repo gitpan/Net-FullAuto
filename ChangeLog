@@ -18,9 +18,22 @@
 #
 ################################################################
 
+
+2013-06-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999906 released.
+
+        * Now checks sshd account priviliges every invocation.
+          (for Windows 7 and global policies)
+
+        * When gets sshd Stopped message, checks for orphans.
+
+        * Updated Makefile.PL to ask for local sshd account.
+
+
 2013-06-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
-        * Version 0.99999903 released.
+        * Version 0.99999905 released.
 
         * New version to work with updated Term::Menus.
 
