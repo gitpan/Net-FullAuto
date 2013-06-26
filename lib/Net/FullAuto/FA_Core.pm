@@ -155,14 +155,126 @@ BEGIN {
       }
       $srvout=`/bin/cygrunsrv -Q sshd 2>&1`;
       if (-1<index $srvout,'Stopped') {
-         print "\nFatal Error: The Cygwin sshd (Secure Shell) service is NOT",
-               " running:\n\n${srvout}To start type:  'net start sshd'\n\n";
-         exit;
+         my $ps=`/bin/ps -e`;
+         if (-1<index $ps,'sshd') {
+            foreach my $line (split "\n", $ps) {
+               my $pid=$line;
+               next unless -1<index $line,'sshd';
+               $pid=~s/^\s(\d+)\s+.*$/$1/;
+               `/bin/kill -f $pid`;
+            }
+            my $output=`net start sshd 2>&1`; 
+            unless (-1<index $output,'CYGWIN sshd service was started') {
+               print "\nFatal Error: The Cygwin sshd (Secure Shell) service is",
+                     " NOT running:\n\n${srvout}To start type:  ",
+                     "'net start sshd'\n\n";
+               exit;
+            }
+         } else {
+            print "\nFatal Error: The Cygwin sshd (Secure Shell) service is ",
+                  "NOT running:\n\n${srvout}To start type:  'net start sshd'".
+                  "\n\n";
+            exit;
+         }
       } elsif (-1<index $srvout,'The specified service does not exist') {
          print "\nFatal Error: The Cygwin sshd (Secure Shell) service is NOT",
                " installed:\n\n${srvout}To install type:  ",
                "'/bin/ssh-host-config --privileged'\n\n";
          exit;
+      }
+      my $srvaccount=`sc qc sshd`;
+      $srvaccount=~s/^.*SERVICE_START_NAME : (?:.\\)*(.*?)\s*$/$1/s;
+      my $rights=`/bin/editrights -u $srvaccount -l 2>&1`;
+      if ($rights!~/^Error/) {
+         if ((-1<index $rights,'SeDenyRemoteInteractiveLogonRight') ||
+               (-1==index $rights,'SeServiceLogonRight') ||
+               (-1==index $rights,'SeTcbPrivilege') ||
+               (-1==index $rights,'SeCreateTokenPrivilege') ||
+               (-1==index $rights,'SeAssignPrimaryTokenPrivilege') || 1) {
+            my @missing_rights=();
+            my $output='';my $restart_sshd=0;
+            if (-1<index $rights,'SeDenyRemoteInteractiveLogonRight') {
+               my $rt='SeDenyRemoteInteractiveLogonRight';
+               $output=`/bin/editrights -r $rt -u $srvaccount 2>&1`;
+               if ($output=~/^Error/) {
+                  my $die="\n   ".
+                          "Fatal Error! - The following restriction was\n   ".
+                          "               discovered for the sshd service\n   ".
+                          "               account '".$srvaccount."':\n\n".
+                          $rt."\n\n   An attempt was made to remove this,\n".
+                          "   but was not successful:\n\n   $output\n\n".
+                          "   Please contact your Domain and/or System".
+                          "   Administrators for assistance.\n\n";
+                  print $die;
+                  exit 1;
+               } else { $restart_sshd=1 }
+            }
+            if (-1==index $rights,'SeTcbPrivilege') {
+               $output=`/bin/editrights -a SeTcbPrivilege -u $srvaccount 2>&1`;
+               if ($output=~/^Error/) {
+                  push @missing_rights, 'SeTcbPrivilege';
+               } else { $restart_sshd=1 }
+            }
+            if (-1==index $rights,'SeCreateTokenPrivilege') {
+               my $prv='SeCreateTokenPrivilege';
+               $output=`/bin/editrights -a $prv -u $srvaccount 2>&1`;
+               if ($output=~/^Error/) {
+                  push @missing_rights, 'SeCreateTokenPrivilege';
+               } else { $restart_sshd=1 }
+            }
+            if (-1==index $rights,'SeAssignPrimaryTokenPrivilege') {
+               my $prv='SeAssignPrimaryTokenPrivilege';
+               $output=`/bin/editrights -a $prv -u $srvaccount 2>&1`;
+               if ($output=~/^Error/) {
+                  push @missing_rights, 'SeAssignPrimaryTokenPrivilege';
+               } else { $restart_sshd=1 }
+            }
+            if (-1==index $rights,'SeServiceLogonRight') {
+               my $prv='SeServiceLogonRight';
+               $output=`/bin/editrights -a $prv -u $srvaccount 2>&1`;
+               if ($output=~/^Error/) {
+                  push @missing_rights, 'SeServiceLogonRight';
+               } else { $restart_sshd=1 }
+            }
+            if (-1<$#missing_rights) {
+               my $mis=join "\n",map { "               $_" } @missing_rights;
+               my $die="\n   Fatal Error! - The following priviliges are\n   ".
+                    "               missing from the ID '".$srvaccount."':\n\n".
+                    $mis."\n\n   An attempt was made to add these priviliges,".
+                    "\n   but was not successful. Please contact your\n".
+                    "   your Domain and/or System Administrators for\n".
+                    "   assistance. These priviliges can be controlled at\n".
+                    "   the domain level with a global policy that\n".
+                    "   affects one or multiple hosts. These policies\n".
+                    "   are enforced at host startup - which would\n".
+                    "   explain why sshd may have worked in an earlier\n".
+                    "   session, or immediately following installation,\n".
+                    "   but not after a reboot.\n\n";
+               print $die;
+               exit 1;
+            } elsif ($restart_sshd) {
+               $srvout=`/bin/cygrunsrv -Q sshd 2>&1`;
+               my $output=`net stop sshd 2>&1`;
+               unless (-1<index $output,'CYGWIN sshd service was stopped') {
+                  print "\nFatal Error:".
+                        " The Cygwin sshd (Secure Shell) service ",
+                        " could NOT be restarted:\n\n${srvout}".
+                        "Error: $output\n\nTo restart, Run as Administrator\n".
+                        "\nand type:  'net stop sshd'\n".
+                        "and then:  'net start sshd'\n\n";
+                  exit;
+               }
+               $output=`net start sshd 2>&1`;
+               unless (-1<index $output,'CYGWIN sshd service was started') {
+                  print "\nFatal Error:".
+                        " The Cygwin sshd (Secure Shell) service ",
+                        " could NOT be started:\n\n${srvout}".
+                        "Error: $output\n\nTo restart, Run as Administrator\n".
+                        "\nand then:  'net start sshd'\n\n";
+                  exit;
+               }
+            }
+         }
       }
    }
    use IPC::Semaphore;
@@ -10590,7 +10702,24 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                &release_fa_lock(9361);
                &release_fa_lock(6543);
                die $line;
-               #die "Permission denied";
+            } elsif (-1<index $line,'/bin/bash: Operation not permitted') {
+               my $srvaccount=`sc qc sshd`;
+               $srvaccount=~s/^.*SERVICE_START_NAME : (?:.\\)*(.*?)\s*$/$1/s;
+               my $die="\n   Fatal Error! - There are unknown priviliges\n   ".
+                    "      missing from the ID '".$srvaccount."' needed\n".
+                    "      for the Cygwin sshd service on this host.\n".
+                    "      No attempt was made to add these priviliges,\n".
+                    "      because the user \'$username\' lacks sufficient\n".
+                    "      administrative rights on this host. Please\n".
+                    "      contact your Domain and/or System\n".
+                    "      Administrators for assistance. These priviliges\n".
+                    "      may be controlled at the domain level with a\n".
+                    "      global policy that affects one or multiple\n".
+                    "      hosts. These policies are enforced at host\n".
+                    "      startup. More information is available to\n".
+                    "      accounts running FullAuto with administrative\n".
+                    "      rights.\n\n      $line\n\n";
+               die $die;
             }
             if ($line=~/Connection reset by peer|node or service name/s) {
                &release_fa_lock(6543);
