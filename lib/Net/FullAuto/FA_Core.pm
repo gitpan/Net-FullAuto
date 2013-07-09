@@ -308,11 +308,11 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   %GLOBAL @GLOBAL $MRLOG $fullauto
                   $funkyprompt handle_error
                   $quiet $batch $unattended
-                  %email_addresses @plans $^O
+                  %email_addresses @plans $adminmenu
                   %email_defaults $service
                   persist_get persist_put cache
-                  $berkeleydb %admin_menus
-                  $cache_root $cache_key
+                  $berkeleydb %admin_menus $^O
+                  $cache_root $cache_key $admin_menu
                   acquire_fa_lock release_fa_lock);
 
 {
@@ -700,7 +700,7 @@ our %email_defaults=();our $increment=0;our %tosspass=();
 our $email_defaults='';our %semaphores=();our $batch='';
 our $unattended='';our $fullauto='';our $service='';
 our @dhostlabels=();our %monthconv=();our $cache_root='';
-our $cache_key='';
+our $cache_key='';our $admin='';our $menu='';our $welcome='';
 our %hourconv=();our @weekdays=();our %weekdaysconv=();
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
@@ -1386,15 +1386,15 @@ print $Net::FullAuto::FA_Core::MRLOG "GETTING READY TO KILL!!!!! CMD\n"
 #print "LOCALHOSTSTDOUT=$stdout<== and LOCALHOSTSTDERR=$stderr<==\n";
 
    ($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg);
+   if (defined $master_hostlabel &&
+         defined $username && (-1<index $localhost,'=')) {
+      &scrub_passwd_file($master_hostlabel,
+         $username);
+   }
    %{$localhost}=();undef $localhost;
    %Processes=();
    %Connections=();
    @pid_ts=();
-   if (defined $master_hostlabel &&
-         defined $username) {
-      &scrub_passwd_file($master_hostlabel,
-         $username);
-   }
    if ($Net::FullAuto::FA_Core::makeplan) {
       my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
@@ -1665,7 +1665,6 @@ sub pick
 
 sub Menu
 {
-#print "FAMENUCALLER=",caller,"\n";
    can_load(modules => { "Term::Menus" => 0 });
    return &Term::Menus::Menu(@_);
 }
@@ -2153,7 +2152,7 @@ my $fulldays=sub { package fulldays;
                    return @n };
 
 my $track='';
-my %new_plan_options_menu=(
+our %new_plan_options_menu=(
 
       Label  => 'new_plan_options_menu',
       Item_1 => {
@@ -2399,8 +2398,7 @@ my %select_recurrent_months=(
       },
       Select => 'Many',
       Banner => "   Select the --MONTH(S)-- where\n\n   ".
-                "Plan -  ]P[{choose_from_fullauto_plans}".
-                "\n\n   Will be Run :",
+                "Plan -  ]P[{choose_from_fullauto_plans}\n\n   Will be Run :",
 
 );
 
@@ -2451,7 +2449,7 @@ my %select_type_of_scheduled_plan=(
 
 );
 
-my %choose_from_fullauto_plans=(
+our %choose_from_fullauto_plans=(
 
       Label  => 'choose_from_fullauto_plans',
       Item_1 => {
@@ -2465,13 +2463,13 @@ my %choose_from_fullauto_plans=(
   
 );
  
-my %setup_new_sched_job_menu=(
+our %setup_new_sched_job_menu=(
 
       Label  => 'setup_new_sched_job_menu',
       Item_1 => {
 
            Text => 'Choose a FullAuto Plan to Schedule',
-           Result => \%choose_from_fullauto_plans,
+           Result => \%Net::FullAuto_FA_Core::choose_from_fullauto_plans,
 
       },
       Item_2 => {
@@ -2500,13 +2498,13 @@ my %plan_menu=(
       Item_2 => {
 
           Text => 'Set Options for New Plan',
-          Result => \%new_plan_options_menu,
+          Result => \%Net::FullAuto::FA_Core::new_plan_options_menu,
 
       },
       Item_3 => {
 
           Text => 'Set Up a New Scheduled Job',
-          Result => \%setup_new_sched_job_menu,
+          Result => \%Net::FullAuto::FA_Core::setup_new_sched_job_menu,
 
       },
       Item_4 => {
@@ -2536,6 +2534,25 @@ my %plan_menu=(
                 "           for it's scheduling engine.",
 
 );
+
+my $plan_menu_sub = sub {
+
+   package plan_menu_sub;
+   use Module::Load::Conditional qw[can_load];
+   use if (!defined $Net::FullAuto::FA_Core::localhost), 'Net::FullAuto';
+   our $fa_code='Net::FullAuto::FA_Core.pm';
+   unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
+      $main::plan_menu_sub=1;
+      my @Hosts=@{&Net::FullAuto::FA_Core::check_Hosts(
+         $Net::FullAuto::FA_Core::fa_host)};
+      &Net::FullAuto::FA_Core::host_hash(\@Hosts);
+      &Net::FullAuto::FA_Core::fa_login();
+      undef $main::plan_menu_sub;
+   }
+   
+   return \%plan_menu;
+
+};
 
 sub plan {
 
@@ -3923,102 +3940,165 @@ if (!exists $Hosts{"__Master_${$}__"}{'Cipher'}) {
 my %msproxies=();my %uxproxies=();my %labels=();
 my %DeploySMB_Proxy=();my %DeployFTM_Proxy=();
 my %DeployRCM_Proxy=();my $msflag='';my $uxflag='';
-foreach my $host (@Hosts) {
-   $host->{'Label'}||='';
-   if (exists $labels{$host->{'Label'}} && 
-         ($host->{'Label'} ne "__Master_${$}__")) {
-      &handle_error("DUPLICATE LABEL DETECTED - $host->{'Label'}");
-   } $labels{${$host}{'Label'}}='' if $host->{'Label'};
-   if (exists ${$host}{'SMB_Proxy'}) {
-      if (exists $msproxies{${$host}{'SMB_Proxy'}} &&
-            ${$msproxies{${$host}{'SMB_Proxy'}}}[0] eq ${$host}{'SMB_Proxy'}
-            && ${$msproxies{${$host}{'SMB_Proxy'}}}[1] eq 'SMB_Proxy') {
-         my $die="\n       FATAL ERROR! - Duplicate \"'SMB_Proxy' =>"
-                ." \" Values Detected.\n\n       Hint:  No Host "
-                ."Unit in $Net::FullAuto::FA_Core::fa_host should have"
-                ."\n              "
-                ."the same value for 'SMB_Proxy' =>\n\n       {\n"
-                ."          ...\n\n          'SMB_Proxy' => 1,"
-                ."\n          ...\n       },\n       {\n          "
-                ."...\n\n          'SMB_Proxy' => 2,\n          ..."
-                ."\n       },\n";
-         &handle_error($die);
-      } else {
-         $msproxies{${$host}{'SMB_Proxy'}}
-            =["${$host}{'SMB_Proxy'}",'SMB_Proxy'];
+
+sub host_hash
+{
+   foreach my $host (@{$_[0]}) {
+      $host->{'Label'}||='';
+      if (exists $labels{$host->{'Label'}} && 
+            ($host->{'Label'} ne "__Master_${$}__")) {
+         &handle_error("DUPLICATE LABEL DETECTED - $host->{'Label'}");
+      } $labels{${$host}{'Label'}}='' if $host->{'Label'};
+      if (exists ${$host}{'SMB_Proxy'}) {
+         if (exists $msproxies{${$host}{'SMB_Proxy'}} &&
+               ${$msproxies{${$host}{'SMB_Proxy'}}}[0] eq ${$host}{'SMB_Proxy'}
+               && ${$msproxies{${$host}{'SMB_Proxy'}}}[1] eq 'SMB_Proxy') {
+            my $die="\n       FATAL ERROR! - Duplicate \"'SMB_Proxy' =>"
+                   ." \" Values Detected.\n\n       Hint:  No Host "
+                   ."Unit in $Net::FullAuto::FA_Core::fa_host should have"
+                   ."\n              "
+                   ."the same value for 'SMB_Proxy' =>\n\n       {\n"
+                   ."          ...\n\n          'SMB_Proxy' => 1,"
+                   ."\n          ...\n       },\n       {\n          "
+                   ."...\n\n          'SMB_Proxy' => 2,\n          ..."
+                   ."\n       },\n";
+            &handle_error($die);
+         } else {
+            $msproxies{${$host}{'SMB_Proxy'}}
+               =["${$host}{'SMB_Proxy'}",'SMB_Proxy'];
+         }
       }
-   }
-   if (exists ${$host}{'RCM_Proxy'}) {
-      if (exists $uxproxies{${$host}{'RCM_Proxy'}} &&
-            ${$uxproxies{${$host}{'RCM_Proxy'}}}[0] eq ${$host}{'RCM_Proxy'}
-            && ${$uxproxies{${$host}{'RCM_Proxy'}}}[1] eq 'RCM_Proxy') {
-         &handle_error("DUPLICATE \"RCM_Proxy\" HOSTUNIT DETECTED");
-      } else {
-         $uxproxies{${$host}{'RCM_Proxy'}}
-            =["${$host}{'RCM_Proxy'}",'RCM_Proxy'];
+      if (exists ${$host}{'RCM_Proxy'}) {
+         if (exists $uxproxies{${$host}{'RCM_Proxy'}} &&
+               ${$uxproxies{${$host}{'RCM_Proxy'}}}[0] eq ${$host}{'RCM_Proxy'}
+               && ${$uxproxies{${$host}{'RCM_Proxy'}}}[1] eq 'RCM_Proxy') {
+            &handle_error("DUPLICATE \"RCM_Proxy\" HOSTUNIT DETECTED");
+         } else {
+            $uxproxies{${$host}{'RCM_Proxy'}}
+               =["${$host}{'RCM_Proxy'}",'RCM_Proxy'];
+         }
       }
-   }
-   if (exists ${$host}{'FTM_Proxy'}) {
-     if (exists $uxproxies{${$host}{'FTM_Proxy'}} &&
-           ${$uxproxies{${$host}{'FTM_Proxy'}}}[0]
+      if (exists ${$host}{'FTM_Proxy'}) {
+         if (exists $uxproxies{${$host}{'FTM_Proxy'}} &&
+              ${$uxproxies{${$host}{'FTM_Proxy'}}}[0]
               eq ${$host}{'FTM_Proxy'}
-           && ${$uxproxies{${$host}{'FTM_Proxy'}}}[1] eq 'FTM_Proxy') {
-         &handle_error("DUPLICATE \"RCM_Proxy\" HOSTUNIT DETECTED");
-      } else {
-         $uxproxies{${$host}{'FTM_Proxy'}}
-                =[${$host}{'FTM_Proxy'},'FTM_Proxy'];
-      }
-   }
-   foreach my $key (keys %{$host}) {
-      ${$Hosts{${$host}{'Label'}}}{$key}=${$host}{$key};
-      if ($key eq 'SMB_Proxy') {
-         if (exists $same_host_as_Master{${$host}{'Label'}}) {
-            if (${$host}{'SMB_Proxy'}=~/^(\d+)$/) {
-               $DeploySMB_Proxy{${$host}{'SMB_Proxy'}}
-                  ="__Master_${$}__";
-            } else { push @DeploySMB_Proxy, "__Master_${$}__" }
-         } elsif (&ping(${$host}{'IP'},'__return__') ||
-                  &ping(${$host}{'HostName'},'__return__')) {
-            if (${$host}{'SMB_Proxy'}=~/^(\d+)$/) {
-               $DeploySMB_Proxy{${$host}{'SMB_Proxy'}}
-                  =${$host}{'Label'};
-            } else { push @DeploySMB_Proxy, ${$host}{'Label'} }
+              && ${$uxproxies{${$host}{'FTM_Proxy'}}}[1] eq 'FTM_Proxy') {
+            &handle_error("DUPLICATE \"RCM_Proxy\" HOSTUNIT DETECTED");
+         } else {
+            $uxproxies{${$host}{'FTM_Proxy'}}
+                   =[${$host}{'FTM_Proxy'},'FTM_Proxy'];
          }
       }
-      if ($key eq 'RCM_Proxy') {
-         if (exists $same_host_as_Master{${$host}{'Label'}}) {
-            if (exists ${$host}{'RCM_Proxy'} &&
-                  ${$host}{'RCM_Proxy'}=~/^(\d+)$/) {
-               $DeployRCM_Proxy{${$host}{'RCM_Proxy'}}
-                  ="__Master_${$}__";
-            } else { push @DeployRCM_Proxy, "__Master_${$}__" }
-         } elsif ((exists ${$host}{'IP'} &&
-                  &ping(${$host}{'IP'},'__return__')) ||
-                  (exists ${$host}{'HostName'} &&
-                  &ping(${$host}{'HostName'},'__return__'))) {
-            if (exists ${$host}{'RCM_Proxy'} &&
-                  ${$host}{'RCM_Proxy'}=~/^(\d+)$/) {
+      foreach my $key (keys %{$host}) {
+         ${$Hosts{${$host}{'Label'}}}{$key}=${$host}{$key};
+         if ($key eq 'SMB_Proxy') {
+            if (exists $same_host_as_Master{${$host}{'Label'}}) {
+               if (${$host}{'SMB_Proxy'}=~/^(\d+)$/) {
+                  $DeploySMB_Proxy{${$host}{'SMB_Proxy'}}
+                     ="__Master_${$}__";
+               } else { push @DeploySMB_Proxy, "__Master_${$}__" }
+            } elsif (&ping(${$host}{'IP'},'__return__') ||
+                    &ping(${$host}{'HostName'},'__return__')) {
+               if (${$host}{'SMB_Proxy'}=~/^(\d+)$/) {
+                  $DeploySMB_Proxy{${$host}{'SMB_Proxy'}}
+                     =${$host}{'Label'};
+               } else { push @DeploySMB_Proxy, ${$host}{'Label'} }
+            }
+         }
+         if ($key eq 'RCM_Proxy') {
+            if (exists $same_host_as_Master{${$host}{'Label'}}) {
+               if (exists ${$host}{'RCM_Proxy'} &&
+                     ${$host}{'RCM_Proxy'}=~/^(\d+)$/) {
                   $DeployRCM_Proxy{${$host}{'RCM_Proxy'}}
-                  =${$host}{'Label'};
-            } else { push @DeployRCM_Proxy, ${$host}{'Label'} }
+                     ="__Master_${$}__";
+               } else { push @DeployRCM_Proxy, "__Master_${$}__" }
+            } elsif ((exists ${$host}{'IP'} &&
+                     &ping(${$host}{'IP'},'__return__')) ||
+                     (exists ${$host}{'HostName'} &&
+                     &ping(${$host}{'HostName'},'__return__'))) {
+               if (exists ${$host}{'RCM_Proxy'} &&
+                     ${$host}{'RCM_Proxy'}=~/^(\d+)$/) {
+                  $DeployRCM_Proxy{${$host}{'RCM_Proxy'}}
+                     =${$host}{'Label'};
+               } else { push @DeployRCM_Proxy, ${$host}{'Label'} }
+            }
          }
-      }
-      if ($key eq 'FTM_Proxy') {
-         if (exists $same_host_as_Master{${$host}{'Label'}}) {
-            if (${$host}{'FTM_Proxy'}=~/^(\d+)$/) {
-               $DeployFTM_Proxy{${$host}{'FTM_Proxy'}}
-                  ="__Master_${$}__";
-            } else { push @DeployFTM_Proxy, "__Master_${$}__" }
-         } elsif (&ping(${$host}{'IP'},'__return__') ||
-                  &ping(${$host}{'HostName'},'__return__')) {
-            if (${$host}{'FTM_Proxy'}=~/^(\d+)$/) {
-               $DeployFTM_Proxy{${$host}{'FTM_Proxy'}}
-                  =${$host}{'Label'};
-            } else { push @DeployFTM_Proxy, ${$host}{'Label'} }
+         if ($key eq 'FTM_Proxy') {
+            if (exists $same_host_as_Master{${$host}{'Label'}}) {
+               if (${$host}{'FTM_Proxy'}=~/^(\d+)$/) {
+                  $DeployFTM_Proxy{${$host}{'FTM_Proxy'}}
+                     ="__Master_${$}__";
+               } else { push @DeployFTM_Proxy, "__Master_${$}__" }
+            } elsif (&ping(${$host}{'IP'},'__return__') ||
+                     &ping(${$host}{'HostName'},'__return__')) {
+               if (${$host}{'FTM_Proxy'}=~/^(\d+)$/) {
+                  $DeployFTM_Proxy{${$host}{'FTM_Proxy'}}
+                     =${$host}{'Label'};
+               } else { push @DeployFTM_Proxy, ${$host}{'Label'} }
+            }
          }
       }
    }
+   foreach my $key (keys %same_host_as_Master) {
+      if (exists $Hosts{$key}{'FA_Secure'}) {
+         $Hosts{$key}{'FA_Secure'}.='/' if
+            substr($Hosts{$key}{'FA_Secure'},-1) ne '/';
+         $Hosts{"__Master_${$}__"}{'FA_Secure'}=
+            $Hosts{$key}{'FA_Secure'};
+         last
+      }
+   }
+   if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
+      unless (-d '/var/db/Berkeley/FullAuto') {
+         my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+         my $m=($^O eq 'cygwin')?"-m $mode ":'';
+         unless (-d '/var/db') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+                    $m.'/var/db';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
+         unless (-d '/var/db/Berkeley') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+                    $m.'/var/db/Berkeley';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
+         unless (-d '/var/db/Berkeley/FullAuto') {
+            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+                    $m.'/var/db/Berkeley/FullAuto';
+            my $stdout='';my $stderr='';
+            ($stdout,$stderr)=&setuid_cmd($cmd,5);
+            &handle_error($stderr) if $stderr;
+         }
+      }
+      if (!(-d '/var/db/Berkeley/FullAuto' && -w _)) {
+         &handle_error("Cannot Write to Berkeley FullAuto Directory :".
+            "\n\n             ".
+            '/var/db/Berkeley/FullAuto');
+      }
+      $Hosts{"__Master_${$}__"}{'FA_Secure'}=
+         '/var/db/Berkeley/FullAuto/';
+   } elsif (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
+      handle_error("Cannot Write to Berkeley FullAuto Directory :".
+         "\n\n             ".
+         $Hosts{"__Master_${$}__"}{'FA_Secure'});
+   } else {
+      $Hosts{"__Master_${$}__"}{'FA_Secure'}.='/' if
+         substr($Hosts{"__Master_${$}__"}{'FA_Secure'},-1) ne '/';
+   }
+   my $FA_Core_path='';
+   foreach my $key (keys %INC) {
+      if (-1<index $key,'FA_Core.pm') {
+         $FA_Core_path=substr($INC{$key},0,(rindex $INC{$key},'/')+1);
+         last;
+      }
+   } $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
 }
+
+&host_hash(\@Hosts);
 
 if (keys %DeploySMB_Proxy) {
    foreach my $key (reverse sort keys %DeploySMB_Proxy) {
@@ -7456,6 +7536,7 @@ my $get_modules=sub {
       $type=substr($type,$ind+3,$ind+7);
    }
    my $username=getlogin || getpwuid($<);
+   #use if (!exists $INC{'Net/FullAuto.pm'}), 'Net::FullAuto';
    my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $mkdflag=0;
    unless (-d "$fadir/Custom/$username/$type") {
@@ -8860,6 +8941,7 @@ sub fa_login
    } else {
       my $time_out='$' . (caller)[0] . '::timeout';
       $time_out= eval $time_out;
+      $time_out||=30;
       if ($@ || $time_out!~/^[1-9]+/) {
          $timeout=30;
       } else { $timeout=$time_out }
@@ -8928,12 +9010,13 @@ sub fa_login
    my $email_addresses='%' . (caller)[0] . '::email_addresses';
    %email_addresses=eval $email_addresses;
    %email_addresses=() if $@;
+   my $test_caller=(caller)[0];
    $custom_code_module_file='$' . (caller)[0] . '::fa_code';
    $custom_code_module_file=eval $custom_code_module_file;
    if ($@) {
       my $die="Cannot Locate the \"FullAuto Custom Code\" "
-              ."perl module (.pm) file\n       < original "
-              ."default name 'fa_code.pm' >\n\n       $@";
+           ."perl module (.pm) file\n       < original "
+           ."default name 'fa_code.pm' >\n\n       $@";
       &handle_error($die,'-3');
    }
    my $man=0;my $help=0;my $userflag=0;my $passerror=0;
@@ -8943,6 +9026,10 @@ sub fa_login
 
    Getopt::Long::Configure ("bundling");
    &GetOptions(
+                'admin'                 => \$admin,
+                'menu'                  => \$menu,
+                'welcome'               => \$welcome,
+                'about'                 => \$version,
                 'authorize_connect'     => \$authorize_connect,
                 'cache_root=s'          => \$cache_root,
                 'cache_key=s'           => \$cache_key,
@@ -9181,62 +9268,63 @@ sub fa_login
       $fatimeout=$fhtimeout;
    } $retrys=0;
 
-   foreach my $key (keys %same_host_as_Master) {
-      if (exists $Hosts{$key}{'FA_Secure'}) {
-         $Hosts{$key}{'FA_Secure'}.='/' if
-            substr($Hosts{$key}{'FA_Secure'},-1) ne '/';
-         $Hosts{"__Master_${$}__"}{'FA_Secure'}=
-            $Hosts{$key}{'FA_Secure'};
-         last
-      }
-   } my $FA_Core_path='';
-   foreach my $key (keys %INC) {
-      if (-1<index $key,'FA_Core.pm') {
-         $FA_Core_path=substr($INC{$key},0,(rindex $INC{$key},'/')+1);
-         last;
-      }
-   } $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
-   if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
-      unless (-d '/var/db/Berkeley/FullAuto') {
-         my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
-         my $m=($^O eq 'cygwin')?"-m $mode ":'';
-         unless (-d '/var/db') {
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-                    $m.'/var/db';
-            my $stdout='';my $stderr='';
-            ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
-         }
-         unless (-d '/var/db/Berkeley') {
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-                    $m.'/var/db/Berkeley';
-            my $stdout='';my $stderr='';
-            ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
-         }
-         unless (-d '/var/db/Berkeley/FullAuto') {
-            my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-                    $m.'/var/db/Berkeley/FullAuto';
-            my $stdout='';my $stderr='';
-            ($stdout,$stderr)=&setuid_cmd($cmd,5);
-            &handle_error($stderr) if $stderr;
-         }
-      }
-      if (!(-d '/var/db/Berkeley/FullAuto' && -w _)) {
-         &handle_error("Cannot Write to Berkeley FullAuto Directory :".
-            "\n\n             ".
-            '/var/db/Berkeley/FullAuto');
-      }
-      $Hosts{"__Master_${$}__"}{'FA_Secure'}=
-         '/var/db/Berkeley/FullAuto/';
-   } elsif (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
-      handle_error("Cannot Write to Berkeley FullAuto Directory :".
-         "\n\n             ".
-         $Hosts{"__Master_${$}__"}{'FA_Secure'});
-   } else {
-      $Hosts{"__Master_${$}__"}{'FA_Secure'}.='/' if
-         substr($Hosts{"__Master_${$}__"}{'FA_Secure'},-1) ne '/';
-   }
+   #foreach my $key (keys %same_host_as_Master) {
+   #   if (exists $Hosts{$key}{'FA_Secure'}) {
+   #      $Hosts{$key}{'FA_Secure'}.='/' if
+   #         substr($Hosts{$key}{'FA_Secure'},-1) ne '/';
+   #      $Hosts{"__Master_${$}__"}{'FA_Secure'}=
+   #         $Hosts{$key}{'FA_Secure'};
+   #      last
+   #   }
+   #} 
+   #my $FA_Core_path='';
+   #foreach my $key (keys %INC) {
+   #   if (-1<index $key,'FA_Core.pm') {
+   #      $FA_Core_path=substr($INC{$key},0,(rindex $INC{$key},'/')+1);
+   #      last;
+   #   }
+   #} $Hosts{"__Master_${$}__"}{'FA_Core'}=$FA_Core_path;
+   #if (!exists $Hosts{"__Master_${$}__"}{'FA_Secure'}) {
+   #   unless (-d '/var/db/Berkeley/FullAuto') {
+   #      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+   #      my $m=($^O eq 'cygwin')?"-m $mode ":'';
+   #      unless (-d '/var/db') {
+   #         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+   #                 $m.'/var/db';
+   #         my $stdout='';my $stderr='';
+   #         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+   #         &handle_error($stderr) if $stderr;
+   #      }
+   #      unless (-d '/var/db/Berkeley') {
+   #         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+   #                 $m.'/var/db/Berkeley';
+   #         my $stdout='';my $stderr='';
+   #         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+   #         &handle_error($stderr) if $stderr;
+   #      }
+   #      unless (-d '/var/db/Berkeley/FullAuto') {
+   #         my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+   #                 $m.'/var/db/Berkeley/FullAuto';
+   #         my $stdout='';my $stderr='';
+   #         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+   #         &handle_error($stderr) if $stderr;
+   #      }
+   #   }
+   #   if (!(-d '/var/db/Berkeley/FullAuto' && -w _)) {
+   #      &handle_error("Cannot Write to Berkeley FullAuto Directory :".
+   #         "\n\n             ".
+   #         '/var/db/Berkeley/FullAuto');
+   #   }
+   #   $Hosts{"__Master_${$}__"}{'FA_Secure'}=
+   #      '/var/db/Berkeley/FullAuto/';
+   #} elsif (!(-d $Hosts{"__Master_${$}__"}{'FA_Secure'} && -w _)) {
+   #   handle_error("Cannot Write to Berkeley FullAuto Directory :".
+   #      "\n\n             ".
+   #      $Hosts{"__Master_${$}__"}{'FA_Secure'});
+   #} else {
+   #   $Hosts{"__Master_${$}__"}{'FA_Secure'}.='/' if
+   #      substr($Hosts{"__Master_${$}__"}{'FA_Secure'},-1) ne '/';
+   #}
 
    if ($updatepw) {
       my $uid=$username;
@@ -9837,7 +9925,11 @@ print "HELLO\n";
             $dbenv->close();
             undef $dbenv;
          }
-         if ($localhost && -1<index $login_Mast_error,'invalid log'
+         if ($admin && !defined $main::plan_menu_sub) {
+            $Net::FullAuto::FA_Core::adminmenu->();
+         }
+         if ($localhost &&
+               -1<index $login_Mast_error,'invalid log'
                && -1<index $login_Mast_error,'ogin incor'
                && -1<index $login_Mast_error,'sion den') {
             if ($cmd_type eq 'telnet' &&
@@ -10413,7 +10505,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
          my $lc_cnt=-1;
          $localhost={};my $local_host='';
          $localhost=bless $localhost, 'Rem_Command';
-         bless $localhost, substr($custom_code_module_file,0,-3);
+         bless $localhost,
+            substr($Net::FullAuto::FA_Core::custom_code_module_file,0,-3);
 
          &acquire_fa_lock(6543);
 
@@ -10448,7 +10541,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                $localhost->{_cmd_type}=$cmd_type;
                $localhost->{_connect}=$_connect;
                $localhost->{_uname}=$^O;
-               $localhost->{_hostlabel}=[ "__Master_${$}__",'' ];
+               $localhost->{_hostlabel}=
+                  [ "__Master_${$}__",'' ];
                $local_host=Net::Telnet->new(Fhopen => $localhost,
                   Timeout => $fatimeout);
                $local_host->telnetmode(0);
@@ -10705,21 +10799,24 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
             } elsif (-1<index $line,'/bin/bash: Operation not permitted') {
                my $srvaccount=`sc qc sshd`;
                $srvaccount=~s/^.*SERVICE_START_NAME : (?:.\\)*(.*?)\s*$/$1/s;
-               my $die="\n   Fatal Error! - There are unknown priviliges\n   ".
-                    "      missing from the ID '".$srvaccount."' needed\n".
-                    "      for the Cygwin sshd service on this host.\n".
-                    "      No attempt was made to add these priviliges,\n".
-                    "      because the user \'$username\' lacks sufficient\n".
-                    "      administrative rights on this host. Please\n".
-                    "      contact your Domain and/or System\n".
-                    "      Administrators for assistance. These priviliges\n".
-                    "      may be controlled at the domain level with a\n".
-                    "      global policy that affects one or multiple\n".
-                    "      hosts. These policies are enforced at host\n".
-                    "      startup. More information is available to\n".
-                    "      accounts running FullAuto with administrative\n".
-                    "      rights.\n\n      $line\n\n";
-               die $die;
+               $line=~s/^/       /gm;
+               $line=~s/\s*$//s;
+               my $die="FATAL ERROR! - There may be unknown priviliges missing\n\n".
+                    "       from the ID: '".$srvaccount."'\n\n".
+                    "       needed for the Cygwin sshd service on this host.\n".
+                    "       No attempt was made to add these priviliges, because\n".
+                    "       the user \'$username\' *appears* to lack sufficient\n".
+                    "       administrative rights on this host. If so, please\n".
+                    "       contact your Domain and/or System Administrators for\n".
+                    "       assistance. These priviliges may be controlled at\n".
+                    "       the domain level with a global policy that affects\n".
+                    "       one or multiple hosts. These policies are enforced\n".
+                    "       at host startup. More information is available to\n".
+                    "       accounts running FullAuto with administrative rights.\n".
+                    "\n$line\n\n".
+                    "       HINT: When opening terminal in Windows, right click\n".
+                    "             on icon and select \"Run as administrator\"\n";
+               &handle_error($die,'__cleanup__');
             }
             if ($line=~/Connection reset by peer|node or service name/s) {
                &release_fa_lock(6543);
@@ -11150,7 +11247,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                ($stdout,$stderr)=
                   &Net::FullAuto::FA_Core::kill(
                      $localhost->{_sh_pid},$kill_arg)
-                  if exists $localhost->{_sh_pid} &&
+                  if exists $Net::FullAuto::FA_Core::localhost->{_sh_pid} &&
                   &Net::FullAuto::FA_Core::testpid(
                      $localhost->{_sh_pid});
             }
@@ -11285,8 +11382,17 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
 
 } ## END of &fa_login
 
-my $admin=sub {
+our $adminmenu=sub {
 
+   my $invoke_menu_here=0;
+   #unless (exists $INC{'Net/FullAuto.pm'}) {
+   unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
+      $invoke_menu_here=1;
+      can_load(modules => { "Term::Menus" => 0 });
+      can_load(modules => { "Net::FullAuto" => 0 });
+      my @Hosts=@{&check_Hosts($Net::FullAuto::FA_Core::fa_host)};
+      &Net::FullAuto::FA_Core::host_hash(\@Hosts);
+   }
    my $fam=<<FAM;
       _      _       _        __  __              
      /_\\  __| |_ __ (_)_ _   |  \\/  |___ _ _ _  _ 
@@ -11305,7 +11411,8 @@ FAM
       Item_2 => {
 
           Text => 'FullAuto Job & *PLAN* Menu',
-          Result => \%plan_menu,
+          #Result => \%plan_menu,
+          Result => $plan_menu_sub,
 
       },
       Item_3 => {
@@ -11316,11 +11423,18 @@ FAM
       },
       Banner => $fam,
    );
-   return \%admin;
+   unless ($invoke_menu_here) {
+      return \%admin;
+   } else {
+      while (1) {
+         my @menu_output=Menu(\%admin);
+         last if ($menu_output[0] ne '-' && $menu_output[0] ne '+');
+      }
+   }
 };
 
 our $admin_menu=sub {
-   return $admin->();
+   return $adminmenu->();
 };
 
 sub choose_pass_expiration
@@ -12844,7 +12958,8 @@ sub scrub_passwd_file
       if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "scrub_passwd_file() CALLER=",
       (join ' ',@topcaller),"\n"
-      if !$Net::FullAuto::FA_Core::cron && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if !$Net::FullAuto::FA_Core::cron &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $passlabel=$_[0];my $login_id=$_[1];
    my $cmd_type=$_[2];
    my @passlabels=();

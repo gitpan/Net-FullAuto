@@ -3,6 +3,9 @@
 eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
+eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
@@ -29,8 +32,8 @@ use warnings;
 BEGIN {
 
    my $edit=0;my $earg='';my $cnt=-1;
-   my $VERSION=0;my $version=0;
-   our $planarg=0;our $cronarg=0;
+   my $VERSION=0;my $version=0;my $welcome=0;
+   our $planarg=0;our $cronarg=0;my $admin=0;
    foreach my $arg (@ARGV) {
       if ($arg=~/^--ed*i*t*$/) {
          $edit=1;
@@ -48,10 +51,16 @@ BEGIN {
       } elsif ($arg=~/^-[a-df-uw-zA-Z]*v/ ||
                $arg=~/^--VE*R*S*I*O*N*$/) {
          $version=1;
+      } elsif ($arg=~/^--about$/) {
+         $version=1;
       } elsif ($arg=~/^--plan$/) {
          $planarg=1;
       } elsif ($arg=~/^--cron$/) {
          $cronarg=1;
+      } elsif ($arg=~/^--welcome$/) {
+         $welcome=1;
+      } elsif ($arg=~/^--admin$/) {
+         $admin=1; 
       }
       $cnt++;
    }
@@ -66,6 +75,14 @@ BEGIN {
    } elsif ($version) {
       require Net::FullAuto::FA_Core;
       &Net::FullAuto::FA_Core::version();
+      exit;
+   } elsif ($welcome) {
+      require Net::FullAuto::FA_Core;
+      &Net::FullAuto::FA_Core::welcome();
+      exit;
+   } elsif ($admin) {
+      require Net::FullAuto::FA_Core;
+      $Net::FullAuto::FA_Core::admin_menu->();
       exit;
    }
 
