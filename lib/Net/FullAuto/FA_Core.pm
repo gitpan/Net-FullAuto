@@ -2518,9 +2518,15 @@ my %plan_menu=(
 
       },
 
-      Banner => "                 FullAuto Job Planning Menu\n\n".
-                "    \"Always plan ahead. It wasn\'t raining when Noah\n".
-                "     built the ark.\" -  Richard C. Cushing\n\n".
+
+      Banner => "      ___     _ _   _       _          ___ _                     \n".
+                "     | __|  _| | | /_\\ _  _| |_ ___   | _ \\ |__ _ _ _  ___     \n".
+                "     | _| || | | |/ _\ \\ || |  _/ _ \\  |  _/ / _` | ' \\(_-<   \n".
+                "     |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |_| |_\\__,_|_||_/__/ \n".
+                "\n".
+      #Banner => "                 FullAuto Job Planning Menu\n\n".
+      #          "    \"Always plan ahead. It wasn\'t raining when Noah\n".
+      #          "     built the ark.\" -  Richard C. Cushing\n\n".
                 "    Plan:  Indicated by a Plan Number, A FullAuto \"Plan\"\n".
                 "           is a Complete Job Definition composed of recorded\n".
                 "           User interaction Menu choices and Input. FullAuto\n".
@@ -3676,19 +3682,29 @@ sub testpid
       $sedpath=$Hosts{"__Master_${$}__"}{'sed'};
       $sedpath.='/' if $sedpath!~/\/$/;
    }
-   my $cmd=[ "${bashpath}bash",'-c',
-             "if ${killpath}kill -0 $pid"
-             ." \012then echo 1\012else echo 0\012fi"
-             ." | ${sedpath}sed -e \'s/^/stdout: /' 2>&1" ];
-   my $mystdout='';my $stdout='';my $stderr='';
-   IO::CaptureOutput::capture sub {
+   my $stdout='';my $stderr='';
+   if ($^O ne 'cygwin') {
+      my $cmd=[ "${bashpath}bash",'-c',
+                "if ${killpath}kill -0 $pid"
+                ." \012then echo 1\012else echo 0\012fi"
+                ." | ${sedpath}sed -e \'s/^/stdout: /' 2>&1" ];
+      my $mystdout='';
+      IO::CaptureOutput::capture sub {
+         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+              }, \$mystdout;
+      chomp $mystdout;
+      if ($mystdout=~s/^stdout: ?//) {
+         $stdout=$mystdout;
+      } elsif ($mystdout) {
+         $stderr=$mystdout;
+      }
+   } else {
+      my $cmd=[ "${bashpath}bash".' -c'
+                ." \"if ${killpath}kill -0 $pid 2>/dev/null;"
+                ." then echo 1; else echo 0; fi\""
+                .'|'."${sedpath}sed ".' -e '."\'s/^/stdout: /' ".'2>&1' ];
+      my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
-           }, \$mystdout;
-   chomp $mystdout;
-   if ($mystdout=~s/^stdout: ?//) {
-      $stdout=$mystdout;
-   } elsif ($mystdout) {
-      $stderr=$mystdout;
    }
    print $Net::FullAuto::FA_Core::MRLOG
       "\nppppppp &main::testpid() ppppppp STDOUT ",
@@ -3705,7 +3721,7 @@ sub testpid
       return $stdout, $stderr;
    } elsif ($stdout) {
       return $stdout;
-   } elsif ($stderr!~/^s*$/) {
+   } elsif ($stderr!~/^\s*$/) {
       &Net::FullAuto::FA_Core::handle_error($stderr);
    } else { return $stdout }
 }
@@ -10875,7 +10891,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
          my $wloop=0;
          foreach my $host (keys %same_host_as_Master) {
             if (exists $Hosts{$host}{'LoginID'} &&
-                  ($Hosts{$host}{'LoginID'} ne $username)) {
+                  ($Hosts{$host}{'LoginID'} ne $username) && !exists $Hosts{$host}{'sshport'}) {
                $Hosts{$host}{'LoginID'}=$username;
             }
          }
@@ -10962,22 +10978,15 @@ print $Net::FullAuto::FA_Core::MRLOG
          if (!$mainuser && (exists $Hosts{$hostlabel}{'LoginID'}) &&
                ($Hosts{$hostlabel}{'LoginID'} ne $login_id)) {
             $switch_user=$Hosts{$hostlabel}{'LoginID'};
-            #$passwd[0]=$passwd[2]=$password=
-            #   &Net::FullAuto::FA_Core::getpasswd($hostlabel,
-            #   $switch_user,'',$stderr,'__su__');
             my $ecipher = new Crypt::CBC(
                $href->{"gatekeep_$username"},
                $Net::FullAuto::FA_Core::Hosts{
                "__Master_${$}__"}{'Cipher'});
-            #$passetts->[0]=$ecipher->encrypt($passwd[0]);
             $passetts->[0]=$ecipher->encrypt(
                &Net::FullAuto::FA_Core::getpasswd(
                $hostlabel,$switch_user,'',$stderr,
                '__su__'));
             $passetts->[9]=$dcipher=$ecipher;
-            #$passwd[1]=$passwd[0];
-            #$passwd[1]=unpack('a8',$passwd[0])
-            #   if 7<length $passwd[0];
             $login_id=$username=$switch_user;
             my $cfh_ignore='';my $cfh_error='';
             ($cfh_ignore,$cfh_error)=&clean_filehandle($local_host);
@@ -12613,8 +12622,8 @@ sub cwd
 sub setuid_cmd
 {
    my @topcaller=caller;
-   #print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n";
-   #   if $Net::FullAuto::FA_Core::debug;
+   print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::debug;
    # NOTE: the CALLER line is commmented because it breaks
    #       this routine when set. Anything printing to
    #       stdout from this routine will clash with
@@ -23475,7 +23484,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE GOT HOSTLABEL=$hostlabel<==\n"
       $login_id=$override_login_id;
       $su_id='';
    }
-print "WE ARE BACK FROM LOOKUP and HOSTNAME=$hostname<==\n"
+print "WE ARE BACK FROM LOOKUP and IP=$ip<==\n"
       if !$Net::FullAuto::FA_Core::cron &&
       $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
@@ -23533,6 +23542,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
          $loginid,$ms_domain,'','','smb');
          #$loginid,$ms_domain,$cmd_errmsg,'','SMB_Proxy');
    } elsif (exists $Hosts{$hostlabel} &&
+         exists $Hosts{$hostlabel}->{'Label'} &&
          (lc($Hosts{$hostlabel}->{'Label'}) eq 'mozrepl' ||
          $Hosts{$hostlabel}->{'Label'} eq 'Firefox MozRepl')) {
    } else {
@@ -23542,6 +23552,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
    $host=($use eq 'ip')?$ip:$hostname;
    $host='localhost' if exists $same_host_as_Master{$host};
    if ($host eq 'localhost' && exists $Hosts{$hostlabel}
+         && exists $Hosts{$hostlabel}->{'Label'}
          && $Hosts{$hostlabel}->{'Label'} ne 'localhost'
          && $_connect eq 'connect_telnet') {
       @connect_method=('telnet');

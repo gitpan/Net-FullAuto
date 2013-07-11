@@ -19,6 +19,14 @@
 ################################################################
 
 
+2013-07-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999909 released.
+
+        * Fixed bugs when using FullAuto with local Virtual
+          Box on Windows.
+
+
 2013-07-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999908 released.
