@@ -6118,7 +6118,7 @@ sub getpasswd
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $passlabel=$_[0];$passlabel||='';my $use='';
-   my $host='';
+   my $host='';my $hostlabel='';
    if (exists $Hosts{$passlabel}) {
       if (exists $Hosts{$passlabel}{'HostName'}) {
          if (exists $Hosts{$passlabel}{'IP'}) {
@@ -6126,21 +6126,26 @@ sub getpasswd
                if (lc($Hosts{$passlabel}{'Use'}) eq 'ip') {
                   if (ref $Hosts{$passlabel}{'IP'} eq 'CODE') {
                      $host=$Hosts{$passlabel}{'IP'}->();
+                     $hostlabel=$passlabel;
                   } else {
                      $host=$Hosts{$passlabel}{'IP'};
+                     $hostlabel=$passlabel;
                   }
                   $use='ip';
                } else {
                   $host=$Hosts{$passlabel}{'HostName'};
                   $use='hostname';
+                  $hostlabel=$passlabel;
                }
             } else {
                $host=$Hosts{$passlabel}{'HostName'};
                $use='hostname';
+               $hostlabel=$passlabel;
             }
          } else {
             $host=$Hosts{$passlabel}{'HostName'};
             $use='hostname';
+            $hostlabel=$passlabel;
          }
       } elsif (exists $Hosts{$passlabel}{'IP'}) {
          if (ref $Hosts{$passlabel}{'IP'} eq 'CODE') {
@@ -6148,6 +6153,7 @@ sub getpasswd
          } else {
             $host=$Hosts{$passlabel}{'IP'};
          }
+         $hostlabel=$passlabel;
          $use='ip';
       }
    }
@@ -6234,10 +6240,25 @@ sub getpasswd
          last;
       }
       if (!$local_host_flag) {
-         $passlabel=$Net::FullAuto::FA_Core::local_hostname;
+         #$passlabel=$Net::FullAuto::FA_Core::local_hostname;
+         $passlabel='localhost';
          $local_host_flag=1;
       }
    }
+   if ($hostlabel eq "__Master_${$}__") {
+      #foreach my $hostlab (keys %same_host_as_Master) {
+      #   next if $hostlab eq "__Master_${$}__";
+      #   $passlabel=$hostlab;
+      #   $local_host_flag=1;
+      #   last;
+      #}
+      #if (!$local_host_flag) {
+         #$passlabel=$Net::FullAuto::FA_Core::local_hostname;
+         $hostlabel='localhost';
+         $local_host_flag=1;
+      #}
+   }
+
    if (!$passlabel) {
       my $herr="HOSTLABEL or LABEL needed for first arguement to &getpasswd()"
               ."\n\n              Called from ".(caller(0))[1]." line "
@@ -6504,12 +6525,12 @@ sub getpasswd
                if ($Net::FullAuto::FA_Core::debug) {
                   $print1="\n  Please Enter (4) the \'root\' password "
                          ."for $host."
-                         ."\n  (Needed for Local Host, "
-                         ."HostLabel \'$passlabel\')\n";
+                         ."\n  (Needed for "
+                         ."HostLabel \'$hostlabel\')\n";
                } else {
                   $print1="\n  Please Enter the \'root\' password for $host."
-                         ."\n  (Needed for Local Host, "
-                         ."HostLabel \'$passlabel\')\n";
+                         ."\n  (Needed for "
+                         ."HostLabel \'$hostlabel\')\n";
                }
             } elsif ($host) {
                if ($Net::FullAuto::FA_Core::debug) {
@@ -6543,10 +6564,10 @@ sub getpasswd
                if ($Net::FullAuto::FA_Core::debug) {
                   $print1="\n  Please Enter (8) $login_id\'s password "
                          ."for $host."
-                         ."\n  (Needed for ${prox}HostLabel \'$passlabel\')\n";
+                         ."\n  (Needed for ${prox}HostLabel \'$hostlabel\')\n";
                } else {
                   $print1="\n  Please Enter $login_id\'s password for $host."
-                         ."\n  (Needed for ${prox}HostLabel \'$passlabel\')\n";
+                         ."\n  (Needed for ${prox}HostLabel \'$hostlabel\')\n";
                }
             } else {
                if ($Net::FullAuto::FA_Core::debug) {
@@ -13752,8 +13773,8 @@ sub cmd
    eval {
       if (ref $self eq 'File_Transfer' && (!exists $self->{_cmd_handle}
             || $self->{_cmd_handle} ne "__Master_${$}__")) {
-         if ($self->{_cmd_type} eq 'telnet' ||
-               $self->{_cmd_type} eq 'ssh' ||
+         if ((($self->{_cmd_type} eq 'telnet' ||
+               $self->{_cmd_type} eq 'ssh') && unpack('a1',$command) ne '!') ||
                ($^O eq 'cygwin' &&
                exists $self->{_smb})) {
             $cmdlin=29;
@@ -15456,7 +15477,8 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
                               next;
                            } elsif ((-1<index $allines,$ftp__cmd) ||
                                  ($ftp__cmd eq $allines)) {
-                              print $ftp__cmd,"\n" if !$Net::FullAuto::FA_Core::cron &&
+                              print $ftp__cmd,"\n" if
+                                              !$Net::FullAuto::FA_Core::cron &&
                                               !$Net::FullAuto::FA_Core::quiet;
                               print $Net::FullAuto::FA_Core::MRLOG
                                  "\n       ==>$ftp__cmd<==\n",
@@ -15953,6 +15975,10 @@ print $Net::FullAuto::FA_Core::MRLOG "ftplogin() EVALERROR=$@<==\n" if -1<index 
                     _cmd_type=>$cmd_type },$timeout);
                if ($stderr) {
                   if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
+                     if (!$Net::FullAuto::FA_Core::cron &&
+                           !$Net::FullAuto::FA_Core::quiet) {
+                        print STDERR $stderr."\n";
+                     }
                      die $stderr;
                   } else {
                      $ftp_handle->print("bye");
@@ -16692,6 +16718,7 @@ sub wait_for_passwd_prompt
                   || (-1<index $lin,'name not known')
                   || (-1<index $lin,'Could not create')) {
                chomp($lin=~tr/\0-\11\13-\31\33-\37\177-\377//d);
+               my $fulllin=$lin;
                $lin=~/(^530[ ].*$)|(^421[ ].*$)
                       |(^Connection[ ]refused.*$)
                       |(^Connection[ ]closed.*$)
@@ -16707,7 +16734,17 @@ sub wait_for_passwd_prompt
                   die $lin;
                } elsif (-1<index $lin,'Connection closed') {
                   alarm 0;
-                  die 'Connection closed';
+                  if ($line=~/(_fu?n?k?y?P?r?o?m?p?t?_*$)/) {
+                     $fulllin=~s/_fu?n?k?y?P?r?o?m?p?t?_*//s;
+                     $fulllin=~s/^(.*?)\n(.*)/$2/s;
+                     my $fcmd=$1;
+                     $fulllin.="\n   HINT: Be sure you can run COMMAND:\n"
+                             ."\n      $fcmd\n\n   successfully outside of "
+                             ."FullAuto\n"
+                             ."   before running FullAuto again.\n\n  ";
+                     die $fulllin;
+                  }
+                  die $lin;
                } elsif (-1<index $lin,'Could not create') {
                   alarm 0;
                   if ($^O eq 'cygwin') {
@@ -17292,7 +17329,7 @@ sub tmp
          'mkdir '.$m.$self->{_work_dirs}->{_tmp}.'/'.$tdir);
       &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
       $return_path=$self->{_work_dirs}->{_tmp}.$tdir.'/'.$path;
-   } return $return_path;
+   } return $return_path, $self->{_work_dirs}->{_tmp}.$tdir;
 }
 
 sub diff
@@ -17332,7 +17369,7 @@ sub mirror
    my $debug_info='';$deploy_info='';my $dir='';
    my $mirror_debug='';my $excluded='';
    my $base_unzip_path='';my $dest_unzip_path='';
-   my $base_zip_path='';
+   my $base_zip_path='';my $tarlistmpdir='';
    my ($output,$stdout,$stderr)=('','','');
    $args{ZipBDir}||='';
    $args{ZipDDir}||='';
@@ -17863,7 +17900,6 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
             if ($stderr eq 'redo ls') {
                while (1) {
                   my $err='';
-
                   my $ls_path='';
                   if ($_[7]->{_hostlabel}->[0] eq "__Master_${$}__" &&
                         exists $Hosts{"__Master_${$}__"}{'ls'}) {
@@ -18370,14 +18406,36 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
       ($baseFH,$destFH,$timehash,$deploy_info,$debug_info)
          =&build_mirror_hashes($baseFH,$destFH,$bhostlabel,
          $dhostlabel,$verbose,$cache);
+      $bhostlabel="localhost - $Net::FullAuto::FA_Core::local_hostname"
+         if -1<index $bhostlabel,'__Mas';
+      $dhostlabel="localhost - $Net::FullAuto::FA_Core::local_hostname"
+         if -1<index $dhostlabel,'__Mas';
+      my $dhostname=$destFH->{'_hostname'};
+      if ($dhostlabel!~/^localhost/) {
+         unless ($dhostname) {
+            $dhostname=$destFH->{'_ip'}; 
+         }
+         if ($dhostname) {
+            $dhostlabel.=" - $dhostname";
+         }
+      }
+      my $bhostname=$baseFH->{'_hostname'};
+      if ($bhostlabel!~/^localhost/) {
+         unless ($bhostname) {
+            $bhostname=$baseFH->{'_ip'};
+         }
+         if ($bhostname) {
+            $bhostlabel.=" - $bhostname";
+         }
+      }
 
       $mirror_output.="\n### mirror() output for Base Host:"
                     ." $bhostlabel\n             and Destination Host:"
-                    ." $dhostlabel\n\n    $deploy_info";
+                    ." $dhostlabel\n\n$deploy_info";
 
       $mirror_debug.="\n### mirror() debug for Base Host:\n"
                    ." $bhostlabel\n             and Destination Host:"
-                   ." $dhostlabel\n\n    $debug_info";
+                   ." $dhostlabel\n\n$debug_info";
 
 #print "WHAT IS THIS=",keys %{$baseFH},"\n";
 #print "KEYSBASEHASH=",keys %{$baseFH->{_bhash}},"\n";
@@ -18641,7 +18699,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE9\n"
                            $dirt=substr($dir,0,(index $dir,'/'));
                            $dir='';
                            if ($gnu_tar_input_file_flag) {
-                              $gnu_tar_input_file2=
+                              ($gnu_tar_input_file2,$tarlistmpdir)=
                                  $baseFH->tmp(
                                  'tarlist2.txt')
                                  if !$gnu_tar_input_file2;
@@ -18752,7 +18810,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE11 and FILE=$file\n"
 
                            }
                         } elsif ($gnu_tar_input_file_flag) {
-                           $gnu_tar_input_file1=
+                           ($gnu_tar_input_file1,$tarlistmpdir)=
                               $baseFH->tmp(
                               'tarlist1.txt')
                               if !$gnu_tar_input_file1;
@@ -19020,7 +19078,8 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log
                      &Net::FullAuto::FA_Core::handle_error($stderr,'-2')
                         if $stderr;
                   }
-                  &move_tarfile($baseFH,$btransfer_dir,$destFH,$shortcut,$cache);
+                  &move_tarfile($baseFH,$btransfer_dir,$destFH,
+                                $shortcut,$cache,$tarlistmpdir);
 #print "BASEFH=$baseFH\n";
 #print "DESTFH=$destFH\n";
 #print "BMS_SHARE=$bms_share\n";
@@ -19059,12 +19118,15 @@ print $Net::FullAuto::FA_Core::MRLOG "ACTIVITY3" if $Net::FullAuto::FA_Core::log
                         if (-1<index ${$baseFH->{_bhash}}{$key}[1]{$file}[0],
                               'DIFF_TIME') {
                            my $ts=${$baseFH->{_bhash}}{$key}[1]{$file}[1];
+                           if ((split ' ',$ts)[4]==0) {
+                              $ts=~s/^(\d+ \d+ \d+ \d+ )0( \d+)$/$1$curyear$2/;
+                           }
                            $ts=unpack('x12 a4',$ts).unpack('a2',$ts).
                                unpack('x3 a2',$ts).unpack('x6 a2',$ts).
                                unpack('x9 a2',$ts);
                            my $key_dir=($key ne '/') ? "/$key/" : '/';
                            ($stdout,$stderr)=$destFH->cmd(
-                              "touch -t $ts \"$dest_fdr$key_dir$file\""); 
+                              "touch -t $ts \"$dest_fdr$key_dir$file\"");
                            &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                               if $stderr;
                         }
@@ -19383,7 +19445,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TARRRPWDDDDD=$output\n" if $Net::FullAuto:
                   }
                }
 #print "DO MOVETARFILE\n";
-               &move_tarfile($baseFH,$btransfer_dir,$destFH,$shortcut);
+               &move_tarfile($baseFH,$btransfer_dir,$destFH,
+                             $shortcut,$cache,$tarlistmpdir);
                if (keys %{$timehash}) {
 #my $logreset=1;
 #if ($Net::FullAuto::FA_Core::log) { $logreset=0 }
@@ -19920,8 +19983,9 @@ sub move_tarfile
    print $Net::FullAuto::FA_Core::MRLOG "move_tarfile() CALLER=",
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my ($baseFH,$btransfer_dir,$destFH,$shortcut,$cache)=('','','','','');
-   ($baseFH,$btransfer_dir,$destFH,$shortcut,$cache)=@_;
+   my ($baseFH,$btransfer_dir,$destFH,$shortcut,$cache,$tarlistmpdir)=
+      ('','','','','','');
+   ($baseFH,$btransfer_dir,$destFH,$shortcut,$cache,$tarlistmpdir)=@_;
    my ($output,$stdout,$stderr)=('','','');
    my $dest_fdr=$destFH->{_work_dirs}->{_cwd};
    my $bprxFH='';my $dprxFH='';my $d_fdr='';
@@ -20481,7 +20545,16 @@ my $shownow="NOW HERE SO THERE and FTPProxy=$Net::FullAuto::FA_Core::DeployFTM_P
       }
       ($output,$stderr)=$destFH->cmd("chmod -v 777 ${tdr}transfer".
          "$Net::FullAuto::FA_Core::tran[3].tar"); # chmod it
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+      if ($stderr) {
+         if (-1<index $stderr,'chmod: ERROR: invalid mode') {
+            my $l=__LINE__;$l-=3;
+            print $Net::FullAuto::FA_Core::MRLOG $stderr."\nat Line: ".
+               "$l\n" if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         } else {
+            &Net::FullAuto::FA_Core::handle_error($stderr,'-7');
+         }
+      }
       ($output,$stderr)=$destFH->cmd("tar xovf ${d_fdr}transfer".
          "$Net::FullAuto::FA_Core::tran[3].tar"); # un-tar it
       &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
@@ -20512,14 +20585,34 @@ print $Net::FullAuto::FA_Core::MRLOG "TAR TVF OUT=$output\n"
             &Net::FullAuto::FA_Core::handle_error($stderr,'-2') if $stderr;
          }
       }
+      my $b_fdr=$baseFH->{_work_dirs}->{_tmp};
+      if ($baseFH->{_uname} eq 'aix') {
+         ($output,$stderr)=$baseFH->cmd("rm -ef ${b_fdr}transfer".
+             "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
+         ($output,$stderr)=$destFH->cmd(
+              "rm -erf $tarlistmpdir");               # delete tmp dir
+      } elsif ($baseFH->{_uname} eq 'SunOS') {
+         ($output,$stderr)=$baseFH->cmd("rm -f ${b_fdr}transfer".
+             "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
+         ($output,$stderr)=$baseFH->cmd(
+              "rm -rf $tarlistmpdir");               # delete tmp dir
+      } else {
+         ($output,$stderr)=$baseFH->cmd("rm -vf ${b_fdr}transfer".
+             "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
+         ($output,$stderr)=$baseFH->cmd(
+              "rm -vrf $tarlistmpdir");               # delete tmp dir
+      }
+      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
       if ($destFH->{_uname} eq 'aix') {
          ($output,$stderr)=$destFH->cmd("rm -ef ${d_fdr}transfer".
+             "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
+      } elsif ($destFH->{_uname} eq 'SunOS') {
+         ($output,$stderr)=$destFH->cmd("rm -f ${d_fdr}transfer".
              "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
       } else {
          ($output,$stderr)=$destFH->cmd("rm -vf ${d_fdr}transfer".
              "$Net::FullAuto::FA_Core::tran[3].tar"); # delete tar file
       }
-      &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
    }
 
 }
@@ -21825,7 +21918,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE3\n"
 
                ${$baseFH->{_bhash}}{$key}[3]='NOT_ON_DEST';
                $dest_dir_status='DIR_NOT_ON_DEST';
-               $deploy_info.="DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
+               $deploy_info.="    DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
                $debug_info.="DEPLOY EMPTY DIR $key - DIR_NOT_ON_DEST\n";
                $deploy_empty_dir=$deploy_needed=1;
             } else {
@@ -21919,7 +22012,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE3\n"
                      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             if ($dest_dir_status eq 'DIR_NOT_ON_DEST') {
                if ($key eq '/') {
-                  $deploy_info.="DEPLOY FILE $file - DIR_NOT_ON_DEST\n";
+                  $deploy_info.="    DEPLOY FILE $file - DIR_NOT_ON_DEST\n";
                   $debug_info.="DEPLOY FILE $file - DIR_NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
 
@@ -21934,7 +22027,8 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE7\n"
                      $Net::FullAuto::FA_Core::rename_file{$tmp_file_name}=$file;
                   }
                } else {
-                  $deploy_info.="DEPLOY FILE $key/$file - DIR_NOT_ON_DEST\n";
+                  $deploy_info.=
+                     "    DEPLOY FILE $key/$file - DIR_NOT_ON_DEST\n";
                   $debug_info.="DEPLOY FILE $key/$file - DIR_NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
 
@@ -22006,7 +22100,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                   ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                       ="DIFF_SIZE $bsize $dsize";
                   if ($key eq '/') {
-                     $deploy_info.="DEPLOY(a) $file - DIFF_SIZE\n";
+                     $deploy_info.="    DEPLOY(a) $file - DIFF_SIZE\n";
                      $debug_info.="DEPLOY $file - DIFF_SIZE\n";
                      if (99<length "$key/$file") {
                         my $tmp_file_name="X_".time."_"
@@ -22018,7 +22112,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                            $file;
                      }
                   } else {
-                     $deploy_info.="DEPLOY(b) $key/$file - DIFF_SIZE\n";
+                     $deploy_info.="    DEPLOY(b) $key/$file - DIFF_SIZE\n";
                      $debug_info.="DEPLOY $key/$file - DIFF_SIZE\n";
                      if (99<length "$key/$file") {
                         my $tmp_file_name="X_".time."_"
@@ -22160,7 +22254,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                      ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                          ="NEWR_TIME $btime $dtime";
                      if ($key eq '/') {
-                        $deploy_info.="DEPLOY(c) $file - NEWR_TIME\n";
+                        $deploy_info.="    DEPLOY(c) $file - NEWR_TIME\n";
                         $debug_info.="DEPLOY $file - NEWR_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -22172,7 +22266,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                               $file;
                         }
                      } else {
-                        $deploy_info.="DEPLOY(d) $key/$file - NEWR_TIME\n";
+                        $deploy_info.="    DEPLOY(d) $key/$file - NEWR_TIME\n";
                         $debug_info.="DEPLOY $key/$file - NEWR_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -22191,7 +22285,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                      ${$baseFH->{_bhash}}{$key}[1]{$file}[0]
                         ="DIFF_TIME $btime $dtime";
                      if ($key eq '/') {
-                        $deploy_info.="DEPLOY(e) $file - DIFF_TIME\n";
+                        $deploy_info.="    DEPLOY(e) $file - DIFF_TIME\n";
                         $debug_info.="DEPLOY $file - DIFF_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -22203,7 +22297,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                               $file;
                         }
                      } else {
-                        $deploy_info.="DEPLOY(f) $key/$file - DIFF_TIME\n";
+                        $deploy_info.="    DEPLOY(f) $key/$file - DIFF_TIME\n";
                         $debug_info.="DEPLOY $key/$file - DIFF_TIME\n";
                         if (99<length "$key/$file") {
                            my $tmp_file_name="X_".time."_"
@@ -22235,11 +22329,11 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                   $skip=1;next;
                }
             } else {
-#print "HERE4=$key\n";
+#print "HERE4=$key\n";<STDIN>;
                ${$baseFH->{_bhash}}{$key}[1]{$file}[0]='NOT_ON_DEST';
                ${$baseFH->{_bhash}}{$key}[1]{$file}[2]=$bchmod;
                if ($key eq '/') {
-                  $deploy_info.="DEPLOY(g) $file - NOT_ON_DEST\n";
+                  $deploy_info.="    DEPLOY(g) $file - NOT_ON_DEST\n";
                   $debug_info.="DEPLOY $file - NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
                      my $tmp_file_name="X_".time."_"
@@ -22249,7 +22343,7 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                      $Net::FullAuto::FA_Core::rename_file{$tmp_file_name}=$file;
                   }
                } else {
-                  $deploy_info.="DEPLOY(h) $key/$file - NOT_ON_DEST\n";
+                  $deploy_info.="    DEPLOY(h) $key/$file - NOT_ON_DEST\n";
                   $debug_info.="DEPLOY $key/$file - NOT_ON_DEST\n";
                   if (99<length "$key/$file") {
                      my $tmp_file_name="X_".time."_"
@@ -22268,9 +22362,11 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE5\n"
                $timekey="$key/$file";
             } else { $timekey=$file }
             ${$timehash}{$timekey}=[$byear,$btime];
-            print $Net::FullAuto::FA_Core::MRLOG "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timekey ",
+            print $Net::FullAuto::FA_Core::MRLOG
+               "UPDATEING TIMEHASH3=> TIMEKEY(FILE)=$timekey ",
                "and BYEAR=$byear and BTIME=$btime\n"
-               if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
          }
          if ($skip) {
             if ($deploy) {
@@ -22942,7 +23038,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
 #}
                if (!$cygwin && ($fchar eq '-' || $fchar eq 'l')) {
                   my $up=unpack('x10 a*',$line);
-                  $up=~s/^[.+ ]\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
+                  $up=~s/^[.+ ]?\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
                   ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
                   my $yr='';
                   if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
@@ -23075,7 +23171,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                               if (!$ms_share && !$ms_domain && !$cygwin) {
                                  my $up=unpack('x10 a*',$line);
                                  my $rx=qr/\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)/;
-                                 $up=~s/^[.+ ]$rx$/$1/;
+                                 $up=~s/^[.+ ]?$rx$/$1/;
                                  ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
                                  $mn=$Net::FullAuto::FA_Core::month{$mn}
                                     if length $mn==3;
@@ -23162,7 +23258,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE HAVE A PROBLEM HOUSTON and KEY=$prevkey
                         $file=substr($file,(rindex $file,'/')+1);
                      } else {
                         my $up=unpack('x10 a*',"$line");
-                        $up=~s/^[.+ ]\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
+                        $up=~s/^[.+ ]?\s+\d+\s+\S+\s+\S+\s+(\d+\s+.*)$/$1/;
                         ($size,$mn,$dy,$tm,$file)=split / +/, $up, 5;
                         my $yr='';$fileyr='';
                         if ($mn=~/(\d\d\d\d)-(\d\d)-(\d\d)/) {
