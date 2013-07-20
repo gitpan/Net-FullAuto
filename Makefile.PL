@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999910';
+$main::VERSION='0.99999911';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;

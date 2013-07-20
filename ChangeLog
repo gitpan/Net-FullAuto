@@ -19,6 +19,16 @@
 ################################################################
 
 
+2013-07-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999911 released.
+
+        * Fixed the last of the known &mirror() bugs.
+
+        * Fixed the last of known bugs when using FullAuto
+          with local Virtual Box on Windows.
+
+
 2013-07-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999910 released.
