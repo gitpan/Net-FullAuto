@@ -575,6 +575,7 @@ BEGIN {
       'delete_sets_menu'            => '',
       'manage_modules_menu'         => '',
       'set_default_menu'            => '',
+      'set_default_menu_in_db_sub'  => '',
       'set_menu'                    => '',
 
    );
@@ -1439,7 +1440,8 @@ print $Net::FullAuto::FA_Core::MRLOG
          $localhost->cmd("rm -f *${pid_ts}*");
       }
    }
-   if (exists $Net::FullAuto::FA_Core::tmp_files_dirs
+   if (%Net::FullAuto::FA_Core::tmp_files_dirs &&
+         exists $Net::FullAuto::FA_Core::tmp_files_dirs
          {$localhost->{_cmd_handle}}) {
       foreach my $element
             (@{$Net::FullAuto::FA_Core::tmp_files_dirs
@@ -7413,6 +7415,7 @@ $main::get_default_modules=sub {
          &handle_error($die);
       }
    }
+   $username=getlogin || getpwuid($<);
    unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm') {
       my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm';
       open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
@@ -9004,6 +9007,61 @@ my $manage_modules_menu_sub=sub {
    return \%manage_modules_menu;
 };
 
+my $set_default_menu_in_db_sub=sub {
+
+   package set_default_menu_in_db_sub;
+   no strict "subs";
+   use BerkeleyDB;
+   use File::Path;
+   my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
+   my $progname=substr($0,(rindex $0,'/')+1,-3);
+   require "$loc/fa_defs.pm";
+   my $selection=']S[';
+   $selection=~s/^.*Label:\s+(.*?)\s+.*$/$1/s;
+   $selection='none' if -1<index $selection,"'none'";
+   my $default_modules=$main::get_default_modules->();
+   $default_modules->{'set'}=$selection;
+   &Net::FullAuto::FA_Core::acquire_fa_lock(9361);
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $fa_defs::FA_Secure.'Defaults',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or die(
+      "cannot open environment for DB: ".
+      $BerkeleyDB::Error."\n",'','');
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${progname}_defaults.db",
+      -Flags    => DB_CREATE,
+      -Env      => $dbenv
+   );
+   unless ($BerkeleyDB::Error=~/Successful/) {
+      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils(
+         'recover');
+      my $cmd="$d -h ".$Hosts{"__Master_$\{$\}__"}{'FA_Secure'}.
+         'Defaults';
+      my $out=`$cmd`;
+      &handle_error($out) if $out;
+      $bdb = BerkeleyDB::Btree->new(
+         -Filename => "${progname}_defaults.db",
+         -Flags    => DB_CREATE,
+         -Env      => $dbenv
+      );
+      unless ($BerkeleyDB::Error=~/Successful/) {
+         die "Cannot Open DB: ".
+             "${progname}_defaults.db $BerkeleyDB::Error\n";
+      }
+   }
+   my $put_dref=
+      Data::Dump::Streamer::Dump($default_modules)->Out();
+   my $status=$bdb->db_put($username,$put_dref);
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+   print "\n\n   Default Module Set is now -> \'$selection\'.\n";
+   &Net::FullAuto::FA_Core::release_fa_lock(9361);
+   &Net::FullAuto::FA_Core::cleanup();
+
+};
+
 my $set_default_menu_sub=sub {
 
    my $default_modules=$_[0] || $main::get_default_modules->();
@@ -9023,12 +9081,14 @@ my $set_default_menu_sub=sub {
       Label  => 'set_default_menu',
          Item_1 => {
             Text    => $clearoption,
+            Result  => $set_default_menu_in_db_sub,
          },
          Item_2 => {
             Text    => "]C[\n                ".
                "Username:    $username\n\n",
             Default => "SET Label:   $current_default_set",
             Convey  => $set_default_sub->($current_default_set),
+            Result  => $set_default_menu_in_db_sub,
          },
          Banner => $sdf_banner
    );
@@ -9835,101 +9895,9 @@ sub fa_login
                &release_fa_lock(9361);
                &cleanup();
             } elsif (defined $set) {
-print "HELLO\n";
                $default_modules->{'set'}||='none';
                my $current_default_set=$default_modules->{'set'};
-               my $selection=Menu($set_menu_sub->());
-               if (($selection eq ']quit[') ||
-                     (-1<index $selection,'will EXIT') ||
-                     ($selection eq 'Finished Defining Set') ||
-                     ($selection eq 'Finished Deleting Set')) {
-                  &release_fa_lock(9361);
-                  &cleanup();
-               }
-               my $status='';
-               unless (((-1<index $selection,'none') || 
-                      (-1<index $selection,'Clear') ||
-                      (-1<index $selection,'Keep'))) {
-                  $selection=~s/^.*Label:\s+(.*?)\s+.*$/$1/s;
-                  $default_modules->{'set'}=$selection;
-                  my $dbenv = BerkeleyDB::Env->new(
-                     -Home  => $fa_defs::FA_Secure.'Defaults',
-                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-                  ) or die(
-                     "cannot open environment for DB: ".
-                     $BerkeleyDB::Error."\n",'','');
-                  my $bdb = BerkeleyDB::Btree->new(
-                     -Filename => "${progname}_defaults.db",
-                     -Flags    => DB_CREATE,
-                     -Env      => $dbenv
-                  );
-                  unless ($BerkeleyDB::Error=~/Successful/) {
-                     my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils(
-                        'recover');
-                     my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.
-                        'Defaults';
-                     my $out=`$cmd`;
-                     &handle_error($out) if $out;
-                     $bdb = BerkeleyDB::Btree->new(
-                        -Filename => "${progname}_defaults.db",
-                        -Flags    => DB_CREATE,
-                        -Env      => $dbenv
-                     );
-                     unless ($BerkeleyDB::Error=~/Successful/) {
-                        die "Cannot Open DB: ".
-                            "${progname}_defaults.db $BerkeleyDB::Error\n";
-                     }
-                  }
-                  my $put_dref=
-                     Data::Dump::Streamer::Dump($default_modules)->Out();
-                  $status=$bdb->db_put($username,$put_dref);
-                  undef $bdb;
-                  $dbenv->close();
-                  undef $dbenv;
-               } elsif ((-1<index $selection,'Set to \'none') ||
-                     (-1<index $selection,'Clear')) {
-                  $selection='none';
-                  $default_modules->{'set'}='none';
-                  my $dbenv = BerkeleyDB::Env->new(
-                     -Home  => $fa_defs::FA_Secure.'Defaults',
-                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-                  ) or die(
-                     "cannot open environment for DB: ".
-                      $BerkeleyDB::Error."\n",'','');
-                  my $bdb = BerkeleyDB::Btree->new(
-                     -Filename => "${progname}_defaults.db",
-                     -Flags    => DB_CREATE,
-                     -Env      => $dbenv
-                  );
-                  unless ($BerkeleyDB::Error=~/Successful/) {
-                     my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils(
-                        'recover');
-                     my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.
-                        'Defaults';
-                     my $out=`$cmd`;
-                     &handle_error($out) if $out;
-                     $bdb = BerkeleyDB::Btree->new(
-                        -Filename => "${progname}_defaults.db",
-                        -Flags    => DB_CREATE,
-                        -Env      => $dbenv
-                     );
-                     unless ($BerkeleyDB::Error=~/Successful/) {
-                        die "Cannot Open DB: ".
-                            "${progname}_defaults.db $BerkeleyDB::Error\n";
-                     }
-                  } else { $selection='none' }
-                  my $put_dref=
-                     Data::Dump::Streamer::Dump($default_modules)->Out();
-                  $status=$bdb->db_put($username,$put_dref);
-                  undef $bdb;
-                  $dbenv->close();
-                  undef $dbenv;
-               } elsif (-1<index $selection,'Keep') {
-                  $selection=$current_default_set;
-               } else { $selection='none' }
-               print "\n\n   Default Module Set is now -> \'$selection\'.\n";
-               &release_fa_lock(9361);
-               &cleanup();
+               &Menu($set_menu_sub->());
             }
             if (defined $famenu) {
                set_fa_modules('menu',$default_modules);
@@ -10119,8 +10087,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
 
          if ($login_Mast_error) {
             if ($login_Mast_error=~/[Ll]ogin|sion den|Passwo/) {
-               $userflag=0;@passwd=();#$username='';
+               $userflag=0;@passwd=();
                chomp($login_Mast_error);
+               $login_Mast_error=~s/^(.*try again.).*$/$1\n/s;
             } else {
                chomp($login_Mast_error);
             }
@@ -11604,15 +11573,22 @@ FAM
    unless ($invoke_menu_here) {
       return \%admin;
    } else {
+      my @menu_output=();
       while (1) {
-         my @menu_output=Menu(\%admin);
+         @menu_output=Menu(\%admin);
          last if ($menu_output[0] ne '-' && $menu_output[0] ne '+');
+      }
+      if ( grep { /\]quit\[/ } @menu_output) {
+         &Net::FullAuto::FA_Core::release_fa_lock(9361);
+         &Net::FullAuto::FA_Core::cleanup();
       }
    }
 };
 
 our $admin_menu=sub {
-   return $adminmenu->();
+
+    return $adminmenu->();
+
 };
 
 sub choose_pass_expiration
