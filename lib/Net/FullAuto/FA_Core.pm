@@ -31,6 +31,8 @@ package Net::FullAuto::FA_Core;
 #
 #  at CPAN prompt (cpan[1]) type: o conf init
 #
+#  at CPAN prompt: o conf urllist unshift http://www.perl.com/CPAN
+#
 ## For creating gpg secret key for use with cpansign -s
 #
 #  gpg --gen-key (then follow onscreen instructions)
