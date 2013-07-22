@@ -7993,6 +7993,17 @@ my $default_sets_banner_sub=sub {
    my $progname=substr($0,(rindex $0,'/')+1,-3);
    require "$loc/fa_defs.pm";
    my $mkdflag=0;
+
+   my $dfbann=<<FIN;
+
+    ___     _ _   _       _          ___       __           _ _
+   | __|  _| | | /_\\ _  _| |_ ___   |   \\ ___ / _|__ _ _  _| | |_ ___
+   | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
+   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
+
+
+FIN
+
    unless (-d $fa_defs::FA_Secure.'Sets') {
       $mkdflag=1;
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
@@ -8048,7 +8059,7 @@ my $default_sets_banner_sub=sub {
    my $set=$default_modules->{'set'};
    my $spc=length $set;
    $spc=pack("A$spc",'');
-   my $banner.="      ** DEFAULT SET -> $set **\n\n"
+   my $banner=$dfbann."      ** DEFAULT SET -> $set **\n\n"
           ."     \'$set\'  --> Code => "
           .$mysets->{$set}->{'fa_code'}."\n"
           ."      $spc       Conf => "
@@ -8407,6 +8418,18 @@ my $defaultsettings_sub=sub {
 
    );
    return \%defaultsettings;
+};
+
+my $admin_defaults_sub=sub {
+
+   my $default_modules=$main::get_default_modules->();
+   if (!exists $default_modules->{'set'} ||
+         $default_modules->{'set'} eq 'none') {
+      return $viewdefaults_sub->($default_modules);
+   } else {
+      return $defaultsettings_sub->($default_modules); 
+   } 
+
 };
 
 my $defaults_sub=sub {
@@ -11554,7 +11577,7 @@ FAM
       Item_1 => {
 
           Text => 'FullAuto *DEFAULT* Settings Menu',
-          Result => $viewdefaults_sub->(),
+          Result => $admin_defaults_sub->(),
 
       },
       Item_2 => {

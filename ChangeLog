@@ -19,6 +19,16 @@
 ################################################################
 
 
+2013-07-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999914 released.
+
+        * New version to accompany Term::Menus documentation
+          update.
+
+        * Completed defaults item in admin menu.
+
+
 2013-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999913 released.
