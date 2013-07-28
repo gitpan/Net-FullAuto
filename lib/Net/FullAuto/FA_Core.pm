@@ -2569,8 +2569,48 @@ my %plan_menu=(
       Label  => 'plan_menu',
       Item_1 => {
 
-          Text => 'Accept Defaults and Create New Plan',
-          #Result => sub { return '' },
+          Text => 'Accept Defaults and Record New Plan',
+          Result => sub {
+
+                            unless (grep { /--plan/i } @ARGV) {
+
+          my $message="\n".
+                     "    ___                     _            _     _ \n".
+                     "   |_ _|_ __  _ __  ___ _ _| |_ __ _ _ _| |_  | |\n".
+                     "    | || '  \\| '_ \\/ _ \\ '_|  _/ _` | ' \\  _| |_|\n".
+                     "   |___|_|_|_| .__/\\___/_|  \\__\\__,_|_||_\\__| (_)\n".
+                     "             |_|\n".
+                     "\n".
+                     "   This selection is not available when accessed\n".
+                     "   via the Admin Menu. This item is available only\n".
+                     "   when the --plan argument is used in conjunction\n".
+                     "   with the --code argument invoked from the command\n".
+                     "   line.\n\n".
+                     "      Example:  fa --plan --code hello_world\n\n".
+                     "   Press ANY KEY to return to the Plan Menu\n";
+
+                               print $Net::FullAuto::FA_Core::blanklines,
+                                     $message;
+                               alarm 120;
+                               Term::ReadKey::ReadMode 4;
+                                  # Turn off controls keys
+                               eval {
+                                  $SIG{ALRM} = sub { die "alarm\n" }; # NB:
+                                                              # \n required
+                                  my $key='';
+                                  while (not defined ($key = ReadKey(-1))) {
+                                    # No key yet
+                                  }
+                               };
+                               Term::ReadKey::ReadMode 0;
+                                  # Reset tty mode before exiting
+                               alarm(0);
+                               return '<';
+
+                            }
+                            return ']S['
+
+                        },
 
       },
       Item_2 => {
@@ -2597,25 +2637,18 @@ my %plan_menu=(
       },
 
 
-      Banner => "      ___     _ _   _       _          ___ _                     \n".
-                "     | __|  _| | | /_\\ _  _| |_ ___   | _ \\ |__ _ _ _  ___     \n".
-                "     | _| || | | |/ _\ \\ || |  _/ _ \\  |  _/ / _` | ' \\(_-<   \n".
-                "     |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |_| |_\\__,_|_||_/__/ \n".
-                "\n".
-      #Banner => "                 FullAuto Job Planning Menu\n\n".
-      #          "    \"Always plan ahead. It wasn\'t raining when Noah\n".
-      #          "     built the ark.\" -  Richard C. Cushing\n\n".
-                "    Plan:  Indicated by a Plan Number, A FullAuto \"Plan\"\n".
-                "           is a Complete Job Definition composed of recorded\n".
-                "           User interaction Menu choices and Input. FullAuto\n".
-                "           \"Plans\" allow otherwise manual/interactive processes\n".
-                "           to be run unattended when FullAuto is started with\n".
-                "           the --cron or --unattended or --fullauto options.\n\n".
-                "    Job:   A FullAuto \"Scheduled Job\" is a fully unattended\n".
-                "           invocation of a pre-created \"Plan\". Not all Plans\n".
-                "           are \"Scheduled Jobs\", but all \"Scheduled Jobs\" are\n".
-                "           directed by a \"Plan\". FullAuto uses external cron\n".
-                "           for it's scheduling engine.",
+      Banner =>
+
+   "     ___ _               _        _     _      __  __              \n".
+   "    | _ \\ |__ _ _ _    _| |_   _ | |___| |__  |  \\/  |___ _ _ _  _ \n".
+   "    |  _/ / _` | ' \\  |_   _| | || / _ \\ '_ \\ | |\\/| / -_) ' \\ || |\n".
+   "    |_| |_\\__,_|_||_|   |_|    \\__/\\___/_.__/ |_|  |_\\___|_||_\\_,_|\n".
+   "\n".
+   "    Plan:  Indicated by a Plan Number, A FullAuto 'Plan' is a\n".
+   "           recording of user &Menu() choices and user input.\n".
+   "\n".
+   "    Job:   A FullAuto Scheduled 'Job' is a fully unattended\n".
+   "           invocation of a Custom Code Block via cron.",
 
 );
 
@@ -2683,7 +2716,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
       }
       my $new_plan_number=0;
       my ($k,$v) = ('','') ;
-      if ($output eq 'Accept Defaults and Create New Plan') {
+      if (-1<index $output,'Accept Defaults and Record New Plan') {
          my $cursor = $bdb->db_cursor() ;
          my $status=$cursor->c_get($k, $v, DB_LAST);
          $new_plan_number=++$k;
@@ -2697,7 +2730,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          $dbenv->close();
          undef $dbenv;
          return $plann;
-      } elsif ($output eq 'Work with Existing Plans') {
+      } elsif (-1<index $output,'Work with Existing Plans') {
          my $plans=getplans($bdb);
          if (-1<$#{$plans}) {
             my %existing=(
@@ -11582,14 +11615,13 @@ FAM
       },
       Item_2 => {
 
-          Text => 'FullAuto Job & *PLAN* Menu',
-          #Result => \%plan_menu,
+          Text => 'FullAuto *PLAN* + Job Menu',
           Result => $plan_menu_sub,
 
       },
       Item_3 => {
 
-          Text => 'FullAuto Configuration *SET* Menu',
+          Text => 'FullAuto *SET* Configuration Menu',
           Result => $set_menu_sub->(),
 
       },
