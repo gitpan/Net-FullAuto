@@ -2230,9 +2230,109 @@ my $fulldays=sub { package fulldays;
                    return @n };
 
 my $track='';
-our %new_plan_options_menu=(
 
-      Label  => 'new_plan_options_menu',
+my $plan_menu_options_sub=sub {
+
+   package plan_menu_options_sub;
+   no strict "subs";
+   use BerkeleyDB;
+   use File::Path;
+   my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
+   my $progname=substr($0,(rindex $0,'/')+1,-3);
+   require "$loc/fa_defs.pm";
+   my $mkdflag=0;
+   unless (-d $fa_defs::FA_Secure.'Plans') {
+      $mkdflag=1;
+      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+      my $m=($^O eq 'cygwin')?"-m $mode ":'';
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+         $m.$fa_defs::FA_Secure.'Plans';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      die $stderr if $stderr;
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $fa_defs::FA_Secure.'Plans',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or die(
+      "cannot open environment for DB: ".
+      $BerkeleyDB::Error."\n",'','');
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${progname}_plans.db",
+      -Flags    => DB_CREATE,
+      -Env      => $dbenv
+   );
+   my $mr="__Master_".$$."__";
+   unless ($BerkeleyDB::Error=~/Successful/) {
+      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
+      my $cmd="$d -h ".$Hosts{$mr}{'FA_Secure'}.'Plans';
+      my $out=`$cmd`;
+      &handle_error($out) if $out;
+      $bdb = BerkeleyDB::Btree->new(
+         -Filename => "${progname}_plans.db",
+         -Flags    => DB_CREATE,
+         -Env      => $dbenv
+      );
+      unless ($BerkeleyDB::Error=~/Successful/) {
+         die "Cannot Open DB: ".
+             "${progname}_plans.db $BerkeleyDB::Error\n";
+      }
+   }
+   my $plans=&Net::FullAuto::FA_Core::getplans($bdb);
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+   if (-1<$#{$plans}) {
+      my %existing=(
+
+            Label => 'existing',
+            Item_1=> {
+
+               Text => "Plan #: ]C[",
+               Convey => $plans
+
+            },
+            Banner=> '   Select a Plan to work with:'
+      );
+      return \%existing;
+   } else {
+      my $message="\n".
+                  "    _  _  ___ _____ ___   _   \n".
+                  "   | \\| |/ _ \\_   _| __| (_)\n".
+                  "   | .` | (_) || | | _|   _   \n".
+                  "   |_|\_|\\___/ |_| |___| (_) \n".
+                  "\n\n".
+                  "   *NO* Plans have yet been 'made' with ".
+                  "   this FullAuto installation.\n\n".
+                  "   To make a 'plan' use the --plan argument\n".
+                  "   in conjunction with the --code argument\n".
+                  "   invoked from the command line.\n\n".
+                  "      Example:  fa --plan --code hello_world\n\n".
+                  "   Press ANY KEY to return to the Plan Menu\n";
+
+      print $Net::FullAuto::FA_Core::blanklines,$message;
+      alarm 120;
+      Term::ReadKey::ReadMode 4;
+      # Turn off controls keys
+      eval {
+         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         my $key='';
+         while (not defined ($key = ReadKey(-1))) {
+            # No key yet
+         }
+      };
+      Term::ReadKey::ReadMode 0;
+      # Reset tty mode before exiting
+      alarm(0);
+      return '<';
+
+   }
+
+};
+
+my %plan_options_menu=(
+
+      Label  => 'plan_options_menu',
       Item_1 => {
 
           Text => 'Set Optional Maximum Number of Invocations',
@@ -2615,8 +2715,9 @@ my %plan_menu=(
       },
       Item_2 => {
 
-          Text => 'Set Options for New Plan',
-          Result => \%Net::FullAuto::FA_Core::new_plan_options_menu,
+          Text => 'Set Options for Plan',
+          #Result => \%plan_options_menu,
+          Result => $plan_menu_options_sub,
 
       },
       Item_3 => {
@@ -6813,22 +6914,23 @@ sub getpasswd
    }
    unless ($Net::FullAuto::FA_Core::tosspass) {
       my $mkdflag=0;
-      unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds') {
+      my $mr="__Master_".$$."__";
+      unless (-d $Hosts{$mr}{'FA_Secure'}.'Passwds') {
          $mkdflag=1;
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
          my $m=($^O eq 'cygwin')?"-m $mode ":'';
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-                 $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+                 $m.$Hosts{$mr}{'FA_Secure'}.'Passwds';
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
       } elsif ($^O eq 'cygwin' &&
-            !(-e $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+            !(-e $Hosts{$mr}{'FA_Secure'}.'Passwds/'.
             "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db")) {
          $mkdflag=1;
       }
       my $dbenv = BerkeleyDB::Env->new(
-         -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
+         -Home  => $Hosts{$mr}{'FA_Secure'}.'Passwds',
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
       ) or &handle_error(
          "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
@@ -6841,7 +6943,7 @@ sub getpasswd
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
          my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
-         my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
+         my $cmd="$d -h ".$Hosts{$mr}{'FA_Secure'}.'Passwds';
          my $out=`$cmd`;
          &handle_error($out) if $out;
          $bdb = BerkeleyDB::Btree->new(
@@ -6863,7 +6965,7 @@ sub getpasswd
       if ($mkdflag && $^O eq 'cygwin') {
          my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
          my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-                 $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds/'.
+                 $Hosts{$mr}{'FA_Secure'}.'Passwds/'.
                  "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db";
          my ($stdout,$stderr)=&setuid_cmd($cmd,5);
          &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
@@ -6875,8 +6977,8 @@ sub getpasswd
       $save_passwd.='X' if $save_passwd
          eq substr($Net::FullAuto::FA_Core::progname,0,
          (rindex $Net::FullAuto::FA_Core::progname,'.'));
-      my $cipher='';my $mr="__Master_${$}__";
-      if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
+      my $cipher='';
+      if ($Hosts{$mr}{'Cipher'}=~/DES/) {
          if (8<length $Net::FullAuto::FA_Core::dcipher->decrypt(
                $passetts->[0])) {
             $cipher = new Crypt::CBC(unpack('a8',
@@ -6892,9 +6994,6 @@ sub getpasswd
             $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]),
             $Net::FullAuto::FA_Core::Hosts{$mr}{'Cipher'});
       }
-      #$cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passwd[1],
-      #$cipher = new Crypt::CBC($Net::FullAuto::FA_Core::passetts->[1],
-      #   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'Cipher'});
       my $new_encrypted=$cipher->encrypt($save_passwd);
       $href->{$key}=$new_encrypted;
       my $put_href=Data::Dump::Streamer::Dump($href)->Out();
@@ -11298,7 +11397,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LREF=$lref<==\n if ref $lref eq 'HASH"
             }
          }
          unless ($tosspass) {
-            my $cipher='';my $mr="__Master_${$}__";
+            my $cipher='';my $mr="__Master_".$$."__";
             if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
                if (8<length $dcipher->decrypt($passetts->[0])) {
                   $cipher = new Crypt::CBC(unpack('a8',
@@ -12034,7 +12133,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          while (delete $href->{"$ky"}) {}
       }
    }
-   my $cipher='';my $mr="__Master_${$}__";
+   my $cipher='';my $mr="__Master_".$$."__";
    if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
       if ($Net::FullAuto::FA_Core::dcipher &&
             8<length $Net::FullAuto::FA_Core::dcipher->decrypt(
@@ -12166,7 +12265,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE9=",
          while (delete $href->{$ky}) {}
       }
    }
-   my $cipher='';my $mr="__Master_${$}__";
+   my $cipher='';my $mr="__Master_".$$."__";
    if ($Hosts{"__Master_${$}__"}{'Cipher'}=~/DES/) {
       if (8<length $Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0])) {
          $cipher = new Crypt::CBC(unpack('a8',
@@ -14505,7 +14604,7 @@ print "FTR_RETURN3\n";
 
                      if ($su_scrub) {
                         my $kind='prod';
-                        my $mr="__Master_${$}__";
+                        my $mr="__Master_".$$."__";
                         $kind='test' if $Net::FullAuto::FA_Core::test
                                      && !$Net::FullAuto::FA_Core::prod;
                         my $dbpath=$Net::FullAuto::FA_Core::Hosts{$mr}
