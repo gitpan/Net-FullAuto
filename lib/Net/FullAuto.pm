@@ -21,7 +21,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.99999916';
+our $VERSION='0.99999917';
 
 
 use 5.005;
@@ -95,7 +95,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT = qw(fa_login);
 
-use Term::Menus 2.38;
+use Term::Menus 2.39;
 use Tie::Cache;
 use Sort::Versions;
 use Crypt::CBC;

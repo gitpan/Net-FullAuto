@@ -2117,7 +2117,6 @@ sub edit {
       }
       my %Menu_1=(
 
-         Label   => 'Menu_1',
          Item_1  => {
 
             Text    => "]C[",
@@ -2231,6 +2230,14 @@ my $fulldays=sub { package fulldays;
 
 my $track='';
 
+my $make_plan_changes_sub=sub {
+
+   my $plan=']S[';
+   print "\n   PLAN=$plan\n";
+   return '<';
+
+};
+
 my $plan_menu_options_sub=sub {
 
    package plan_menu_options_sub;
@@ -2285,12 +2292,18 @@ my $plan_menu_options_sub=sub {
    if (-1<$#{$plans}) {
       my %existing=(
 
-            Label => 'existing',
+            Name => 'existing',
             Item_1=> {
 
-               Text => "Plan #: ]C[",
-               Convey => $plans
+               Text => "Plan: ]C[",
+               Convey => $plans,
+               Result => sub {
 
+                                my $plan=']S[{existing}';
+                                print "\n   PLAN=$plan\n";<STDIN>;
+                                return '<';
+
+                         },
             },
             Banner=> '   Select a Plan to work with:'
       );
@@ -2332,7 +2345,6 @@ my $plan_menu_options_sub=sub {
 
 my %plan_options_menu=(
 
-      Label  => 'plan_options_menu',
       Item_1 => {
 
           Text => 'Set Optional Maximum Number of Invocations',
@@ -2353,7 +2365,6 @@ my %plan_options_menu=(
 
 my %select_min_for_invocation=(
 
-   Label => 'select_min_for_invocation',
    Item_1=> {
 
       Text => "]C[",
@@ -2371,7 +2382,6 @@ my %select_min_for_invocation=(
 
 my %select_hour_for_invocation=(
 
-   Label => 'select_hour_for_invocation',
    Item_1=> {
 
       Text => "Show Minutes",
@@ -2395,7 +2405,6 @@ my %select_hour_for_invocation=(
 
 my %select_cal_mins_for_plan=(
 
-   Label => 'select_cal_mins_for_plan',
    Item_1=> {
 
       Text => "]C[",
@@ -2414,7 +2423,6 @@ my %select_cal_mins_for_plan=(
 
 my %select_cal_hours_for_plan=(
 
-   Label => 'select_cal_hours_for_plan',
    Item_1=> {
 
       Text => "Show Minutes",
@@ -2441,7 +2449,6 @@ my %select_cal_hours_for_plan=(
 
 my %select_cal_days_for_plan=(
 
-   Label => 'select_cal_days_for_plan',
    Item_1=> {
 
       Text => "]C[",
@@ -2454,7 +2461,6 @@ my %select_cal_days_for_plan=(
 
 my %select_cal_months_for_plan=(
 
-   Label => 'select_cal_months_for_plan',
    Item_1=> {
 
       Text => "]C[",
@@ -2466,7 +2472,6 @@ my %select_cal_months_for_plan=(
 
 my %calendar_years_for_plan=(
 
-   Label => 'calendar_years_for_plan',
    Item_1=> {
 
       Text => "]C[",
@@ -2479,7 +2484,6 @@ my %calendar_years_for_plan=(
 
 my %select_recurrent_minutes=(
 
-   Label => 'select_recurrent_minutes',
    Item_1=> {
 
       Text => "Minute  ]C[",
@@ -2503,7 +2507,6 @@ my %select_recurrent_minutes=(
 
 my %select_recurrent_hours=(
 
-      Label  => 'select_recurrent_hours',
       #Item_1=> {
 
       #   Text => "Show Minutes",
@@ -2532,7 +2535,6 @@ my %select_recurrent_hours=(
 
 my %select_recurrent_days=(
 
-      Label  => 'select_recurrent_days',
       Item_1 => {
 
            Text => 'Day  ]C[',
@@ -2549,7 +2551,6 @@ my %select_recurrent_days=(
 
 my %select_recurrent_weekdays=(
 
-      Label  => 'select_recurrent_weekdays',
       Item_1 => {
 
            Text => ']C[',
@@ -2566,7 +2567,6 @@ my %select_recurrent_weekdays=(
 
 my %select_recurrent_months=(
 
-      Label  => 'select_recurrent_months',
       Item_1 => {
 
            Text => ']C[',
@@ -2582,7 +2582,6 @@ my %select_recurrent_months=(
 
 my %one_time_launch=(
 
-      Label  => 'one_time_launch',
       Item_1 => {
 
            Text => 'FULL CALENDAR',
@@ -2610,7 +2609,6 @@ my %one_time_launch=(
 
 my %select_type_of_scheduled_plan=(
 
-      Label  => 'select_type_of_scheduled_plan',
       Item_1 => {
  
            Text => 'This Plan will Launch Recurrently',
@@ -2629,7 +2627,6 @@ my %select_type_of_scheduled_plan=(
 
 our %choose_from_fullauto_plans=(
 
-      Label  => 'choose_from_fullauto_plans',
       Item_1 => {
 
            Text => "]C[",
@@ -2643,7 +2640,6 @@ our %choose_from_fullauto_plans=(
  
 our %setup_new_sched_job_menu=(
 
-      Label  => 'setup_new_sched_job_menu',
       Item_1 => {
 
            Text => 'Choose a FullAuto Plan to Schedule',
@@ -2666,7 +2662,7 @@ our %setup_new_sched_job_menu=(
 
 my %plan_menu=(
 
-      Label  => 'plan_menu',
+      #Name   => 'plan_menu',
       Item_1 => {
 
           Text => 'Accept Defaults and Record New Plan',
@@ -2767,7 +2763,6 @@ my $plan_menu_sub = sub {
       &Net::FullAuto::FA_Core::fa_login();
       undef $main::plan_menu_sub;
    }
-   
    return \%plan_menu;
 
 };
@@ -2836,7 +2831,6 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          if (-1<$#{$plans}) {
             my %existing=(
 
-                  Label => 'existing',
                   Item_1=> {
                  
                      Text => "]C[",
@@ -3180,7 +3174,7 @@ sub persist_put {
 
 
 sub openplandb {
-print "openplandb CALLER=",caller,"\n";
+
    my $track='';
    my $mkdflag=0;
    unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
@@ -8215,7 +8209,6 @@ my $cacomm_sub=sub {
 
    my %cacomm=(
 
-      Label => 'cacomm',
       Item_1 => {
          Text   => "YES",
          Result  => sub {
@@ -8349,7 +8342,6 @@ my $camenu_sub=sub {
 
    my %camenu=(
 
-      Label => 'camenu',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Menu'),
@@ -8377,7 +8369,6 @@ my $camaps_sub=sub {
 
    my %camaps=(
 
-      Label => 'camaps',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Maps'),
@@ -8404,7 +8395,6 @@ my $cahost_sub=sub {
 
    my %cahost=(
 
-      Label => 'cahost',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Host'),
@@ -8428,7 +8418,6 @@ my $caconf_sub=sub {
 
    my %caconf=(
 
-      Label => 'caconf',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Conf'),
@@ -8450,7 +8439,6 @@ my $cacode_sub=sub {
 
    my %cacode=(
 
-      Label => 'cacode',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Code'),
@@ -8465,7 +8453,6 @@ my $cacode_sub=sub {
 my $define_module_from_viewdef_sub=sub {
 
    my %define_module_from_viewdef=(
-      Label      => 'define_module_from_viewdef',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules,
@@ -8511,7 +8498,6 @@ my $viewdefaults_sub=sub {
 
    my %viewdefaults=(
 
-      Label => 'viewdefaults',
       Item_1 => {
          Text   => "Change ALL Defaults",
          Result => $cacode_sub->($_[0]),
@@ -8531,7 +8517,6 @@ my $defaultsettings_sub=sub {
 
    my %defaultsettings=(
 
-      Label  => 'defaultsettings',
       Item_1 => {
          Text   =>
          "View Defaults when Default Set equals \'none\'",
@@ -8591,7 +8576,6 @@ my $defaults_sub=sub {
 my $define_modules_commit_sub=sub {
 
    my %define_modules_commit=(
-      Label      => 'define_modules_commit',
       Item_1 => {
          Text => "YES",
          Result => sub {
@@ -8711,7 +8695,6 @@ FIN
 my $define_modules_menu_fa_menu_sub=sub {
 
    my %define_modules_menu_fa_menu=(
-      Label      => 'define_modules_menu_fa_menu',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Menu'),
@@ -8738,7 +8721,6 @@ my $define_modules_menu_fa_menu_sub=sub {
 my $define_modules_menu_fa_maps_sub=sub {
 
    my %define_modules_menu_fa_maps=(
-      Label      => 'define_modules_menu_fa_maps',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Maps'),
@@ -8763,7 +8745,6 @@ my $define_modules_menu_fa_maps_sub=sub {
 my $define_modules_menu_fa_host_sub=sub {
 
    my %define_modules_menu_fa_host=(
-      Label      => 'define_modules_menu_fa_host',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Host'),
@@ -8786,7 +8767,6 @@ my $define_modules_menu_fa_host_sub=sub {
 my $define_modules_menu_fa_conf_sub=sub {
 
    my %define_modules_menu_fa_conf=(
-      Label      => 'define_modules_menu_fa_conf',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Conf'),
@@ -8805,7 +8785,6 @@ my $define_modules_menu_fa_conf_sub=sub {
 my $define_modules_menu_fa_code_sub=sub {
 
    my %define_modules_menu_fa_code=(
-      Label      => 'define_modules_menu_fa_code',
       Item_1 => {
          Text    => ']C[',
          Convey  => sub {
@@ -8917,7 +8896,6 @@ my $define_modules_menu_fa_code_sub=sub {
 my $delete_sets_menu_sub=sub {
 
    my %delete_sets_menu=(
-      Label      => 'delete_sets_menu',
       Item_1     => {
          Text    => "]C[",
          Convey  => sub {
@@ -9142,7 +9120,6 @@ my $manage_modules_menu_sub=sub {
          "      ** DEFAULT SET -> $current_default_set **\n";
    }
    my %manage_modules_menu=(
-      Label      => 'manage_modules_menu',
       Item_1 => {
          Text    => 'Examine Module Set(s)',
       },
@@ -9235,19 +9212,18 @@ my $set_default_menu_sub=sub {
       $clearoption="Set to 'none'\n\n";
    }
    my %set_default_menu=(
-      Label  => 'set_default_menu',
-         Item_1 => {
-            Text    => $clearoption,
-            Result  => $set_default_menu_in_db_sub,
-         },
-         Item_2 => {
-            Text    => "]C[\n                ".
-               "Username:    $username\n\n",
-            Default => "SET Label:   $current_default_set",
-            Convey  => $set_default_sub->($current_default_set),
-            Result  => $set_default_menu_in_db_sub,
-         },
-         Banner => $sdf_banner
+      Item_1 => {
+         Text    => $clearoption,
+         Result  => $set_default_menu_in_db_sub,
+      },
+      Item_2 => {
+         Text    => "]C[\n                ".
+            "Username:    $username\n\n",
+         Default => "SET Label:   $current_default_set",
+         Convey  => $set_default_sub->($current_default_set),
+         Result  => $set_default_menu_in_db_sub,
+      },
+      Banner => $sdf_banner
    );
    return \%set_default_menu;
 };
@@ -9276,7 +9252,6 @@ FIN
       $clearoption="Set to 'none'\n\n";
    }
    my %set_menu=(
-      Label  => 'set_menu',
       Item_1 => {
          Text   => 'Select Default Module Set',
          Result => $set_default_menu_sub->($default_modules),
@@ -9988,7 +9963,6 @@ sub fa_login
             my $default_modules=$main::get_default_modules->();
             if (defined $facode) {
                my %define_module_fa_code=(
-                  Label      => 'define_module_fa_code',
                   Item_1 => {
                      Text   => ']C[',
                      Convey => $get_modules->('Code'),
@@ -10001,7 +9975,6 @@ sub fa_login
                &cleanup();
             } elsif (defined $faconf) {
                my %define_module_fa_conf=(
-                  Label      => 'define_module_fa_conf',
                   Item_1 => {
                      Text   => ']C[',
                      Convey => $get_modules->('Conf'),
@@ -10014,7 +9987,6 @@ sub fa_login
                &cleanup();
             } elsif (defined $fahost) {
                my %define_module_fa_host=(
-                  Label      => 'define_module_fa_host',
                   Item_1 => {
                      Text   => ']C[',
                      Convey => $get_modules->('Host'),
@@ -10027,7 +9999,6 @@ sub fa_login
                &cleanup();
             } elsif (defined $famaps) {
                my %define_module_fa_maps=(
-                  Label      => 'define_module_fa_maps',
                   Item_1 => {
                      Text   => ']C[',
                      Convey => $get_modules->('Maps'),
@@ -10040,7 +10011,6 @@ sub fa_login
                &cleanup();
             } elsif (defined $famenu) {
                my %define_module_fa_menu=(
-                  Label      => 'define_module_fa_menu',
                   Item_1 => {
                      Text   => ']C[',
                      Convey => $get_modules->('Menu'),
@@ -10715,7 +10685,6 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   if ($passwd[0] eq $tdcipher->decrypt($passetts->[0])) {
                      my %askaboutpass=(
 
-                        Label => 'askaboutpass',
                         Item_1 => {
 
                            Text => 'Keep the Saved Password',
@@ -11705,7 +11674,6 @@ our $adminmenu=sub {
 FAM
    my %admin=(
 
-      Label  => 'admin',
       Item_1 => {
 
           Text => 'FullAuto *DEFAULT* Settings Menu',
@@ -11754,7 +11722,6 @@ sub choose_pass_expiration
    #$curmonth='04';
    my %show_mins=(
 
-      Label => 'show_mins',
       Item_1=> {
          
          Text => "]C[",
@@ -11770,7 +11737,6 @@ sub choose_pass_expiration
    );
    my %select_hour=(
 
-      Label => 'select_hour',
       Item_1=> {
 
          Text => "Show Minutes",
@@ -11792,7 +11758,6 @@ sub choose_pass_expiration
    );
    my %select_cal_days=(
 
-      Label => 'select_cal_days',
       Item_1=> {
 
          Text => "]C[",
@@ -11804,7 +11769,6 @@ sub choose_pass_expiration
    );
    my %select_cal_months=(
 
-      Label => 'select_cal_months',
       Item_1=> {
 
          Text => "]C[",
@@ -11815,7 +11779,6 @@ sub choose_pass_expiration
    );
    my %calendar_years=(
 
-      Label => 'calendar_years',
       Item_1=> {
 
          Text => "]C[",
@@ -11827,7 +11790,6 @@ sub choose_pass_expiration
    );
    my %select_minutes=(
 
-      Label => 'select_minutes',
       Item_1=> {
 
          Text => "1  Minute",
@@ -11850,7 +11812,6 @@ sub choose_pass_expiration
    );
    my %select_hours=(
 
-      Label => 'select_hours',
       Item_1=> {
 
          Text => "1  Hour",
@@ -11873,7 +11834,6 @@ sub choose_pass_expiration
    );
    my %select_days=(
 
-      Label => 'select_days',
       Item_1=> {
 
          Text => "1  Day",
@@ -11896,7 +11856,6 @@ sub choose_pass_expiration
    );
    my %select_weeks=(
 
-      Label => 'select_weeks',
       Item_1=> {
 
          Text => "1  Week",
@@ -11919,7 +11878,6 @@ sub choose_pass_expiration
    );
    my %select_months=(
 
-      Label => 'select_time',
       Item_1=> {
 
          Text => "1  Month",
@@ -11943,7 +11901,6 @@ sub choose_pass_expiration
    );
    my %pass_ask_exp=(
 
-      Label => 'pass_ask_exp',
       Item_1=> {
 
          Text => "FULL CALENDAR",
