@@ -2232,9 +2232,24 @@ my $track='';
 
 my $make_plan_changes_sub=sub {
 
-   my $plan=']S[';
-   print "\n   PLAN=$plan\n";
-   return '<';
+   #my $plan=']S[';
+   #print "\n   PLAN=$plan\n";<STDIN>;
+   #return '<';
+
+   my %make_plan_changes=(
+
+      Name   => 'make_plan_changes',
+      Item_1 => {
+
+         Text => "Delete ]P[",
+
+      },
+      Banner => "   Choose an operation to perform".
+                " with ]P[",
+
+
+   );
+   return \%make_plan_changes;
 
 };
 
@@ -2297,13 +2312,14 @@ my $plan_menu_options_sub=sub {
 
                Text => "Plan: ]C[",
                Convey => $plans,
-               Result => sub {
+               Result => $make_plan_changes_sub,
+               #Result => sub {
 
-                                my $plan=']S[{existing}';
-                                print "\n   PLAN=$plan\n";<STDIN>;
-                                return '<';
+               #                 my $plan=']S[{existing}';
+               #                 print "\n   PLAN=$plan\n";<STDIN>;
+               #                 return '<';
 
-                         },
+               #          },
             },
             Banner=> '   Select a Plan to work with:'
       );
@@ -2662,7 +2678,7 @@ our %setup_new_sched_job_menu=(
 
 my %plan_menu=(
 
-      #Name   => 'plan_menu',
+      Name   => 'plan_menu',
       Item_1 => {
 
           Text => 'Accept Defaults and Record New Plan',
