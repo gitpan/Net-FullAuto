@@ -2230,28 +2230,40 @@ my $fulldays=sub { package fulldays;
 
 my $track='';
 
-my $make_plan_changes_sub=sub {
+my $plan_options_sub=sub {
 
    #my $plan=']S[';
    #print "\n   PLAN=$plan\n";<STDIN>;
    #return '<';
 
-   my %make_plan_changes=(
+   my %plan_options=(
 
-      Name   => 'make_plan_changes',
+      Name   => 'plan_options',
       Item_1 => {
 
-         Text => "Delete ]P[",
+         Text => 'Set Optional Maximum Number of Invocations',
 
       },
-      Banner => "   Choose an operation to perform".
-                " with ]P[",
+      Item_2 => {
+
+         Text => 'Set Optional Expiration Date and/or Time',
+
+      },
+      Item_3 => {
+
+         Text => 'Set Authorized Users of this Plan',
+
+      },
+
+      Banner => "   Choose an operation to perform\n\n".
+                "   with PLAN:  ]P[",
 
 
    );
-   return \%make_plan_changes;
+   return \%plan_options;
 
 };
+
 
 my $plan_menu_options_sub=sub {
 
@@ -2312,14 +2324,8 @@ my $plan_menu_options_sub=sub {
 
                Text => "Plan: ]C[",
                Convey => $plans,
-               Result => $make_plan_changes_sub,
-               #Result => sub {
+               Result => $plan_options_sub,
 
-               #                 my $plan=']S[{existing}';
-               #                 print "\n   PLAN=$plan\n";<STDIN>;
-               #                 return '<';
-
-               #          },
             },
             Banner=> '   Select a Plan to work with:'
       );
@@ -2358,26 +2364,6 @@ my $plan_menu_options_sub=sub {
    }
 
 };
-
-my %plan_options_menu=(
-
-      Item_1 => {
-
-          Text => 'Set Optional Maximum Number of Invocations',
-
-      },
-      Item_2 => {
-
-          Text => 'Set Optional Expiration Date and/or Time',
-
-      },
-      Item_3 => {
-
-          Text => 'Set Authorized Users of this Plan',
-
-      },
-
-);
 
 my %select_min_for_invocation=(
 
@@ -8225,6 +8211,7 @@ my $cacomm_sub=sub {
 
    my %cacomm=(
 
+      Name   => 'cacomm',
       Item_1 => {
          Text   => "YES",
          Result  => sub {
@@ -8358,6 +8345,7 @@ my $camenu_sub=sub {
 
    my %camenu=(
 
+      Name   => 'camenu',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Menu'),
@@ -8385,6 +8373,7 @@ my $camaps_sub=sub {
 
    my %camaps=(
 
+      Name   => 'camaps',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Maps'),
@@ -8411,6 +8400,7 @@ my $cahost_sub=sub {
 
    my %cahost=(
 
+      Name   => 'cahost',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Host'),
@@ -8434,6 +8424,7 @@ my $caconf_sub=sub {
 
    my %caconf=(
 
+      Name   => 'caconf',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Conf'),
@@ -8455,6 +8446,7 @@ my $cacode_sub=sub {
 
    my %cacode=(
 
+      Name   => 'cacode',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Code'),
@@ -8469,6 +8461,8 @@ my $cacode_sub=sub {
 my $define_module_from_viewdef_sub=sub {
 
    my %define_module_from_viewdef=(
+
+      Name   => 'define_module_from_viewdef',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules,
@@ -8514,6 +8508,7 @@ my $viewdefaults_sub=sub {
 
    my %viewdefaults=(
 
+      Name   => 'viewdefaults',
       Item_1 => {
          Text   => "Change ALL Defaults",
          Result => $cacode_sub->($_[0]),
@@ -8533,6 +8528,7 @@ my $defaultsettings_sub=sub {
 
    my %defaultsettings=(
 
+      Name   => 'defaultsettings',
       Item_1 => {
          Text   =>
          "View Defaults when Default Set equals \'none\'",
@@ -8592,6 +8588,8 @@ my $defaults_sub=sub {
 my $define_modules_commit_sub=sub {
 
    my %define_modules_commit=(
+
+      Name   => 'define_modules_commit',
       Item_1 => {
          Text => "YES",
          Result => sub {
@@ -8711,6 +8709,8 @@ FIN
 my $define_modules_menu_fa_menu_sub=sub {
 
    my %define_modules_menu_fa_menu=(
+
+      Name   => 'define_modules_menu_fa_menu',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Menu'),
@@ -8737,6 +8737,8 @@ my $define_modules_menu_fa_menu_sub=sub {
 my $define_modules_menu_fa_maps_sub=sub {
 
    my %define_modules_menu_fa_maps=(
+
+      Name   => 'define_modules_menu_fa_maps',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Maps'),
@@ -8761,6 +8763,8 @@ my $define_modules_menu_fa_maps_sub=sub {
 my $define_modules_menu_fa_host_sub=sub {
 
    my %define_modules_menu_fa_host=(
+
+      Name   => 'define_modules_menu_fa_host',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Host'),
@@ -8783,6 +8787,8 @@ my $define_modules_menu_fa_host_sub=sub {
 my $define_modules_menu_fa_conf_sub=sub {
 
    my %define_modules_menu_fa_conf=(
+
+      Name   => 'define_modules_menu_fa_conf',
       Item_1 => {
          Text   => ']C[',
          Convey => $get_modules->('Conf'),
@@ -8801,6 +8807,7 @@ my $define_modules_menu_fa_conf_sub=sub {
 my $define_modules_menu_fa_code_sub=sub {
 
    my %define_modules_menu_fa_code=(
+      Name   => 'define_modules_menu_fa_code',
       Item_1 => {
          Text    => ']C[',
          Convey  => sub {
@@ -8912,6 +8919,8 @@ my $define_modules_menu_fa_code_sub=sub {
 my $delete_sets_menu_sub=sub {
 
    my %delete_sets_menu=(
+
+      Name       => 'delete_sets_menu',
       Item_1     => {
          Text    => "]C[",
          Convey  => sub {
@@ -9136,6 +9145,8 @@ my $manage_modules_menu_sub=sub {
          "      ** DEFAULT SET -> $current_default_set **\n";
    }
    my %manage_modules_menu=(
+
+      Name   => 'manage_modules_menu',
       Item_1 => {
          Text    => 'Examine Module Set(s)',
       },
@@ -9228,6 +9239,8 @@ my $set_default_menu_sub=sub {
       $clearoption="Set to 'none'\n\n";
    }
    my %set_default_menu=(
+
+      Name   => 'set_default_menu',
       Item_1 => {
          Text    => $clearoption,
          Result  => $set_default_menu_in_db_sub,
