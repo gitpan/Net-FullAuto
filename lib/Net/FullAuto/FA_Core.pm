@@ -315,7 +315,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   persist_get persist_put cache
                   $berkeleydb %admin_menus $^O
                   $cache_root $cache_key $admin_menu
-                  acquire_fa_lock release_fa_lock);
+                  acquire_fa_lock release_fa_lock
+                  $choose_pass_expiration);
 
 {
    no warnings;
@@ -688,7 +689,7 @@ our %email_addresses=();our $debug=0;our %tiedb=();
 our @ascii_que=();our $passetts=['','','','','','','','','',''];
 our %Connections=();our $tranback=0;our @ascii=();our $uhray='';
 our %base_excluded_dirs=();our %base_excluded_files=(); 
-our %hours=();our %month=();our %Hosts=();our $berkeleydb='';
+our %hours=();our %Hosts=();our $berkeleydb='';
 our %same_host_as_Master=("__Master_${$}__"=>'-','localhost'=>'-');
 our @same_host_as_Master=();our $dest_first_hash='';
 our %file_rename=();our %rename_file=();our $quiet='';
@@ -701,7 +702,7 @@ our $prod=0;our $force_pause_for_exceed=0;our $tosspass=0;
 our $timeout=30;our $cltimeout='X';our $slave=0;our $dcipher='';
 our %email_defaults=();our $increment=0;our %tosspass=();
 our $email_defaults='';our %semaphores=();our $batch='';
-our $unattended='';our $fullauto='';our $service='';
+our $unattended='';our %month=();our $fullauto='';our $service='';
 our @dhostlabels=();our %monthconv=();our $cache_root='';
 our $cache_key='';our $admin='';our $menu='';our $welcome='';
 our %hourconv=();our @weekdays=();our %weekdaysconv=();
@@ -2230,6 +2231,375 @@ my $fulldays=sub { package fulldays;
 
 my $track='';
 
+my %show_mins=(
+
+   Name => 'show_mins',
+   Item_1=> {
+      
+      Text => "]C[",
+      Convey => $showmins,
+      Result => sub{ my $previous_selection='"]P[{select_cal_days}"';
+                     return substr($previous_selection,1,-1)." ".']S[' }
+ 
+   },
+   Banner=> "   (The current time is ".&get_now_am_pm." ".
+                POSIX::strftime("%Z", localtime()).")\n\n".
+            "   Please Select a Password Expiration Time :",
+
+);
+
+my %select_hour=(
+
+   Name => 'select_hour',
+   Item_1=> {
+
+      Text => "Show Minutes",
+      Result => \%show_mins,
+
+   },
+   Item_2=> {
+
+      Text => "]C[",
+      Convey => $hours,
+      Result => sub{ my $previous_selection=']P[';
+                     return $previous_selection." ".']S[' }
+
+   },
+   Banner=> "   (The current time is ".&get_now_am_pm." ".
+                POSIX::strftime("%Z", localtime()).")\n\n".
+            "   Please Select a Password Expiration Time :",
+
+);
+
+my %select_cal_days=(
+
+   Name => 'select_cal_days',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $fulldays,
+      Result => \%select_hour,
+
+   },
+   Banner=> '   Please Select a Password Expiration Date :'
+);
+
+my %select_cal_months=(
+
+   Name => 'select_cal_months',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $cal_months,
+      Result => \%select_cal_days,
+   },
+   Banner=> '   Please Select a Month :'
+);
+
+my %calendar_years=(
+
+   Name => 'calendar_years',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => [$curyear..$endyear],
+      Result => \%select_cal_months,
+
+   },
+   Banner=> '   Please Select a Year :'
+);
+
+my $select_time_result_sub = sub {
+  
+   package select_time_result_sub;
+   use Net::FullAuto::FA_Core qw/%month timelocal/;
+   my $selection="]S[";
+   $selection=~s/^["]?(.*)["]?/$1/;
+   my ($num,$type)=('','');
+   my $expires=0;
+   ($num,$type)=split /\s+/, $selection;
+   if ($num!~/^\d/) {
+      my @d=split /,* +/, $selection;
+      $mn=unpack('a3',$d[0]);
+      if (defined $d[3] && $d[3]) {
+         my $ap=substr($d[3],-2);
+         my ($h,$m)=('','');
+         ($h,$m)=split ':',substr($d[3],0,-2);
+         $h+=12 if $ap eq 'pm' && $h!=12;
+         my $mon=$month{$mn} if $mn && exists $month{$mn};
+         $mon||=1;
+         my $day=$d[1] if defined $d[1] && $d[1];
+         $day||=1;
+         $expires=&Net::FullAuto::FA_Core::timelocal(
+            0,$m,$h,$day,$mon-1,$d[2]);
+      } else {
+         my $mon=$month{$mn} if $mn && exists $month{$mn};
+         $mon||=1;
+         my $day=$d[1] if defined $d[1] && $d[1];
+         $day||=1;
+         $expires=&Net::FullAuto::FA_Core::timelocal(
+            0,0,0,$day,$mon-1,$d[2]);
+      }
+   } elsif ($type=~/Min/) {
+      $expires=time + $num * 60;
+   } elsif ($type=~/Hour/) {
+      $expires=time + $num * 3600;
+   } elsif ($type=~/Day/)  {
+      $expires=time + $num * 86400;
+   } elsif ($type=~/Week/) {
+      $expires=time + $num * 604800;
+   } elsif ($type=~/Month/) {
+      $expires=time + $num * 2592000;
+   }
+   my $previous="]P[{existing}";
+   if ($previous=~/[]]P[[][{]existing[}]/) {
+      return $expires;
+   } else {
+
+      print "\n   EXPIRATION=$expires\n";sleep 2;
+
+      return '{activate_or_disable_expiration}<';
+   }
+
+};
+
+my %select_minutes=(
+
+   Name => 'select_minutes',
+   Item_1=> {
+
+      Text => "1  Minute",
+      Result => $select_time_result_sub,
+
+   },
+   Item_2=> {
+
+      Text => "]C[  Minutes",
+      Convey => [2,3,4,5,6,7,8,9],
+      Result => $select_time_result_sub,
+
+   },
+   Item_3=> {
+
+      Text => "]C[ Minutes",
+      Convey => [10..60],
+      Result => $select_time_result_sub,
+
+   },
+   Banner => '   Choose Time :',
+
+);
+
+my %select_hours=(
+
+   Name => 'select_hours',
+   Item_1=> {
+
+      Text => "1  Hour",
+      Result => $select_time_result_sub,
+
+   },
+   Item_2=> {
+
+      Text => "]C[  Hours",
+      Convey => [2,3,4,5,6,7,8,9],
+      Result => $select_time_result_sub,
+
+   },
+   Item_3=> {
+
+      Text => "]C[ Hours",
+      Convey => [10..24],
+      Result => $select_time_result_sub,
+
+   },
+   Banner => '   Choose Time :',
+
+);
+
+my %select_days=(
+
+   Name => 'select_days',
+   Item_1=> {
+
+      Text => "1  Day",
+      Result => $select_time_result_sub,
+
+   },
+   Item_2=> {
+
+      Text => "]C[  Days",
+      Convey => [2,3,4,5,6,7,8,9],
+      Result => $select_time_result_sub,
+
+   },
+   Item_3=> {
+
+      Text => "]C[ Days",
+      Convey => [10..365],
+      Result => $select_time_result_sub,
+
+   },
+   Banner => '   Choose Time :',
+
+);
+
+my %select_weeks=(
+
+   Name => 'select_weeks',
+   Item_1=> {
+
+      Text => "1  Week",
+      Result => $select_time_result_sub,
+
+   },
+   Item_2=> {
+
+      Text => "]C[  Weeks",
+      Convey => [2,3,4,5,6,7,8,9],
+      Result => $select_time_result_sub,
+
+   },
+   Item_3=> {
+
+      Text => "]C[ Weeks",
+      Convey => [10..53],
+      Result => $select_time_result_sub,
+
+   },
+   Banner => '   Choose Time :',
+
+);
+
+my %select_months=(
+
+   Name => 'select_months',
+   Item_1=> {
+
+      Text => "1  Month",
+      Result => $select_time_result_sub,
+
+   },
+   Item_2=> {
+
+      Text => "]C[  Months",
+      Convey => [2,3,4,5,6,7,8,9],
+      Result => $select_time_result_sub,
+
+   },
+   Item_3=> {
+
+      Text => "]C[ Months",
+      Convey => [10..12],
+      Result => $select_time_result_sub,
+
+   },
+   Banner => "   Choose Time in Months (A Month is 30 Days)\n\n".
+             "   [Hint: Use FULL CALENDAR for more precision]:",
+
+);
+
+my $ask_exp_banner_sub = sub {
+
+   my $banner='';
+   my $caller="]P[";
+   if ($caller eq 'Set New Expiration') {
+      return "   Choose the Expiration Time for\n\n".
+             "      ]P[{existing}";
+   } else {
+      my $username=getlogin || getpwuid($<);
+      return "   Choose the Expiration Time of the local saving\n".
+             "   of ${username}\'s ".
+             "Password via one of the following\n".
+             "   selection methods (Password is Saved with Encryption):"
+   }
+
+};
+
+my %ask_exp=(
+
+   Name => 'ask_exp',
+   Item_1=> {
+
+      Text => "FULL CALENDAR",
+      Result => \%calendar_years,
+
+   },
+   Item_2=> {
+
+      Text => "Number of MINUTES",
+      Result => \%select_minutes,
+
+   },
+   Item_3=> {
+
+      Text => "Number of HOURS",
+      Result => \%select_hours,
+
+   },
+   Item_4=> {
+
+      Text => "Number of DAYS",
+      Result => \%select_days,
+
+   },
+   Item_5=> {
+
+      Text => "Number of WEEKS",
+      Result => \%select_weeks,
+
+   },
+   Item_6=> {
+
+      Text => "Number of MONTHS",
+      Result => \%select_months,
+
+   },
+   Banner => $ask_exp_banner_sub,
+
+);
+
+my $get_expiration_sub=sub {
+
+   my $arg=']P[{existing}';
+   my $plan=&Net::FullAuto::FA_Core::getplan($arg);
+#print "PLAN KEYS=",(join " ",keys %{$plan}),"\n";
+   my $return="\n   Choose an expiration action for\n\n      $arg:\n";
+   if (exists $plan->{Expires} && $plan->{Expires} &&
+         $plan->{Expires} ne 'never') {
+      
+   } else {
+      $return.="\n   -- NO EXPIRATION IS SET --\n";
+   }
+   return $return;
+
+};
+
+my $set_optional_expiration_sub=sub {
+
+   my %activate_or_disable_expiration=(
+
+      Name => 'activate_or_disable_expiration',
+      Item_1 => {
+
+         Text => 'Set New Expiration',
+         Result => \%ask_exp,
+
+      },
+      Item_2 => {
+
+         Text => 'Set to Never Expires',
+         Result => '',
+
+      },
+      Banner => $get_expiration_sub,
+
+
+   );
+   return \%activate_or_disable_expiration;
+
+};
+
 my $plan_options_sub=sub {
 
    #my $plan=']S[';
@@ -2247,6 +2617,7 @@ my $plan_options_sub=sub {
       Item_2 => {
 
          Text => 'Set Optional Expiration Date and/or Time',
+         Result => $set_optional_expiration_sub,
 
       },
       Item_3 => {
@@ -2255,8 +2626,8 @@ my $plan_options_sub=sub {
 
       },
 
-      Banner => "   Choose an operation to perform\n\n".
-                "   with PLAN:  ]P[",
+      Banner => "   Choose an operation to perform".
+                " with\n\n      PLAN:  ]P[",
 
 
    );
@@ -2823,6 +3194,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
                      'Created'=>$Net::FullAuto::FA_Core::invoked[2],
                      'Creator'=>$Net::FullAuto::FA_Core::username,
                      'Host'   =>$Net::FullAuto::FA_Core::local_hostname,
+                     'Expires'=>'never',
                      'Plan'   =>[] };
          undef $bdb;
          $dbenv->close();
@@ -3211,9 +3583,31 @@ sub openplandb {
    return $bdb;
 }
 
+sub getplan {
+
+   my $plan=$_[0];
+   $plan=~s/^\s*Plan:\s+(\d+)\s+.*$/$1/;
+   my $bdb=openplandb();
+   my $cursor=$bdb->db_cursor();
+   my ($k,$v)=('','');
+   my $planhash='';
+   while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+#print "WHAT IS K=$k<== and PLAN=$plan\n";
+      if ($k eq $plan) {
+         $v=~s/\$HASH\d*\s*=\s*//s;
+         $planhash=eval $v;
+         $planhash->{'Title'}||='';
+         last;
+      }
+   }
+   undef $cursor;
+   return $planhash;
+
+}
+
 sub getplans {
 
-   my $bdb=openplandb;
+   my $bdb=openplandb();
    my $cursor=$bdb->db_cursor();
    my @plans=();
    my ($k,$v)=('','');
@@ -11425,7 +11819,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
             $tosspass{$key}=$dcipher->decrypt($passetts->[0]);
          }
          if ($save_main_pass) {
-            $passetts->[1]=&choose_pass_expiration();
+            $passetts->[1]=$Net::FullAuto::FA_Core::choose_pass_expiration->();
             if (!$Net::FullAuto::FA_Core::cron &&
                   !$Net::FullAuto::FA_Core::quiet) { 
                print "\n  Saved Password will Expire: ",
@@ -11744,237 +12138,13 @@ our $admin_menu=sub {
 
 };
 
-sub choose_pass_expiration
-{
+our $choose_pass_expiration=sub {
 
-   my $notice=$_[0]||'';
-   #$curmonth='04';
-   my %show_mins=(
-
-      Item_1=> {
-         
-         Text => "]C[",
-         Convey => $showmins,
-         Result => sub{ my $previous_selection='"]P[{select_cal_days}"';
-                        return substr($previous_selection,1,-1)." ".']S[' }
- 
-      },
-      Banner=> "   (The current time is ".&get_now_am_pm." ".
-                   POSIX::strftime("%Z", localtime()).")\n\n".
-               "   Please Select a Password Expiration Time :",
-
-   );
-   my %select_hour=(
-
-      Item_1=> {
-
-         Text => "Show Minutes",
-         Result => \%show_mins,
-
-      },
-      Item_2=> {
-
-         Text => "]C[",
-         Convey => $hours,
-         Result => sub{ my $previous_selection=']P[';
-                        return $previous_selection." ".']S[' }
-
-      },
-      Banner=> "   (The current time is ".&get_now_am_pm." ".
-                   POSIX::strftime("%Z", localtime()).")\n\n".
-               "   Please Select a Password Expiration Time :",
-
-   );
-   my %select_cal_days=(
-
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => $fulldays,
-         Result => \%select_hour,
-
-      },
-      Banner=> '   Please Select a Password Expiration Date :'
-   );
-   my %select_cal_months=(
-
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => $cal_months,
-         Result => \%select_cal_days,
-      },
-      Banner=> '   Please Select a Month :'
-   );
-   my %calendar_years=(
-
-      Item_1=> {
-
-         Text => "]C[",
-         Convey => [$curyear..$endyear],
-         Result => \%select_cal_months,
-
-      },
-      Banner=> '   Please Select a Year :'
-   );
-   my %select_minutes=(
-
-      Item_1=> {
-
-         Text => "1  Minute",
-
-      },
-      Item_2=> {
-
-         Text => "]C[  Minutes",
-         Convey => [2,3,4,5,6,7,8,9],
-
-      },
-      Item_3=> {
-
-         Text => "]C[ Minutes",
-         Convey => [10..60],
-
-      },
-      Banner => '   Choose Time :',
-
-   );
-   my %select_hours=(
-
-      Item_1=> {
-
-         Text => "1  Hour",
-
-      },
-      Item_2=> {
-
-         Text => "]C[  Hours",
-         Convey => [2,3,4,5,6,7,8,9],
-
-      },
-      Item_3=> {
-
-         Text => "]C[ Hours",
-         Convey => [10..24],
-
-      },
-      Banner => '   Choose Time :',
-
-   );
-   my %select_days=(
-
-      Item_1=> {
-
-         Text => "1  Day",
-
-      },
-      Item_2=> {
-
-         Text => "]C[  Days",
-         Convey => [2,3,4,5,6,7,8,9],
-
-      },
-      Item_3=> {
-
-         Text => "]C[ Days",
-         Convey => [10..365],
-
-      },
-      Banner => '   Choose Time :',
-
-   );
-   my %select_weeks=(
-
-      Item_1=> {
-
-         Text => "1  Week",
-
-      },
-      Item_2=> {
-
-         Text => "]C[  Weeks",
-         Convey => [2,3,4,5,6,7,8,9],
-
-      },
-      Item_3=> {
-
-         Text => "]C[ Weeks",
-         Convey => [10..53],
-
-      },
-      Banner => '   Choose Time :',
-
-   );
-   my %select_months=(
-
-      Item_1=> {
-
-         Text => "1  Month",
-
-      },
-      Item_2=> {
-
-         Text => "]C[  Months",
-         Convey => [2,3,4,5,6,7,8,9],
-
-      },
-      Item_3=> {
-
-         Text => "]C[ Months",
-         Convey => [10..12],
-
-      },
-      Banner => "   Choose Time in Months (A Month is 30 Days)\n\n".
-                "   [Hint: Use FULL CALENDAR for more precision]:",
-
-   );
-   my %pass_ask_exp=(
-
-      Item_1=> {
-
-         Text => "FULL CALENDAR",
-         Result => \%calendar_years,
-
-      },
-      Item_2=> {
-
-         Text => "Number of MINUTES",
-         Result => \%select_minutes,
-
-      },
-      Item_3=> {
-
-         Text => "Number of HOURS",
-         Result => \%select_hours,
-
-      },
-      Item_4=> {
-
-         Text => "Number of DAYS",
-         Result => \%select_days,
-
-      },
-      Item_5=> {
-
-         Text => "Number of WEEKS",
-         Result => \%select_weeks,
-
-      },
-      Item_6=> {
-
-         Text => "Number of MONTHS",
-         Result => \%select_months,
-
-      },
-      Banner => $notice.
-                "   Choose the Expiration Time of the local saving\n".
-                "   of ${username}\'s Password via one of the following\n".
-                "   selection methods (Password is Saved with Encryption):",
-
-   );
-   my $selection=&Menu(\%pass_ask_exp);
+   my $selection=&Menu(\%ask_exp);
 #print "SELECTION=$selection\n";
    &cleanup if $selection eq ']quit[';
+   return $selection;
+if (0) {
    my ($num,$type)=('','');
    ($num,$type)=split /\s+/, $selection;
    if ($num!~/^\d/) {
@@ -12002,8 +12172,9 @@ sub choose_pass_expiration
    } elsif ($type=~/Month/) {
       return time + $num * 2592000;
    }
-
 }
+
+};
 
 sub passwd_db_update
 {
