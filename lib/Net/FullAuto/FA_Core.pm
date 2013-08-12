@@ -791,7 +791,9 @@ our $specialperms='none';
        'Thurs'=>'Thursday','Fri'=>'Friday','Sat'=>'Saturday',
        'Sun'=>'Sunday','Monday'=>'Mon','Tuesday'=>'Tue',
        'Wednesday'=>'Wed','Thursday'=>'Thu','Friday'=>'Fri',
-       'Sat'=>'Saturday','Sun'=>'Sunday');
+       'Sat'=>'Saturday','Sun'=>'Sunday','0'=>'Sunday',
+       '1'=>'Monday','2'=>'Tuesday','3'=>'Wednesday',
+       '4'=>'Thursday','5'=>'Friday','6'=>'Saturday');
 
 %perms=('rwx'=>'7','rw-'=>'6','r-x'=>'5','r--'=>'4',
         '-wx'=>'3','-w-'=>'2','--x'=>'1','---'=>'0',
@@ -1769,7 +1771,8 @@ sub get_tomorrow
 
 sub get_now_am_pm
 {
-   my $t=unpack('a5',(split / +/, scalar localtime(time))[3]);
+   my $time=$_[0]||time;
+   my $t=unpack('a5',(split / +/, scalar localtime($time))[3]);
    my $i=unpack('a2',$t);
    if ($i<12) {
       substr($t,0,1)='' if $i<10;
@@ -2309,6 +2312,42 @@ my %calendar_years=(
    Banner=> '   Please Select a Year :'
 );
 
+sub openplandb {
+
+   my $track='';
+   my $mkdflag=0;
+   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
+      $mkdflag=1;
+      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+      my $m=($^O eq 'cygwin')?"-m $mode ":'';
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+              $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
+      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
+      -Flags    => DB_CREATE,
+      -Compare  => sub { $_[0] <=> $_[1] },
+      -Env      => $dbenv
+   ) or &handle_error(
+     "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
+              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
+      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
+   }
+   return $bdb;
+}
+
 my $select_time_result_sub = sub {
   
    package select_time_result_sub;
@@ -2317,6 +2356,13 @@ my $select_time_result_sub = sub {
    $selection=~s/^["]?(.*)["]?/$1/;
    my ($num,$type)=('','');
    my $expires=0;
+   no strict 'subs';
+   use BerkeleyDB;
+   use File::Path;
+   my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
+   my $progname=substr($0,(rindex $0,'/')+1,-3);
+   require "$loc/fa_defs.pm";
+   my $mkdflag=0;
    ($num,$type)=split /\s+/, $selection;
    if ($num!~/^\d/) {
       my @d=split /,* +/, $selection;
@@ -2356,7 +2402,27 @@ my $select_time_result_sub = sub {
       return $expires;
    } else {
 
-      print "\n   EXPIRATION=$expires\n";sleep 2;
+      my $bdb=&Net::FullAuto::FA_Core::openplandb();
+      my $cursor=$bdb->db_cursor();
+      my ($k,$v)=('','');
+      my $planhash='';
+      my $plan_number=$previous;
+      $plan_number=~s/^.*:\s+(\d+)\s+.*$/$1/;
+      while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+         #print "WHAT IS K=$k<== and PLAN=$plan_number\n";
+         if ($k eq $plan_number) {
+            $v=~s/\$HASH\d*\s*=\s*//s;
+            $planhash=eval $v;
+            $planhash->{'Title'}||='';
+            last;
+         }
+      }
+      undef $cursor;
+      $planhash->{'Expires'}=$expires;
+      my $put_plan=Data::Dump::Streamer::Dump($planhash)->Out();
+      my $status=$bdb->db_put($plan_number,$put_plan);
+
+      #print "\n   EXPIRATION=$expires and SELECTION=$previous\n";sleep 2;
 
       return '{activate_or_disable_expiration}<';
    }
@@ -2561,17 +2627,55 @@ my %ask_exp=(
 
 my $get_expiration_sub=sub {
 
+   package get_expiration_sub;
+   use Net::FullAuto::FA_Core qw/%days @month/;
    my $arg=']P[{existing}';
    my $plan=&Net::FullAuto::FA_Core::getplan($arg);
 #print "PLAN KEYS=",(join " ",keys %{$plan}),"\n";
    my $return="\n   Choose an expiration action for\n\n      $arg:\n";
    if (exists $plan->{Expires} && $plan->{Expires} &&
          $plan->{Expires} ne 'never') {
-      
+      my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime;
+      my $m=$month[$mon];$m=~s/\s*$//;
+      $year += 1900;my $xp='*EXPIRED*';
+      $xp='EXPIRES' if time<$plan->{Expires};
+      $return.="\n   PLAN $xp => $days{$wday} $m $mday, $year ".
+         &Net::FullAuto::FA_Core::get_now_am_pm($plan->{Expires})." ".
+         POSIX::strftime("%Z",localtime($plan->{Expires}))."\n";
    } else {
       $return.="\n   -- NO EXPIRATION IS SET --\n";
    }
    return $return;
+
+};
+
+my $never_expires_sub=sub {
+
+   package neverexpires;
+   my $arg=']P[{existing}';
+   no strict 'subs';
+   use BerkeleyDB;
+   my $plan=&Net::FullAuto::FA_Core::getplan($arg);
+   my $bdb=&Net::FullAuto::FA_Core::openplandb();
+   my $cursor=$bdb->db_cursor();
+   my ($k,$v)=('','');
+   my $planhash='';
+   my $plan_number=$arg;
+   $plan_number=~s/^.*:\s+(\d+)\s+.*$/$1/;
+   while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
+      #print "WHAT IS K=$k<== and PLAN=$plan_number\n";
+      if ($k eq $plan_number) {
+         $v=~s/\$HASH\d*\s*=\s*//s;
+         $planhash=eval $v;
+         $planhash->{'Title'}||='';
+         last;
+      }
+   }
+   undef $cursor;
+   $planhash->{'Expires'}='never';
+   my $put_plan=Data::Dump::Streamer::Dump($planhash)->Out();
+   my $status=$bdb->db_put($plan_number,$put_plan);
+   return '{activate_or_disable_expiration}<';
 
 };
 
@@ -2589,7 +2693,7 @@ my $set_optional_expiration_sub=sub {
       Item_2 => {
 
          Text => 'Set to Never Expires',
-         Result => '',
+         Result => $never_expires_sub,
 
       },
       Banner => $get_expiration_sub,
@@ -2639,7 +2743,7 @@ my $plan_options_sub=sub {
 my $plan_menu_options_sub=sub {
 
    package plan_menu_options_sub;
-   no strict "subs";
+   no strict 'subs';
    use BerkeleyDB;
    use File::Path;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
@@ -3544,43 +3648,6 @@ sub persist_put {
    undef $dbenv;
    return $status;
 
-}
-
-
-sub openplandb {
-
-   my $track='';
-   my $mkdflag=0;
-   unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
-      $mkdflag=1;
-      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
-      my $m=($^O eq 'cygwin')?"-m $mode ":'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-              $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans';
-      my $stdout='';my $stderr='';
-      ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
-   }
-   my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-   ) or &handle_error(
-     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
-   my $bdb = BerkeleyDB::Btree->new(
-      -Filename => "${Net::FullAuto::FA_Core::progname}_plans.db",
-      -Flags    => DB_CREATE,
-      -Compare  => sub { $_[0] <=> $_[1] },
-      -Env      => $dbenv
-   ) or &handle_error(
-     "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
-   if ($mkdflag && $^O eq 'cygwin') {
-      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-              $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans/*';
-      my ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
-   }
-   return $bdb;
 }
 
 sub getplan {
@@ -8137,7 +8204,7 @@ my $set_default_sub=sub {
 
    package set_default_sub;
    my $default_set=shift;
-   no strict "subs";
+   no strict 'subs';
    use BerkeleyDB;
    use File::Path;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
@@ -8363,7 +8430,7 @@ my $fasetdef=sub {
    package fasetdef;
    use BerkeleyDB;
    use File::Path;
-   no strict "subs";
+   no strict 'subs';
    my $username=getlogin || getpwuid($<);
    my $loc=substr($INC{'Net/FullAuto.pm'},
                   0,-3);
@@ -8507,7 +8574,7 @@ my $fasetdef=sub {
 my $default_sets_banner_sub=sub {
 
    package default_sets_banner;
-   no strict "subs";
+   no strict 'subs';
    use BerkeleyDB;
    use File::Path;
    use Data::Dump::Streamer;
@@ -8612,7 +8679,7 @@ my $cacomm_sub=sub {
                            package del_sets;
                            use BerkeleyDB;
                            use File::Path;
-                           no strict "subs";
+                           no strict 'subs';
                            my $username=getlogin || getpwuid($<);
                            my $loc=substr($INC{'Net/FullAuto.pm'},
                                           0,-3);
@@ -8988,7 +9055,7 @@ my $define_modules_commit_sub=sub {
          Text => "YES",
          Result => sub {
             package set_default_sub;
-            no strict "subs";
+            no strict 'subs';
             use BerkeleyDB;
             use File::Path;
             use Data::Dump::Streamer;
@@ -9329,7 +9396,7 @@ my $delete_sets_menu_sub=sub {
                            package del_sets;
                            use BerkeleyDB;
                            use File::Path;
-                           no strict "subs";
+                           no strict 'subs';
                            my $res='';
                            if ("]S[") {
                               $res="]S[";
@@ -9565,7 +9632,7 @@ my $manage_modules_menu_sub=sub {
 my $set_default_menu_in_db_sub=sub {
 
    package set_default_menu_in_db_sub;
-   no strict "subs";
+   no strict 'subs';
    use BerkeleyDB;
    use File::Path;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
