@@ -145,13 +145,13 @@ BEGIN {
    if ($^O eq 'cygwin' && $0 ne 'test.t') {
       my $srvout=`/bin/cygrunsrv -Q cygserver 2>&1`;
       if (-1<index $srvout,'Stopped') {
-         print "\nFatal Error: The Cygwin cygserver service is NOT",
-               " running:\n\n${srvout}To start type:  ".
+         print "\n   FATAL ERROR! - The Cygwin cygserver service is NOT",
+               " running:\n\n   ${srvout}To start type:  ".
                "'net start cygserver'\n\n";
          exit;
       } elsif (-1<index $srvout,'The specified service does not exist') {
-         print "\nFatal Error: The Cygwin cygserver service is NOT",
-               " installed:\n\n${srvout}To install type:  ",
+         print "\n   FATAL ERROR! - The Cygwin cygserver service is NOT",
+               " installed:\n\n   ${srvout}To install type:  ",
                "'/bin/cygserver-config'\n\n";
          exit;
       }
@@ -167,20 +167,20 @@ BEGIN {
             }
             my $output=`net start sshd 2>&1`; 
             unless (-1<index $output,'CYGWIN sshd service was started') {
-               print "\nFatal Error: The Cygwin sshd (Secure Shell) service is",
-                     " NOT running:\n\n${srvout}To start type:  ",
+               print "\n   FATAL ERROR! - The Cygwin sshd (Secure Shell) ",
+                     "service is NOT running:\n\n   ${srvout}To start type:  ",
                      "'net start sshd'\n\n";
                exit;
             }
          } else {
-            print "\nFatal Error: The Cygwin sshd (Secure Shell) service is ",
-                  "NOT running:\n\n${srvout}To start type:  'net start sshd'".
-                  "\n\n";
+            print "\n   FATAL ERROR! - The Cygwin sshd (Secure Shell) ",
+                  "service is NOT running:\n\n   ${srvout}To start type:  ",
+                  "'net start sshd'\n\n";
             exit;
          }
       } elsif (-1<index $srvout,'The specified service does not exist') {
-         print "\nFatal Error: The Cygwin sshd (Secure Shell) service is NOT",
-               " installed:\n\n${srvout}To install type:  ",
+         print "\n   FATAL ERROR! - The Cygwin sshd (Secure Shell) ",
+               "service is NOT installed:\n\n   ${srvout}To install type:  ",
                "'/bin/ssh-host-config --privileged'\n\n";
          exit;
       }
@@ -200,7 +200,7 @@ BEGIN {
                $output=`/bin/editrights -r $rt -u $srvaccount 2>&1`;
                if ($output=~/^Error/) {
                   my $die="\n   ".
-                          "Fatal Error! - The following restriction was\n   ".
+                          "FATAL ERROR! - The following restriction was\n   ".
                           "               discovered for the sshd service\n   ".
                           "               account '".$srvaccount."':\n\n".
                           $rt."\n\n   An attempt was made to remove this,\n".
@@ -240,7 +240,7 @@ BEGIN {
             }
             if (-1<$#missing_rights) {
                my $mis=join "\n",map { "               $_" } @missing_rights;
-               my $die="\n   Fatal Error! - The following priviliges are\n   ".
+               my $die="\n   FATAL ERROR! - The following priviliges are\n   ".
                     "               missing from the ID '".$srvaccount."':\n\n".
                     $mis."\n\n   An attempt was made to add these priviliges,".
                     "\n   but was not successful. Please contact your\n".
@@ -258,7 +258,7 @@ BEGIN {
                $srvout=`/bin/cygrunsrv -Q sshd 2>&1`;
                my $output=`net stop sshd 2>&1`;
                unless (-1<index $output,'CYGWIN sshd service was stopped') {
-                  print "\nFatal Error:".
+                  print "\n   FATAL ERROR! - ".
                         " The Cygwin sshd (Secure Shell) service ",
                         " could NOT be restarted:\n\n${srvout}".
                         "Error: $output\n\nTo restart, Run as Administrator\n".
@@ -268,7 +268,7 @@ BEGIN {
                }
                $output=`net start sshd 2>&1`;
                unless (-1<index $output,'CYGWIN sshd service was started') {
-                  print "\nFatal Error:".
+                  print "\n   FATAL ERROR! - ".
                         " The Cygwin sshd (Secure Shell) service ",
                         " could NOT be started:\n\n${srvout}".
                         "Error: $output\n\nTo restart, Run as Administrator\n".
@@ -2345,7 +2345,7 @@ sub openplandb {
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
-   return $bdb;
+   return $bdb,$dbenv;
 }
 
 my $select_time_result_sub = sub {
@@ -2353,7 +2353,8 @@ my $select_time_result_sub = sub {
    package select_time_result_sub;
    use Net::FullAuto::FA_Core qw/%month timelocal/;
    my $selection="]S[";
-   $selection=~s/^["]?(.*)["]?/$1/;
+   $selection=~s/^["]//;
+   $selection=~s/["]$//;
    my ($num,$type)=('','');
    my $expires=0;
    no strict 'subs';
@@ -2397,15 +2398,14 @@ my $select_time_result_sub = sub {
    } elsif ($type=~/Month/) {
       $expires=time + $num * 2592000;
    }
-   my $previous="]P[{existing}";
-   if ($previous=~/[]]P[[][{]existing[}]/) {
+   my $previous="]!P[{existing}";
+   if ($previous=~/[]]!P[[][{]existing[}]/) {
       return $expires;
    } else {
-
-      my $bdb=&Net::FullAuto::FA_Core::openplandb();
+      my ($bdb,$dbenv)=&Net::FullAuto::FA_Core::openplandb();
       my $cursor=$bdb->db_cursor();
       my ($k,$v)=('','');
-      my $planhash='';
+      my $planhash={};
       my $plan_number=$previous;
       $plan_number=~s/^.*:\s+(\d+)\s+.*$/$1/;
       while ($cursor->c_get($k, $v, DB_NEXT) == 0) {
@@ -2421,9 +2421,9 @@ my $select_time_result_sub = sub {
       $planhash->{'Expires'}=$expires;
       my $put_plan=Data::Dump::Streamer::Dump($planhash)->Out();
       my $status=$bdb->db_put($plan_number,$put_plan);
-
-      #print "\n   EXPIRATION=$expires and SELECTION=$previous\n";sleep 2;
-
+      undef $bdb;
+      $dbenv->close();
+      undef $dbenv;
       return '{activate_or_disable_expiration}<';
    }
 
@@ -2571,7 +2571,7 @@ my $ask_exp_banner_sub = sub {
    my $caller="]P[";
    if ($caller eq 'Set New Expiration') {
       return "   Choose the Expiration Time for\n\n".
-             "      ]P[{existing}";
+             "      ]!P[{existing}";
    } else {
       my $username=getlogin || getpwuid($<);
       return "   Choose the Expiration Time of the local saving\n".
@@ -2629,15 +2629,15 @@ my $get_expiration_sub=sub {
 
    package get_expiration_sub;
    use Net::FullAuto::FA_Core qw/%days @month/;
-   my $arg=']P[{existing}';
+   my $arg=']!P[{existing}';
    my $plan=&Net::FullAuto::FA_Core::getplan($arg);
-#print "PLAN KEYS=",(join " ",keys %{$plan}),"\n";
    my $return="\n   Choose an expiration action for\n\n      $arg:\n";
    if (exists $plan->{Expires} && $plan->{Expires} &&
          $plan->{Expires} ne 'never') {
-      my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime;
+      my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=
+         localtime($plan->{Expires});
       my $m=$month[$mon];$m=~s/\s*$//;
-      $year += 1900;my $xp='*EXPIRED*';
+      $year += 1900;my $xp='--EXPIRED--';
       $xp='EXPIRES' if time<$plan->{Expires};
       $return.="\n   PLAN $xp => $days{$wday} $m $mday, $year ".
          &Net::FullAuto::FA_Core::get_now_am_pm($plan->{Expires})." ".
@@ -2652,11 +2652,11 @@ my $get_expiration_sub=sub {
 my $never_expires_sub=sub {
 
    package neverexpires;
-   my $arg=']P[{existing}';
+   my $arg=']!P[{existing}';
    no strict 'subs';
    use BerkeleyDB;
    my $plan=&Net::FullAuto::FA_Core::getplan($arg);
-   my $bdb=&Net::FullAuto::FA_Core::openplandb();
+   my ($bdb,$dbenv)=&Net::FullAuto::FA_Core::openplandb();
    my $cursor=$bdb->db_cursor();
    my ($k,$v)=('','');
    my $planhash='';
@@ -2675,7 +2675,10 @@ my $never_expires_sub=sub {
    $planhash->{'Expires'}='never';
    my $put_plan=Data::Dump::Streamer::Dump($planhash)->Out();
    my $status=$bdb->db_put($plan_number,$put_plan);
-   return '{activate_or_disable_expiration}<';
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+   return '<';
 
 };
 
@@ -3654,7 +3657,7 @@ sub getplan {
 
    my $plan=$_[0];
    $plan=~s/^\s*Plan:\s+(\d+)\s+.*$/$1/;
-   my $bdb=openplandb();
+   my ($bdb,$dbenv)=openplandb();
    my $cursor=$bdb->db_cursor();
    my ($k,$v)=('','');
    my $planhash='';
@@ -3668,13 +3671,16 @@ sub getplan {
       }
    }
    undef $cursor;
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
    return $planhash;
 
 }
 
 sub getplans {
 
-   my $bdb=openplandb();
+   my ($bdb,$dbenv)=openplandb();
    my $cursor=$bdb->db_cursor();
    my @plans=();
    my ($k,$v)=('','');
@@ -3685,6 +3691,9 @@ sub getplans {
       push @plans, pack('A10',$k).$planhash->{'Title'};
    }
    undef $cursor;
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
    return \@plans;
 }
 
@@ -12105,7 +12114,6 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
             ."\n              Rejecting the $c_t Login Attempt of the ID"
             ."\n              -> $login_id :\n\n       "
             ."$login_Mast_error\n";
-         #print $MRLOG $die if -1<index $MRLOG,'*';
          print $die if (!$Net::FullAuto::FA_Core::cron ||
             $Net::FullAuto::FA_Core::debug) &&
             !$Net::FullAuto::FA_Core::quiet;
@@ -12123,6 +12131,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
       cleanup() if $Net::FullAuto::FA_Core::makeplan eq ']quit[';
    } elsif ($plan || $plan_ignore_error) {
       $plan||=$plan_ignore_error||='';
+      my $plan_num=$plan;
       my $dbenv = BerkeleyDB::Env->new(
          -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans',
          -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
@@ -12136,9 +12145,28 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
       ) or &handle_error(
          "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
       my $pref='';
-      my $status=$bdb->db_get($plan,$pref);
+      my $status=$bdb->db_get($plan_num,$pref);
       $pref=~s/\$HASH\d*\s*=\s*//s;
       $plan=eval $pref;
+      if (exists $plan->{Expires} && $plan->{Expires} ne 'never'
+            && $plan->{Expires}<time()) {
+         my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=
+            localtime($plan->{Expires});
+         my $m=$month[$mon];$m=~s/\s*$//;
+         $year += 1900;
+         my $x="Expired => $days{$wday} $m $mday, $year ".
+         &Net::FullAuto::FA_Core::get_now_am_pm($plan->{Expires})." ".
+         POSIX::strftime("%Z",localtime($plan->{Expires}))."\n";
+         my $die="\n   FATAL ERROR! - Plan $plan_num is --EXPIRED--\n".
+                 "\n      Plan $plan_num $x".
+                 "\n      Run   fa --plan   to alter Plan Settings.\n";
+         print $die if (!$Net::FullAuto::FA_Core::cron ||
+            $Net::FullAuto::FA_Core::debug) &&
+            !$Net::FullAuto::FA_Core::quiet;
+         print $MRLOG $die
+            if $log && -1<index $MRLOG,'*';
+         cleanup();
+      }
       $plan=$plan->{Plan};
    }
    return $cust_subnam_in_fa_code_module_file, \@menu_args, $fatimeout, $cache;
@@ -12148,7 +12176,6 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
 our $adminmenu=sub {
 
    my $invoke_menu_here=0;
-   #unless (exists $INC{'Net/FullAuto.pm'}) {
    unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
       $invoke_menu_here=1;
       can_load(modules => { "Term::Menus" => 0 });
