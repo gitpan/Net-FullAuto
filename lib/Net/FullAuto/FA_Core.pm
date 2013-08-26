@@ -2352,7 +2352,8 @@ my $select_time_result_sub = sub {
   
    package select_time_result_sub;
    use Net::FullAuto::FA_Core qw/%month timelocal/;
-   my $selection="]S[";
+   my $selection="]S[{select_minutes|select_hours|".
+                     "select_days|select_weeks|select_months}";
    $selection=~s/^["]//;
    $selection=~s/["]$//;
    my ($num,$type)=('','');
@@ -2709,9 +2710,8 @@ my $set_optional_expiration_sub=sub {
 
 my $plan_options_sub=sub {
 
-   #my $plan=']S[';
-   #print "\n   PLAN=$plan\n";<STDIN>;
-   #return '<';
+   #my $choice=']P[';
+   #print "\n   PLAN=$choice\n";<STDIN>;
 
    my %plan_options=(
 
@@ -2742,6 +2742,16 @@ my $plan_options_sub=sub {
 
 };
 
+my $plan_options_work_with_sub=sub {
+
+   my $choice="]!T[{plan_menu}";
+   if ($choice eq 'Work with Existing Plans') {
+      print "WORK WITH EXISTING\n";<STDIN>;
+   } else {
+      return $plan_options_sub;
+   }
+
+};
 
 my $plan_menu_options_sub=sub {
 
@@ -2802,7 +2812,8 @@ my $plan_menu_options_sub=sub {
 
                Text => "Plan: ]C[",
                Convey => $plans,
-               Result => $plan_options_sub,
+               #Result => $plan_options_sub,
+               Result => $plan_options_work_with_sub,
 
             },
             Banner=> '   Select a Plan to work with:'
@@ -3192,7 +3203,6 @@ my %plan_menu=(
       Item_2 => {
 
           Text => 'Set Options for Plan',
-          #Result => \%plan_options_menu,
           Result => $plan_menu_options_sub,
 
       },
@@ -3205,6 +3215,7 @@ my %plan_menu=(
       Item_4 => {
 
           Text => 'Work with Existing Plans',
+          Result => $plan_menu_options_sub,
 
       },
       Item_5 => {
@@ -10708,7 +10719,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                $localhost->{_cmd_handle}->print("\003");
                $localhost->{_cmd_handle}->print("\003");
                $localhost->{_cmd_handle}->close; 
-            } else { $localhost->{_cmd_handle}->close }
+            } elsif (exists $localhost->{_cmd_handle}) {
+               $localhost->{_cmd_handle}->close;
+            }
          }
 
          if ($login_Mast_error) {
