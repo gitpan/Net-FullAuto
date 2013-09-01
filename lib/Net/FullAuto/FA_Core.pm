@@ -2425,6 +2425,7 @@ my $select_time_result_sub = sub {
       undef $bdb;
       $dbenv->close();
       undef $dbenv;
+print "GOING TO RETURN TO SPECIFIC\n";sleep 3;
       return '{activate_or_disable_expiration}<';
    }
 
@@ -2742,68 +2743,141 @@ my $plan_options_sub=sub {
 
 };
 
+my $change_existing_plan_sub=sub {
+
+   package change_existing_plan_sub;
+   my $choice="]S[{plan_existing}";
+   no strict 'subs';
+   use BerkeleyDB;
+   my ($plan_number,$planhash,$bdb,$dbenv)=('',''.'','');
+   ($plan_number,$planhash,$bdb,$dbenv)=
+      &Net::FullAuto::FA_Core::getplan($choice);
+   if (-1<index $choice,'Delete') {
+      my $answer='';
+      while ($answer!~/^[yY|nN]$/) { last }
+      my $ch=$choice;
+      $ch=~s/Delete //s;
+      $ch=~s/["]//gs;
+      $ch=~s/\s\s+/   /gs;
+      print $Net::FullAuto::FA_Core::blanklines;
+      print "\n Are You Sure You want to DELETE\n\n",
+            " $ch?   (y|N) ";
+      while ($answer!~/^[yY|nN]$/) { 
+         $answer=<STDIN>;
+         chomp($answer);
+         last if $answer=~/^[yY|nN]$/;
+      }
+      &Net::FullAuto::FA_Core::acquire_fa_lock(9361);
+      if ($answer=~/^[yY]$/) {
+         my $status=$bdb->db_del($plan_number);
+      }
+   } elsif (-1<index $choice, 'Rename') {
+      $planhash->{'Expires'}='never';
+      print "\n\n\n   Type New Name for Plan $plan_number: ";
+      my $newname=<STDIN>;
+      chomp($newname);
+      $planhash->{'Title'}=$newname;
+      $planhash=Data::Dump::Streamer::Dump($planhash)->Out();
+      &Net::FullAuto::FA_Core::acquire_fa_lock(9361);
+      my $status=$bdb->db_put($plan_number,$planhash);
+   } else {
+      $planhash->{'Expires'}='never';
+      print "GOING TO EXPORT\n";
+   }
+   undef $bdb;
+   $dbenv->close();
+   undef $dbenv;
+   &Net::FullAuto::FA_Core::release_fa_lock(9361);
+   return '{plan_menu}<';
+
+};
+
+my $plan_existing_sub=sub {
+
+   my %plan_existing=(
+
+      Name   => 'plan_existing',
+      Item_1 => {
+
+         Text => 'Delete Plan:  ]P[',
+         Result => $change_existing_plan_sub,
+
+      },
+      Item_2 => {
+
+         Text => 'Rename Plan:  ]P[',
+         Result => $change_existing_plan_sub,
+
+      },
+      Item_3 => {
+
+         Text => 'Export Plan:  ]P[',
+         Result => $change_existing_plan_sub,
+
+      },
+
+      Banner => "   Choose an operation to perform".
+                " with\n\n      PLAN:  ]P[",
+
+
+   );
+   return \%plan_existing;
+
+};
+
 my $plan_options_work_with_sub=sub {
 
    my $choice="]!T[{plan_menu}";
    if ($choice eq 'Work with Existing Plans') {
-      print "WORK WITH EXISTING\n";<STDIN>;
+      return $plan_existing_sub;
    } else {
       return $plan_options_sub;
    }
 
 };
 
+my $getplans_sub=sub {
+
+   my $plans=&Net::FullAuto::FA_Core::getplans();
+   if (-1<$#{$plans}) {
+      return $plans;
+   } else {
+      my $message="\n\n".
+                  "    _  _  ___ _____ ___   _   \n".
+                  "   | \\| |/ _ \\_   _| __| (_)\n".
+                  "   | .` | (_) || | | _|   _   \n".
+                  "   |_|\\_|\\___/ |_| |___| (_) \n".
+                  "\n\n".
+                  "   *NO* Plans have yet been 'made' with\n".
+                  "   this FullAuto installation.\n\n".
+                  "   To make a 'plan' use the --plan argument\n".
+                  "   in conjunction with the --code argument\n".
+                  "   invoked from the command line.\n\n".
+                  "      Example:  fa --plan --code hello_world\n\n".
+                  "   Press ANY KEY to return to the Plan Menu\n";
+
+      print $Net::FullAuto::FA_Core::blanklines,$message;
+      alarm 120;
+      Term::ReadKey::ReadMode 4;
+      # Turn off controls keys
+      eval {
+         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         my $key='';
+         while (not defined ($key = ReadKey(-1))) {
+            # No key yet
+         }
+      };
+      Term::ReadKey::ReadMode 0;
+      # Reset tty mode before exiting
+      alarm(0);
+      return '{plan_menu}<';
+   }
+
+};
+
 my $plan_menu_options_sub=sub {
 
-   package plan_menu_options_sub;
-   no strict 'subs';
-   use BerkeleyDB;
-   use File::Path;
-   my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
-   my $progname=substr($0,(rindex $0,'/')+1,-3);
-   require "$loc/fa_defs.pm";
-   my $mkdflag=0;
-   unless (-d $fa_defs::FA_Secure.'Plans') {
-      $mkdflag=1;
-      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
-      my $m=($^O eq 'cygwin')?"-m $mode ":'';
-      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-         $m.$fa_defs::FA_Secure.'Plans';
-      my $stdout='';my $stderr='';
-      ($stdout,$stderr)=&setuid_cmd($cmd,5);
-      die $stderr if $stderr;
-   }
-   my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $fa_defs::FA_Secure.'Plans',
-      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
-   ) or die(
-      "cannot open environment for DB: ".
-      $BerkeleyDB::Error."\n",'','');
-   my $bdb = BerkeleyDB::Btree->new(
-      -Filename => "${progname}_plans.db",
-      -Flags    => DB_CREATE,
-      -Env      => $dbenv
-   );
-   my $mr="__Master_".$$."__";
-   unless ($BerkeleyDB::Error=~/Successful/) {
-      my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
-      my $cmd="$d -h ".$Hosts{$mr}{'FA_Secure'}.'Plans';
-      my $out=`$cmd`;
-      &handle_error($out) if $out;
-      $bdb = BerkeleyDB::Btree->new(
-         -Filename => "${progname}_plans.db",
-         -Flags    => DB_CREATE,
-         -Env      => $dbenv
-      );
-      unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ".
-             "${progname}_plans.db $BerkeleyDB::Error\n";
-      }
-   }
-   my $plans=&Net::FullAuto::FA_Core::getplans($bdb);
-   undef $bdb;
-   $dbenv->close();
-   undef $dbenv;
+   my $plans=&Net::FullAuto::FA_Core::getplans();
    if (-1<$#{$plans}) {
       my %existing=(
 
@@ -2811,8 +2885,7 @@ my $plan_menu_options_sub=sub {
             Item_1=> {
 
                Text => "Plan: ]C[",
-               Convey => $plans,
-               #Result => $plan_options_sub,
+               Convey => $getplans_sub,
                Result => $plan_options_work_with_sub,
 
             },
@@ -2820,13 +2893,13 @@ my $plan_menu_options_sub=sub {
       );
       return \%existing;
    } else {
-      my $message="\n".
+      my $message="\n\n".
                   "    _  _  ___ _____ ___   _   \n".
                   "   | \\| |/ _ \\_   _| __| (_)\n".
                   "   | .` | (_) || | | _|   _   \n".
-                  "   |_|\_|\\___/ |_| |___| (_) \n".
+                  "   |_|\\_|\\___/ |_| |___| (_) \n".
                   "\n\n".
-                  "   *NO* Plans have yet been 'made' with ".
+                  "   *NO* Plans have yet been 'made' with\n".
                   "   this FullAuto installation.\n\n".
                   "   To make a 'plan' use the --plan argument\n".
                   "   in conjunction with the --code argument\n".
@@ -3260,7 +3333,7 @@ my $plan_menu_sub = sub {
 
 sub plan {
 
-print "PLANCALLER=",caller,"\n";
+#print "PLANCALLER=",caller,"\n";
 
    my $output=&Menu(\%plan_menu);
    &cleanup() if $output=~/\]quit\[/i;
@@ -3667,7 +3740,7 @@ sub persist_put {
 sub getplan {
 
    my $plan=$_[0];
-   $plan=~s/^\s*Plan:\s+(\d+)\s+.*$/$1/;
+   $plan=~s/^.*\s*Plan:\s+(\d+)\s+.*$/$1/;
    my ($bdb,$dbenv)=openplandb();
    my $cursor=$bdb->db_cursor();
    my ($k,$v)=('','');
@@ -3682,6 +3755,7 @@ sub getplan {
       }
    }
    undef $cursor;
+   return $plan,$planhash,$bdb,$dbenv if wantarray;
    undef $bdb;
    $dbenv->close();
    undef $dbenv;

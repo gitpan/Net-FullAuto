@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-08-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999924 released.
+
+        * More work on Plans - nearly complete.
+
+        * New version of Term::Menus paired with this release.
+
+
 2013-08-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999923 released.
