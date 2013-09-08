@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-09-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999925 released.
+
+        * Resumed work on Scheduled Jobs.
+
+        * New version of Term::Menus paired with this release.
+
+
 2013-08-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999924 released.

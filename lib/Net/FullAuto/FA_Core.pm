@@ -316,7 +316,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $berkeleydb %admin_menus $^O
                   $cache_root $cache_key $admin_menu
                   acquire_fa_lock release_fa_lock
-                  $choose_pass_expiration);
+                  $choose_pass_expiration
+                  %monthconv);
 
 {
    no warnings;
@@ -2399,8 +2400,8 @@ my $select_time_result_sub = sub {
    } elsif ($type=~/Month/) {
       $expires=time + $num * 2592000;
    }
-   my $previous="]!P[{existing}";
-   if ($previous=~/[]]!P[[][{]existing[}]/) {
+   my $previous="]!P[{existing_plans}";
+   if ($previous=~/[]]!P[[][{]existing_plans[}]/) {
       return $expires;
    } else {
       my ($bdb,$dbenv)=&Net::FullAuto::FA_Core::openplandb();
@@ -2425,7 +2426,6 @@ my $select_time_result_sub = sub {
       undef $bdb;
       $dbenv->close();
       undef $dbenv;
-print "GOING TO RETURN TO SPECIFIC\n";sleep 3;
       return '{activate_or_disable_expiration}<';
    }
 
@@ -2571,9 +2571,12 @@ my $ask_exp_banner_sub = sub {
 
    my $banner='';
    my $caller="]P[";
+   $caller=~s/^["](.*)["]$/$1/s;
    if ($caller eq 'Set New Expiration') {
+      my $plan=']!P[{existing_plans}';
+      $plan=~s/^["](.*)["]$/$1/s;
       return "   Choose the Expiration Time for\n\n".
-             "      ]!P[{existing}";
+             "      $plan";
    } else {
       my $username=getlogin || getpwuid($<);
       return "   Choose the Expiration Time of the local saving\n".
@@ -2631,7 +2634,8 @@ my $get_expiration_sub=sub {
 
    package get_expiration_sub;
    use Net::FullAuto::FA_Core qw/%days @month/;
-   my $arg=']!P[{existing}';
+   my $arg=']!P[{existing_plans}';
+   $arg=~s/^["](.*)["]$/$1/s;
    my $plan=&Net::FullAuto::FA_Core::getplan($arg);
    my $return="\n   Choose an expiration action for\n\n      $arg:\n";
    if (exists $plan->{Expires} && $plan->{Expires} &&
@@ -2654,7 +2658,8 @@ my $get_expiration_sub=sub {
 my $never_expires_sub=sub {
 
    package neverexpires;
-   my $arg=']!P[{existing}';
+   my $arg=']!P[{existing_plans}';
+   $arg=~s/^["](.*)["]$/$1/s;
    no strict 'subs';
    use BerkeleyDB;
    my $plan=&Net::FullAuto::FA_Core::getplan($arg);
@@ -2734,9 +2739,14 @@ my $plan_options_sub=sub {
 
       },
 
-      Banner => "   Choose an operation to perform".
-                " with\n\n      PLAN:  ]P[",
+      Banner => sub {
 
+         my $plan=']P[';
+         $plan=~s/^["](.*)["]$/$1/s;
+         return "   Choose an operation to perform".
+                " with\n\n      PLAN:  $plan"
+
+      },
 
    );
    return \%plan_options;
@@ -2799,40 +2809,55 @@ my $plan_existing_sub=sub {
       Name   => 'plan_existing',
       Item_1 => {
 
-         Text => 'Delete Plan:  ]P[',
+         Text => 'Delete Plan:  ]C[',
+         Convey => sub {
+
+            my $p=']P[';
+            $p=~s/^["](.*)["]$/$1/s;
+            return $p;
+
+         },
          Result => $change_existing_plan_sub,
 
       },
       Item_2 => {
 
-         Text => 'Rename Plan:  ]P[',
+         Text => 'Rename Plan:  ]C[',
+         Convey => sub {
+
+            my $p=']P[';
+            $p=~s/^["](.*)["]$/$1/s;
+            return $p;
+
+         },
          Result => $change_existing_plan_sub,
 
       },
       Item_3 => {
 
-         Text => 'Export Plan:  ]P[',
+         Text => 'Export Plan:  ]C[',
+         Convey => sub {
+
+            my $p=']P[';
+            $p=~s/^["](.*)["]$/$1/s;
+            return $p;
+
+         },
          Result => $change_existing_plan_sub,
 
       },
 
-      Banner => "   Choose an operation to perform".
-                " with\n\n      PLAN:  ]P[",
+      Banner => sub {
 
+         my $p=']P[';
+         $p=~s/^["](.*)["]$/$1/s;
+         return "   Choose an operation to perform".
+                " with\n\n      PLAN:  $p"
+
+      },
 
    );
    return \%plan_existing;
-
-};
-
-my $plan_options_work_with_sub=sub {
-
-   my $choice="]!T[{plan_menu}";
-   if ($choice eq 'Work with Existing Plans') {
-      return $plan_existing_sub;
-   } else {
-      return $plan_options_sub;
-   }
 
 };
 
@@ -2875,13 +2900,534 @@ my $getplans_sub=sub {
 
 };
 
+my $generate_crontrab=sub {
+
+   package generate_crontrab;
+   use Net::FullAuto::FA_Core;
+   my $data='][[ "select_recurrent_minutes" '.
+            ']|[ ]P[{select_recurrent_months} '.
+            ']|[ ]P[{select_recurrent_weekdays} '.
+            ']|[ ]P[{select_recurrent_days} '.
+            ']|[ ]P[{select_recurrent_hours} '.
+            ']|[ ]S[{select_recurrent_minutes} '.
+            ']|[ ]P[{existing_plans} ]][';
+   $data=~s/^[]](.*)[[]$/$1/s;
+   $data=~s/\]\|\[/],[/g;
+   $data=~s/\];/]/g;
+print "DATA=$data\n";
+   my $output=eval $data;
+print "ERROR=$@\n" if $@;
+print "OUTPUT=$output\n";<STDIN>;
+   my ($monthstring,$weekdaysstring,$daystring,
+       $hourstring,$minstring,$weekstring)=
+       ('','','','','');
+   if (ref $output->[1] eq 'ARRAY') {
+      if ($#{$output->[1]}==11) {
+         $monthstring='*';
+      } elsif ($#{$output->[1]}==0) {
+         $monthstring=$monthconv{${$output->[1]}[0]};
+      } else {
+         my $cnt=$monthconv{${$output->[1]}[0]};
+         my $save_start=$cnt;
+         foreach my $month (@{$output->[1]}) {
+            unless ($cnt++==$monthconv{$month}) {
+               $save_start=-1;
+            }
+            $monthstring.=$monthconv{$month}.',';
+         }
+         if (-1<$save_start) {
+            $monthstring=$save_start.'-'.
+               $monthconv{${$output->[1]}
+               [$#{$output->[1]}]};
+         } else {
+            chop $monthstring;
+         }
+      }
+   } else {
+      $monthstring=$monthconv{$output->[1]};
+   }
+   if (ref $output->[2] eq 'ARRAY') {
+      if ($#{$output->[2]}==6) {
+         $weekdaysstring='*';
+      } elsif ($#{$output->[2]}==0) {
+         $weekdaysstring=$weekdaysconv{${$output->[2]}[0]};
+      } else {
+         my $cnt=$weekdaysconv{${$output->[2]}[0]};
+         my $save_start=$cnt;
+         foreach my $weekday (@{$output->[2]}) {
+            unless ($cnt++==$weekdaysconv{$weekday}) {
+               $save_start=-1;
+            }
+            $weekdaysstring.=$weekdaysconv{$weekday}.',';
+         }
+         if (-1<$save_start) {
+            $weekdaysstring=$save_start.'-'.
+               $weekdaysconv{${$output->[2]}
+               [$#{$output->[2]}]};
+         } else {
+            chop $weekdaysstring;
+         }
+      }
+   } else {
+      $weekdaysstring=$weekdaysconv{$output->[2]};
+   }
+   if (ref $output->[3] eq 'ARRAY') {
+      if ($#{$output->[3]}==30) {
+         $daystring='*';
+      } elsif ($#{$output->[3]}==0) {
+         $daystring=unpack('x5 a*',${$output->[3]}[0]);
+      } else {
+         my $cnt=unpack('x5 a*',${$output->[3]}[0]);
+         my $save_start=$cnt;
+         foreach my $day (@{$output->[3]}) {
+            $day=unpack('x5 a*',$day);
+            unless ($cnt++==$day) {
+               $save_start=-1;
+            }
+            $daystring.=$day.',';
+         }
+         if (-1<$save_start) {
+            $daystring=$save_start.'-'.
+               ${$output->[3]}[$#{$output->[3]}];
+         } else {
+            chop $daystring;
+         }
+      }
+   } else {
+      $daystring=unpack('x5 a*',{$output->[3]});
+   }
+print "DAYSTRING=$daystring\n";<STDIN>;
+   if (ref $output->[4] eq 'ARRAY') {
+      if ($#{$output->[4]}==23) {
+         $hourstring='*';
+      } elsif ($#{$output->[4]}==0) {
+         $hourstring=$hourconv{${$output->[4]}[0]};
+      } else {
+         my $cnt=$hourconv{unpack('x6 a*',${$output->[4]}[0])};
+         my $save_start=$cnt;
+         foreach my $hour (@{$output->[4]}) {
+            unless ($cnt++==$hourconv{unpack('x6 a*',$hour)}) {
+               $save_start=-1;
+            }
+            $hourstring.=$hourconv{unpack('x6 a*',$hour)}.',';
+         }
+         if (-1<$save_start) {
+            $hourstring=$save_start.'-'.
+               $hourconv{unpack('x6 a*',${$output->[4]}
+               [$#{$output->[4]}])};
+         } else {
+            chop $hourstring;
+         }
+      }
+   } else {
+      $hourstring=$hourconv{unpack('x6 a*',$output->[4])};
+   }
+   if (ref $output->[5] eq 'ARRAY') {
+      if ($#{$output->[5]}==59) {
+         $minstring='*';
+      } elsif ($#{$output->[5]}==0) {
+         $minstring=unpack('x8 a*',${$output->[5]}[0]);
+      } else {
+         my $cnt=unpack('x8 a*',${$output->[5]}[0]);
+         my $save_start=$cnt;
+         foreach my $minute (@{$output->[5]}) {
+            $minute=unpack('x8 a*',$minute);
+            unless ($cnt++==$minute) {
+               $save_start=-1;
+            }
+            $minstring.=$minute.',';
+         }
+         if (-1<$save_start) {
+            $minstring=$save_start.'-'.
+               ${$output->[5]}[$#{$output->[5]}];
+         } else {
+            chop $minstring;
+         }
+      }
+   } else {
+      $minstring=unpack('x8 a*',$output->[5]);
+   }
+   my $planstring=$output->[6];
+   my $cronstring=$minstring.' '.$hourstring.' '.$daystring.' '.
+         $monthstring.' '.$weekdaysstring;
+   print "CRONSTRING=$cronstring\n";<STDIN>;
+   #our $crontabpath='';
+   #if (-e '/usr/bin/crontab') {
+   #   $crontabpath='/usr/bin/';
+   #} elsif (-e '/bin/crontab') {
+   #   $crontabpath='/bin/';
+   #} elsif (-e '/usr/local/bin/crontab') {
+   #   $crontabpath='/usr/local/bin/';
+   #}
+   #my ($stdout,$stderr)=('','');
+   #($stdout,$stderr)=cmd("${crontabpath}crontab -l");
+#print "WAHT IS CRONTABSTDOUT=$stdout\n";
+   #my $mkdflag=0;
+   #unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs') {
+   #   $mkdflag=1;
+   #   my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+   #   my $m=($^O eq 'cygwin')?"-m $mode ":'';
+   #   my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+   #           $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs';
+   #   my $stdout='';my $stderr='';
+   #   ($stdout,$stderr)=&setuid_cmd($cmd,5);
+   #   &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
+   #}
+
+   return '{plan_menu}<';
+
+};
+
+my %select_recurrent_minutes=(
+
+   Name => 'select_recurrent_minutes',
+   Item_1 => {
+
+        Text => 'Do Not Use this Criteria',
+        Result => $generate_crontrab,
+
+   },
+   Item_2 => {
+
+      Text => "Minute  ]C[",
+      #Select => 'Many',
+      Convey => [0..59],
+      Result => $generate_crontrab,
+
+   },
+Select => 'Many',
+   Banner => sub {
+
+      my $plan="]P[{existing_plans}";
+      $plan=~s/^["](.*)["]$/$1/s;
+      return "   (The current time is ".&get_now_am_pm." ".
+                 POSIX::strftime("%Z", localtime()).")\n\n".
+             "   Select the --MINUTE(S)-- of the Day Where\n\n   ".
+             "   $plan\n\n   Will be Run :"
+
+   },
+
+);
+
+my %select_recurrent_hours=(
+
+   Name => 'select_recurrent_hours',
+   Item_1 => {
+
+        Text => 'Do Not Use this Criteria',
+        Result => \%select_recurrent_minutes,
+
+   },
+   Item_2 => {
+
+        Text => 'Hour  ]C[',
+        Convey => $hours,
+        Select => 'Many',
+        Result => \%select_recurrent_minutes,
+
+   },
+   Banner => sub {
+
+      my $plan="]P[{existing_plans}";
+      $plan=~s/^["](.*)["]$/$1/s;
+      return "   Select the --HOUR(S)-- of the Day Where\n\n   ".
+             "   $plan\n\n   Will be Run :"
+
+   },
+
+);
+
+my %select_recurrent_days=(
+
+   Name => 'select_recurrent_days',
+   Item_1 => {
+
+        Text => 'Do Not Use this Criteria',
+        Result => \%select_recurrent_hours,
+
+   },
+   Item_2 => {
+
+        Text => 'Day  ]C[',
+        Convey => [1..31],
+        Select => 'Many',
+        Result => \%select_recurrent_hours,
+
+   },
+   Banner => sub {
+
+      my $plan="]P[{existing_plans}";
+      $plan=~s/^["](.*)["]$/$1/s;
+      return "   Select the --DAY(S)-- of the Month Where\n\n   ".
+             "   $plan\n\n   Will be Run :"
+
+   },
+
+);
+
+my %select_recurrent_weekdays=(
+
+   Name => 'select_recurrent_weekdays',
+   Item_1 => {
+
+        Text => 'Do Not Use this Criteria',
+        Result => \%select_recurrent_days,
+
+   },
+   Item_2 => {
+
+        Text => ']C[',
+        Convey => \@weekdays,
+        Select => 'Many',
+        Result => \%select_recurrent_days,
+
+   },
+   Banner => sub {
+
+      my $plan="]P[{existing_plans}";
+      $plan=~s/^["](.*)["]$/$1/s;
+      return "   Select the --WEEKDAY(S)-- Where\n\n   ".
+             "   $plan\n\n   Will be Run :"
+
+   },
+
+);
+
+my %select_recurrent_months=(
+
+   Name => 'select_recurrent_months',
+   Item_1 => {
+        Text => 'Do Not Use this Criteria',
+        Result => \%select_recurrent_weekdays,
+   },
+   Item_2 => {
+
+        Text => ']C[',
+        Convey => \@month,
+        Select => 'Many',
+        Result => \%select_recurrent_weekdays,
+
+   },
+   Display => 6,
+   Banner => sub {
+
+      my $plan="]P[{existing_plans}";
+      $plan=~s/^["](.*)["]$/$1/s;
+      return "   Select the --MONTH(S)-- where\n\n   ".
+             "   $plan\n\n   Will be Run :"
+
+   },
+
+);
+
+my %select_min_for_invocation=(
+
+   Name => 'select_min_for_invocation',
+   Item_1 => {
+
+      Text => "]C[",
+      Convey => $showmins,
+      Result => sub{ return 'select_min_for_invocation '.
+                ']P[{one_time_launch} '.
+                ']S[ | ]P[{existing_plans}' }
+
+   },
+   Banner => "   (The current time is ".&get_now_am_pm." ".
+                 POSIX::strftime("%Z", localtime()).")\n\n".
+             "   Please Select a Job Invocation Time :",
+
+);
+
+my %select_hour_for_invocation=(
+
+   Name => 'select_hour_for_invocation',
+   Item_1 => {
+
+      Text => "Show Minutes",
+      Result => \%select_min_for_invocation,
+
+   },
+   Item_2 => {
+
+      Text => "]C[",
+      Convey => $hours,
+      Result => sub{ return 'select_hour_for_invocation '.
+                ']P[{one_time_launch} '.
+                ']S[ | ]P[{existing_plans}' }
+
+   },
+   Banner => "   (The current time is ".&get_now_am_pm." ".
+                 POSIX::strftime("%Z", localtime()).")\n\n".
+             "   Please Select a Job Invocation Time for\n\n   ]P[ :",
+
+);
+
+my %select_cal_mins_for_plan=(
+
+   Name => 'select_cal_mins_for_plan',
+   Item_1 => {
+
+      Text => "]C[",
+      Convey => $showmins,
+      Result => sub{ return 'select_cal_mins_for_plan '.
+                ']|[ ]P[{select_cal_months_for_plan} '.
+                ']|[ ]P[{select_cal_days_for_plan} '.
+                ']|[ ]P[{select_cal_hours_for_plan} ]|[ '.
+                ']S[ ]|[ ]P[{existing_plans}' }
+
+   },
+   Banner => "   (The current time is ".&get_now_am_pm." ".
+                 POSIX::strftime("%Z", localtime()).")\n\n".
+             "   Please Select a Job Invocation Time :",
+
+);
+
+my %select_cal_hours_for_plan=(
+
+   Name => 'select_cal_hours_for_plan',
+   Item_1 => {
+
+      Text => "Show Minutes",
+      Negate => [ 'Item_2' ],
+      Result => \%select_cal_mins_for_plan,
+
+   },
+   Item_2=> {
+
+      Text => "]C[",
+      Convey => $hours,
+      Negate => [ 'Item_1' ],
+      Result => sub{ return 'select_cal_hours_for_plan '.
+               ']|[ ]P[{select_cal_months_for_plan} '.
+               ']|[ ]P[{select_cal_days_for_plan} ]|[ '.
+               ']S[ ]|[ ]P[{existing_plans}' }
+
+   },
+   Banner => "   (The current time is ".&get_now_am_pm." ".
+                 POSIX::strftime("%Z", localtime()).")\n\n".
+             "   Please Select a Job Invocation Time :",
+
+);
+
+my %select_cal_days_for_plan=(
+
+   Name => 'select_cal_days_for_plan',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $fulldays,
+      Result => \%select_cal_hours_for_plan,
+
+   },
+   Banner => '   Please Select a Job cal_days Invocation Time :'
+
+);
+
+my %select_cal_months_for_plan=(
+
+   Name => 'select_cal_months_for_plan',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => $cal_months,
+      Result => \%select_cal_days_for_plan,
+   },
+   Banner => '   Please Select a Month :'
+
+);
+
+my %calendar_years_for_plan=(
+
+   Name => 'calendar_years_for_plan',
+   Item_1=> {
+
+      Text => "]C[",
+      Convey => [$curyear..$endyear],
+      Result => \%select_cal_months_for_plan,
+
+   },
+   Banner => '   Please Select a Year :'
+
+);
+
+my %one_time_launch=(
+
+   Name => 'one_time_launch',
+   Item_1 => {
+
+        Text => 'FULL CALENDAR',
+        Result => \%calendar_years_for_plan,
+
+   },
+   Item_2 => {
+
+        Text => "]C[", 
+        Convey => sub { return 'Today - '.&get_today() },
+        Result => \%select_hour_for_invocation,
+
+   },
+   Item_3 => {
+
+        Text => "]C[",
+        Convey => sub { return 'Tomorrow - '.&get_tomorrow() },
+        Result => \%select_hour_for_invocation,
+
+   },
+   Banner => "   Select Invocation Time for\n\n   ".
+             "Plan -  ]P[{existing_plans}",
+
+);
+
+my $select_type_of_scheduled_plan_sub=sub {
+
+   my %select_type_of_scheduled_plan=(
+
+      Name   => 'select_type_of_scheduled_plan',
+      Item_1 => {
+
+           Text => 'This Plan will Launch Recurrently',
+           Result => \%select_recurrent_months,
+
+      },
+      Item_2 => {
+
+           Text => 'This Plan will Launch One Time Only',
+           Result => \%one_time_launch,
+
+      },
+      Banner => sub { 
+
+           my $choice=']P[';
+           $choice=~s/^"(.*)"$/$1/s;
+           return "   Select Type of Scheduled Job for\n\n      Plan:  $choice";
+
+      },   
+
+   );
+   return \%select_type_of_scheduled_plan;
+
+};
+
+my $plan_options_work_with_sub=sub {
+
+   my $choice="]!T[{plan_menu}";
+   if ($choice eq '"Work with Existing Plans"') {
+      return $plan_existing_sub;
+   } elsif ($choice eq '"Set Up a New Scheduled Job"') {
+      return $select_type_of_scheduled_plan_sub;
+   } else {
+      return $plan_options_sub;
+   }
+
+};
+
 my $plan_menu_options_sub=sub {
 
    my $plans=&Net::FullAuto::FA_Core::getplans();
    if (-1<$#{$plans}) {
-      my %existing=(
+      my %existing_plans=(
 
-            Name => 'existing',
+            Name => 'existing_plans',
             Item_1=> {
 
                Text => "Plan: ]C[",
@@ -2891,7 +3437,7 @@ my $plan_menu_options_sub=sub {
             },
             Banner=> '   Select a Plan to work with:'
       );
-      return \%existing;
+      return \%existing_plans;
    } else {
       my $message="\n\n".
                   "    _  _  ___ _____ ___   _   \n".
@@ -2927,287 +3473,15 @@ my $plan_menu_options_sub=sub {
 
 };
 
-my %select_min_for_invocation=(
+my $setup_new_sched_job_menu_sub=sub {
 
-   Item_1=> {
+   my %setup_new_sched_job_menu=(
 
-      Text => "]C[",
-      Convey => $showmins,
-      Result => sub{ return 'select_min_for_invocation '.
-                ']P[{one_time_launch} '.
-                ']S[ | ]P[{choose_from_fullauto_plans}' }
-
-   },
-   Banner=> "   (The current time is ".&get_now_am_pm." ".
-                POSIX::strftime("%Z", localtime()).")\n\n".
-            "   Please Select a Job Invocation Time :",
-
-);
-
-my %select_hour_for_invocation=(
-
-   Item_1=> {
-
-      Text => "Show Minutes",
-      Result => \%select_min_for_invocation,
-
-   },
-   Item_2=> {
-
-      Text => "]C[",
-      Convey => $hours,
-      Result => sub{ return 'select_hour_for_invocation '.
-                ']P[{one_time_launch} '.
-                ']S[ | ]P[{choose_from_fullauto_plans}' }
-
-   },
-   Banner=> "   (The current time is ".&get_now_am_pm." ".
-                POSIX::strftime("%Z", localtime()).")\n\n".
-            "   Please Select a Job Invocation Time for\n\n   ]P[ :",
-
-);
-
-my %select_cal_mins_for_plan=(
-
-   Item_1=> {
-
-      Text => "]C[",
-      Convey => $showmins,
-      Result => sub{ return 'select_cal_mins_for_plan '.
-                ']|[ ]P[{select_cal_months_for_plan} '.
-                ']|[ ]P[{select_cal_days_for_plan} '.
-                ']|[ ]P[{select_cal_hours_for_plan} ]|[ '.
-                ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
-
-   },
-   Banner=> "   (The current time is ".&get_now_am_pm." ".
-                POSIX::strftime("%Z", localtime()).")\n\n".
-            "   Please Select a Job Invocation Time :", 
-);
-
-my %select_cal_hours_for_plan=(
-
-   Item_1=> {
-
-      Text => "Show Minutes",
-      Negate => [ 'Item_2' ],
-      Result => \%select_cal_mins_for_plan,
-
-   },
-   Item_2=> {
-
-      Text => "]C[",
-      Convey => $hours,
-      Negate => [ 'Item_1' ],
-      Result => sub{ return 'select_cal_hours_for_plan '.
-               ']|[ ]P[{select_cal_months_for_plan} '.
-               ']|[ ]P[{select_cal_days_for_plan} ]|[ '.
-               ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
-
-   },
-   Banner=> "   (The current time is ".&get_now_am_pm." ".
-                POSIX::strftime("%Z", localtime()).")\n\n".
-            "   Please Select a Job Invocation Time :",
-
-);
-
-my %select_cal_days_for_plan=(
-
-   Item_1=> {
-
-      Text => "]C[",
-      Convey => $fulldays,
-      Result => \%select_cal_hours_for_plan,
-
-   },
-   Banner=> '   Please Select a Job cal_days Invocation Time :'
-);
-
-my %select_cal_months_for_plan=(
-
-   Item_1=> {
-
-      Text => "]C[",
-      Convey => $cal_months,
-      Result => \%select_cal_days_for_plan,
-   },
-   Banner=> '   Please Select a Month :'
-);
-
-my %calendar_years_for_plan=(
-
-   Item_1=> {
-
-      Text => "]C[",
-      Convey => [$curyear..$endyear],
-      Result => \%select_cal_months_for_plan,
-
-   },
-   Banner=> '   Please Select a Year :'
-);
-
-my %select_recurrent_minutes=(
-
-   Item_1=> {
-
-      Text => "Minute  ]C[",
-      Convey => [0..59],
-      Result => sub{ return '][[ select_recurrent_minutes '.
-                ']|[ ]P[{select_recurrent_months} '.
-                ']|[ ]P[{select_recurrent_weekdays} '.
-                ']|[ ]P[{select_recurrent_days} '.
-                ']|[ ]P[{select_recurrent_hours} ]|[ '.
-                ']S[ ]|[ ]P[{choose_from_fullauto_plans} ]][' }
-
-   },
-   Select=> "Many",
-   Banner=> "   (The current time is ".&get_now_am_pm." ".
-                POSIX::strftime("%Z", localtime()).")\n\n".
-            "   Select the --MINUTE(S)-- of the Day Where\n\n   ".
-                "Plan -  ]P[{choose_from_fullauto_plans}".
-                "\n\n   Will be Run :",
-
-);
-
-my %select_recurrent_hours=(
-
-      #Item_1=> {
-
-      #   Text => "Show Minutes",
-      #   Negate => [ 'Item_2' ],
-      #   Result => \%select_recurrent_minutes,
-
-      #},
-      Item_1 => {
-
-           Text => 'Hour  ]C[',
-           Convey => $hours,
-           Result => \%select_recurrent_minutes,
-           #Negate => [ 'Item_1' ],
-           #Result => sub{ return 'select_recurrent_hours '.
-           #          ']|[ ]P[{select_recurrent_months} '.
-           #          ']|[ ]P[{select_recurrent_days} ]|[ '.
-           #          ']S[ ]|[ ]P[{choose_from_fullauto_plans}' }
-
-      },
-      Select => 'Many',
-      Banner => "   Select the --HOUR(S)-- of the Day Where\n\n   ".
-                "Plan -  ]P[{choose_from_fullauto_plans}".
-                "\n\n   Will be Run :",
-
-);
-
-my %select_recurrent_days=(
-
-      Item_1 => {
-
-           Text => 'Day  ]C[',
-           Convey => [1..31],
-           Result => \%select_recurrent_hours,
-
-      },
-      Select => 'Many',
-      Banner => "   Select the --DAY(S)-- of the Month Where\n\n   ".
-                "Plan -  ]P[{choose_from_fullauto_plans}".
-                "\n\n   Will be Run :",
-
-);
-
-my %select_recurrent_weekdays=(
-
-      Item_1 => {
-
-           Text => ']C[',
-           Convey => \@weekdays,
-           Result => \%select_recurrent_days,
-
-      },
-      Select => 'Many',
-      Banner => "   Select the --WEEKDAY(S)-- Where\n\n   ".
-                "Plan -  ]P[{choose_from_fullauto_plans}".
-                "\n\n   Will be Run :",
-
-);
-
-my %select_recurrent_months=(
-
-      Item_1 => {
-
-           Text => ']C[',
-           Convey => \@month,
-           Result => \%select_recurrent_weekdays,
-
-      },
-      Select => 'Many',
-      Banner => "   Select the --MONTH(S)-- where\n\n   ".
-                "Plan -  ]P[{choose_from_fullauto_plans}\n\n   Will be Run :",
-
-);
-
-my %one_time_launch=(
-
-      Item_1 => {
-
-           Text => 'FULL CALENDAR',
-           Result => \%calendar_years_for_plan,
-
-      },
-      Item_2 => {
-
-           Text => "]C[", 
-           Convey => sub { return 'Today - '.&get_today() },
-           Result => \%select_hour_for_invocation,
-
-      },
-      Item_3 => {
-
-           Text => "]C[",
-           Convey => sub { return 'Tomorrow - '.&get_tomorrow() },
-           Result => \%select_hour_for_invocation,
-
-      },
-      Banner => "   Select Invocation Time for\n\n   ".
-                "Plan -  ]P[{choose_from_fullauto_plans}",
-
-);
-
-my %select_type_of_scheduled_plan=(
-
-      Item_1 => {
- 
-           Text => 'This Plan will Launch Recurrently',
-           Result => \%select_recurrent_months,
-
-      },
-      Item_2 => {
-
-           Text => 'This Plan will Launch One Time Only',
-           Result => \%one_time_launch,
-
-      },
-      Banner => "   Select Type of Scheduled Job for\n\n   Plan -  ]P["
-
-);
-
-our %choose_from_fullauto_plans=(
-
-      Item_1 => {
-
-           Text => "]C[",
-           Convey => sub { return @{&Net::FullAuto::FA_Core::getplans()} },
-           Result => \%select_type_of_scheduled_plan,
-
-      },
-      Banner => "   Select a Plan to Schedule:",
-  
-);
- 
-our %setup_new_sched_job_menu=(
-
+      Name => 'setup_new_sched_job_menu',
       Item_1 => {
 
            Text => 'Choose a FullAuto Plan to Schedule',
-           Result => \%Net::FullAuto_FA_Core::choose_from_fullauto_plans,
+           Result => $plan_menu_options_sub,
 
       },
       Item_2 => {
@@ -3222,7 +3496,10 @@ our %setup_new_sched_job_menu=(
       },
       Banner => '   Select a Task to Perform',
 
-);
+   );
+   return \%setup_new_sched_job_menu;
+
+};
 
 my %plan_menu=(
 
@@ -3282,7 +3559,7 @@ my %plan_menu=(
       Item_3 => {
 
           Text => 'Set Up a New Scheduled Job',
-          Result => \%Net::FullAuto::FA_Core::setup_new_sched_job_menu,
+          Result => $setup_new_sched_job_menu_sub,
 
       },
       Item_4 => {
@@ -3394,8 +3671,9 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
       } elsif (-1<index $output,'Work with Existing Plans') {
          my $plans=getplans($bdb);
          if (-1<$#{$plans}) {
-            my %existing=(
+            my %existing_plans=(
 
+                  Name => 'existing_plans',
                   Item_1=> {
                  
                      Text => "]C[",
@@ -3404,7 +3682,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
                   },
                   Banner=> '   Select a Plan to work with:'
             );
-            my $outp=Menu(\%existing);
+            my $outp=Menu(\%existing_plans);
             undef $bdb;
             $dbenv->close();
             undef $dbenv;
@@ -3613,12 +3891,12 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
                   print "COMMENTED LINE=$line\n";
                   my @plancom=split ' ',$line;
                   my $plnum='';my $chksum='';
-print "WHAT IS THIS=$plancom[$#plancom-2]\n";
+#print "WHAT IS THIS=$plancom[$#plancom-2]\n";
                   if ($plancom[$#plancom-1] eq ']|[') {
                      $chksum=$plancom[$#plancom];
                      $plnum=$plancom[3];
                   }
-print "PLAN=$plnum and CHKSUM=$chksum\n";
+#print "PLAN=$plnum and CHKSUM=$chksum\n";
                } else {
                   print "UNCOMMENTED LINE=$line<==\n";
                   my $tesline=sha256_hex($line);
