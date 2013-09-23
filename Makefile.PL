@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999925';
+$main::VERSION='0.99999926';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -817,7 +817,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.45');
+      '','2.46');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
@@ -1526,7 +1526,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
 
       }
 
-      my $url='http://www.cygwin.com/setup.exe';
+      my $url='http://www.cygwin.com/setup-x86.exe';
       if ($CPAN::META->has_usable('LWP')) {
          FA::LWP::UserAgent->config;
          print "Fetching with LWP:\n  $url\n";
@@ -1560,7 +1560,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                <STDIN>;
                exit 1;
             }
-            open(CP,">$main::root_dir\\setup.exe") || die $!;
+            open(CP,">$main::root_dir\\setup-x86.exe") || die $!;
             binmode(CP);
             print CP $res->content;
             my $cyghome=$Ua->get('http://www.cygwin.com');
@@ -1588,7 +1588,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                }
             } 
          } elsif ($res->status_line=~/403/) {
-            $url='http://www.fullautosoftware.net/download/setup.exe'; 
+            $url='http://www.fullautosoftware.net/download/setup-x86.exe'; 
             $req = HTTP::Request->new(GET => $url);
             $req->header('Accept' => 'text/html');
             $res = $Ua->request($req);
@@ -1596,7 +1596,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                print " + request successful.\n"
                   if $CPAN::DEBUG;
                mkpath($main::root_dir,1) unless -d $main::root_dir;
-               open(CP,">$main::root_dir\\setup.exe") || die $!;
+               open(CP,">$main::root_dir\\setup-x86.exe") || die $!;
                binmode(CP);
                print CP $res->content;
             } elsif ($res->status_line=~/403/) {
@@ -1626,7 +1626,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             die $res->status_line;
          }
          close(CP) || die $!;
-         chmod 0755, "$main::root_dir\\setup.exe";
+         chmod 0755, "$main::root_dir\\setup-x86.exe";
         
          my $mirror_url='http://www.cygwin.com/mirrors.html';
          $req = HTTP::Request->new(GET => $mirror_url);
@@ -1655,21 +1655,21 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $selection=",$selection";
             }
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup.exe -P gcc4-core,'
+                      .'setup-x86.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
                       .'libmpfr4'.$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup.exe -P gcc4-core,'
+                      .'setup-x86.exe -P gcc4-core,'
                       .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
                       .'libmpfr4 -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
          } else {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup.exe -P openssh,ncurses,inetutils,procps,vim,'
+                      .'setup-x86.exe -P openssh,ncurses,inetutils,procps,vim,'
                       .'libmpfr4 -X -A -q '."-R $main::root_dir ".'-s '
                       .$mirror_url;
          }
@@ -2847,7 +2847,7 @@ if ($^O eq 'cygwin' && !can_cc()) {
            "\n                      version 4 as provided by Cygwin".
            "\n                      is required to install FullAuto".
            "\n                      on Windows.".
-           "\n(Hint: Run Cygwin setup.exe and install 'gcc4-core' ".
+           "\n(Hint: Run Cygwin setup-x86.exe and install 'gcc4-core' ".
            "and 'gcc4-g++' under the Category 'Devel' ).".
            "\n\n";
    die $die;
@@ -2896,7 +2896,7 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
             "\n                  as provided by Cygwin".
             "\n                  is required to install FullAuto".
             "\n                  on Windows.".
-            "\n(Hint: Run Cygwin setup.exe and install OpenSSH ".
+            "\n(Hint: Run Cygwin setup-x86.exe and install OpenSSH ".
             "under the Category 'Net' ).".
             "\n\n";
       print "Press <ENTER> if you wish to continue, or 'N' to quit . . . [Y] ";
@@ -3435,7 +3435,7 @@ if ($@) {
            "\n                      You may be missing the Berkeley DB 'c' library.".
            "\n                      This 'c' library is required to install FullAuto\n";
    if ($^O eq 'cygwin') {
-      $die.="\n(Hint: Run Cygwin setup.exe and install Oracle Berkley DB ".
+      $die.="\n(Hint: Run Cygwin setup-x86.exe and install Oracle Berkley DB ".
            "under the Category 'Database' ).";
    } else {
       $die.="\n(Hint: goto ->  http://www.oracle.com/technetwork/".
@@ -4065,7 +4065,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.45;
+#requires        'Term::Menus'               => 2.46;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

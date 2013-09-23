@@ -2903,7 +2903,14 @@ my $getplans_sub=sub {
 my $generate_crontrab=sub {
 
    package generate_crontrab;
+   no strict 'subs';
+   use BerkeleyDB;
+   use Digest::SHA qw(sha256_hex);
    use Net::FullAuto::FA_Core;
+   use File::Path;
+   my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
+   my $progname=substr($0,(rindex $0,'/')+1,-3);
+   require "$loc/fa_defs.pm";
    my $data='][[ "select_recurrent_minutes" '.
             ']|[ ]P[{select_recurrent_months} '.
             ']|[ ]P[{select_recurrent_weekdays} '.
@@ -2919,15 +2926,16 @@ print "DATA=$data\n";
 print "ERROR=$@\n" if $@;
 print "OUTPUT=$output\n";<STDIN>;
    my ($monthstring,$weekdaysstring,$daystring,
-       $hourstring,$minstring,$weekstring)=
-       ('','','','','');
+       $hourstring,$minstring,$weekstring,$track)=
+       ('','','','','','',0);
    if (ref $output->[1] eq 'ARRAY') {
-      if ($#{$output->[1]}==11) {
+      if ($#{$output->[1]}==11
+            || -1<index $output->[1]->[0],'Every') {
          $monthstring='*';
       } elsif ($#{$output->[1]}==0) {
-         $monthstring=$monthconv{${$output->[1]}[0]};
+         $monthstring=$monthconv{$output->[1]->[0]};
       } else {
-         my $cnt=$monthconv{${$output->[1]}[0]};
+         my $cnt=$monthconv{$output->[1]->[0]};
          my $save_start=$cnt;
          foreach my $month (@{$output->[1]}) {
             unless ($cnt++==$monthconv{$month}) {
@@ -2937,17 +2945,19 @@ print "OUTPUT=$output\n";<STDIN>;
          }
          if (-1<$save_start) {
             $monthstring=$save_start.'-'.
-               $monthconv{${$output->[1]}
-               [$#{$output->[1]}]};
+               $monthconv{$output->[1]->[$#{$output->[1]}]};
          } else {
             chop $monthstring;
          }
       }
+   } elsif (-1<index $output->[1],'Every') {
+      $monthstring='*';
    } else {
       $monthstring=$monthconv{$output->[1]};
    }
    if (ref $output->[2] eq 'ARRAY') {
-      if ($#{$output->[2]}==6) {
+      if ($#{$output->[2]}==6
+            || -1<index $output->[2]->[0],'Every') {
          $weekdaysstring='*';
       } elsif ($#{$output->[2]}==0) {
          $weekdaysstring=$weekdaysconv{${$output->[2]}[0]};
@@ -2968,16 +2978,19 @@ print "OUTPUT=$output\n";<STDIN>;
             chop $weekdaysstring;
          }
       }
+   } elsif (-1<index $output->[2],'Every') {
+      $weekdaysstring='*';
    } else {
       $weekdaysstring=$weekdaysconv{$output->[2]};
    }
    if (ref $output->[3] eq 'ARRAY') {
-      if ($#{$output->[3]}==30) {
+      if ($#{$output->[3]}==30
+            || -1<index $output->[3]->[0],'Every') {
          $daystring='*';
       } elsif ($#{$output->[3]}==0) {
-         $daystring=unpack('x5 a*',${$output->[3]}[0]);
+         $daystring=unpack('x5 a*',$output->[3]->[0]);
       } else {
-         my $cnt=unpack('x5 a*',${$output->[3]}[0]);
+         my $cnt=unpack('x5 a*',$output->[3]->[0]);
          my $save_start=$cnt;
          foreach my $day (@{$output->[3]}) {
             $day=unpack('x5 a*',$day);
@@ -2988,24 +3001,29 @@ print "OUTPUT=$output\n";<STDIN>;
          }
          if (-1<$save_start) {
             $daystring=$save_start.'-'.
-               ${$output->[3]}[$#{$output->[3]}];
+               $output->[3]->[$#{$output->[3]}];
          } else {
             chop $daystring;
          }
       }
+   } elsif (-1<index $output->[3],'Every') {
+      $daystring='*';
    } else {
       $daystring=unpack('x5 a*',{$output->[3]});
    }
-print "DAYSTRING=$daystring\n";<STDIN>;
    if (ref $output->[4] eq 'ARRAY') {
-      if ($#{$output->[4]}==23) {
+      if ($#{$output->[4]}==23 
+            || -1<index $output->[4]->[0],'Every') {
          $hourstring='*';
       } elsif ($#{$output->[4]}==0) {
-         $hourstring=$hourconv{${$output->[4]}[0]};
+         $hourstring=$hourconv{unpack('x6 a*',$output->[4]->[0])};
       } else {
-         my $cnt=$hourconv{unpack('x6 a*',${$output->[4]}[0])};
+         my $out=${$output->[4]}[0];
+         $out=~s/^.*Hour\s*(.*)$/$1/;
+         my $cnt=$hourconv{unpack('x6 a*',$out)};
          my $save_start=$cnt;
          foreach my $hour (@{$output->[4]}) {
+            $hour=~s/^.*Hour\s*(.*)$/$1/;
             unless ($cnt++==$hourconv{unpack('x6 a*',$hour)}) {
                $save_start=-1;
             }
@@ -3013,22 +3031,25 @@ print "DAYSTRING=$daystring\n";<STDIN>;
          }
          if (-1<$save_start) {
             $hourstring=$save_start.'-'.
-               $hourconv{unpack('x6 a*',${$output->[4]}
-               [$#{$output->[4]}])};
+               $hourconv{unpack('x6 a*',
+               $output->[4]->[$#{$output->[4]}])};
          } else {
             chop $hourstring;
          }
       }
+   } elsif (-1<index $output->[4],'Every') {
+      $hourstring='*';
    } else {
       $hourstring=$hourconv{unpack('x6 a*',$output->[4])};
    }
    if (ref $output->[5] eq 'ARRAY') {
-      if ($#{$output->[5]}==59) {
+      if ($#{$output->[5]}==59
+            || -1<index $output->[5]->[0],'Every') {
          $minstring='*';
       } elsif ($#{$output->[5]}==0) {
-         $minstring=unpack('x8 a*',${$output->[5]}[0]);
+         $minstring=unpack('x8 a*',$output->[5]->[0]);
       } else {
-         my $cnt=unpack('x8 a*',${$output->[5]}[0]);
+         my $cnt=unpack('x8 a*',$output->[5]->[0]);
          my $save_start=$cnt;
          foreach my $minute (@{$output->[5]}) {
             $minute=unpack('x8 a*',$minute);
@@ -3039,40 +3060,89 @@ print "DAYSTRING=$daystring\n";<STDIN>;
          }
          if (-1<$save_start) {
             $minstring=$save_start.'-'.
-               ${$output->[5]}[$#{$output->[5]}];
+               $output->[5]->[$#{$output->[5]}];
          } else {
             chop $minstring;
          }
       }
+   } elsif (-1<index $output->[5],'Every') {
+      $minstring='*';
    } else {
       $minstring=unpack('x8 a*',$output->[5]);
    }
-   my $planstring=$output->[6];
+   my $planstring=$output->[6]->[0];
+   $planstring=~s/^Plan:\s*(\d+)\s+.*$/$1/;
    my $cronstring=$minstring.' '.$hourstring.' '.$daystring.' '.
          $monthstring.' '.$weekdaysstring;
-   print "CRONSTRING=$cronstring\n";<STDIN>;
-   #our $crontabpath='';
-   #if (-e '/usr/bin/crontab') {
-   #   $crontabpath='/usr/bin/';
-   #} elsif (-e '/bin/crontab') {
-   #   $crontabpath='/bin/';
-   #} elsif (-e '/usr/local/bin/crontab') {
-   #   $crontabpath='/usr/local/bin/';
-   #}
-   #my ($stdout,$stderr)=('','');
-   #($stdout,$stderr)=cmd("${crontabpath}crontab -l");
-#print "WAHT IS CRONTABSTDOUT=$stdout\n";
-   #my $mkdflag=0;
-   #unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs') {
-   #   $mkdflag=1;
-   #   my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
-   #   my $m=($^O eq 'cygwin')?"-m $mode ":'';
-   #   my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-   #           $m.$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Jobs';
-   #   my $stdout='';my $stderr='';
-   #   ($stdout,$stderr)=&setuid_cmd($cmd,5);
-   #   &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
-   #}
+print "CRONSTRING=$cronstring and PLANSTRING=$planstring<==\n";<STDIN>;
+   my $crontabpath=$Net::FullAuto::FA_Core::gbp->('crontab');
+   my ($stdout,$stderr)=('','');
+   ($stdout,$stderr)=Net::FullAuto::FA_Core::cmd("${crontabpath}crontab -l");
+print "WAHT IS CRONTABSTDOUT=$stdout and STDERR=$stderr\n";<STDIN>;
+   my $mkdflag=0;
+   unless (-d $fa_defs::FA_Secure.'Jobs') {
+      $mkdflag=1;
+      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+      my $m=($^O eq 'cygwin')?"-m $mode ":'';
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
+              $m.$fa_defs::FA_Secure.'Jobs';
+      my $stdout='';my $stderr='';
+      ($stdout,$stderr)=&Net::FullAuto::FA_Core::setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
+   }
+   my $dbenv = BerkeleyDB::Env->new(
+      -Home  => $fa_defs::FA_Secure.'Jobs',
+      -Flags =>
+         DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+   ) or &handle_error(
+     "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
+   my $filename=$Net::FullAuto::FA_Core::progname.'_jobs.db';
+   my $bdb = BerkeleyDB::Btree->new(
+      -Filename => $filename,
+      -Flags    => DB_CREATE,
+      -Compare  => sub { $_[0] <=> $_[1] },
+      -Env      => $dbenv
+   ) or &handle_error(
+      "cannot open Btree for DB: $BerkeleyDB::Error\n",'',$track);
+   if ($mkdflag && $^O eq 'cygwin') {
+      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
+      my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
+              $fa_defs::FA_Secure.'Jobs/*';
+      my ($stdout,$stderr)=&Net::FullAuto::FA_Core::setuid_cmd($cmd,5);
+      &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
+   }
+   my $cronentry="$cronstring /usr/local/bin/fa --login ".
+                 "$Net::FullAuto::FA_Core::username ".
+                 "--password --plan $planstring";
+   if ($stderr && -1<index $stderr,'no crontab') {
+      my $dig=sha256_hex($cronentry);
+print "DIG=$dig and CRONENTRY=$cronentry\n";
+      ($stdout,$stderr)=Net::FullAuto::FA_Core::cmd(
+         $Net::FullAuto::FA_Core::gbp->('printf').
+         "printf \"# FullAuto Job: $dig\012".
+         $cronentry."\012\"".' | crontab -');
+   } elsif ($stdout=~/^\s*[^#].*$/m) {
+      my $line='';
+      my %fullauto_jobs=();
+      my %all_cron_entries=();
+      my %line_lookup=();
+      foreach my $line (split "\n", $stdout) {
+         if ($line=~/^\s*[#] FullAuto Job: (\S+)$/) {
+            $fullauto_jobs{$1}='';
+         } else {
+            print "UNCOMMENTED LINE=$line<==\n";
+            my $dig=sha256_hex($line);
+            $all_cron_entries{$dig}=$line;
+            $line_lookup{$line}=$dig;
+         }
+#print "LINE=$line\n";
+      }
+      if (exists $line_lookup{$cronentry}
+            && exists $fullauto_jobs{$line_lookup{$cronentry}}) {
+         print "FullAuto Cmd: $cronentry\nAlready exists as a job: $line_lookup{$cronentry}\n";<STDIN>;
+      }
+#print "WE GOT CRON CONTENTS=$stdout<==\n";
+   }
 
    return '{plan_menu}<';
 
@@ -3083,7 +3153,7 @@ my %select_recurrent_minutes=(
    Name => 'select_recurrent_minutes',
    Item_1 => {
 
-        Text => 'Do Not Use this Criteria',
+        Text => 'Every Minute of the Hour (*)',
         Result => $generate_crontrab,
 
    },
@@ -3114,7 +3184,7 @@ my %select_recurrent_hours=(
    Name => 'select_recurrent_hours',
    Item_1 => {
 
-        Text => 'Do Not Use this Criteria',
+        Text => 'Every Hour of the Day (*)',
         Result => \%select_recurrent_minutes,
 
    },
@@ -3142,7 +3212,7 @@ my %select_recurrent_days=(
    Name => 'select_recurrent_days',
    Item_1 => {
 
-        Text => 'Do Not Use this Criteria',
+        Text => 'Every Day of the Month (*)',
         Result => \%select_recurrent_hours,
 
    },
@@ -3170,7 +3240,7 @@ my %select_recurrent_weekdays=(
    Name => 'select_recurrent_weekdays',
    Item_1 => {
 
-        Text => 'Do Not Use this Criteria',
+        Text => 'Every Day of the Week (*)',
         Result => \%select_recurrent_days,
 
    },
@@ -3197,7 +3267,7 @@ my %select_recurrent_months=(
 
    Name => 'select_recurrent_months',
    Item_1 => {
-        Text => 'Do Not Use this Criteria',
+        Text => 'Every Month of the Year (*)',
         Result => \%select_recurrent_weekdays,
    },
    Item_2 => {
@@ -12558,14 +12628,14 @@ FAM
 
       Item_1 => {
 
-          Text => 'FullAuto *DEFAULT* Settings Menu',
-          Result => $admin_defaults_sub->(),
+          Text => 'FullAuto *PLAN + JOB* Menu',
+          Result => $plan_menu_sub,
 
       },
       Item_2 => {
 
-          Text => 'FullAuto *PLAN* + Job Menu',
-          Result => $plan_menu_sub,
+          Text => 'FullAuto *DEFAULT* Settings Menu',
+          Result => $admin_defaults_sub->(),
 
       },
       Item_3 => {
