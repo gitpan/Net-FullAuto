@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999926';
+$main::VERSION='0.99999927';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -219,7 +219,7 @@ END
             "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
             "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
             "\n           ncurses, cron, and procps [as provided by Cygwin]".
-            "\n           gcc4-core and gcc4-g++ [as provided by Cygwin]".
+            "\n           gcc-core and gcc-g++ [as provided by Cygwin]".
             "\n           Oracle Berkeley DB [as provided by Cygwin or Oracle]".
             "\n\n           **IMPORTANT** - the FullAuto install, either manual".
             "\n           or via CPAN, must be run *inside* a Cygwin bash shell".
@@ -1655,15 +1655,15 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $selection=",$selection";
             }
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup-x86.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
+                      .'setup-x86.exe -P gcc-core,'
+                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
                       .'libmpfr4'.$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
          } elsif ($selection!~/MINIMAL/s) {
             $setup_cmd="$drlet & cd \"$main::root_dir\" & "
-                      .'setup-x86.exe -P gcc4-core,'
-                      .'gcc4-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
+                      .'setup-x86.exe -P gcc-core,'
+                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
                       .'libmpfr4 -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
@@ -2674,7 +2674,7 @@ print "REBASE ONE\n";
            "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
            "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
            "\n           ncurses, cron, and procps [as provided by Cygwin]".
-           "\n           gcc4-core and gcc4-g++ [as provided by Cygwin]".
+           "\n           gcc-core and gcc-g++ [as provided by Cygwin]".
            "\n           Oracle Berkeley DB [as provided by Cygwin or Oracle]".
            "\n\n           **IMPORTANT** - the FullAuto install, either manual".
            "\n           or via CPAN, must be run *inside* a Cygwin bash shell".
@@ -2847,8 +2847,8 @@ if ($^O eq 'cygwin' && !can_cc()) {
            "\n                      version 4 as provided by Cygwin".
            "\n                      is required to install FullAuto".
            "\n                      on Windows.".
-           "\n(Hint: Run Cygwin setup-x86.exe and install 'gcc4-core' ".
-           "and 'gcc4-g++' under the Category 'Devel' ).".
+           "\n(Hint: Run Cygwin setup-x86.exe and install 'gcc-core' ".
+           "and 'gcc-g++' under the Category 'Devel' ).".
            "\n\n";
    die $die;
 } elsif (!can_cc()) {
@@ -2877,10 +2877,10 @@ if ($^O eq 'cygwin' && !can_cc()) {
            "\n                      if you lack root/admin privileges."
    }
 
-   my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc version 4)".
+   my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
            "\n                      is required to install FullAuto";
            $moreinfo.
-           "\n                      (Hint: goto www.gnu.org for gcc version 4).".
+           "\n                      (Hint: goto www.gnu.org for gcc).".
            "\n\n";
    die $die;
 }

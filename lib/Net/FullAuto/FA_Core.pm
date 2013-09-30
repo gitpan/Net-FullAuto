@@ -2369,7 +2369,7 @@ my $select_time_result_sub = sub {
    ($num,$type)=split /\s+/, $selection;
    if ($num!~/^\d/) {
       my @d=split /,* +/, $selection;
-      $mn=unpack('a3',$d[0]);
+      my $mn=unpack('a3',$d[0]);
       if (defined $d[3] && $d[3]) {
          my $ap=substr($d[3],-2);
          my ($h,$m)=('','');
@@ -4188,6 +4188,7 @@ sub acquire_fa_lock
      if ($c=~/\d/) {
         $letoct.=$c;
      } else {
+        $enable=1 unless $enable;
         $letoct.=ord($c);
      }
    }
@@ -4263,7 +4264,7 @@ sub acquire_fa_lock
    if (-1<$#processes) {
       $maxnumberallowed=$locks->{$processes[0]}->{'MaxNumberAllowed'};
       $killafterseconds=$locks->{$processes[0]}->{'KillAfterSeconds'}||0;
-      $enable=$locks->{$processes[0]}->{'Enable'};
+      $enable=$locks->{$processes[0]}->{'Enable'}||0;
       $lock_description=$locks->{$processes[0]}->{'Lock_Description'}||'';
       $wait_for_newlock=$locks->{$processes[0]}->{'Wait_For_NewLock'};
       $pollingmillisecs=$locks->{$processes[0]}->{'PollingMilliSecs'};
@@ -4449,6 +4450,9 @@ sub acquire_fa_lock
       }
       $newlock=Data::Dump::Streamer::Dump($locks)->Out();
       my $status=$Net::FullAuto::FA_Core::bdb_locks->db_put($letoct,$newlock);
+      return 1 unless $status;
+      return 0;
+
    }
 }
 
@@ -8774,7 +8778,7 @@ my $get_modules=sub {
       next if -d $entry;
       push @return, $entry;
    }
-   return @return;
+   return \@return;
 };
 
 my $custmm=<<FIN;
@@ -13616,7 +13620,7 @@ sub setuid_cmd
 {
    my @topcaller=caller;
    print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_Core::debug;
+      if $Net::FullAuto::FA_Core::debug && $^O eq 'cygwin';
    # NOTE: the CALLER line is commmented because it breaks
    #       this routine when set. Anything printing to
    #       stdout from this routine will clash with
@@ -14129,7 +14133,7 @@ sub new {
             "${hostlabel}__%-$chk_id"},'';
       }
    }
-   my ($ftp_handle,$ftp_pid,$work_dirs,$ftr_cmd,$ftm_type,
+   my ($ftp_handle,$ftp_pid,$work_dirs,$homedir,$ftr_cmd,$ftm_type,
        $cmd_type,$smb,$fpx_handle,$fpx_pid,$stderr)=
        ftm_login($hostlabel,$new_master,$_connect,$cache);
    if ($stderr) {
@@ -14180,6 +14184,7 @@ sub new {
    $self->{_work_dirs}=$work_dirs;
    $self->{_ftp_pid}=$ftp_pid if $ftp_pid;
    $self->{_fpx_pid}=$fpx_pid if $fpx_pid;
+   $self->{_homedir}=$homedir;
    bless($self,$class);
    $Net::FullAuto::FA_Core::Connections{"${hostlabel}__%-$chk_id"}=$self;
    return $self,'';
@@ -15568,6 +15573,7 @@ sub ftm_login
    my $new_master=$_[1]||'';
    my $_connect=$_[2]||'';
    my $cache=$_[3]||'';
+   my $homedir='';
    my $kill_arg=($^O eq 'cygwin')?'f':9;
    my ($ip,$hostname,$use,$ms_share,$ms_domain,
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
@@ -17414,6 +17420,12 @@ print "AUTHENHERE!1111\n";<STDIN>;
             if $ftm_type ne 'sftp';
          &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
 
+         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,'pwd',$cache);
+         &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
+         my $rwd='Remote working directory:';
+         my $icd=' is the current directory';
+         ($homedir=$output)=~s/^(?:257 ["]|$rwd\s+)(.*)?(?:["]$icd)*$/$1/s;
+
          if ($_connect ne 'connect_sftp' && $_connect ne 'connect_ftp') {
             my $ftmtype='';
             if ($ms_hostlabel) {
@@ -17649,7 +17661,7 @@ print "File_Transfer::ftm_login() LOOKING FOR PROMPT=$line\n and ERROR=$@\n";
          } last;
       } else { last }
       last if $die;
-   } return $ftp_handle,$ftp_pid,$work_dirs,$ftr_cmd,
+   } return $ftp_handle,$ftp_pid,$work_dirs,$homedir,$ftr_cmd,
             $ftm_type,$cmd_type,$smb,'','',$die;
 
 } ## END of &ftm_login

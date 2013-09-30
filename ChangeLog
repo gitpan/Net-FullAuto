@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-09-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999927 released.
+
+        * Work on Scheduled Jobs continues.
+
+        * Added _homedir to ftp.
+
+
 2013-09-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999926 released.
