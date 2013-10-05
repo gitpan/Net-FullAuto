@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-10-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999928 released.
+
+        * Fixed bugs found when running with cron.
+
+
 2013-09-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999927 released.

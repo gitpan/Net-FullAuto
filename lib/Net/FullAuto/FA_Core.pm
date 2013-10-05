@@ -19161,6 +19161,11 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
       my $err='';
       ($dest_output,$dest_dir,$err)=get_dest_ls_output(
          $destFH,$dest_fdr,$dms_share,$dhost,$die);
+      if ($err) {
+         if (wantarray) {
+            return '',$err;
+         } else { &Net::FullAuto::FA_Core::handle_error($err,'-7'); }
+      }
 
       ($output,$stderr)=$destFH->cwd($dest_dir)
          if $dest_fdr && (!exists $destFH->{_smb});
@@ -28302,7 +28307,8 @@ print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIPTTTTTTTTTT=$growou
                               } else {
                                  next FETCH;                                 
                               }
-                           } elsif ($growoutput=~/^stdout:\s*stdout:/s) {
+                           #} elsif ($growoutput=~/^stdout:\s*stdout:/s) {
+                           } elsif ($growoutput=~/^stdout:.*stdout:/s) {
                               $command_stripped_from_output=1;
                            }
 
