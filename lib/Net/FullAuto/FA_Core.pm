@@ -4262,12 +4262,12 @@ sub acquire_fa_lock
       @processes=keys %{$locks};
    }
    if (-1<$#processes) {
-      $maxnumberallowed=$locks->{$processes[0]}->{'MaxNumberAllowed'};
+      $maxnumberallowed=$locks->{$processes[0]}->{'MaxNumberAllowed'}||1;
       $killafterseconds=$locks->{$processes[0]}->{'KillAfterSeconds'}||0;
       $enable=$locks->{$processes[0]}->{'Enable'}||0;
       $lock_description=$locks->{$processes[0]}->{'Lock_Description'}||'';
-      $wait_for_newlock=$locks->{$processes[0]}->{'Wait_For_NewLock'};
-      $pollingmillisecs=$locks->{$processes[0]}->{'PollingMilliSecs'};
+      $wait_for_newlock=$locks->{$processes[0]}->{'Wait_For_NewLock'}||60;
+      $pollingmillisecs=$locks->{$processes[0]}->{'PollingMilliSecs'}||500;
       $newlock={
 
          MaxNumberAllowed => $maxnumberallowed,
@@ -4339,6 +4339,7 @@ sub acquire_fa_lock
          }
          my $expired_flag=0;
          if (!$getnewlock) {
+            $locks->{$processes[0]}->{'Wait_For_NewLock'}||=60;
             my $expires=time+$locks->{$processes[0]}->{'Wait_For_NewLock'};
             my $p_length=length $pollingmillisecs;
             my $polling=$pollingmillisecs;

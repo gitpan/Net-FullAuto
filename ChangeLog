@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-10-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999929 released.
+
+        * Fixed with ftp file locking.
+
+
 2013-10-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999928 released.
