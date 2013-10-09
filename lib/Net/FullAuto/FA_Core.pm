@@ -14270,7 +14270,8 @@ print "GET_VLABEL_CALLER=",caller,"\n";<STDIN>;
       next if $label1 eq '';
       if ($label1 ne uc($label1)) {
          print $Net::FullAuto::FA_Core::blanklines;
-         print "\n\n       ERROR! - Use Only Upper Case Letters for Version Labels!";
+         print "\n\n       ERROR! - Use Only Upper Case Letters ",
+               "for Version Labels!";
          next;
       }
       print "\n       Please Re-Enter the Version Number : ";
@@ -14289,9 +14290,10 @@ print "GET_VLABEL_CALLER=",caller,"\n";<STDIN>;
             my %settings=();
             if (($archive_hostlabel eq "__Master_${$}__"
                    && $Net::FullAuto::FA_Core::local_hostname eq substr(
-                   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'HostName'},
-                   0,index
-                   $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{'HostName'},
+                   $Net::FullAuto::FA_Core::Hosts{
+                   "__Master_${$}__"}{'HostName'},0,index
+                   $Net::FullAuto::FA_Core::Hosts{
+                   "__Master_${$}__"}{'HostName'},
                    '.')) || $deploy_type eq 'put') {
                if (defined $archivedir && $archivedir ne '') {
                   if (-1<index $archivedir,'__VLABEL__') {
@@ -14307,9 +14309,11 @@ print "GET_VLABEL_CALLER=",caller,"\n";<STDIN>;
                                ."!\n\nIf this is the right Version, "
                                ."move or delete the\ndirectory on $target "
                                ."before running this script\n\n";
-                        &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
+                        &Net::FullAuto::FA_Core::handle_error(
+                           $die,'__cleanup__');
                      }
-                  } elsif ($^O ne 'cygwin' && $^O ne 'MSWin32' && $^O ne 'MSWin64'
+                  } elsif ($^O ne 'cygwin' && $^O ne 'MSWin32'
+                        && $^O ne 'MSWin64'
                         && $ENV{OS} ne 'Windows_NT') {
 #### DO ERROR TRAPPING!!!!!!!!!!!!
 #print "MKDIR1=$archivedir\n";
@@ -14878,6 +14882,7 @@ sub get
             if (-1<index $file_arg,'/') {
                $path=substr($file_arg,0,(rindex $file_arg,'/'));
                $file=substr($file_arg,(rindex $file_arg,'/')+1);
+               $path=~s/^~/$self->{_home_dir}/;
                ($output,$stderr)=&Rem_Command::ftpcmd($self,
                   "cd \"$path\"",$cache);
                if ($stderr) {
@@ -14890,6 +14895,7 @@ sub get
             } elsif (-1<index $file_arg,'\\') {
                $path=substr($file_arg,0,(rindex $file_arg,'\\'));
                $file=substr($file_arg,(rindex $file_arg,'\\')+1);
+               $path=~s/^~/$self->{_home_dir}/;
                ($output,$stderr)=&Rem_Command::ftpcmd($self,
                   "cd \"$path\"",$cache);
                if ($stderr) {
@@ -14947,6 +14953,7 @@ sub put
    my ($output,$stderr)='';
    foreach my $file (@args) {
       if ($self->{_ftp_handle} ne "__Master_${$}__") {
+         $file=~s/^~/$self->{_home_dir}/;
          ($output,$stderr)=&Rem_Command::ftpcmd($self,
             "put $file",$cache);
          &Net::FullAuto::FA_Core::release_fa_lock($file);
@@ -14998,7 +15005,8 @@ sub ftr_cmd
       if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "File_Transfer::ftr_cmd() CALLER=",
       (join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $hostlabel=$_[0];
    my $ftp_handle=$_[1];
    my $new_master=$_[2]||'';
@@ -15060,11 +15068,11 @@ sub ftr_cmd
             }
             ${$work_dirs}{_pre_mswin}=$cdr.'\\\\';
             $ftr_cmd->{_cygdrive}||='/';
-            ${$work_dirs}{_pre}=$curdir;
-            ($output,$stderr)=$ftr_cmd->cmd('cd '.${$work_dirs}{_tmp});
+            $work_dirs->{_pre}=$curdir;
+            ($output,$stderr)=$ftr_cmd->cmd('cd '.$work_dirs->{_tmp});
             if ($stderr) {
                @FA_Core::tran=();
-               my $die="Cannot cd to TransferDir -> ".${$work_dirs}{_tmp}
+               my $die="Cannot cd to TransferDir -> ".$work_dirs->{_tmp}
                       ."\n        $stderr";
                &Net::FullAuto::FA_Core::handle_error($die,'-5');
             }
@@ -18071,6 +18079,54 @@ sub cwd
       if (wantarray) {
          return 'CWD command successful.','';
       } else { return 'CWD command successful.' }
+   } elsif ($target_dir eq '-' || $target_dir eq '~') {
+      if ($self->{_work_dirs}->{_pre}) {
+         my $chdir='';
+         if ($target_dir eq '-') {
+            $chdir=$self->{_work_dirs}->{_pre};
+         } else {
+            $chdir=$self->{_homedir};
+         }
+         if (exists $self->{_cmd_handle} && $self->{_cmd_handle}) {
+            ($output,$stderr)=$self->{_cmd_handle}->cmd("cd $chdir");
+         }
+         if ($stderr) {
+            my $die="\n\n   --> $target_dir\n\n"
+                   ."       DOES NOT EXIST!: $!";
+            if (wantarray) { return '',$die }
+            else { &Net::FullAuto::FA_Core::handle_error($die,'-7') }
+         }
+         if ($self->{_ftm_type}=~/s*ftp/) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(
+                { _ftp_handle=>$self->{_ftp_handle},
+                  _hostlabel=>[ $hostlabel,'' ],
+                  _ftm_type  =>$self->{_ftm_type} },
+                "cd \"$chdir\"",$cache);
+            if ($stderr) {
+               if (wantarray) { return '',$stderr }
+               else {
+                  &Net::FullAuto::FA_Core::handle_error($stderr,'-4')
+               }
+            }
+         }
+         my $save_pre=$self->{_work_dirs}->{_pre};
+         $self->{_work_dirs}->{_pre}=
+            $self->{_work_dirs}->{_cwd};
+         if ($target_dir eq '-') {
+            $self->{_work_dirs}->{_cwd}=$save_pre;
+         } else {
+            $self->{_work_dirs}->{_cwd}=
+               $self->{_homedir};
+         }
+         if (wantarray) {
+            return 'CWD command successful.','';
+         } else { return 'CWD command successful.' }
+         #$self->{_work_dirs}->{_pre_mswin}=
+         #   $self->{_work_dirs}->{_cwd_mswin};
+         #$self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
+      } elsif (wantarray) {
+         return 'CWD command successful.','';
+      } else { return 'CWD command successful.' }
    }
 print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
       if $Net::FullAuto::FA_Core::log &&
@@ -18159,16 +18215,19 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
          }
       } elsif ($target_dir=~/^([^~.\/\\][^:])/) {
          $target_dir=~s/\\/\//g;
-         $target_dir=$self->{_work_dirs}->{_cwd}
-                    .$target_dir.'/';
-         ($output,$stderr)=$self->{_cmd_handle}->
-               cmd("cd $target_dir");
+         if (exists $self->{_work_dirs}->{_cwd}) {
+            $self->{_work_dirs}->{_pre}=
+                $self->{_work_dirs}->{_cwd};
+            $target_dir=$self->{_work_dirs}->{_cwd}.$target_dir.'/';
+         } else {
+            $self->{_work_dirs}->{_pre}=$self->{_homedir};
+            $target_dir=$self->{_homedir}.'/'.$target_dir.'/';
+         }
+         if (exists $self->{_cmd_handle} && $self->{_cmd_handle}) {
+            ($output,$stderr)=$self->{_cmd_handle}->
+                  cmd("cd $target_dir");
+         }
          my $phost=$hostlabel;
-         #if ($self->{_cmd_type} eq 'ms_proxy') {
-         #   $phost=$Net::FullAuto::FA_Core::DeployMS_Proxy[0];
-         #} elsif ($self->{_cmd_type} eq 'tn_proxy') {
-         #   $phost=$Net::FullAuto::FA_Core::DeployTN_Proxy[0];
-         #}
          if ($stderr) {
             #my $die="The Transfer Directory on Proxy Host "
             my $die="The Transfer Directory on Host "
@@ -18186,9 +18245,12 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                 "cd \"$target_dir\"",$cache);
             if ($stderr) {
                if (wantarray) { return '',$stderr }
-               else { &Net::FullAuto::FA_Core::handle_error($stderr,'-3') }
+               else {
+                  &Net::FullAuto::FA_Core::handle_error($stderr,'-4')
+               }
             }
          }
+         $self->{_work_dirs}->{_cwd}=$target_dir;
          $self->{_work_dirs}->{_pre_mswin}=
             $self->{_work_dirs}->{_cwd_mswin};
          $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
@@ -18216,11 +18278,11 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                else { &Net::FullAuto::FA_Core::handle_error($stderr,'-3') }
             }
          }
-         $self->{_work_dirs}->{_pre}=$self->{_work_dirs}->{_cwd};
-         $self->{_work_dirs}->{_pre_mswin}=
-            $self->{_work_dirs}->{_cwd_mswin};
-         $self->{_work_dirs}->{_cwd}=$tar_dir.'/';
-         $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
+         #$self->{_work_dirs}->{_pre}=$self->{_work_dirs}->{_cwd};
+         #$self->{_work_dirs}->{_pre_mswin}=
+         #   $self->{_work_dirs}->{_cwd_mswin};
+         #$self->{_work_dirs}->{_cwd}=$tar_dir.'/';
+         #$self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
       } else {
          if (1<$len_tdir && unpack('a2',$target_dir) eq '..') {
             if ($self->{_ftm_type}=~/s*ftp/) {
@@ -18231,13 +18293,17 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                    'cd \'..\'',$cache);
                if ($stderr) {
                   if (wantarray) { return '',$stderr }
-                  else { &Net::FullAuto::FA_Core::handle_error($stderr,'-3') }
+                  else {
+                     &Net::FullAuto::FA_Core::handle_error($stderr,'-4')
+                  }
                }
             }
             ($output,$stderr)=$self->cmd('cd \'..\'');
             if ($stderr) {
                if (wantarray) { return '',$stderr }
-               else { &Net::FullAuto::FA_Core::handle_error($stderr,'-3') }
+               else {
+                  &Net::FullAuto::FA_Core::handle_error($stderr,'-4')
+               }
             }
          } elsif (unpack('a1',$target_dir) ne '/' &&
                unpack('a1',$target_dir) ne '\\' &&

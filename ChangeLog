@@ -19,11 +19,20 @@
 ################################################################
 
 
+2013-10-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999930 released.
+
+        * Can now use '-' and '~' with ftp cwd().
+
+        * Can now use '~' with ftp get() and put().
+
+
 2013-10-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999929 released.
 
-        * Fixed with ftp file locking.
+        * Fixed ftp file locking.
 
 
 2013-10-05  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
