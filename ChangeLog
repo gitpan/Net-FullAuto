@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-10-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999931 released.
+
+        * Runs with Perl 5.18 and BerkeleyDB 6.0.
+
+        * Fixed some Solaris installation issues.
+
+
 2013-10-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999930 released.

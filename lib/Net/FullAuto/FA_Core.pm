@@ -11787,8 +11787,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         return '',$line;
                      } else { &release_fa_lock(6543);die $line }
                   }
-                  last if $line=~
-                     /(?<!Last )login[: ]*$|username[: ]*$/i;
+                  last if $line!~/Last login/i &&
+                     $line=~/login[: ]*$|username[: ]*$/i;
                }
 
                $local_host->print($login_id);
@@ -15270,8 +15270,8 @@ print "FTR_RETURN3\n";
                   } elsif (-1<index $line,'AIX') {
                      $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'Uname'}='aix';
                   }
-                  last if $line=~
-                     /(?<!Last )login[: ]*$|username[: ]*$/i;
+                  last if $line!~/Last login/i &&
+                     $line=~/login[: ]*$|username[: ]*$/i;
                }
                while (1) {
                   eval {
@@ -17749,6 +17749,8 @@ sub wait_for_passwd_prompt
             } elsif (-1<index $lin,'Address already in use') {
                alarm 0;
                die 'Connection closed';
+            } elsif (-1< index $lin,'Write failed: Broken pipe') {
+                die "read timed-out\n";
             #} elsif (-1<index $lin,'No route to host') {
             #   alarm 0;
             #   die $lin;
@@ -18218,7 +18220,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
          if (exists $self->{_work_dirs}->{_cwd}) {
             $self->{_work_dirs}->{_pre}=
                 $self->{_work_dirs}->{_cwd};
-            $target_dir=$self->{_work_dirs}->{_cwd}.$target_dir.'/';
+            $target_dir=$self->{_work_dirs}->{_cwd}.'/'.$target_dir.'/';
          } else {
             $self->{_work_dirs}->{_pre}=$self->{_homedir};
             $target_dir=$self->{_homedir}.'/'.$target_dir.'/';
@@ -25246,8 +25248,8 @@ print $Net::FullAuto::FA_Core::MRLOG
                            $Net::FullAuto::FA_Core::Hosts{
                               $hostlabel}{'Uname'}='aix';
                         }
-                        last if $line=~
-                           /(?<!Last )login[: ]+$|username[: ]+$/i;
+                        last if $line!~/Last login/i &&
+                           $line=~/login[: ]*$|username[: ]*$/i;
                         if ($line=~/(repl\d*)>\s*$/s) {
                            $shell=$1;
                            $cmd_handle->prompt("/$shell> \$/");

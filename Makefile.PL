@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999930';
+$main::VERSION='0.99999931';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3418,31 +3418,53 @@ if ($get_BerkeleyDB) {
 
 chdir $main::curdir;
 
-my %hash=();
-eval {
-   require BerkeleyDB;
-   my $db = tie %hash, "BerkeleyDB::Btree",
+my $B_flag=1;
+while (1) {
+   eval {
+      my %hash=();
+      require BerkeleyDB;
+      my $db = tie %hash, "BerkeleyDB::Btree",
           -Filename => "fullauto_test_for_db_creation.db",
           -Flags =>  BerkeleyDB::DB_CREATE()
       or die "Cannot tie fullauto_test_for_db_creation.db: $!";
-   undef $db;
-   untie %hash;
-   unlink "fullauto_test_for_db_creation.db";
-};
-if ($@) {
-   my $die="\n$@\n".
-           "\n       FATAL ERROR! : Cannot create 'fullauto_test_for_db_creation.db'".
-           "\n                      You may be missing the Berkeley DB 'c' library.".
-           "\n                      This 'c' library is required to install FullAuto\n";
-   if ($^O eq 'cygwin') {
-      $die.="\n(Hint: Run Cygwin setup-x86.exe and install Oracle Berkley DB ".
-           "under the Category 'Database' ).";
-   } else {
-      $die.="\n(Hint: goto ->  http://www.oracle.com/technetwork/".
-           "products/berkeleydb/downloads/index.html ).";
+      undef $db;
+      untie %hash;
+      unlink "fullauto_test_for_db_creation.db";
+   };
+   if ($@) {
+      if (-1<index $@,'libgcc_s.so.1' && $B_flag) {
+         if (-e '/usr/local/lib/libgcc_s.so.1') {
+            `ln -s /usr/local/lib/libgcc_s.so.1 /usr/lib/libgcc_s.so.1`;
+            # Flush inheritance caches
+            @{BerkeleyDB::ISA} = ();
+            my $symtab = 'BerkeleyDB::';
+            # Delete all symbols except other namespaces
+            for my $symbol (keys %$symtab) {
+               next if $symbol =~ /\A[^:]+::\z/;
+               delete $symtab->{$symbol};
+            }
+            delete $INC{'BerkeleyDB.pm'};
+            $B_flag=0;
+            next;
+         }
+      }
+      my $die=<<END;
+$@
+   FATAL ERROR! : Cannot create 'fullauto_test_for_db_creation.db'
+                  You may be missing the Berkeley DB 'c' library.
+                  This 'c' library is required to install FullAuto.
+END
+      if ($^O eq 'cygwin') {
+         $die.="\n(Hint: Run Cygwin setup-x86.exe and install Oracle Berkley ".
+               "DB under the Category 'Database' ).";
+      } else {
+         $die.="\n(Hint: goto ->  http://www.oracle.com/technetwork/".
+               "products/berkeleydb/downloads/index.html ).";
+      }
+      $die.="\n\n";
+      die $die;
    }
-   $die.="\n\n";
-   die $die;
+   last
 }
 
 sub find_windows_app {
