@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-10-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999932 released.
+
+        * Can now use '..' with ftp cwd().
+
+
 2013-10-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999931 released.

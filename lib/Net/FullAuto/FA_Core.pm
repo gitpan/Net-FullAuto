@@ -50,7 +50,7 @@ package Net::FullAuto::FA_Core;
 #
 ## For compiling into MSWin32 setup executable with PAR::Packager
 #
-#  pp -o "Setup-FullAuto-v.99999904-MSWin32-x86.exe"
+#  pp -o "Setup-FullAuto-v.99999932-MSWin32-x86.exe"
 #     -l C:\strawberry\perl\bin\libgcc_s_sjlj-1.dll
 #     -l C:\strawberry\c\bin\libeay32_.dll
 #     -l C:\strawberry\c\bin\libz_.dll
@@ -304,7 +304,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   @invoked $cleanup pick Menu
                   $progname memnow acquire_semaphore
                   release_semaphore $savetran %hours
-                  $increment %month ls_timestamp
+                  $increment %month ls_parse
                   cleanup $dest_first_hash %days
                   test_file test_dir timelocal
                   %GLOBAL @GLOBAL $MRLOG $fullauto
@@ -1786,23 +1786,24 @@ sub get_now_am_pm
    }
 }
 
-sub ls_timestamp
+sub ls_parse
 {
 
-   my $line=$_[0];my $size='';
-   my $mn='';my $dy='';my $time='';my $fileyr='';
+   my $line=$_[0];my $size='';my $file='';
+   my $mn='';my $dy='';my $time=0;my $fileyr='';
    my $rx1=qr/\d+\s+\w\w\w\s+\d+\s+\d\d:\d\d\s+.*/;
    my $rx2=qr/\d+\s+\w\w\w\s+\d+\s+\d\d\d\d\s+.*/;
    if ($line=~s/^.*\s+($rx1|$rx2)$/$1/) {
-      $line=~/^(\d+)\s+(\w\w\w)\s+(\d+)\s+(\d\d:\d\d\s+|\d\d\d\d\s+)+.*$/;
+      $line=~/^(\d+)\s+(\w\w\w)\s+(\d+)\s+(\d\d:\d\d\s+|\d\d\d\d\s+)+(.*)$/;
       $size=$1;$mn=$Net::FullAuto::FA_Core::month{$2};$dy=$3;$time=$4;
+      $file=$5;
    }
    my $hr=12;my $mt='00';
    if (length $time==4) {
       $fileyr=$time;
-   } else {
-      ($hr,$mt)=unpack('a2 @3 a2',"$time");
-      my $yr=unpack('x1 a2',"$Net::FullAuto::FA_Core::thisyear");
+   } elsif ($time) {
+      ($hr,$mt)=unpack('a2 @3 a2',$time);
+      my $yr=unpack('x1 a2',$Net::FullAuto::FA_Core::thisyear);
       $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
       if ($Net::FullAuto::FA_Core::thismonth<$mn-1) {
          --$yr;
@@ -1817,8 +1818,8 @@ sub ls_timestamp
             $fileyr=$Net::FullAuto::FA_Core::curcen.$yr;
          }
       }
-   }
-   return $size, timelocal(0,$mt,$hr,$dy,$mn-1,$fileyr);
+   } else { return 0,0,'' }
+   return $size, timelocal(0,$mt,$hr,$dy,$mn-1,$fileyr), $file;
 
 }
 
@@ -16961,6 +16962,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                   $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                      $hostlabel}{'sshport'}.' ';
                }
+#####4444444
                $ftp_handle->print($Net::FullAuto::FA_Core::gbp->('sftp').
                                   'sftp '."${sshport}$sftploginid\@$host");
                FH: foreach my $hlabel (
@@ -17014,7 +17016,8 @@ print $Net::FullAuto::FA_Core::MRLOG
                ($ignore,$stderr)=&wait_for_passwd_prompt(
                   { _cmd_handle=>$ftp_handle,
                     _hostlabel=>[ $hostlabel,'' ],
-                    _cmd_type=>$cmd_type },$timeout);
+                    _cmd_type=>$cmd_type,
+                  },$timeout);
                if ($stderr) {
                   if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                      if (!$Net::FullAuto::FA_Core::cron &&
@@ -18081,17 +18084,19 @@ sub cwd
       if (wantarray) {
          return 'CWD command successful.','';
       } else { return 'CWD command successful.' }
-   } elsif ($target_dir eq '-' || $target_dir eq '~') {
+   } elsif ($target_dir eq '-' || $target_dir eq '~'
+         || $target_dir eq '..') {
       if ($self->{_work_dirs}->{_pre}) {
          my $chdir='';
          if ($target_dir eq '-') {
             $chdir=$self->{_work_dirs}->{_pre};
-         } else {
+         } elsif ($target_dir ne '..') {
             $chdir=$self->{_homedir};
-         }
+         } else { $chdir=$target_dir }
          if (exists $self->{_cmd_handle} && $self->{_cmd_handle}) {
             ($output,$stderr)=$self->{_cmd_handle}->cmd("cd $chdir");
          }
+         $stderr=$output if -1<index $output,"Couldn't can";
          if ($stderr) {
             my $die="\n\n   --> $target_dir\n\n"
                    ."       DOES NOT EXIST!: $!";
@@ -18104,6 +18109,7 @@ sub cwd
                   _hostlabel=>[ $hostlabel,'' ],
                   _ftm_type  =>$self->{_ftm_type} },
                 "cd \"$chdir\"",$cache);
+            $stderr=$output if -1<index $output,"Couldn't can";
             if ($stderr) {
                if (wantarray) { return '',$stderr }
                else {
@@ -18112,13 +18118,37 @@ sub cwd
             }
          }
          my $save_pre=$self->{_work_dirs}->{_pre};
-         $self->{_work_dirs}->{_pre}=
-            $self->{_work_dirs}->{_cwd};
-         if ($target_dir eq '-') {
-            $self->{_work_dirs}->{_cwd}=$save_pre;
+         if ($chdir eq '..') {
+            $self->{_work_dirs}->{_pre}=
+               $self->{_work_dirs}->{_cwd};
+            if ($self->{_ftm_type}=~/s*ftp/) {
+               ($output,$stderr)=&Rem_Command::ftpcmd(
+                   { _ftp_handle=>$self->{_ftp_handle},
+                     _hostlabel=>[ $hostlabel,'' ],
+                     _ftm_type  =>$self->{_ftm_type} },
+                   "pwd",$cache);
+               $output=~s/Remote working directory: (.*)/$1/;
+               $self->{_work_dirs}->{_cwd}=$output;
+               $stderr=$output if -1<index $output,"Couldn't can";
+               if ($stderr) {
+                  if (wantarray) { return '',$stderr }
+                  else {
+                     &Net::FullAuto::FA_Core::handle_error($stderr,'-4')
+                  }
+               }
+            } elsif (exists $self->{_cmd_handle} && $self->{_cmd_handle}) {
+               ($output,$stderr)=$self->cmd("pwd");
+               $self->{_work_dirs}->{_cwd}=$output;
+            }
          } else {
-            $self->{_work_dirs}->{_cwd}=
-               $self->{_homedir};
+            $self->{_work_dirs}->{_pre}=
+               $self->{_work_dirs}->{_cwd};
+            if ($target_dir eq '-') {
+               $self->{_work_dirs}->{_cwd}=$save_pre;
+            } else {
+               $self->{_work_dirs}->{_cwd}=
+                  $self->{_homedir};
+            }
          }
          if (wantarray) {
             return 'CWD command successful.','';
@@ -18179,6 +18209,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
          while (1) {
             ($output,$stderr)=$self->{_cmd_handle}->
                   cmd("cmd /c dir /-C \"$tar_dir\"");
+            $stderr=$output if -1<index $output,"Couldn't can";
             if (!$stderr && substr($output,-12,-2) ne 'bytes free') {
                $output='';next unless $cnt++;
                my $die="Attempt to retrieve output from the command:\n"
@@ -18228,6 +18259,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
          if (exists $self->{_cmd_handle} && $self->{_cmd_handle}) {
             ($output,$stderr)=$self->{_cmd_handle}->
                   cmd("cd $target_dir");
+            $stderr=$output if -1<index $output,"Couldn't can";
          }
          my $phost=$hostlabel;
          if ($stderr) {
@@ -18245,6 +18277,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                   _hostlabel=>[ $hostlabel,'' ],
                   _ftm_type  =>$self->{_ftm_type} },
                 "cd \"$target_dir\"",$cache);
+            $stderr=$output if -1<index $output,"Couldn't can";
             if ($stderr) {
                if (wantarray) { return '',$stderr }
                else {
@@ -18262,6 +18295,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
          $path=~tr/\\/\//;
          my $tar_dir=$self->{_cygdrive}.'/'.lc($drive).$path;
          ($output,$stderr)=$self->cmd("cd \"$tar_dir\"");
+         $stderr=$output if -1<index $output,"Couldn't can";
          if ($stderr) {
             if (wantarray) {
                return $output,$stderr;
@@ -18275,6 +18309,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                   _hostlabel=>[ $hostlabel,'' ],
                   _ftm_type  =>$self->{_ftm_type} },
                 "cd \"$tar_dir\"",$cache);
+            $stderr=$output if -1<index $output,"Couldn't can";
             if ($stderr) {
                if (wantarray) { return '',$stderr }
                else { &Net::FullAuto::FA_Core::handle_error($stderr,'-3') }
@@ -18293,6 +18328,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                      _hostlabel=>[ $hostlabel,'' ],
                      _ftm_type  =>$self->{_ftm_type} },
                    'cd \'..\'',$cache);
+               $stderr=$output if -1<index $output,"Couldn't can";
                if ($stderr) {
                   if (wantarray) { return '',$stderr }
                   else {
@@ -18301,6 +18337,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
                }
             }
             ($output,$stderr)=$self->cmd('cd \'..\'');
+            $stderr=$output if -1<index $output,"Couldn't can";
             if ($stderr) {
                if (wantarray) { return '',$stderr }
                else {
@@ -18358,6 +18395,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
             ($output,$stderr)=
                &Rem_Command::ftpcmd($self,
                   "cd \"$target_dir\"",$cache);
+            $stderr=$output if -1<index $output,"Couldn't can";
             if ($stderr && (-1==index $stderr,'command success')) {
                if (wantarray) {
                   return '',$stderr;
@@ -18386,6 +18424,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
                }
             }
             ($output,$stderr)=$self->cmd("cd \'$target_dir\'");
+            $stderr=$output if -1<index $output,"Couldn't can";
             if ($stderr) {
                if (wantarray) {
                   return '',$stderr;
