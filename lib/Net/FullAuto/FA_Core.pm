@@ -755,9 +755,9 @@ our $specialperms='none';
 @weekdays=('Sunday   ','Monday   ','Tuesday  ','Wednesday',
            'Thursday ','Friday   ','Saturday ');
 
-%weekdaysconv=('Sunday   '=>1,'Monday   '=>2,'Tuesday  '=>3,
-               'Wednesday'=>4,'Thursday '=>5,'Friday   '=>6,
-               'Saturday '=>7);
+%weekdaysconv=('Sunday'=>1,'Monday'=>2,'Tuesday'=>3,
+               'Wednesday'=>4,'Thursday'=>5,'Friday'=>6,
+               'Saturday'=>7);
 
 %month=('01'=>'Jan','02'=>'Feb','03'=>'Mar','04'=>'Apr',
         '05'=>'May','06'=>'Jun','07'=>'Jul','08'=>'Aug',
@@ -2958,23 +2958,32 @@ print "OUTPUT=$output\n";<STDIN>;
    }
    if (ref $output->[2] eq 'ARRAY') {
       if ($#{$output->[2]}==6
-            || -1<index $output->[2]->[0],'Every') {
+            || -1<index $output->[2]->[0],'Any') {
          $weekdaysstring='*';
       } elsif ($#{$output->[2]}==0) {
-         $weekdaysstring=$weekdaysconv{${$output->[2]}[0]};
+         my $day=$output->[2]->[0];
+         $day=~s/\s*$//;
+print "DAY1=$day<==\n";
+         $weekdaysstring=$weekdaysconv{$day};
       } else {
-         my $cnt=$weekdaysconv{${$output->[2]}[0]};
+         my $day=$output->[2]->[0];
+         $day=~s/\s*$//;
+print "DAY2=$day\n";
+         my $cnt=$weekdaysconv{$day};
          my $save_start=$cnt;
          foreach my $weekday (@{$output->[2]}) {
+            $weekday=~s/\s*$//;
             unless ($cnt++==$weekdaysconv{$weekday}) {
                $save_start=-1;
             }
             $weekdaysstring.=$weekdaysconv{$weekday}.',';
          }
          if (-1<$save_start) {
+print "FIVE={${$output->[2]}
+               [$#{$output->[2]}]\n";
+            my $day=$output->[2]->[$#{$output->[2]}];
             $weekdaysstring=$save_start.'-'.
-               $weekdaysconv{${$output->[2]}
-               [$#{$output->[2]}]};
+               $weekdaysconv{$day};
          } else {
             chop $weekdaysstring;
          }
@@ -2982,11 +2991,14 @@ print "OUTPUT=$output\n";<STDIN>;
    } elsif (-1<index $output->[2],'Every') {
       $weekdaysstring='*';
    } else {
-      $weekdaysstring=$weekdaysconv{$output->[2]};
+print "FOUR=$output->[2]\n";
+      my $day=$output->[2];
+      $day=~s/\s*$//;
+      $weekdaysstring=$weekdaysconv{$day};
    }
    if (ref $output->[3] eq 'ARRAY') {
       if ($#{$output->[3]}==30
-            || -1<index $output->[3]->[0],'Every') {
+            || -1<index $output->[3]->[0],'Any') {
          $daystring='*';
       } elsif ($#{$output->[3]}==0) {
          $daystring=unpack('x5 a*',$output->[3]->[0]);
@@ -3073,6 +3085,7 @@ print "OUTPUT=$output\n";<STDIN>;
    }
    my $planstring=$output->[6]->[0];
    $planstring=~s/^Plan:\s*(\d+)\s+.*$/$1/;
+print "WEEKDATS=$weekdaysstring<==\n";
    my $cronstring=$minstring.' '.$hourstring.' '.$daystring.' '.
          $monthstring.' '.$weekdaysstring;
 print "CRONSTRING=$cronstring and PLANSTRING=$planstring<==\n";<STDIN>;
@@ -3213,7 +3226,8 @@ my %select_recurrent_days=(
    Name => 'select_recurrent_days',
    Item_1 => {
 
-        Text => 'Every Day of the Month (*)',
+        Text => "Any Day of the Month (*)\n".
+                "                [Subject to Day of the Week selections]",
         Result => \%select_recurrent_hours,
 
    },
@@ -3241,7 +3255,8 @@ my %select_recurrent_weekdays=(
    Name => 'select_recurrent_weekdays',
    Item_1 => {
 
-        Text => 'Every Day of the Week (*)',
+        Text => "Any Day of the Week (*)\n".
+                "                [Subject to Day of the Month selections]",
         Result => \%select_recurrent_days,
 
    },
@@ -4209,10 +4224,10 @@ sub acquire_fa_lock
       my $ff=$Hosts{"__Master_${$}__"}{'FA_Secure'}."Locks/lock_$letoct.flag";
       if (-e $ff) {
          open (FF,"<$ff") || &handle_error("FATAL ERROR: Cannot open $ff");
-         my $db_info=<FF>;
+         my $db_info=<FF>||'';
          close FF;
          $db_info=~s/\s*$//;
-         my @db_info=split '|',$db_info;
+         my @db_info=split '|',$db_info||();
          if (time>$db_info[1]+5) {
             my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
             my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Locks';
@@ -16378,7 +16393,7 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
          $ftp_handle=$ftp_handle->{_cmd_handle};
          $ftp_handle->timeout($fttimeout);
          my $previous_method='';$stderr='';
-         my $fm_cnt=-1;
+         my $fm_cnt=-1;my $key_authentication=0;
          CM2: foreach my $connect_method (@connect_method) {
             $fm_cnt++;
             if ($stderr && $connect_method ne $previous_method) {
@@ -16935,8 +16950,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                   $ftp_handle->print($login_id);
                }
                ## Wait for password prompt.
-               my $ignore='';
-               ($ignore,$stderr)=&wait_for_passwd_prompt(
+               ($key_authentication,$stderr)=&wait_for_passwd_prompt(
                   { _cmd_handle=>$ftp_handle,
                     _hostlabel=>[ $hostlabel,'' ],
                     _cmd_type=>$cmd_type },$timeout);
@@ -17012,8 +17026,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                   if $Net::FullAuto::FA_Core::log
                   && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                ## Wait for password prompt.
-               my $ignore='';
-               ($ignore,$stderr)=&wait_for_passwd_prompt(
+               ($key_authentication,$stderr)=&wait_for_passwd_prompt(
                   { _cmd_handle=>$ftp_handle,
                     _hostlabel=>[ $hostlabel,'' ],
                     _cmd_type=>$cmd_type,
@@ -17038,7 +17051,7 @@ print $Net::FullAuto::FA_Core::MRLOG
          }
 
          ## Send password.
-         $ftp_handle->print($ftm_passwd);
+         $ftp_handle->print($ftm_passwd) unless $key_authentication;
 
          my $lin='';my $asked=0;my $authyes=0;my @choices=();
          while (1) {
@@ -17196,8 +17209,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                     'sftp '."${sshport}$login_id\@$host");
 
                                  ## Wait for password prompt.
-                                 my $ignore='';
-                                 ($ignore,$stderr)=
+                                 ($key_authentication,$stderr)=
                                     &wait_for_passwd_prompt(
                                        { _cmd_handle=>$ftp_handle,
                                          _hostlabel=>[ $hostlabel,'' ],
@@ -17319,8 +17331,7 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                         "${sshport}$login_id\@$host");
 
                      ## Wait for password prompt.
-                     my $ignore='';
-                     ($ignore,$stderr)=
+                     ($key_authentication,$stderr)=
                         &wait_for_passwd_prompt(
                            { _cmd_handle=>$ftp_handle,
                              _hostlabel=>[ $hostlabel,'' ],
@@ -17737,6 +17748,8 @@ sub wait_for_passwd_prompt
             if (-1<index $line,'Permission denied') {
                alarm 0;
                die 'Permission denied';
+            } elsif ($line=~/sftp>\s*$/s) {
+               return 'key_authenticated','';
             } elsif ($warning || (-1<index $line,'@@@@@@@@@@')) {
                $warning.=$line;
                $count++ if $line=~/^\s*$/s;

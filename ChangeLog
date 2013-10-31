@@ -19,6 +19,17 @@
 ################################################################
 
 
+2013-10-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999933 released.
+
+        * Happy Halloween!
+
+        * Can now authenticate with keys with sftp (only).
+
+        * Now correctly creating cron strings from Menu.
+
+
 2013-10-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999932 released.
