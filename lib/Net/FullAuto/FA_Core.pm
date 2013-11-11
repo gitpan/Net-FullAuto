@@ -3679,14 +3679,10 @@ my %plan_menu=(
 my $plan_menu_sub = sub {
 
    package plan_menu_sub;
-   use Module::Load::Conditional qw[can_load];
    use if (!defined $Net::FullAuto::FA_Core::localhost), 'Net::FullAuto';
    our $fa_code='Net::FullAuto::FA_Core.pm';
    unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
       $main::plan_menu_sub=1;
-      my @Hosts=@{&Net::FullAuto::FA_Core::check_Hosts(
-         $Net::FullAuto::FA_Core::fa_host)};
-      &Net::FullAuto::FA_Core::host_hash(\@Hosts);
       &Net::FullAuto::FA_Core::fa_login();
       undef $main::plan_menu_sub;
    }
@@ -4918,6 +4914,7 @@ sub check_Hosts
       &get_master_info;
    my $chk_hostname='';my $chk_ip='';my $trandir_flag='';
    my $name=substr($_[0],0,-3);
+   $name=~s/^.*[\\|\/](.*)$/$1/;
    my @Hosts=();
    {
       no warnings;
@@ -10181,6 +10178,55 @@ my $set_default_menu_sub=sub {
    return \%set_default_menu;
 };
 
+my $im_from_remote=sub {
+
+   &Net::FullAuto::FA_Core::fa_set;
+   my @Hosts=@{&Net::FullAuto::FA_Core::check_Hosts(
+      $Net::FullAuto::FA_Core::fa_host->[0])};
+   my %im_from_remote=(
+
+      Name => 'im_from_remote',
+      Item_1 => {
+
+          Text => 'Import from ]C[',
+          Convey => [ sort map { $_->{Label} } @Hosts ], 
+
+      },
+
+   );
+   return \%im_from_remote;
+
+};
+
+my $im_ex_menu_sub=sub {
+
+   my %im_ex_menu=(
+
+      Item_1 => {
+
+          Text => 'IMPORT CCB from Remote FA',
+          Result => $im_from_remote,
+
+      },
+      Item_2 => {
+
+          Text => 'IMPORT CCB from Local Host',
+          Result => '',
+
+      },
+      Item_3 => {
+
+          Text => 'EXPORT CCB to File',
+          Result => '',
+
+      },
+      Banner => '',
+   );
+   return \%im_ex_menu;
+
+
+};
+
 my $set_menu_sub=sub {
 
    my $default_modules=$_[0] || $main::get_default_modules->();
@@ -12629,6 +12675,559 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
 
 } ## END of &fa_login
 
+sub fa_set {
+
+   unless (exists $INC{'Term/Menus.pm'}) {
+      foreach my $fpath (@INC) {
+         my $f=$fpath;
+         if (-e $f.'/Term/Menus.pm') {
+            $INC{'Term/Menus.pm'}=$f.'/Term/Menus.pm';
+            last;
+         }
+      }
+   }
+   my $vlin=__LINE__;
+   #####################################################################
+   ####                                                              ###
+   #### DEFAULT MODULE OF  Net::FullAuto  $fa_code IS:               ###
+   ####                                                              ###
+   #### ==> Distro/fa_code_demo.pm <==  If you want a different      ###
+   ####                                                              ###
+   #### module to be the default, change $fa_code variable below or  ###
+   #### set the $fa_code variable in the BEGIN { } block             ###
+   #### of the top level script invoking Net::FullAuto. (Advised)    ###
+   ####                                                              ###
+   #####################################################################
+                                                                     ###
+   our $fa_code=['Distro/fa_code_demo.pm', #<== Change Location Here ###
+                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+13)];   ###
+                                                                     ###
+   #####################################################################
+
+   #####################################################################
+   ####                                                              ###
+   #### DEFAULT MODULE OF  Net::FullAuto  $fa_conf IS:               ###
+   ####                                                              ###
+   #### ==> Distro/fa_conf.pm <==  If you want a differnet           ###
+   ####                                                              ###
+   #### module to be the default, change $fa_conf variable below or  ###
+   #### set the $fa_conf variable in the BEGIN { } block             ###
+   #### of the top level script invoking Net::FullAuto. (Advised)    ###
+   ####                                                              ###
+   #####################################################################
+                                                                     ###
+   our $fa_conf=['Distro/fa_conf.pm', #<== Change Location Here      ###
+                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+30)];   ###
+                                                                     ###
+   #####################################################################
+
+   #####################################################################
+   ####                                                              ###
+   #### DEFAULT MODULE OF  Net::FullAuto  $fa_host IS:               ###
+   ####                                                              ###
+   #### ==> Distro/fa_host.pm <==  If you want a different           ###
+   ####                                                              ###
+   #### module to be the default, change $fa_host variable below or  ###
+   #### set the $fa_hosts_config variable in the BEGIN { } block     ###
+   #### of the top level script invoking Net::FullAuto. (Advised)    ###
+   ####                                                              ###
+   #####################################################################
+                                                                     ###
+   our $fa_host=['Distro/fa_host.pm', #<== Change Location Here      ###
+                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+47)];   ###
+                                                                     ###
+   #####################################################################
+
+   #####################################################################
+   ####                                                              ###
+   #### DEFAULT MODULE OF  Net::FullAuto  $fa_maps IS:               ###
+   ####                                                              ###
+   #### ==> Distro/fa_maps.pm <==  If you want a different           ###
+   ####                                                              ###
+   #### module to be the default, change $fa_host variable below or  ###
+   #### set the $fa_mapping variable in the BEGIN { } block          ###
+   #### of the top level script invoking Net::FullAuto. (Advised)    ###
+   ####                                                              ###
+   #####################################################################
+                                                                     ###
+   our $fa_maps=['Distro/fa_maps.pm', #<== Change Location Here      ###
+                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+64)];   ###
+                                                                     ###
+   #####################################################################
+
+   #####################################################################
+   ####                                                              ###
+   #### DEFAULT MODULE OF  Net::FullAuto  $fa_menu IS:               ###
+   ####                                                              ###
+   #### ==> Distro/fa_menu_demo.pm <==  If you want a different      ###
+   ####                                                              ###
+   #### module to be the default, change $fa_menu variable below or  ###
+   #### set the $fa_menu variable in the BEGIN { } block             ###
+   #### of the top level script invoking Net::FullAuto. (Advised)    ###
+   ####                                                              ###
+   #####################################################################
+                                                                     ###
+   our $fa_menu=['Distro/fa_menu_demo.pm', #<== Change Location Here ###
+                 "From $INC{'Term/Menus.pm'}, Line ".($vlin+81)];    ###
+                                                                     ###
+   #####################################################################
+
+   my $default_modules='';
+   unless ($main::fa_code && $main::fa_conf && $main::fa_host
+           && $main::fa_maps && $main::fa_menu) {
+      unless (exists $INC{'Net/FullAuto.pm'}) {
+         foreach my $fpath (@INC) {
+            my $f=$fpath;
+            if (-e $f.'/Net/FullAuto.pm') {
+               $INC{'Net/FullAuto.pm'}=$f.'/Net/FullAuto.pm';
+               last;
+            }
+         }
+      }
+      my $fa_path=$INC{'Net/FullAuto.pm'};
+      my $progname=substr($0,(rindex $0,'/')+1,-3);
+      substr($fa_path,-3)='';
+      if (-f $fa_path.'/fa_defs.pm') {
+         if (-r $fa_path.'/fa_defs.pm') {
+            {
+               no strict 'subs';
+               require $fa_path.'/fa_defs.pm';
+               $fa_defs::FA_Secure||='';
+               if ($fa_defs::FA_Secure &&
+                     -d $fa_defs::FA_Secure.'Defaults') {
+                  BEGIN { $Term::Menus::facall=caller(2);
+                          $Term::Menus::facall||='' };
+                  use if (-1<index $Term::Menus::facall,'FullAuto'),
+                      "BerkeleyDB";
+                  my $dbenv = BerkeleyDB::Env->new(
+                     -Home  => $fa_defs::FA_Secure.'Defaults',
+                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                  ) or die(
+                     "cannot open environment for DB: ".
+                     $BerkeleyDB::Error."\n",'','');
+                  my $bdb = BerkeleyDB::Btree->new(
+                        -Filename => "${progname}_defaults.db",
+                        -Flags    => DB_CREATE,
+                        -Env      => $dbenv
+                     );
+                  unless ($BerkeleyDB::Error=~/Successful/) {
+                     $bdb = BerkeleyDB::Btree->new(
+                        -Filename => "${progname}_defaults.db",
+                        -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                        -Env      => $dbenv
+                     );
+                     unless ($BerkeleyDB::Error=~/Successful/) {
+                        die "Cannot Open DB ${progname}_defaults.db:".
+                            " $BerkeleyDB::Error\n";
+                     }
+                  }
+                  my $username=getlogin || getpwuid($<);
+                  if (exists $ENV{'SSH_CONNECTION'} &&
+                        exists $ENV{'USER'} && ($ENV{'USER'}
+                        ne $username)) {
+                     $username=$ENV{'USER'};
+                  } elsif ($username eq 'SYSTEM' &&
+                        exists $ENV{'IWUSER'} && ($ENV{'IWUSER'}
+                        ne $username)) {
+                     my $login_flag=0;
+                     foreach (@ARGV) {
+                        my $argv=$_;
+                        if ($login_flag) {
+                           $username=$argv;
+                           last;
+                        } elsif (lc($argv) eq '--login') {
+                           $login_flag=1;
+                        }
+                     }
+                     $username=$ENV{'IWUSER'} unless $login_flag;
+                  }
+                  my $status=$bdb->db_get(
+                        $username,$default_modules) if $bdb;
+                  $default_modules||='';
+                  $default_modules=~s/\$HASH\d*\s*=\s*//s
+                     if -1<index $default_modules,'$HASH';
+                  $default_modules=eval $default_modules;
+                  $default_modules||={};
+                  undef $bdb;
+                  $dbenv->close();
+                  undef $dbenv;
+                  unless (keys %{$default_modules}) {
+                     $default_modules->{'set'}='none';
+                     $default_modules->{'fa_code'}=
+                        'Net/FullAuto/Distro/fa_code_demo.pm';
+                     $default_modules->{'fa_conf'}=
+                        'Net/FullAuto/Distro/fa_conf.pm';
+                     $default_modules->{'fa_host'}=
+                        'Net/FullAuto/Distro/fa_host.pm';
+                     $default_modules->{'fa_maps'}=
+                        'Net/FullAuto/Distro/fa_maps.pm';
+                     $default_modules->{'fa_menu'}=
+                        'Net/FullAuto/Distro/fa_menu_demo.pm';
+                  } elsif (exists $default_modules->{'set'} &&
+                        $default_modules->{'set'} ne 'none') {
+                     my $setname=$default_modules->{'set'};
+                     my $stenv = BerkeleyDB::Env->new(
+                        -Home  => $fa_defs::FA_Secure.'Sets',
+                        -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                     ) or die(
+                        "cannot open environment for DB: ".
+                        $BerkeleyDB::Error."\n",'','');
+                     my $std = BerkeleyDB::Btree->new(
+                           -Filename => "${progname}_sets.db",
+                           -Flags    => DB_CREATE,
+                           -Env      => $stenv
+                        );
+                     unless ($BerkeleyDB::Error=~/Successful/) {
+                        $std = BerkeleyDB::Btree->new(
+                           -Filename => "${progname}_sets.db",
+                           -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                           -Env      => $stenv
+                        );
+                        unless ($BerkeleyDB::Error=~/Successful/) {
+                           die "Cannot Open DB ${progname}_sets.db:".
+                               " $BerkeleyDB::Error\n";
+                        }
+                     }
+                     my $username=getlogin || getpwuid($<);
+                     my $set='';
+                     my $status=$std->db_get(
+                           $username,$set);
+                     $set||='';
+                     $set=~s/\$HASH\d*\s*=\s*//s
+                        if -1<index $set,'$HASH';
+                     $set=eval $set;
+                     $set||={};
+                     undef $std;
+                     $stenv->close();
+                     undef $stenv;
+                     $fa_code=[$set->{$setname}->{'fa_code'},
+                               "From Default Set $setname ".
+                               "(Change with fa --set)"];
+                     $fa_conf=[$set->{$setname}->{'fa_conf'},
+                               "From Default Set $setname ".
+                               "(Change with fa --set)"];
+                     $fa_host=[$set->{$setname}->{'fa_host'},
+                               "From Default Set $setname ".
+                               "(Change with fa --set)"];
+                     $fa_maps=[$set->{$setname}->{'fa_maps'},
+                               "From Default Set $setname ".
+                               "(Change with fa --set)" ];
+                     $fa_menu=[$set->{$setname}->{'fa_menu'},
+                               "From Default Set $setname ".
+                               "(Change with fa --set)"];
+                  } else {
+                     if (exists $default_modules->{'fa_code'}) {
+                        $fa_code=[$default_modules->{'fa_code'},
+                                  "From Default Setting ".
+                                  "(Change with fa --defaults)"];
+                     }
+                     if (exists $default_modules->{'fa_conf'}) {
+                        $fa_conf=[$default_modules->{'fa_conf'},
+                                  "From Default Setting ".
+                                  "(Change with fa --defaults)"];
+                     }
+                     if (exists $default_modules->{'fa_host'}) {
+                        $fa_host=[$default_modules->{'fa_host'},
+                                  "From Default Setting ".
+                                  "(Change with fa --defaults)"];
+                     }
+                     if (exists $default_modules->{'fa_maps'}) {
+                        $fa_maps=[$default_modules->{'fa_maps'},
+                                  "From Default Setting ".
+                                  "(Change with fa --defaults)"];
+                     }
+                     if (exists $default_modules->{'fa_menu'}) {
+                        $fa_menu=[$default_modules->{'fa_menu'},
+                                  "From Default Setting ".
+                                  "(Change with fa --defaults)"];
+                     }
+                  }
+               }
+            }
+         } else {
+            warn("WARNING: Cannot read defaults file $fa_path/fa_defs.pm".
+                 " - permission denied (Hint: Perhaps you need to 'Run as ".
+                 "Administrator'?)");
+         }
+      }
+      my @A=();my %A=();
+      push @A,@ARGV;
+      my $acnt=0;
+      foreach my $a (@A) {
+         $acnt++;
+         my $aa=$a;
+         if (-1<index $aa,'--fa_') {
+            my $k=unpack('x5a*',$aa);
+            my $v=$A[$acnt]||'';
+            unless (-1<index $v, '--fa_') {
+               $A{$k}=$v;
+            } else {
+               @A=();
+               last;
+            }
+         } elsif (-1<index $aa,'--set') {
+            my $v=$A[$acnt]||'';
+            unless (-1<index $v, '--') {
+               $A{set}=$v;
+            } else {
+               @A=();
+               last;
+            }
+         }
+      }
+      foreach my $e (('set','code','conf','host','maps','menu')) {
+         if (exists $A{$e}) {
+            if ($e eq 'set') {
+               no strict 'subs';
+               my $setname=$A{$e};
+               my $fa_path=$INC{'Net/FullAuto.pm'};
+               my $progname=substr($0,(rindex $0,'/')+1,-3);
+               substr($fa_path,-3)='';
+               if (-f $fa_path.'/fa_defs.pm') {
+                  my $stenv = BerkeleyDB::Env->new(
+                     -Home  => $fa_defs::FA_Secure.'Sets',
+                     -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
+                  ) or die(
+                     "cannot open environment for DB: ".
+                     $BerkeleyDB::Error."\n",'','');
+                  my $std = BerkeleyDB::Btree->new(
+                        -Filename => "${progname}_sets.db",
+                        -Flags    => DB_CREATE,
+                        -Env      => $stenv
+                     );
+                  unless ($BerkeleyDB::Error=~/Successful/) {
+                     $std = BerkeleyDB::Btree->new(
+                        -Filename => "${progname}_sets.db",
+                        -Flags    => DB_CREATE|DB_RECOVER_FATAL,
+                        -Env      => $stenv
+                     );
+                     unless ($BerkeleyDB::Error=~/Successful/) {
+                        die "Cannot Open DB ${progname}_sets.db:".
+                            " $BerkeleyDB::Error\n";
+                     }
+                  }
+                  my $username=getlogin || getpwuid($<);
+                  my $set='';
+                  my $status=$std->db_get(
+                        $username,$set);
+                  $set||='';
+                  $set=~s/\$HASH\d*\s*=\s*//s
+                     if -1<index $set,'$HASH';
+                  $set=eval $set;
+                  $set||={};
+                  undef $std;
+                  $stenv->close();
+                  undef $stenv;
+                  $fa_code=[$set->{$setname}->{'fa_code'},
+                            "From CMD arg fa --set $setname line ".__LINE__];
+                  $fa_conf=[$set->{$setname}->{'fa_conf'},
+                            "From CMD arg fa --set $setname line ".__LINE__];
+                  $fa_host=[$set->{$setname}->{'fa_host'},
+                            "From CMD arg fa --set $setname line ".__LINE__];
+                  $fa_maps=[$set->{$setname}->{'fa_maps'},
+                            "From CMD arg fa --set $setname line ".__LINE__];
+                  $fa_menu=[$set->{$setname}->{'fa_menu'},
+                            "From CMD arg fa --set $setname line ".__LINE__];
+               } else {
+                  my $die="\n       FATAL ERROR: The Set indicated from".
+                          " the CMD arg:\n\n".
+                          "              ==> fa --set $A{$e}n\n".
+                          "              does not exist. To create this\n".
+                          "              set, run fa --set without any\n".
+                          "              other arguments";
+                  die $die;
+               }
+            } elsif ($e eq 'code') {
+               $fa_code=$A{$e};
+               $fa_code=[$fa_code,
+                         "From CMD arg: fa --fa_code $A{$e}"];
+            } elsif ($e eq 'menu') {
+               $fa_menu=$A{$e};
+               $fa_menu=[$fa_menu,
+                         "From CMD arg: fa --fa_menu $A{$e}"];
+            } elsif ($e eq 'host') {
+               $fa_host=$A{$e};
+               $fa_host=[$fa_host,
+                         "From CMD arg: fa --fa_host $A{$e}"];
+            } elsif ($e eq 'conf') {
+               $fa_conf=$A{$e};
+               $fa_conf=[$fa_conf,
+                         "From CMD arg: fa --fa_conf $A{$e}"];
+            } elsif ($e eq 'maps') {
+               $fa_maps=$A{$e};
+               $fa_maps=[$fa_maps,
+                         "From CMD arg: fa --fa_maps $A{$e}"];
+            }
+         }
+         my $abspath=Cwd::abs_path($0);
+         $abspath=~s/\.exe$//;
+         $abspath.='.pl';
+         if (defined $main::fa_code && $main::fa_code) {
+            $fa_code=$main::fa_code;
+            my $p=Cwd::abs_path($0);
+            $fa_code=[$fa_code,
+                      "From \$fa_code variable in $abspath"];
+         }
+         if (defined $main::fa_conf && $main::fa_conf) {
+            $fa_conf=$main::fa_conf;
+            $fa_conf=[$fa_conf,
+                      "From \$fa_conf variable in $abspath"];
+         }
+         if (defined $main::fa_host && $main::fa_host) {
+            $fa_host=$main::fa_host;
+            $fa_host=[$fa_host,
+                      "From \$fa_host variable in $abspath"];
+         }
+         if (defined $main::fa_maps && $main::fa_maps) {
+            $fa_maps=$main::fa_maps;
+            $fa_maps=[$fa_maps,
+                      "From \$fa_maps variable in $abspath"];
+         }
+         if (defined $main::fa_menu && $main::fa_menu) {
+            $fa_menu=$main::fa_menu;
+            $fa_menu=[$fa_menu,
+                      "From \$fa_menu variable in $abspath"];
+         }
+      }
+   } else {
+      my $abspath=Cwd::abs_path($0);
+      $abspath=~s/\.exe$//;
+      $abspath.='.pl';
+      $fa_code=[$fa_code,
+                "From \$fa_code variable in $abspath"];
+      $fa_conf=[$fa_conf,
+                "From \$fa_conf variable in $abspath"];
+      $fa_host=[$fa_host,
+                "From \$fa_host variable in $abspath"];
+      $fa_maps=[$fa_maps,
+                "From \$fa_maps variable in $abspath"];
+      $fa_menu=[$fa_menu,
+                "From \$fa_menu variable in $abspath"];
+   }
+   $fa_code->[0]='Net/FullAuto/'.$fa_code->[0]
+      if $fa_code->[0] && -1==index $fa_code->[0],'Net/FullAuto';
+   $fa_code->[0]||='';
+   my $argv=join " ",@ARGV;
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+      if ($fa_code->[0]) {
+         if ($Term::Menus::canload->($fa_code->[0])) {
+            require $fa_code->[0];
+            my $mod=substr($fa_code->[0],(rindex $fa_code->[0],'/')+1,-3);
+            import $mod;
+            $fa_code=$mod.'.pm';
+         } else {
+            my $ln=__LINE__;
+            $ln-=5;
+            die "Cannot load module $fa_code->[0]".
+                "\n   $fa_code->[1]\n".
+                "\"require $fa_code->[0];\"".
+                "--failed at ".$INC{'Term/Menus.pm'}." line $ln\.\n$@\n";
+         }
+      } else {
+         require 'Net/FullAuto/Distro/fa_code.pm';
+         import fa_code;
+         $fa_code='fa_code.pm';
+      }
+   }
+   $fa_conf->[0]='Net/FullAuto/'.$fa_conf->[0]
+      if $fa_conf->[0] && -1==index $fa_conf->[0],'Net/FullAuto';
+   $fa_conf->[0]||='';
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+      if ($fa_conf->[0]) {
+         if ($Term::Menus::canload->($fa_conf->[0])) {
+            require $fa_conf->[0];
+            my $mod=substr($fa_conf->[0],(rindex $fa_conf->[0],'/')+1,-3);
+            import $mod;
+            $fa_conf=$mod.'.pm';
+         } else {
+            my $ln=__LINE__;
+            $ln-=5;
+            die "Cannot load module $fa_conf->[0]".
+                "\n   $fa_conf->[1]\n".
+                "\"require $fa_conf->[0];\"".
+                "--failed at ".$INC{'Term/Menus.pm'}." line $ln\.\n$@\n";
+         }
+      } else {
+         require 'Net/FullAuto/Distro/fa_conf.pm';
+         import fa_conf;
+         $fa_conf='fa_conf.pm';
+      }
+   }
+   $fa_host->[0]='Net/FullAuto/'.$fa_host->[0]
+      if $fa_host->[0] && -1==index $fa_host->[0],'Net/FullAuto';
+   $fa_host->[0]||='';
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+      if ($fa_host->[0]) {
+         if ($Term::Menus::canload->($fa_host->[0])) {
+            require $fa_host->[0];
+            my $mod=substr($fa_host->[0],(rindex $fa_host->[0],'/')+1,-3);
+            import $mod;
+            $fa_host=$mod.'.pm';
+         } else {
+            my $ln=__LINE__;
+            $ln-=5;
+            die "Cannot load module $fa_host->[0]".
+                "\n   $fa_host->[1]\n".
+                "\"require $fa_host->[0];\"".
+                "--failed at ".$INC{'Term/Menus.pm'}." line $ln\.\n$@\n";
+         }
+      } else {
+         require 'Net/FullAuto/Distro/fa_host.pm';
+         import fa_host;
+         $fa_host='fa_host.pm';
+      }
+   }
+   $fa_maps->[0]='Net/FullAuto/'.$fa_maps->[0]
+      if $fa_maps->[0] && -1==index $fa_maps->[0],'Net/FullAuto';
+   $fa_maps->[0]||='';
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+      if ($fa_maps->[0]) {
+         if ($Term::Menus::canload->($fa_maps->[0])) {
+            require $fa_maps->[0];
+            my $mod=substr($fa_maps->[0],(rindex $fa_maps->[0],'/')+1,-3);
+            import $mod;
+            $fa_maps=$mod.'.pm';
+         } else {
+            my $ln=__LINE__;
+            $ln-=5;
+            die "Cannot load module $fa_maps->[0]".
+                "\n   $fa_maps->[1]\n".
+                "\"require $fa_maps->[0];\"".
+                "--failed at ".$INC{'Term/Menus.pm'}." line $ln\.\n$@\n";
+         }
+      } else {
+         require 'Net/FullAuto/Distro/fa_maps.pm';
+         import fa_maps;
+         $fa_maps='fa_maps.pm';
+      }
+   }
+   $fa_menu->[0]='Net/FullAuto/'.$fa_menu->[0]
+      if $fa_menu->[0] && -1==index $fa_menu->[0],'Net/FullAuto';
+   $fa_menu->[0]||='';
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+      if ($fa_menu->[0]) {
+         if ($Term::Menus::canload->($fa_menu->[0])) {
+            require $fa_menu->[0];
+            my $mod=substr($fa_menu->[0],(rindex $fa_menu->[0],'/')+1,-3);
+            import $mod;
+            $fa_menu=$mod.'.pm';
+         } else {
+            my $ln=__LINE__;
+            $ln-=5;
+            die "Cannot load module $fa_menu->[0]".
+                "\n   $fa_menu->[1]\n".
+                "\"require $fa_menu->[0];\"".
+                "--failed at ".$INC{'Term/Menus.pm'}." line $ln\.\n$@\n";
+         }
+      } else {
+         require 'Net/FullAuto/Distro/fa_menu_demo.pm';
+         import fa_menu_demo;
+         $fa_menu='fa_menu_demo.pm';
+      }
+   }
+
+}
+
 our $adminmenu=sub {
 
    my $invoke_menu_here=0;
@@ -12663,6 +13262,12 @@ FAM
 
           Text => 'FullAuto *SET* Configuration Menu',
           Result => $set_menu_sub->(),
+
+      },
+      Item_4 => {
+
+          Text => 'FullAuto *IMPORT/EXPORT* Menu',
+          Result => $im_ex_menu_sub,
 
       },
       Banner => $fam,
@@ -29801,3 +30406,5 @@ package Net::FullAuto::Getline;
 use strict;
 use Carp 'croak';
 use IO::Handle;
+
+1

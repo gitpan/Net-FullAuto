@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999933';
+$main::VERSION='0.99999934';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4103,6 +4103,7 @@ requires        'Net::Telnet'               => 0;
 requires        'Term::RawInput'            => 0;
 requires        'Term::ReadKey'             => 0;
 requires        'Test::Deep'                => 0;
+requires        'PPI'                       => 0;
 requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;

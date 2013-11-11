@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-11-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999934 released.
+
+        * Development on Import/Export Menu Item.
+
+        * Added PPI as a module dependency.
+
+
 2013-10-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999933 released.
