@@ -20,7 +20,7 @@ provides:
     version: 0
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.99999934
+    version: 0.99999935
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
     version: 0
@@ -64,6 +64,7 @@ requires:
   Digest::MD5: 0
   Digest::SHA: 0
   Email::Sender: 0
+  ExtUtils::CBuilder: 0
   ExtUtils::Depends: 0
   ExtUtils::MakeMaker: 6.59
   HTTP::Date: 0
@@ -87,4 +88,4 @@ requires:
   perl: 5.006
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
-version: 0.99999934
+version: 0.99999935

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999934';
+$main::VERSION='0.99999935';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -663,6 +663,14 @@ END
       'ExtUtils::MakeMaker','install','Makefile','','6.59');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::CBuilder','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'CPAN::Meta::Requirements','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
    ($stdout,$stderr)=&fa_install_module('YAML','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'YAML') if $stderr;
@@ -759,10 +767,14 @@ END
    ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'LWP') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('IO::Socket::SSL','install',
+      'Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'IO::Socket::SSL') if $stderr;
    ($stdout,$stderr)=&fa_install_module('LWP::Protocol::https','install',
       'Makefile');
    print $stdout if $stdout;
-   &fa_err_exit($stderr,'LWP') if $stderr;
+   &fa_err_exit($stderr,'LWP::Protocol::https') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Task::Weaken','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Task::Weaken') if $stderr;
@@ -776,6 +788,10 @@ END
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Types::Serialiser','install',
+      'Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Types::Serialiser') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
@@ -796,6 +812,10 @@ END
    my $cpanmvalue=$ENV{PERL5_CPANM_IS_RUNNING}||'';
    undef $ENV{PERL5_CPAN_IS_RUNNING};
    undef $ENV{PERL5_CPANM_IS_RUNNING};
+   ($stdout,$stderr)=&fa_install_module(
+      'Types::Serialiser','install','Makefile');
+   &fa_err_exit($stderr,'Types::Serialiser') if $stderr;
+   print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('JSON::XS','install','Makefile');
    &fa_err_exit($stderr,'JSON::XS') if $stderr;
    print $stdout if $stdout;
@@ -4083,6 +4103,7 @@ requires        'Module::Load::Conditional' => 0;
 requires        'Task::Weaken'              => 0;
 requires        'ExtUtils::Depends'         => 0;
 requires        'ExtUtils::MakeMaker'       => 6.59;
+requires        'ExtUtils::CBuilder'        => 0;
 requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;

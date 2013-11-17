@@ -5088,6 +5088,7 @@ my %DeployRCM_Proxy=();my $msflag='';my $uxflag='';
 
 sub host_hash
 {
+
    foreach my $host (@{$_[0]}) {
       $host->{'Label'}||='';
       if (exists $labels{$host->{'Label'}} && 
@@ -5638,6 +5639,7 @@ sub connect_host
    } else {
       my $tst='$' . (caller)[0] . '::test';
       $tst= eval $tst;
+      $tst||=0;
       if ($@ || $tst!~/^[1-9]+/) {
          $Net::FullAuto::FA_Core::test=0;
       } else { $Net::FullAuto::FA_Core::test=$tst }
@@ -8244,7 +8246,7 @@ sub send_email
       }
       if (exists ${$mail_info}{From}) {
          $ent->head->mime_attr(From=>${$mail_info}{From});
-      } elsif ($email_defaults &&
+      } elsif ($email_defaults && ref $email_defaults eq 'HASH' &&
             (exists $email_defaults{From})) {
          $ent->head->mime_attr(From=>${$email_defaults}{From});
       } else {
@@ -10178,6 +10180,36 @@ my $set_default_menu_sub=sub {
    return \%set_default_menu;
 };
 
+my $login_to_remote=sub {
+
+   package login_to_remote;
+   my $host_to_connect_to=']S[';
+   $host_to_connect_to=~s/^"Import from (.*)"$/$1/;
+   use if (!defined $Net::FullAuto::FA_Core::localhost), 'Net::FullAuto';
+   our $fa_code='Net::FullAuto::FA_Core.pm';
+   unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
+      $main::plan_menu_sub=1;
+      eval {
+         &Net::FullAuto::FA_Core::fa_login();
+         undef $main::plan_menu_sub;
+         &Net::FullAuto::FA_Core::fa_set;
+         my @Hosts=@{&Net::FullAuto::FA_Core::check_Hosts(
+            $Net::FullAuto::FA_Core::fa_host->[0])};
+         &Net::FullAuto::FA_Core::host_hash(\@Hosts);
+      };
+      die $@ if $@;
+   }
+   my $error='';
+   ($main::remote_host,$error)=
+      &Net::FullAuto::FA_Core::connect_secure($host_to_connect_to);
+   my ($stdout,$stderr)=('','');
+   ($stdout,$stderr)=$main::remote_host->cmd(
+      'hostname');
+   print "HOSTNAME=$stdout\n";
+   &Net::FullAuto::FA_Core::cleanup;
+
+};
+
 my $im_from_remote=sub {
 
    &Net::FullAuto::FA_Core::fa_set;
@@ -10190,6 +10222,7 @@ my $im_from_remote=sub {
 
           Text => 'Import from ]C[',
           Convey => [ sort map { $_->{Label} } @Hosts ], 
+          Result => $login_to_remote,
 
       },
 
@@ -11378,6 +11411,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      "__Master_${$}__"}{'Cipher'});
                   my $tpess=$dcipher->decrypt($passetts->[0]);
                   my $skipflag=0;
+print "WHAT IS FPASSS=$password_from\n";sleep 10;
                   if ($password_from ne 'user_input') {
                      if ($passwd[0] ne $tpess) {
                         undef $tpess;
@@ -12700,7 +12734,8 @@ sub fa_set {
    #####################################################################
                                                                      ###
    our $fa_code=['Distro/fa_code_demo.pm', #<== Change Location Here ###
-                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+13)];   ###
+                 "From $INC{'Net/FullAuto/FA_Core.pm'}, Line: ".     ###
+                 ($vlin+15)];                                        ###
                                                                      ###
    #####################################################################
 
@@ -12717,7 +12752,8 @@ sub fa_set {
    #####################################################################
                                                                      ###
    our $fa_conf=['Distro/fa_conf.pm', #<== Change Location Here      ###
-                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+30)];   ###
+                 "From $INC{'Net/FullAuto/FA_Core.pm'}, Line: ".     ###
+                 ($vlin+33)];                                        ###
                                                                      ###
    #####################################################################
 
@@ -12734,7 +12770,8 @@ sub fa_set {
    #####################################################################
                                                                      ###
    our $fa_host=['Distro/fa_host.pm', #<== Change Location Here      ###
-                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+47)];   ###
+                 "From $INC{'Net/FullAuto/FA_Core.pm'}, Line: ".     ###
+                 ($vlin+51)];                                        ###
                                                                      ###
    #####################################################################
 
@@ -12751,7 +12788,8 @@ sub fa_set {
    #####################################################################
                                                                      ###
    our $fa_maps=['Distro/fa_maps.pm', #<== Change Location Here      ###
-                 "From $INC{'Term/Menus.pm'}, Line: ".($vlin+64)];   ###
+                 "From $INC{'Net/FullAuto/FA_Core.pm'}, Line: ".     ###
+                 ($vlin+69)];                                        ###
                                                                      ###
    #####################################################################
 
@@ -12768,7 +12806,8 @@ sub fa_set {
    #####################################################################
                                                                      ###
    our $fa_menu=['Distro/fa_menu_demo.pm', #<== Change Location Here ###
-                 "From $INC{'Term/Menus.pm'}, Line ".($vlin+81)];    ###
+                 "From $INC{'Net/FullAuto/FA_Core.pm'}, Line: ".     ###
+                 ($vlin+87)];                                        ###
                                                                      ###
    #####################################################################
 
@@ -18558,8 +18597,11 @@ sub connect_share
    my @topcaller=caller;
    print "File_Transfer::connect_share() CALLER=",(join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::debug;
-   print $Net::FullAuto::FA_Core::MRLOG "File_Transfer::connect_share() CALLER=",
-      (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+   print $Net::FullAuto::FA_Core::MRLOG
+      "File_Transfer::connect_share() CALLER=",
+      (join ' ',@topcaller),"\n"
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my (@outlines,@errlines)=();
    my $cmd_handle=$_[0];
    my $hostlabel=$_[1];
@@ -18568,7 +18610,8 @@ sub connect_share
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
        $owner,$group,$cdtimeout,$transfer_dir,$rcm_chain,
        $rcm_map,$uname,$ping)
-       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label($hostlabel,$_connect);
+       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
+       $hostlabel,$_connect);
    my ($output,$stdout,$stderr)=('','','');
    my $cnct_passwd='';
    my $host=($use eq 'ip')?$ip:$hostname;    
