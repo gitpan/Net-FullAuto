@@ -672,7 +672,7 @@ BEGIN {
 # Getopt::Long needs it this way for some args to work properly. 
 our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,
      $default,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
-     $usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL);
+     $users,$usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -1632,6 +1632,58 @@ FullAuto Home Page.
 VERSION
 print $version;
 exit;
+}
+
+sub users
+{
+
+   #package users;
+   #use if (!defined $Net::FullAuto::FA_Core::localhost), 'Net::FullAuto';
+   #our $fa_code='Net::FullAuto::FA_Core.pm';
+   #unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
+   #   $main::plan_menu_sub=1;
+   #   &Net::FullAuto::FA_Core::fa_login();
+   #   undef $main::plan_menu_sub;
+   #}
+   #can_load(modules => { "Term::Menus" => 0 });
+   can_load(modules => { "Net::FullAuto" => 0 });
+   my $net_fulla_path=
+      substr($INC{'Net/FullAuto.pm'},0,
+      (rindex $INC{'Net/FullAuto.pm'},'Net'));
+   my @falist=();
+   my $o='';
+   foreach my $p (@INC) {
+      $o=$p;
+      last if -1<index $o,$net_fulla_path;
+      last if "$o/" eq $net_fulla_path;
+   }
+   if (-f $o.'/auto/Net/FullAuto/.packlist') {
+      open (PH,"<$o/auto/Net/FullAuto/.packlist");
+      @falist=<PH>;
+      close(PH);
+   }
+   my $checkpath='';
+   foreach my $file (@falist) {
+      if (-1<index $file,'Net/FullAuto/Custom') {
+         $checkpath=substr($file,0,(index $file,'Net/FullAuto/Custom')+19);
+         last;
+      }
+   }
+   my $output=`ls -l $checkpath 2>&1`;
+   my ($size,$timestampd,$dirname)=('','','');
+   my @users=();
+   my $nl=0;
+   foreach my $line (split "\n", $output) {
+      print "\n" if $nl==1;
+      next unless $line=~/^d/;
+      ($size,$timestampd,$dirname)=&Net::FullAuto::FA_Core::ls_parse($line);
+      next if $dirname eq 'BackUp';
+      $nl=1;
+      print $dirname;
+   }
+   exit;
+   #&Net::FullAuto::FA_Core::cleanup();
+
 }
 
 sub VERSION
@@ -10458,6 +10510,7 @@ sub fa_login
                 'service'               => \$service,
                 'edit:s'                => \$edit,
                 'e:s'                   => \$edit,
+                'users'                 => \$users,
                 'v'                     => \$version,
                 'version'               => \$version,
                 'V'                     => \$VERSION,
@@ -11411,7 +11464,6 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      "__Master_${$}__"}{'Cipher'});
                   my $tpess=$dcipher->decrypt($passetts->[0]);
                   my $skipflag=0;
-print "WHAT IS FPASSS=$password_from\n";sleep 10;
                   if ($password_from ne 'user_input') {
                      if ($passwd[0] ne $tpess) {
                         undef $tpess;
