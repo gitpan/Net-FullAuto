@@ -70,7 +70,7 @@
       },
       "Net::FullAuto" : {
          "file" : "lib/Net/FullAuto.pm",
-         "version" : "0.99999936"
+         "version" : "0.99999937"
       },
       "Net::FullAuto::FA_Core" : {
          "file" : "lib/Net/FullAuto/FA_Core.pm",
@@ -119,5 +119,5 @@
          "http://opensource.org/licenses/gpl-3.0.html"
       ]
    },
-   "version" : "0.99999936"
+   "version" : "0.99999937"
 }

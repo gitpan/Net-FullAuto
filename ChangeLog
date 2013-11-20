@@ -21,6 +21,13 @@
 
 2013-11-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999937 released.
+
+        * Fix for --users arg
+
+
+2013-11-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999936 released.
 
         * More Development on Import/Export Menu Item.

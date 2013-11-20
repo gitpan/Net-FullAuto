@@ -1645,18 +1645,33 @@ sub users
    #   &Net::FullAuto::FA_Core::fa_login();
    #   undef $main::plan_menu_sub;
    #}
-   #can_load(modules => { "Term::Menus" => 0 });
+   can_load(modules => { "Term::Menus" => 0 });
    can_load(modules => { "Net::FullAuto" => 0 });
+   my $username=getlogin || getpwuid($<);
+   my $term_menus_path=
+      substr($INC{'Term/Menus.pm'},0,
+      (rindex $INC{'Term/Menus.pm'},'Term'));
    my $net_fulla_path=
       substr($INC{'Net/FullAuto.pm'},0,
       (rindex $INC{'Net/FullAuto.pm'},'Net'));
-   my @falist=();
+   $term_menus_path=~s/\/share\//\/lib\//
+      if -1<index $term_menus_path,'share';
    my $o='';
    foreach my $p (@INC) {
       $o=$p;
-      last if -1<index $o,$net_fulla_path;
-      last if "$o/" eq $net_fulla_path;
+      last if -1<index $o,$term_menus_path;
+      last if "$o/" eq $term_menus_path;
    }
+   my @tmlist=();
+   if (-f $o.'/auto/Term/Menus/.packlist') {
+      open (TH,"<$o/auto/Term/Menus/.packlist");
+      while (my $f=<TH>) {
+         chomp $f;
+         push @tmlist,$f;
+      }
+      close(TH);
+   }
+   my @falist=();
    if (-f $o.'/auto/Net/FullAuto/.packlist') {
       open (PH,"<$o/auto/Net/FullAuto/.packlist");
       @falist=<PH>;
@@ -1681,6 +1696,7 @@ sub users
       $nl=1;
       print $dirname;
    }
+   print "\n" unless $^O eq 'cygwin';
    exit;
    #&Net::FullAuto::FA_Core::cleanup();
 
