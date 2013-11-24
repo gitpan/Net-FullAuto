@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-11-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999939 released.
+
+        * More Development on Import/Export Menu Item.
+
+        * New version of Term::Menus paired with this release.
+
+
 2013-11-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999938 released.

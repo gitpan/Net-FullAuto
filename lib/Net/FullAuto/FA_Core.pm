@@ -10252,11 +10252,11 @@ my $login_to_remote=sub {
 
    package login_to_remote;
    use Term::ReadKey;
-   my $host_to_connect_to=']S[';
+   my $host_to_connect_to=']T[{im_from_remote}';
    $host_to_connect_to=~s/^"Import from (.*)"$/$1/;
    use if (!defined $Net::FullAuto::FA_Core::localhost), 'Net::FullAuto';
    our $fa_code='Net::FullAuto::FA_Core.pm';
-   my @Hosts=();
+   my @Hosts=();my $fa_host='';
    unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
       $main::plan_menu_sub=1;
       eval {
@@ -10318,6 +10318,32 @@ my $login_to_remote=sub {
       
    } 
    print "USERS=$stdout<== and STDERR=$stderr\n";
+   my @users=();
+   foreach my $user (split /\n/,$stdout) {
+      chomp $user;
+      push @users, $user;
+   }
+   if (-1<$#users) {
+      my %users=(
+
+         Name => 'users',
+         Item_1 => {
+
+            Text => ']C[',
+            Convey => \@users,
+
+         },
+         Item_2 => {
+
+            Text => 'Return to Admin Menu',
+            Result => sub { return '{admin}<' }
+
+         },
+         Banner => '   Select User Account',
+
+      );
+      return \%users;
+   }
    &Net::FullAuto::FA_Core::cleanup;
 
 };
@@ -10325,6 +10351,7 @@ my $login_to_remote=sub {
 my $im_from_remote=sub {
 
    &Net::FullAuto::FA_Core::fa_set;
+   my $fa_host='';
    my @Hosts=@{&Net::FullAuto::FA_Core::check_Hosts(
       $Net::FullAuto::FA_Core::fa_host->[0])};
    my %im_from_remote=(
