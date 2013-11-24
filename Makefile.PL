@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999937';
+$main::VERSION='0.99999938';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -533,8 +533,9 @@ END
       }
       close(DH);
       $new=$file if !$new && $file;
+      $new=~s/^.*[\/](.*)$/$1/;
       print "***** Module Directory ",$new,"\n";
-      return $new; 
+      return "$d/$new"; 
    }
    
    sub fa_install_mod {
@@ -583,7 +584,7 @@ END
                      my $cb  = CPANPLUS::Backend->new;
                      my $mod = $cb->parse_module(module=>$p);
                      my $where = $cb->_fetch(module=>$mod,verbose=>1);
-                     $dir - $cb->_extract(module=>$mod,verbose=>1);
+                     $dir = $cb->_extract(module=>$mod,verbose=>1);
                   };
                   die "CPANPLUS Error: $@ $! and CPAN Error: $cpan_error" if $@;
                }; 
@@ -600,6 +601,7 @@ END
                print "*** Running Build install\n";
                system("cd \"$dir\";./Build install");
             }
+            require $p;
          }
          chdir $main::curdir;
       } else { print "*** $p Loaded Successfully\n" }
@@ -663,10 +665,6 @@ END
       'ExtUtils::MakeMaker','install','Makefile','','6.59');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'ExtUtils::CBuilder','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
    ($stdout,$stderr)=&fa_install_module(
       'CPAN::Meta::Requirements','install','Makefile');
    print $stdout if $stdout;
@@ -792,6 +790,10 @@ END
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('common::sense','install',
+      'Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'common::sense') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Types::Serialiser','install',
       'Makefile');
    print $stdout if $stdout;
@@ -831,6 +833,22 @@ END
    ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'Module::CoreList','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Module::CoreList') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'Module::Load::Conditional','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Module::Load::Conditional') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'IPC::Cmd','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'IPC::Cmd') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::CBuilder','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
    eval { require Data::Dump::Streamer };
    if ($@) {
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
@@ -841,7 +859,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.47');
+      '','2.48');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
@@ -4112,7 +4130,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.47;
+#requires        'Term::Menus'               => 2.48;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

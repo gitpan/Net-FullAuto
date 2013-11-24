@@ -10251,29 +10251,73 @@ my $set_default_menu_sub=sub {
 my $login_to_remote=sub {
 
    package login_to_remote;
+   use Term::ReadKey;
    my $host_to_connect_to=']S[';
    $host_to_connect_to=~s/^"Import from (.*)"$/$1/;
    use if (!defined $Net::FullAuto::FA_Core::localhost), 'Net::FullAuto';
    our $fa_code='Net::FullAuto::FA_Core.pm';
+   my @Hosts=();
    unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
       $main::plan_menu_sub=1;
       eval {
          &Net::FullAuto::FA_Core::fa_login();
          undef $main::plan_menu_sub;
          &Net::FullAuto::FA_Core::fa_set;
-         my @Hosts=@{&Net::FullAuto::FA_Core::check_Hosts(
+         @Hosts=@{&Net::FullAuto::FA_Core::check_Hosts(
             $Net::FullAuto::FA_Core::fa_host->[0])};
          &Net::FullAuto::FA_Core::host_hash(\@Hosts);
       };
       die $@ if $@;
    }
    my $error='';
+   my $host='';
+   foreach my $h (@Hosts) {
+#print "H=",$h->{Label}," and HOST_TO_CONN=$host_to_connect_to\n";
+      if ($h->{Label} eq $host_to_connect_to) {
+         $host=$h;
+         last;
+      }
+   }
    ($main::remote_host,$error)=
       &Net::FullAuto::FA_Core::connect_secure($host_to_connect_to);
    my ($stdout,$stderr)=('','');
    ($stdout,$stderr)=$main::remote_host->cmd(
-      'hostname');
-   print "HOSTNAME=$stdout\n";
+      '/usr/local/bin/fullauto --users --quiet');
+   $stdout=~s/\s*$//s;
+   if ($stdout=~/^\s*$/s) {
+      my $message="\n\n".
+                  "    _  _  ___ _____ ___   _   \n".
+                  "   | \\| |/ _ \\_   _| __| (_)\n".
+                  "   | .` | (_) || | | _|   _   \n".
+                  "   |_|\\_|\\___/ |_| |___| (_) \n".
+                  "\n\n".
+                  "   *NO* users have yet been added to\n".
+                  "   the FullAuto installation on $host_to_connect_to.\n\n".
+                  "   To add a user, login directly to $host_to_connect_to\n".
+                  "   with the desired user login and run\n".
+                  "   fullauto with the --defaults argument\n".
+                  "   invoked from the command line.\n\n".
+                  "      Example:  fa --defaults\n\n".
+                  "   Press ANY KEY to return to the Admin Menu\n";
+      $main::remote_host->close(); 
+      print $Net::FullAuto::FA_Core::blanklines,$message;
+      alarm 120;
+      Term::ReadKey::ReadMode 4;
+      # Turn off controls keys
+      eval {
+         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         my $key='';
+         while (not defined ($key = ReadKey(-1))) {
+            # No key yet
+         }
+      };
+      Term::ReadKey::ReadMode 0;
+      # Reset tty mode before exiting
+      alarm(0);
+      return '{admin}<';
+      
+   } 
+   print "USERS=$stdout<== and STDERR=$stderr\n";
    &Net::FullAuto::FA_Core::cleanup;
 
 };
@@ -28614,6 +28658,8 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                   $output=~tr/\0-\11\13-\37\177-\377//d;
                   if (-1<index $output,'[A') {
                      $output=~s/^(.*2[>][&]1\s*)\[A\s*$/$1/s;
+                  } elsif (-1<index $output,'7[r') {
+                     $output=~s/7[[]r[[]999[;]999H[[]6n//s;
                   }
                   print $Net::FullAuto::FA_Core::MRLOG
                      "\nCMD RAW OUTPUT: ==>$output<== at Line ",__LINE__,"\n\n"
