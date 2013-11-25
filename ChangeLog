@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-11-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999940 released.
+
+        * Fix require to use line 604 in Makefile.PL.
+
+
 2013-11-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999939 released.

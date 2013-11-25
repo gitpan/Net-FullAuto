@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999939';
+$main::VERSION='0.99999940';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -594,14 +594,17 @@ END
             $dir||=&fa_find_latest($p);
             print "*** Running $butil.PL\n";
             system("cd \"$dir\";$^X $butil.PL");
+            my $flag=0;
             if ($butil eq 'Makefile') {
                print "*** Running make install\n";
                system("cd \"$dir\";make install");
+               $flag=1;
             } else {
                print "*** Running Build install\n";
                system("cd \"$dir\";./Build install");
+               $flag=1;
             }
-            require $p;
+            use if ($flag), $p;
          }
          chdir $main::curdir;
       } else { print "*** $p Loaded Successfully\n" }
