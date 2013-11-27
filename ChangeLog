@@ -19,6 +19,13 @@
 ################################################################
 
 
+2013-11-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999941 released.
+
+        * require and import Digest::MD5 in Makefile.PL.
+
+
 2013-11-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999940 released.

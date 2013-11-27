@@ -5,7 +5,7 @@ author:
 build_requires:
   ExtUtils::MakeMaker: 6.42
 dynamic_config: 0
-generated_by: 'CPAN::Meta::Converter version 2.112621, CPAN::Meta::Converter version 2.112621'
+generated_by: 'CPAN::Meta::Converter version 2.120351, CPAN::Meta::Converter version 2.120351'
 license: unknown
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -20,7 +20,7 @@ provides:
     version: 0
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.99999940
+    version: 0.99999941
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
     version: 0
@@ -88,4 +88,4 @@ requires:
   perl: 5.006
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
-version: 0.99999940
+version: 0.99999941

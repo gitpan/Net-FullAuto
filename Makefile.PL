@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999940';
+$main::VERSION='0.99999941';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3266,6 +3266,8 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                   $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
                   open(FILE, $filename) or die "Can't open '$file': $!";
                   binmode(FILE);
+                  require Digest::MD5;
+                  import Digest::MD5;
                   my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
                   if ($checksum eq $digestmd5) {
                      print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
