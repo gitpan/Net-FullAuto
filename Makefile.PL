@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999942';
+$main::VERSION='0.99999943';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -506,7 +506,7 @@ END
       }
 
       my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
-              "\n                      is required to install FullAuto";
+              "\n                      is required to install FullAuto".
               $moreinfo.
               "\n                      (Hint: goto www.gnu.org for gcc).".
               "\n\n";
@@ -640,6 +640,10 @@ END
             }
          }
          chdir $main::curdir;
+         my $_p=$p;
+         $_p=~s/::/\//;
+         $_p.='.pm';
+         require $_p;
       } else { print "*** $p Loaded Successfully\n" }
    }
    
@@ -742,7 +746,7 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Module::Build') if $stderr;
    }
-   ($stdout,$stderr)=&fa_install_module('IO::CaptureOutput','install','Build');
+   ($stdout,$stderr)=&fa_install_mod('IO::CaptureOutput','install','Build');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'IO::CaptureOutput') if $stderr;
    if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {
@@ -830,6 +834,12 @@ END
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'Class::Method::Modifiers','install',
+      'Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,
+      'Class::Method::Modifiers') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Types::Serialiser','install',
       'Makefile');
    print $stdout if $stdout;
