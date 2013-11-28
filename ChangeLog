@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999942 released.
+
+        * Roll back some changes in Makefile.PL.
+ 
+        * Test earlier for compiler in Unix builds.
+
+
 2013-11-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999941 released.

@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999941';
+$main::VERSION='0.99999942';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -184,6 +184,11 @@ END
    use Cwd qw/cwd/;
    use lib '.';
    use lib './inc';
+   use inc::Module::Install;
+   use Config;
+   use File::stat;
+   CPAN::HandleConfig->load;
+   use POSIX qw/strftime/;
    my $mycpantest=0; 
    $main::curdir=&cwd;
    $main::PARdir=$main::curdir;
@@ -474,6 +479,38 @@ END
             exit 1;
          }
       }
+   } elsif (!can_cc()) {
+
+      my $moreinfo='';
+      if ($Config{cc} and $Config{cc}!~/^\s*$/) {
+         $moreinfo="\n\n                      You are running $^X version $].\n".
+              "\n                      The Config.pm file for this perl installation".
+              "\n                      contains \"$Config{cc}\" as the compiler used".
+              "\n                      to build this perl, but this compiler does not".
+              "\n                      exist in the PATH and may not be installed on".
+              "\n                      this host.\n";
+              "\n                      Retrofitting an existing perl installation to".
+              "\n                      work properly with a new compiler for building".
+              "\n                      CPAN modules, is tricky and NOT recommended.".
+              "\n                      Often the available perl (especially on Unix".
+              "\n                      systems) is highly integrated with the host".
+              "\n                      OS and many of its features and utilities.".
+              "\n                      Upgrading the perl, but not the overall OS".
+              "\n                      is risky and may result in more than a few".
+              "\n                      system problems and instabilities.\n".
+              "\n                      The recommended approach is build a NEW perl".
+              "\n                      from source with your choice of newly installed".
+              "\n                      compiler (such as gcc) in a different location".
+              "\n                      (such as /usr/local/lib) or your home directory".
+              "\n                      if you lack root/admin privileges."
+      }
+
+      my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
+              "\n                      is required to install FullAuto";
+              $moreinfo.
+              "\n                      (Hint: goto www.gnu.org for gcc).".
+              "\n\n";
+      die $die;
    }
    if ($incflag && ($main::PARdir ne $main::curdir)) {
       open(PD,">$main::PARdir/inc_exists.txt")
@@ -533,9 +570,8 @@ END
       }
       close(DH);
       $new=$file if !$new && $file;
-      $new=~s/^.*[\/](.*)$/$1/;
       print "***** Module Directory ",$new,"\n";
-      return "$d/$new"; 
+      return $new; 
    }
    
    sub fa_install_mod {
@@ -548,6 +584,7 @@ END
       my $dir='';
       my $cpan_error='';
       eval "require $p;1";
+      my $ver='';
       unless ($@) {
          if ($version) {
             my $ttmp='$ver=$'.$p.'::VERSION';
@@ -594,17 +631,13 @@ END
             $dir||=&fa_find_latest($p);
             print "*** Running $butil.PL\n";
             system("cd \"$dir\";$^X $butil.PL");
-            my $flag=0;
             if ($butil eq 'Makefile') {
                print "*** Running make install\n";
                system("cd \"$dir\";make install");
-               $flag=1;
             } else {
                print "*** Running Build install\n";
                system("cd \"$dir\";./Build install");
-               $flag=1;
             }
-            use if ($flag), $p;
          }
          chdir $main::curdir;
       } else { print "*** $p Loaded Successfully\n" }
@@ -668,6 +701,10 @@ END
       'ExtUtils::MakeMaker','install','Makefile','','6.59');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::CBuilder','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
    ($stdout,$stderr)=&fa_install_module(
       'CPAN::Meta::Requirements','install','Makefile');
    print $stdout if $stdout;
@@ -793,10 +830,6 @@ END
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('common::sense','install',
-      'Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'common::sense') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Types::Serialiser','install',
       'Makefile');
    print $stdout if $stdout;
@@ -836,22 +869,6 @@ END
    ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'Module::CoreList','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Module::CoreList') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'Module::Load::Conditional','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Module::Load::Conditional') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'IPC::Cmd','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'IPC::Cmd') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'ExtUtils::CBuilder','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
    eval { require Data::Dump::Streamer };
    if ($@) {
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
@@ -1259,7 +1276,7 @@ sub clean_mswin {
 }
 
 # Load the Module::Install bundled in ./inc/
-use inc::Module::Install;
+# use inc::Module::Install;
 
 # Define metadata
 version         $main::VERSION;
@@ -1271,10 +1288,10 @@ perl_version    '5.006';
 
 #unshift @INC, $main::PARdir if $main::unshift_incdir;
 
-use Config;
-use File::stat;
-CPAN::HandleConfig->load;
-use POSIX qw/strftime/;
+#use Config;
+#use File::stat;
+#CPAN::HandleConfig->load;
+#use POSIX qw/strftime/;
 
 require Mozilla::CA;
 require Term::Menus;
@@ -2896,39 +2913,7 @@ if ($^O eq 'cygwin' && !can_cc()) {
            "and 'gcc-g++' under the Category 'Devel' ).".
            "\n\n";
    die $die;
-} elsif (!can_cc()) {
-
-   my $moreinfo='';
-   if ($Config{cc} and $Config{cc}!~/^\s*$/) {
-      $moreinfo="\n\n                      You are running $^X version $].\n".
-           "\n                      The Config.pm file for this perl installation".
-           "\n                      contains \"$Config{cc}\" as the compiler used".
-           "\n                      to build this perl, but this compiler does not".
-           "\n                      exist in the PATH and may not be installed on".
-           "\n                      this host.\n";
-           "\n                      Retrofitting an existing perl installation to".
-           "\n                      work properly with a new compiler for building".
-           "\n                      CPAN modules, is tricky and NOT recommended.".
-           "\n                      Often the available perl (especially on Unix".
-           "\n                      systems) is highly integrated with the host".
-           "\n                      OS and many of its features and utilities.".
-           "\n                      Upgrading the perl, but not the overall OS".
-           "\n                      is risky and may result in more than a few".
-           "\n                      system problems and instabilities.\n".
-           "\n                      The recommended approach is build a NEW perl".
-           "\n                      from source with your choice of newly installed".
-           "\n                      compiler (such as gcc) in a different location".
-           "\n                      (such as /usr/local/lib) or your home directory".
-           "\n                      if you lack root/admin privileges."
-   }
-
-   my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
-           "\n                      is required to install FullAuto";
-           $moreinfo.
-           "\n                      (Hint: goto www.gnu.org for gcc).".
-           "\n\n";
-   die $die;
-}
+} 
 
 if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
    my $timeout=120;my $a='';
