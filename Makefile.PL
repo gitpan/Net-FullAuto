@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999960';
+$main::VERSION='0.99999961';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -535,12 +535,21 @@ END
          die "ERROR - No argument provided to &fa_find_latest().\n";
       }
       $look=~s/::/-/g;
-      $look='libwww-perl' if $look eq 'LWP';
-      $look='IO-Compress' if $look eq 'Compress-Zlib';
-      $look='MIME-tools' if $look eq 'MIME-Entity';
-      $look='TermReadKey' if $look eq 'Term-ReadKey';
-      $look='IO-Tty' if $look eq 'IO-Pty';
-      $look='MailTools' if $look eq 'Mail-Internet';
+      if ($look eq 'LWP') {
+         $look='libwww-perl';
+      } elsif ($look eq 'Compress-Zlib') {
+         $look='IO-Compress';
+      } elsif ($look eq 'MIME-Entity') {
+         $look='MIME-tools';
+      } elsif ($look eq 'Term-ReadKey') {
+         $look='TermReadKey';
+      } elsif ($look eq 'IO-Pty') {
+         $look='IO-Tty';
+      } elsif ($look eq 'Mail-Internet') {
+         $look='MailTools' ;
+      } elsif ($look eq 'Date-Format') {
+         $look='TimeDate';
+      }
       print "***** Looking for Most Recent \"$look Dir\" \n";
       CPAN::HandleConfig->load;
       my $d = $CPAN::Config->{build_dir};
