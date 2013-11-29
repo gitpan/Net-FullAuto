@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999951';
+$main::VERSION='0.99999952';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -760,6 +760,18 @@ END
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       ($stdout,$stderr)=&fa_install_mod(
+         'CPAN::Meta::YAML','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'CPAN::Meta::YAML') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'JSON::PP','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'JSON::PP') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Parse::CPAN::Meta','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Parse::CPAN::Meta') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
          'CPAN::Meta','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
@@ -767,21 +779,6 @@ END
          'ExtUtils::ParseXS','install','Makefile','force');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'ExtUtils::ParseXS') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Parse::CPAN::Meta','install','Makefile','force');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Parse::CPAN::Meta') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Perl::OSType','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Perl::OSType') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'version','install','Makefile','force');
-      print $stdout if $stdout;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Module::Metadata','install','Makefile','force');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'version') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
          'Module::Build','install','Build','force');
       print $stdout if $stdout;
