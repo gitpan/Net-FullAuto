@@ -21,6 +21,13 @@
 
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999958 released.
+
+        * Added prerequisites Text::Diff and Regexp::Common.
+
+
+2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999957 released.
 
         * Mapped Compress::Zlib to IO-Compress.

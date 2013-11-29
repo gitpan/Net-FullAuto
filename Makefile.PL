@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999957';
+$main::VERSION='0.99999958';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -793,9 +793,21 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'IO::Zlib') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
+         'Algorithm::Diff','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Text::Diff','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Text::Diff') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
          'Archive::Tar','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Archive::Tar') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Regexp::Common','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Regexp::Common') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
          'Pod::Readme','install','Makefile');
       print $stdout if $stdout;
@@ -952,9 +964,6 @@ END
    &fa_err_exit($stderr,'JSON') if $stderr;
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
-   ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
    eval { require Data::Dump::Streamer };
    if ($@) {
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
