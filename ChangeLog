@@ -21,6 +21,13 @@
 
 2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999946 released.
+
+        * Added Params::Check in Makefile.PL for Unix builds.
+
+
+2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999945 released.
 
         * Added IPC::Cmd in Makefile.PL for Unix builds.
