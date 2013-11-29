@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999959';
+$main::VERSION='0.99999960';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -535,7 +535,7 @@ END
          die "ERROR - No argument provided to &fa_find_latest().\n";
       }
       $look=~s/::/-/g;
-      $look='libwww' if $look eq 'LWP';
+      $look='libwww-perl' if $look eq 'LWP';
       $look='IO-Compress' if $look eq 'Compress-Zlib';
       $look='MIME-tools' if $look eq 'MIME-Entity';
       $look='TermReadKey' if $look eq 'Term-ReadKey';
@@ -769,13 +769,13 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Parse::CPAN::Meta') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
-         'CPAN::Meta','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
          'CPAN::Meta::Requirements','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'CPAN::Meta','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
          'ExtUtils::ParseXS','install','Makefile','force');
       print $stdout if $stdout;
@@ -840,6 +840,21 @@ END
    ($stdout,$stderr)=&fa_install_module('URI','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'URI') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('HTTP::Date','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'HTTP::Date') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'LWP::MediaTypes','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'LWP::MediaTypes') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'Encode::Locale','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Encode::Locale') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'IO::HTML','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'IO::HTML') if $stderr;
    ($stdout,$stderr)=&fa_install_module('HTTP::Message','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'HTTP::Message') if $stderr;
@@ -862,9 +877,20 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'WWW::RobotRules') if $stderr;
       ($stdout,$stderr)=&fa_install_module(
+         'Date::Format','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Date::Format') if $stderr;
+      ($stdout,$stderr)=&fa_install_module(
+         'Date::Parse','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Date::Parse') if $stderr;
+      ($stdout,$stderr)=&fa_install_module(
          'Mail::Internet','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Mail::Internet') if $stderr;
+      ($stdout,$stderr)=&fa_install_module('Test::Deep','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Test::Deep') if $stderr;
       ($stdout,$stderr)=&fa_install_module('MIME::Entity','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'MIME::Entity') if $stderr;
@@ -872,9 +898,6 @@ END
    ($stdout,$stderr)=&fa_install_module('LWP::MediaTypes','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'LWP::MediaTypes') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('HTTP::Date','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'HTTP::Date') if $stderr;
    ($stdout,$stderr)=&fa_install_module('HTTP::Negotiate','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'HTTP::Negotiate') if $stderr;
@@ -925,6 +948,10 @@ END
       'Test::Harness','install','Makefile','','3.30');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Test::Harness') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'CPAN::Meta::Requirements','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
    ($stdout,$stderr)=&fa_install_module(
       'CPAN::Meta','install','Makefile');
    print $stdout if $stdout;

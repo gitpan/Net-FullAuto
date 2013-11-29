@@ -21,6 +21,17 @@
 
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999960 released.
+
+        * Added prerequisite IO::HTML.
+
+        * Re-arranged other prerequisites.
+
+        * Mapped LWP to libwww-perl.
+
+
+2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999959 released.
 
         * Added prerequisites Devel::Symdump and PadWalker.
