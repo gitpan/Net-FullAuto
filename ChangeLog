@@ -21,6 +21,13 @@
 
 2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999945 released.
+
+        * Added IPC::Cmd in Makefile.PL for Unix builds.
+
+
+2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999944 released.
 
         * Roll back some changes in Makefile.PL.
