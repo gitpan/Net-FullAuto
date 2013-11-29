@@ -21,6 +21,14 @@
 
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999951 released.
+
+        * Moved version ahead of Module::Metadata
+          in Makefile.PL
+
+
+2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999950 released.
 
         * Added Module::CoreList, Module::Load, Module::Metadata

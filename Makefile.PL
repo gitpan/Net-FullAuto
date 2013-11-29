@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999950';
+$main::VERSION='0.99999951';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -731,13 +731,13 @@ END
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Module::Load') if $stderr;
    ($stdout,$stderr)=&fa_install_mod(
-      'Module::Metadata','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Module::Metadata') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
       'version','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'version') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'Module::Metadata','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Module::Metadata') if $stderr;
    ($stdout,$stderr)=&fa_install_mod(
       'Module::Load::Conditional','install','Makefile');
    print $stdout if $stdout;
