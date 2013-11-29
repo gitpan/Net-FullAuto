@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999953';
+$main::VERSION='0.99999954';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -750,10 +750,6 @@ END
       'ExtUtils::CBuilder','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'CPAN::Meta::Requirements','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
    ($stdout,$stderr)=&fa_install_mod('YAML','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'YAML') if $stderr;
@@ -772,9 +768,9 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Parse::CPAN::Meta') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
-         'CPAN::Meta','install','Makefile');
+         'CPAN::Meta::Requirements','install','Makefile');
       print $stdout if $stdout;
-      &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
+      &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
          'ExtUtils::ParseXS','install','Makefile','force');
       print $stdout if $stdout;

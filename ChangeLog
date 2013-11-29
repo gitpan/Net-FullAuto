@@ -21,6 +21,14 @@
 
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999954 released.
+
+        * Moved CPAN::Meta::Requirements ahead of
+          CPAN::Meta in Makefile.PL
+
+
+2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999953 released.
 
         * Re-arranged some prerequisites in Makefile.PL.
