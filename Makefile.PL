@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999954';
+$main::VERSION='0.99999955';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -555,11 +555,11 @@ END
       while ($_ = readdir(DH)) {
          next if ($_ eq ".") || ($_ eq "..");
          next unless -d $d.'/'.$_;
-         next if $_!~/^$look/;
+         next if $_!~/^$look[-]\d/;
          $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
          my @attrs = stat $file;
          my $diff = time()-$attrs[9];
-         if ($temp == 0 && $_=~/^$look/) {
+         if ($temp == 0 && $_=~/^$look[-]\d/) {
            $temp=$diff;
            $new=$file;
          }
