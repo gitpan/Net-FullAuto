@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999955';
+$main::VERSION='0.99999956';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -775,6 +775,22 @@ END
          'ExtUtils::ParseXS','install','Makefile','force');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'ExtUtils::ParseXS') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Compress::Raw::Bzip2','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Compress::Raw::Bzip2') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Compress::Raw::Zlib','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Compress::Raw::Zlib') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'IO::Compress','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'IO::Compress') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'IO::Zlib','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'IO::Zlib') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
          'Archive::Tar','install','Makefile');
       print $stdout if $stdout;
