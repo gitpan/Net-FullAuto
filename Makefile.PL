@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999952';
+$main::VERSION='0.99999953';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -636,7 +636,7 @@ END
                system("cd \"$dir\";make install");
             } else {
                print "*** Running Build install\n";
-               system("cd \"$dir\";./Build install");
+               system("cd \"$dir\";./Build build;./Build install");
             }
          }
          chdir $main::curdir;
@@ -780,6 +780,14 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'ExtUtils::ParseXS') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
+         'Archive::Tar','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Archive::Tar') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
+         'Pod::Readme','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Pod::Readme') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
          'Module::Build','install','Build','force');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Module::Build') if $stderr;
@@ -873,6 +881,27 @@ END
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
    ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::Config','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'ExtUtils::Config') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::InstallPaths','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'ExtUtils::InstallPaths') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'ExtUtils::Helpers','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'ExtUtils::Helpers') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'Test::Harness','install','Makefile','','3.30');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Test::Harness') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
+      'Module::Build::Tiny','install',
+      'Build');
+   &fa_err_exit($stderr,
+      'Module::Build::Tiny') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
       'Class::Method::Modifiers','install',
       'Makefile');
    print $stdout if $stdout;
@@ -902,16 +931,12 @@ END
    my $cpanmvalue=$ENV{PERL5_CPANM_IS_RUNNING}||'';
    undef $ENV{PERL5_CPAN_IS_RUNNING};
    undef $ENV{PERL5_CPANM_IS_RUNNING};
-   ($stdout,$stderr)=&fa_install_module(
-      'Types::Serialiser','install','Makefile');
-   &fa_err_exit($stderr,'Types::Serialiser') if $stderr;
-   print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('JSON::XS','install','Makefile');
+   print $stdout if $stdout;
    &fa_err_exit($stderr,'JSON::XS') if $stderr;
-   print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('JSON','install','Makefile');
-   &fa_err_exit($stderr,'JSON') if $stderr;
    print $stdout if $stdout;
+   &fa_err_exit($stderr,'JSON') if $stderr;
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
    ($stdout,$stderr)=&fa_install_module('Algorithm::Diff','install','Makefile');

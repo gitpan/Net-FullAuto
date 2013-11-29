@@ -21,6 +21,15 @@
 
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999953 released.
+
+        * Re-arranged some prerequisites in Makefile.PL.
+
+        * Added more prerequisites for Class::Method::Modifiers.
+
+
+2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999952 released.
 
         * Re-arranged some prerequisites in Makefile.PL.
