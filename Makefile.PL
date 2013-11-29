@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999946';
+$main::VERSION='0.99999947';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -710,6 +710,14 @@ END
       'Perl::OSType','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Perl::OSType') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'Locale::Maketext::Simple','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Locale::Maketext::Simple') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'Test::Simple','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Test::Simple') if $stderr;
    ($stdout,$stderr)=&fa_install_mod(
       'Params::Check','install','Makefile');
    print $stdout if $stdout;

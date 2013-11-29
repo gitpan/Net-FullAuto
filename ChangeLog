@@ -21,6 +21,15 @@
 
 2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999947 released.
+
+        * Added Locale::Maketext::Simple in Makefile.PL for Unix builds.
+
+        * Added Test::Simple in Makefile.PL for Unix builds.
+
+
+2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999946 released.
 
         * Added Params::Check in Makefile.PL for Unix builds.
