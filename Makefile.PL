@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999943';
+$main::VERSION='0.99999944';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -645,6 +645,7 @@ END
          $_p.='.pm';
          require $_p;
       } else { print "*** $p Loaded Successfully\n" }
+      return '';
    }
    
    sub fa_install_module {
@@ -701,19 +702,23 @@ END
    }
 
    my $stdout='';my $stderr='';
-   ($stdout,$stderr)=&fa_install_module(
+   ($stdout,$stderr)=&fa_install_mod(
       'ExtUtils::MakeMaker','install','Makefile','','6.59');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
+   ($stdout,$stderr)=&fa_install_mod(
+      'Perl::OSType','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Perl::OSType') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
       'ExtUtils::CBuilder','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
+   ($stdout,$stderr)=&fa_install_mod(
       'CPAN::Meta::Requirements','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('YAML','install','Makefile');
+   ($stdout,$stderr)=&fa_install_mod('YAML','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'YAML') if $stderr;
    eval { require Module::Build };
