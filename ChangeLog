@@ -21,6 +21,13 @@
 
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999962 released.
+
+        * Eliminated prompt for Net::SSLeay during install.
+
+
+2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999961 released.
 
         * Mapped Date::Format to TimeDate.

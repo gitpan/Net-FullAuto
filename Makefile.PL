@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999961';
+$main::VERSION='0.99999962';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -852,6 +852,9 @@ END
    ($stdout,$stderr)=&fa_install_module('HTTP::Date','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'HTTP::Date') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('Digest::MD5','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Digest::MD5') if $stderr;
    ($stdout,$stderr)=&fa_install_module(
       'LWP::MediaTypes','install','Makefile');
    print $stdout if $stdout;
@@ -897,10 +900,20 @@ END
          'Mail::Internet','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Mail::Internet') if $stderr;
-      ($stdout,$stderr)=&fa_install_module('Test::Deep','install','Makefile');
+      ($stdout,$stderr)=&fa_install_module(
+         'Test::NoWarnings','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Test::NoWarnings') if $stderr;
+      ($stdout,$stderr)=&fa_install_module(
+         'Test::Tester','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Test::Tester') if $stderr;
+      ($stdout,$stderr)=&fa_install_module(
+         'Test::Deep','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Test::Deep') if $stderr;
-      ($stdout,$stderr)=&fa_install_module('MIME::Entity','install','Makefile');
+      ($stdout,$stderr)=&fa_install_module(
+         'MIME::Entity','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'MIME::Entity') if $stderr;
    }
@@ -916,10 +929,15 @@ END
    ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'LWP') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Net::SSLeay','install',
-      'Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Net::SSLeay') if $stderr;
+   eval { require Net::SSLeay };
+   if ($@) {
+      ($stdout,$stderr)=&fa_install_module('Net::SSLeay','get');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'Net::SSLeay') if $stderr;
+      my $dir=&fa_find_latest('Net-SSLeay');
+      system("cd \"$dir\";echo n | $^X Makefile.PL;");
+      system("cd \"$dir\";make install;");
+   }
    ($stdout,$stderr)=&fa_install_module('IO::Socket::SSL','install',
       'Makefile');
    print $stdout if $stdout;
@@ -935,9 +953,6 @@ END
       'ExtUtils::Depends','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'ExtUtils::Depends') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Digest::MD5','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Digest::MD5') if $stderr;
    ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'B::Utils') if $stderr;
