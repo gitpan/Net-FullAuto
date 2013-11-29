@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999956';
+$main::VERSION='0.99999957';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -536,6 +536,7 @@ END
       }
       $look=~s/::/-/g;
       $look='libwww' if $look eq 'LWP';
+      $look='IO-Compress' if $look eq 'Compress-Zlib';
       $look='MIME-tools' if $look eq 'MIME-Entity';
       $look='TermReadKey' if $look eq 'Term-ReadKey';
       $look='IO-Tty' if $look eq 'IO-Pty';
@@ -784,9 +785,9 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Compress::Raw::Zlib') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
-         'IO::Compress','install','Makefile');
+         'Compress::Zlib','install','Makefile');
       print $stdout if $stdout;
-      &fa_err_exit($stderr,'IO::Compress') if $stderr;
+      &fa_err_exit($stderr,'Compress::Zlib') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
          'IO::Zlib','install','Makefile');
       print $stdout if $stdout;
