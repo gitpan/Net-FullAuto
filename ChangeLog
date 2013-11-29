@@ -21,6 +21,14 @@
 
 2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999949 released.
+
+        * Installing Module::Load::Conditional
+          earlier in Makefile.PL for Unix builds.
+
+
+2013-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999948 released.
 
         * Fixed Regex in Makefile.PL for Unix builds.

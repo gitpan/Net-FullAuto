@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999948';
+$main::VERSION='0.99999949';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -722,6 +722,10 @@ END
       'Params::Check','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Params::Check') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'Module::Load::Conditional','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Module::Load::Conditional') if $stderr;
    ($stdout,$stderr)=&fa_install_mod(
       'IPC::Cmd','install','Makefile');
    print $stdout if $stdout;
