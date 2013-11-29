@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999947';
+$main::VERSION='0.99999948';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -641,7 +641,7 @@ END
          }
          chdir $main::curdir;
          my $_p=$p;
-         $_p=~s/::/\//;
+         $_p=~s/::/\//g;
          $_p.='.pm';
          require $_p;
       } else { print "*** $p Loaded Successfully\n" }
