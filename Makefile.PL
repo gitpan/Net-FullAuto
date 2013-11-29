@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999958';
+$main::VERSION='0.99999959';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -769,6 +769,10 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Parse::CPAN::Meta') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
+         'CPAN::Meta','install','Makefile');
+      print $stdout if $stdout;
+      &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
+      ($stdout,$stderr)=&fa_install_mod(
          'CPAN::Meta::Requirements','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
@@ -922,6 +926,10 @@ END
    print $stdout if $stdout;
    &fa_err_exit($stderr,'Test::Harness') if $stderr;
    ($stdout,$stderr)=&fa_install_module(
+      'CPAN::Meta','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
+   ($stdout,$stderr)=&fa_install_module(
       'Module::Build::Tiny','install',
       'Build');
    &fa_err_exit($stderr,
@@ -964,6 +972,12 @@ END
    &fa_err_exit($stderr,'JSON') if $stderr;
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
+   ($stdout,$stderr)=&fa_install_module('Devel::Symdump','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Devel::Symdump') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('PadWalker','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'PadWalker') if $stderr;
    eval { require Data::Dump::Streamer };
    if ($@) {
       ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');

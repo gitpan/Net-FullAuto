@@ -21,6 +21,13 @@
 
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999959 released.
+
+        * Added prerequisites Devel::Symdump and PadWalker.
+
+
+2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999958 released.
 
         * Added prerequisites Text::Diff and Regexp::Common.
