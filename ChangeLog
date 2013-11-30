@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-11-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999962 released.
+
+        * Changed out code for "Press Any Key".
+
+        * Removed MYMETA.* from distribution.
+
+
 2013-11-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999962 released.
