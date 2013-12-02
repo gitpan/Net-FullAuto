@@ -82,9 +82,13 @@ package Net::FullAuto::FA_Core;
 #
 #  Also - in the /etc/ssh_config, set UseDNS to no.
 #
-## # ASCII BANNER Courtesy of (small font):
+## ASCII BANNER Courtesy of (small font):
 #
 #  http://www.network-science.de/ascii/
+#
+## TO DO: Look for way to fix this error:
+#
+#  cd "/cygdrive_funkyPrompt_cd "/cygdrive/c/Users/KB06606-admin" 2>&1
 #
 ## *************************************************************
 
@@ -2952,18 +2956,16 @@ my $getplans_sub=sub {
 
       print $Net::FullAuto::FA_Core::blanklines,$message;
       alarm 120;
-      Term::ReadKey::ReadMode 4;
+      Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
          $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
-         while (not defined ($key = ReadKey(-1))) {
-            # No key yet
-         }
+         $key = ReadKey(0);
       };
-      Term::ReadKey::ReadMode 0;
-      # Reset tty mode before exiting
       alarm(0);
+      # Reset tty mode before exiting
+      Term::ReadKey::ReadMode('normal');
       return '{plan_menu}<';
    }
 
@@ -3609,18 +3611,16 @@ my $plan_menu_options_sub=sub {
 
       print $Net::FullAuto::FA_Core::blanklines,$message;
       alarm 120;
-      Term::ReadKey::ReadMode 4;
+      Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
          $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
-         while (not defined ($key = ReadKey(-1))) {
-            # No key yet
-         }
+         $key = ReadKey(0);
       };
-      Term::ReadKey::ReadMode 0;
-      # Reset tty mode before exiting
       alarm(0);
+      # Reset tty mode before exiting
+      Term::ReadKey::ReadMode('normal');
       return '<';
 
    }
@@ -3683,19 +3683,17 @@ my %plan_menu=(
                                print $Net::FullAuto::FA_Core::blanklines,
                                      $message;
                                alarm 120;
-                               Term::ReadKey::ReadMode 4;
-                                  # Turn off controls keys
+                               Term::ReadKey::ReadMode('cbreak');
+                               # Turn off controls keys
                                eval {
-                                  $SIG{ALRM} = sub { die "alarm\n" }; # NB:
-                                                              # \n required
+                                  $SIG{ALRM} = sub { die "alarm\n" };
+                                                   # \n required
                                   my $key='';
-                                  while (not defined ($key = ReadKey(-1))) {
-                                    # No key yet
-                                  }
+                                  $key = ReadKey(0);
                                };
-                               Term::ReadKey::ReadMode 0;
-                                  # Reset tty mode before exiting
                                alarm(0);
+                               # Reset tty mode before exiting
+                               Term::ReadKey::ReadMode('normal');
                                return '<';
 
                             }
@@ -5633,8 +5631,6 @@ sub connect_host
       }
    } else {
       my @called=caller(2);
-      #if ((-1<index $caller,'mirror') || (-1<index $caller,'login_retry')
-      #      || (-1<index $caller,'connect_cmd')) {
       if ((-1<index $caller,'mirror') || (-1<index $caller,'login_retry')) {
          $sub=$called[3]
       } else {
@@ -10248,6 +10244,100 @@ my $set_default_menu_sub=sub {
    return \%set_default_menu;
 };
 
+my $select_file_components_to_import_sub=sub {
+
+   my $file_comp="]T[{select_user_comp_file}";
+   print "FILE_COMP=$file_comp\n";<STDIN>;
+   return '{admin}<';
+
+};
+
+my $select_component_file_sub=sub {
+
+   package select_component_file_sub;
+   use Term::ReadKey;
+   my $component="]!S[{select_component_dir}";
+   $component=~s/^["](.*)["]$/$1/;
+   my $server="]!P[{im_from_remote}";
+   $server=~s/^["]Import from (.*)["]$/$1/;
+   my $user="]!P[{remote_fa_users}";
+   $user=~s/^["](.*)["]$/$1/;
+   my ($stdout,$stderr)=('','');
+   ($stdout,$stderr)=$main::remote_host->cmd('/usr/local/bin/fullauto -V');
+   if ($stderr) {
+      $main::remote_host->close();
+      $stderr=~s/Connection cl/   Connection cl/s;
+      $stderr=~s/^\s*//s;
+      print $Net::FullAuto::FA_Core::blanklines,"\n\n   ",$stderr,
+            "   Press ANY KEY to return to the Admin Menu\n";
+      alarm 120;
+      Term::ReadKey::ReadMode('cbreak');
+      # Turn off controls keys
+      eval {
+         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         my $key='';
+         $key = ReadKey(0);
+      };
+      alarm(0);
+      # Reset tty mode before exiting
+      Term::ReadKey::ReadMode('normal');
+      return '{admin}<';
+   }
+   my @comp=();
+   foreach my $line (split "\n", $stdout) {
+      next if $line!~/$user\/$component/;
+      push @comp, $line;
+   }
+   my %select_user_comp_file=(
+
+      Name => 'select_user_comp_file',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => \@comp,
+         Result => $select_file_components_to_import_sub,
+
+      },
+      Item_2 => {
+
+         Text => 'Return to Admin Menu',
+         Result => sub { return '{admin}<' },
+
+      },
+      Banner => "   Select $component File for $user",
+
+   );
+   return \%select_user_comp_file,
+#print "COMP=@comp\n";
+#return '{admin}<';
+
+};
+
+my $select_component_dir_sub=sub {
+
+   my %select_component_dir=(
+
+      Name => 'select_component_dir',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => ['Code','Conf','Host','Maps','Menu'],
+         Result => $select_component_file_sub,
+
+      },
+      Item_2 => {
+
+         Text => 'Return to Admin Menu',
+         Result => sub { return '{admin}<' }
+
+      },
+      Banner => '   Select Component Directory',
+
+   );
+   return \%select_component_dir,
+
+};
+
 my $login_to_remote=sub {
 
    package login_to_remote;
@@ -10280,6 +10370,25 @@ my $login_to_remote=sub {
    }
    ($main::remote_host,$error)=
       &Net::FullAuto::FA_Core::connect_secure($host_to_connect_to);
+   if ($error) {
+      $main::remote_host->close();
+      $error=~s/Connection cl/   Connection cl/s;
+      $error=~s/^\s*//s;
+      print $Net::FullAuto::FA_Core::blanklines,"\n\n   ",$error,
+            "   Press ANY KEY to return to the Admin Menu\n";
+      alarm 120;
+      Term::ReadKey::ReadMode('cbreak');
+      # Turn off controls keys
+      eval {
+         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         my $key='';
+         $key = ReadKey(0);
+      };
+      alarm(0);
+      # Reset tty mode before exiting
+      Term::ReadKey::ReadMode('normal');
+      return '{admin}<';
+   }
    my ($stdout,$stderr)=('','');
    ($stdout,$stderr)=$main::remote_host->cmd(
       '/usr/local/bin/fullauto --users --quiet');
@@ -10299,23 +10408,20 @@ my $login_to_remote=sub {
                   "   invoked from the command line.\n\n".
                   "      Example:  fa --defaults\n\n".
                   "   Press ANY KEY to return to the Admin Menu\n";
-      $main::remote_host->close(); 
+      #$main::remote_host->close(); 
       print $Net::FullAuto::FA_Core::blanklines,$message;
       alarm 120;
-      Term::ReadKey::ReadMode 4;
+      Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
          $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
-         while (not defined ($key = ReadKey(-1))) {
-            # No key yet
-         }
+         $key = ReadKey(0);
       };
-      Term::ReadKey::ReadMode 0;
-      # Reset tty mode before exiting
       alarm(0);
+      # Reset tty mode before exiting
+      Term::ReadKey::ReadMode('normal');
       return '{admin}<';
-      
    } 
    print "USERS=$stdout<== and STDERR=$stderr\n";
    my @users=();
@@ -10324,13 +10430,14 @@ my $login_to_remote=sub {
       push @users, $user;
    }
    if (-1<$#users) {
-      my %users=(
+      my %remote_fa_users=(
 
-         Name => 'users',
+         Name => 'remote_fa_users',
          Item_1 => {
 
             Text => ']C[',
             Convey => \@users,
+            Result => $select_component_dir_sub,
 
          },
          Item_2 => {
@@ -10342,7 +10449,7 @@ my $login_to_remote=sub {
          Banner => '   Select User Account',
 
       );
-      return \%users;
+      return \%remote_fa_users;
    }
    &Net::FullAuto::FA_Core::cleanup;
 
@@ -10376,19 +10483,19 @@ my $im_ex_menu_sub=sub {
 
       Item_1 => {
 
-          Text => 'IMPORT CCB from Remote FA',
+          Text => 'IMPORT Component(s) from Remote FA',
           Result => $im_from_remote,
 
       },
       Item_2 => {
 
-          Text => 'IMPORT CCB from Local Host',
+          Text => 'IMPORT Component(s) from Local Host',
           Result => '',
 
       },
       Item_3 => {
 
-          Text => 'EXPORT CCB to File',
+          Text => 'EXPORT Component(s) to File',
           Result => '',
 
       },
@@ -29921,6 +30028,12 @@ sub new {
    } else {
       return $self;
    }
+}
+
+sub close {
+
+   return 0,'';
+
 }
 
 sub cmd
