@@ -21,7 +21,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.99999964';
+our $VERSION='0.99999965';
 
 
 use 5.005;
@@ -44,7 +44,8 @@ BEGIN {
          next;
       } elsif ($_ eq '--quiet' ||
                $_ eq '--version' ||
-               $_ =~ /^-[a-uw-zA-UW-Z]*[Vv]/) {
+               $_ =~ /^-[a-uw-zA-UW-Z]*[Vv]/ ||
+               $_ =~ '--cat') {
          $quiet=1; 
       }
       $args.="$_ ";
@@ -95,7 +96,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT = qw(fa_login);
 
-use Term::Menus 2.50;
+use Term::Menus 2.51;
 use Tie::Cache;
 use Sort::Versions;
 use Crypt::CBC;

@@ -674,7 +674,7 @@ BEGIN {
 
 # Globally Scoped Variables, but Intentionally NOT Initialized.
 # Getopt::Long needs it this way for some args to work properly. 
-our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,
+our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,$cat,
      $default,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
      $users,$usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL);
 
@@ -2065,6 +2065,43 @@ sub find_berkeleydb_utils {
       }
       return $berkeleydb.'/bin/db_'.$db_util;
    }
+}
+
+sub cat {
+
+   eval {
+      die;
+   };
+   my $path=$@;
+   $path=~s/Died at (.*)FA_Core.pm.*$/$1/;
+   my $username=getlogin || getpwuid($<);
+   chomp($path);
+   my $cpath=$path."Custom/$username/";
+   my $arg=$_[0];
+   if (-e $arg) {
+      if (-r $arg) {
+         if ($arg=~/^$cpath/) {
+            open (FH,"<$arg") ||
+               (print STDERR "\n\n   FullAuto cannot open $arg $!\n\n"
+               && exit 1);
+            my $file='';
+            while (my $line=<FH>) {
+               $file.=$line;
+            }
+            close(FH);
+            print $file;
+         } else {
+            print STDERR "\n   FATAL ERROR: The user $username is not",
+                         " authorized to view - \n\n      $arg\n\n";
+         }
+      } else {
+         print STDERR "\n   FATAL ERROR: FullAuto cannot read",
+                      " - \n\n      $arg\n\n";
+      }
+   } else {
+      print STDERR "\n   FATAL ERROR:\n\n      $arg\n\n   DOES NOT EXIST\n\n";
+   }
+   exit;
 }
 
 sub edit {
@@ -10702,6 +10739,7 @@ sub fa_login
                 'tosspass'              => \$tosspass,
                 'daemon'                => \$service,
                 'service'               => \$service,
+                'cat:s'                 => \$cat,
                 'edit:s'                => \$edit,
                 'e:s'                   => \$edit,
                 'users'                 => \$users,
@@ -26134,9 +26172,9 @@ print $Net::FullAuto::FA_Core::MRLOG
                                  IO::CaptureOutput::capture sub {
                                     system($fcmd);
                                  }, \$mystdout;
-                                 my $cat=$Net::FullAuto::FA_Core::gbp->('cat');
+                                 my $cat_=$Net::FullAuto::FA_Core::gbp->('cat');
                                  foreach (1..30) {
-                                    my $out=`${cat}cat $ro`;
+                                    my $out=`${cat_}cat $ro`;
                                     if (-1<index $out,'MOZREPL : Listening') {
                                        unlink $ro;
                                        $previous_method=0;
