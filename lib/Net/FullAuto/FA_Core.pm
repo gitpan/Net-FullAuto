@@ -1427,7 +1427,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             $localhost->cmd("rm -f transfer$tran[3]*tar")
             if $stderr;
          &handle_error("CLEANUP ERROR -> $stderr",'-1') if $stderr
-            && $stderr!~/^\[A(\[C)+\[K1\s*/s;
+            && $stderr!~/^\[[A|C](\[C)+\[K1\s*/s;
          if ($^O eq 'cygwin') {
             if ($clean_master==2) {
                $localhost->cmd('cd ..');
@@ -10284,7 +10284,51 @@ my $set_default_menu_sub=sub {
 my $select_file_components_to_import_sub=sub {
 
    my $file_comp="]T[{select_user_comp_file}";
-   print "FILE_COMP=$file_comp\n";<STDIN>;
+   my $user="]!P[{remote_fa_users}";
+   $user=~s/^["](.*)["]$/$1/;
+   my ($stdout,$stderr)=('','');
+   ($stdout,$stderr)=$main::remote_host->cmd(
+      '/usr/local/bin/fullauto --cat '.
+      $file_comp);
+   if ($stderr) {
+      $main::remote_host->close();
+      $stderr=~s/Connection cl/   Connection cl/s;
+      $stderr=~s/^\s*//s;
+      print $Net::FullAuto::FA_Core::blanklines,"\n\n   ",$stderr,
+            "   Press ANY KEY to return to the Admin Menu\n";
+      alarm 120;
+      Term::ReadKey::ReadMode('cbreak');
+      # Turn off controls keys
+      eval {
+         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         my $key='';
+         $key = ReadKey(0);
+      };
+      alarm(0);
+      # Reset tty mode before exiting
+      Term::ReadKey::ReadMode('normal');
+      return '{admin}<';
+   } else {
+      require PPI;
+      require Data::Dump::Streamer;
+      %main::fa_subs=();
+      my $Document = PPI::Document->new(\$stdout);
+      my $subs_ref = 
+            $Document->find( sub { $_[1]->isa('PPI::Statement::Sub') });
+      foreach my $ref (@$subs_ref) {
+         unless ($ref->forward) {
+            $main::fa_subs{ $ref->name } = $ref->content;
+         }
+      }
+      print "SUB NAMES=",(join " ",keys %main::fa_subs),"\n";<STDIN>;
+      my $fullfiles=&Net::FullAuto::FA_Core::fa_set;
+      print "WHAT IS THIS=$fullfiles->{'code'}\n";
+      #foreach my $line (split "\n",
+      #       $fullfiles->{'code'}) {
+      #   next if $line!~/[\/]$user[\/]/;
+      #   print "LINE=$line\n";
+      #}
+   }
    return '{admin}<';
 
 };
@@ -12995,15 +13039,6 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
 
 sub fa_set {
 
-   unless (exists $INC{'Term/Menus.pm'}) {
-      foreach my $fpath (@INC) {
-         my $f=$fpath;
-         if (-e $f.'/Term/Menus.pm') {
-            $INC{'Term/Menus.pm'}=$f.'/Term/Menus.pm';
-            last;
-         }
-      }
-   }
    my $vlin=__LINE__;
    #####################################################################
    ####                                                              ###
@@ -13095,21 +13130,25 @@ sub fa_set {
                                                                      ###
    #####################################################################
 
+   unless (exists $INC{'Net/FullAuto.pm'}) {
+      foreach my $fpath (@INC) {
+         my $f=$fpath;
+         if (-e $f.'/Net/FullAuto.pm') {
+            $INC{'Net/FullAuto.pm'}=$f.'/Net/FullAuto.pm';
+            last;
+         }
+      }
+   }
+   my $fa_path=$INC{'Net/FullAuto.pm'};
+   substr($fa_path,-3)='';
+   chomp($fa_path);
+   my $net_path=$fa_path;
+   $net_path=~s/Net\/.*$//;
+   my %fullpath_files=();
    my $default_modules='';
    unless ($main::fa_code && $main::fa_conf && $main::fa_host
            && $main::fa_maps && $main::fa_menu) {
-      unless (exists $INC{'Net/FullAuto.pm'}) {
-         foreach my $fpath (@INC) {
-            my $f=$fpath;
-            if (-e $f.'/Net/FullAuto.pm') {
-               $INC{'Net/FullAuto.pm'}=$f.'/Net/FullAuto.pm';
-               last;
-            }
-         }
-      }
-      my $fa_path=$INC{'Net/FullAuto.pm'};
       my $progname=substr($0,(rindex $0,'/')+1,-3);
-      substr($fa_path,-3)='';
       if (-f $fa_path.'/fa_defs.pm') {
          if (-r $fa_path.'/fa_defs.pm') {
             {
@@ -13303,9 +13342,7 @@ sub fa_set {
             if ($e eq 'set') {
                no strict 'subs';
                my $setname=$A{$e};
-               my $fa_path=$INC{'Net/FullAuto.pm'};
                my $progname=substr($0,(rindex $0,'/')+1,-3);
-               substr($fa_path,-3)='';
                if (-f $fa_path.'/fa_defs.pm') {
                   my $stenv = BerkeleyDB::Env->new(
                      -Home  => $fa_defs::FA_Secure.'Sets',
@@ -13430,6 +13467,8 @@ sub fa_set {
    $fa_code->[0]='Net/FullAuto/'.$fa_code->[0]
       if $fa_code->[0] && -1==index $fa_code->[0],'Net/FullAuto';
    $fa_code->[0]||='';
+   $fullpath_files{'code'}=$net_path.$fa_code->[0] if $fa_code->[0];
+   $fullpath_files{'code'}||='';
    my $argv=join " ",@ARGV;
    if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
       if ($fa_code->[0]) {
@@ -13437,6 +13476,7 @@ sub fa_set {
             require $fa_code->[0];
             my $mod=substr($fa_code->[0],(rindex $fa_code->[0],'/')+1,-3);
             import $mod;
+            $fullpath_files{'code'}=$net_path.$fa_code->[0];
             $fa_code=$mod.'.pm';
          } else {
             my $ln=__LINE__;
@@ -13449,18 +13489,22 @@ sub fa_set {
       } else {
          require 'Net/FullAuto/Distro/fa_code.pm';
          import fa_code;
+         $fullpath_files{'code'}=$net_path.'Net/FullAuto/Distro/fa_code.pm';
          $fa_code='fa_code.pm';
       }
    }
    $fa_conf->[0]='Net/FullAuto/'.$fa_conf->[0]
       if $fa_conf->[0] && -1==index $fa_conf->[0],'Net/FullAuto';
    $fa_conf->[0]||='';
+   $fullpath_files{'conf'}=$net_path.$fa_conf->[0] if $fa_conf->[0];
+   $fullpath_files{'conf'}||='';
    if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
       if ($fa_conf->[0]) {
          if ($Term::Menus::canload->($fa_conf->[0])) {
             require $fa_conf->[0];
             my $mod=substr($fa_conf->[0],(rindex $fa_conf->[0],'/')+1,-3);
             import $mod;
+            $fullpath_files{'conf'}=$net_path.$fa_conf->[0];
             $fa_conf=$mod.'.pm';
          } else {
             my $ln=__LINE__;
@@ -13473,18 +13517,22 @@ sub fa_set {
       } else {
          require 'Net/FullAuto/Distro/fa_conf.pm';
          import fa_conf;
+         $fullpath_files{'conf'}=$net_path.'Net/FullAuto/Distro/fa_conf.pm';
          $fa_conf='fa_conf.pm';
       }
    }
    $fa_host->[0]='Net/FullAuto/'.$fa_host->[0]
       if $fa_host->[0] && -1==index $fa_host->[0],'Net/FullAuto';
    $fa_host->[0]||='';
+   $fullpath_files{'host'}=$net_path.$fa_host->[0] if $fa_host->[0];
+   $fullpath_files{'host'}||='';
    if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
       if ($fa_host->[0]) {
          if ($Term::Menus::canload->($fa_host->[0])) {
             require $fa_host->[0];
             my $mod=substr($fa_host->[0],(rindex $fa_host->[0],'/')+1,-3);
             import $mod;
+            $fullpath_files{'host'}=$net_path.$fa_host->[0];
             $fa_host=$mod.'.pm';
          } else {
             my $ln=__LINE__;
@@ -13497,18 +13545,22 @@ sub fa_set {
       } else {
          require 'Net/FullAuto/Distro/fa_host.pm';
          import fa_host;
+         $fullpath_files{'host'}=$net_path.'Net/FullAuto/Distro/fa_host.pm';
          $fa_host='fa_host.pm';
       }
    }
    $fa_maps->[0]='Net/FullAuto/'.$fa_maps->[0]
       if $fa_maps->[0] && -1==index $fa_maps->[0],'Net/FullAuto';
    $fa_maps->[0]||='';
+   $fullpath_files{'maps'}=$net_path.$fa_maps->[0] if $fa_maps->[0];
+   $fullpath_files{'maps'}||='';
    if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
       if ($fa_maps->[0]) {
          if ($Term::Menus::canload->($fa_maps->[0])) {
             require $fa_maps->[0];
             my $mod=substr($fa_maps->[0],(rindex $fa_maps->[0],'/')+1,-3);
             import $mod;
+            $fullpath_files{'maps'}=$net_path.$fa_maps->[0];
             $fa_maps=$mod.'.pm';
          } else {
             my $ln=__LINE__;
@@ -13521,18 +13573,22 @@ sub fa_set {
       } else {
          require 'Net/FullAuto/Distro/fa_maps.pm';
          import fa_maps;
+         $fullpath_files{'maps'}=$net_path.'Net/FullAuto/Distro/fa_maps.pm';
          $fa_maps='fa_maps.pm';
       }
    }
    $fa_menu->[0]='Net/FullAuto/'.$fa_menu->[0]
       if $fa_menu->[0] && -1==index $fa_menu->[0],'Net/FullAuto';
    $fa_menu->[0]||='';
+   $fullpath_files{'menu'}=$net_path.$fa_menu->[0] if $fa_menu->[0];
+   $fullpath_files{'menu'}||='';
    if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
       if ($fa_menu->[0]) {
          if ($Term::Menus::canload->($fa_menu->[0])) {
             require $fa_menu->[0];
             my $mod=substr($fa_menu->[0],(rindex $fa_menu->[0],'/')+1,-3);
             import $mod;
+            $fullpath_files{'menu'}=$net_path.$fa_menu->[0];
             $fa_menu=$mod.'.pm';
          } else {
             my $ln=__LINE__;
@@ -13545,9 +13601,11 @@ sub fa_set {
       } else {
          require 'Net/FullAuto/Distro/fa_menu_demo.pm';
          import fa_menu_demo;
+         $fullpath_files{'menu'}=$net_path.'Net/FullAuto/Distro/fa_menu_demo.pm';
          $fa_menu='fa_menu_demo.pm';
       }
    }
+   return \%fullpath_files;
 
 }
 
