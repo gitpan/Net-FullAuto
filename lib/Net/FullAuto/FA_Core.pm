@@ -581,7 +581,15 @@ BEGIN {
       'define_modules_menu_fa_conf' => '',
       'define_modules_menu_fa_code' => '',
       'delete_sets_menu'            => '',
+      'im_ex_menu'                  => '',
+      'im_from_remote'              => '',
+      'login_to_remote'             => '',
       'manage_modules_menu'         => '',
+      'remote_fa_users'             => '',
+      'select_component_dir'        => '',
+      'select_comp_to_import'       => '',
+      'select_how_to_insert'        => '',
+      'select_user_comp_file'       => '',
       'set_default_menu'            => '',
       'set_default_menu_in_db_sub'  => '',
       'set_menu'                    => '',
@@ -10281,11 +10289,159 @@ my $set_default_menu_sub=sub {
    return \%set_default_menu;
 };
 
+my $insert_comp_sub=sub {
+
+   my $item_to_insert="]T[{select_how_to_insert}";
+   $item_to_insert=~s/^["](.*)["]$/$1/;
+   print "ITEM TO INSERT=$item_to_insert\n";<STDIN>;
+   my $compon="]!P[{select_component_dir}";
+   $compon=~s/^["](.*)["]$/$1/;
+   my $local_code=&Net::FullAuto::FA_Core::fa_set;
+   require PPI;
+   my %fa_subs=();
+   foreach my $sub (keys %main::fa_subs) {
+      print "SUB=$sub and NAME=$main::fa_subs{$sub}->[0]<==\n";
+      $fa_subs{$main::fa_subs{$sub}->[0]}=$main::fa_subs{$sub}->[1];
+   }
+   my %loc_subs=();
+   my $local_doc = PPI::Document->new($local_code->{lc($compon)});
+   my $subs_ref =
+         $local_doc->find(
+         sub { $_[1]->isa('PPI::Statement::Sub') });
+   my %refs=();
+   foreach my $ref (@$subs_ref) {
+      unless ($ref->forward) {
+         $loc_subs{ $ref->location->[0] } =
+            [ $ref->name, $ref->content ];
+         $refs{$ref->name}=$ref;
+      }
+   }
+   my @comp=();
+   my $ll=0;my $l=0;
+   foreach my $loc (keys %main::loc_subs) {
+      $l=length $loc_subs{$loc}->[0];
+      $ll=$l if $l>$ll;
+   }
+   $ll+=3;
+   foreach my $loc (sort numerically keys %loc_subs) {
+      push @comp, $loc_subs{$loc}->[0];
+   }
+
+   my $replace_flag=0;
+   $replace_flag=1 if $item_to_insert=~s/^Replace\s+(.*)$/$1/;
+   my $item_above='';
+   my $item_below='';
+   my $found_item_flag=0;
+   foreach my $item (@comp) {
+      if ($item ne $item_to_insert && !$found_item_flag) {
+         $item_above=$item;
+         next;
+      } elsif ($found_item_flag) {
+         $item_below=$item;
+      } else {
+         $found_item_flag=1;
+         next;
+      }
+   }
+   if ($item_above) {
+      my $rm_sub=PPI::Document->new(\$fa_subs{$item_to_insert});
+      $refs{$item_above}->__insert_after($rm_sub);
+      $rm_sub=PPI::Document->new(\"\n\n");
+      $refs{$item_above}->__insert_after($rm_sub);
+      while (my $ws=$refs{$item_to_insert}->next_token) {
+         last if $ws ne "\n";
+         $ws->remove;
+      }
+      $refs{$item_to_insert}->remove if $replace_flag;
+   } elsif ($item_below) {
+      my $rm_sub=PPI::Document->new(\$fa_subs{$item_to_insert});
+      $refs{$item_below}->insert_before($rm_sub);
+   }
+
+   $local_doc->save($local_code->{lc($compon)});
+   return '{admin}<'
+
+};
+
+my $select_location_to_insert_comp_sub=sub {
+
+   my $insert_item="]T[{select_comp_to_import}";
+   $insert_item=~s/^["](.*)["]$/$1/;
+   my $i_item=$insert_item;
+   $i_item=~s/\s*at Line.*//;
+   my $compon="]!P[{select_component_dir}";
+   $compon=~s/^["](.*)["]$/$1/;
+   my $local_code=&Net::FullAuto::FA_Core::fa_set;
+   require PPI;
+   require Data::Dump::Streamer;
+   my %loc_subs=();
+   my $local_doc = PPI::Document->new($local_code->{lc($compon)});
+   my $subs_ref =
+         $local_doc->find(
+         sub { $_[1]->isa('PPI::Statement::Sub') });
+   my $replace_flag=1;
+   foreach my $ref (@$subs_ref) {
+      unless ($ref->forward) {
+         if ($ref->name eq $i_item) {
+            $replace_flag=1;
+         }
+         $loc_subs{ $ref->location->[0] } =
+            [ $ref->name, $ref->content ];
+      }
+   }
+   my @comp=();
+   my $ll=0;my $l=0;
+   foreach my $loc (keys %main::loc_subs) {
+      $l=length $loc_subs{$loc}->[0];
+      $ll=$l if $l>$ll;
+   }
+   $ll+=3;
+   foreach my $loc (sort numerically keys %loc_subs) {
+      push @comp, "Insert above  ".sprintf "%-${ll}s %-s",
+                  $loc_subs{$loc}->[0]," at Line $loc";
+   }
+   my $last=$comp[$#comp];
+   $last=~s/ above / below /;
+   push @comp, $last;
+   if ($replace_flag) {
+      unshift @comp, "Replace $i_item";
+   }
+   my $banner='';
+   if ($compon eq 'Code') {
+      $banner="   Select how to insert CCB - $i_item";
+   } elsif ($compon eq 'Host') {
+      $banner="   Select how to insert CHB - $i_item";
+   } elsif ($compon eq 'Conf') {
+      $banner="   Select how to insert CCI - $i_item";
+   } elsif ($compon eq 'Maps') {
+      $banner="   Select how to insert CMI - $i_item";
+   } else {
+      $banner="   Select how to insert CMB - $i_item";
+   }
+   my %select_how_to_insert=(
+
+      Name => 'select_how_to_insert',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => \@comp,
+         Result => $insert_comp_sub,
+
+      },
+      Banner => $banner,
+
+   );
+   return \%select_how_to_insert,
+
+};
+
 my $select_file_components_to_import_sub=sub {
 
    my $file_comp="]T[{select_user_comp_file}";
    my $user="]!P[{remote_fa_users}";
    $user=~s/^["](.*)["]$/$1/;
+   my $compon="]!P[{select_component_dir}";
+   $compon=~s/^["](.*)["]$/$1/;
    my ($stdout,$stderr)=('','');
    ($stdout,$stderr)=$main::remote_host->cmd(
       '/usr/local/bin/fullauto --cat '.
@@ -10312,24 +10468,53 @@ my $select_file_components_to_import_sub=sub {
       require PPI;
       require Data::Dump::Streamer;
       %main::fa_subs=();
-      my $Document = PPI::Document->new(\$stdout);
+      my $remote_doc = PPI::Document->new(\$stdout);
       my $subs_ref = 
-            $Document->find( sub { $_[1]->isa('PPI::Statement::Sub') });
+            $remote_doc->find( sub { $_[1]->isa('PPI::Statement::Sub') });
       foreach my $ref (@$subs_ref) {
          unless ($ref->forward) {
-            $main::fa_subs{ $ref->name } = $ref->content;
+            $main::fa_subs{ $ref->location->[0] } =
+               [ $ref->name, $ref->content ];
          }
       }
-      print "SUB NAMES=",(join " ",keys %main::fa_subs),"\n";<STDIN>;
-      my $fullfiles=&Net::FullAuto::FA_Core::fa_set;
-      print "WHAT IS THIS=$fullfiles->{'code'}\n";
-      #foreach my $line (split "\n",
-      #       $fullfiles->{'code'}) {
-      #   next if $line!~/[\/]$user[\/]/;
-      #   print "LINE=$line\n";
-      #}
+      my $banner='';
+      if ($compon eq 'Code') {
+         $banner="   Select CCB (Custom Code Block) to Import";
+      } elsif ($compon eq 'Host') {
+         $banner="   Select CHB (Custom Host Block) to Import";
+      } elsif ($compon eq 'Conf') {
+         $banner="   Select CCI (Custom Config Item) to Import";
+      } elsif ($compon eq 'Maps') {
+         $banner="   Select CMI (Custom Maps Item) to Import";
+      } else {
+         $banner="   Select CMB (Custom Menu Block) to Import";
+      }
+      my @comp=();
+      my $ll=0;my $l=0;
+      foreach my $loc (keys %main::fa_subs) {
+         $l=length $main::fa_subs{$loc}->[0];
+         $ll=$l if $l>$ll;
+      }
+      $ll+=3;
+      foreach my $loc (sort numerically keys %main::fa_subs) {
+         push @comp, sprintf "%-${ll}s %-s",
+                     $main::fa_subs{$loc}->[0]," at Line $loc";
+      }
+      my %select_comp_to_import=(
+
+         Name => 'select_comp_to_import',
+         Item_1 => {
+
+            Text => ']C[',
+            Convey => \@comp,
+            Result => $select_location_to_insert_comp_sub,
+
+         },
+         Banner => $banner,
+
+      );
+      return \%select_comp_to_import,
    }
-   return '{admin}<';
 
 };
 
@@ -10379,12 +10564,6 @@ my $select_component_file_sub=sub {
          Result => $select_file_components_to_import_sub,
 
       },
-      Item_2 => {
-
-         Text => 'Return to Admin Menu',
-         Result => sub { return '{admin}<' },
-
-      },
       Banner => "   Select $component File for $user",
 
    );
@@ -10404,12 +10583,6 @@ my $select_component_dir_sub=sub {
          Text => ']C[',
          Convey => ['Code','Conf','Host','Maps','Menu'],
          Result => $select_component_file_sub,
-
-      },
-      Item_2 => {
-
-         Text => 'Return to Admin Menu',
-         Result => sub { return '{admin}<' }
 
       },
       Banner => '   Select Component Directory',
@@ -10450,7 +10623,7 @@ my $login_to_remote=sub {
       }
    }
    ($main::remote_host,$error)=
-      &Net::FullAuto::FA_Core::connect_secure($host_to_connect_to);
+      &Net::FullAuto::FA_Core::connect_ssh($host_to_connect_to);
    if ($error) {
       $main::remote_host->close();
       $error=~s/Connection cl/   Connection cl/s;
@@ -10521,12 +10694,6 @@ my $login_to_remote=sub {
             Result => $select_component_dir_sub,
 
          },
-         Item_2 => {
-
-            Text => 'Return to Admin Menu',
-            Result => sub { return '{admin}<' }
-
-         },
          Banner => '   Select User Account',
 
       );
@@ -10552,6 +10719,7 @@ my $im_from_remote=sub {
           Result => $login_to_remote,
 
       },
+      Banner => '   Select Remote Host to Import From',
 
    );
    return \%im_from_remote;
@@ -10562,9 +10730,10 @@ my $im_ex_menu_sub=sub {
 
    my %im_ex_menu=(
 
+      Name => 'im_ex_menu',
       Item_1 => {
 
-          Text => 'IMPORT Component(s) from Remote FA',
+          Text => 'IMPORT Component(s) from Remote Host',
           Result => $im_from_remote,
 
       },
@@ -10580,10 +10749,9 @@ my $im_ex_menu_sub=sub {
           Result => '',
 
       },
-      Banner => '',
+      Banner => '   Select a FullAuto Component Operation to Perform',
    );
    return \%im_ex_menu;
-
 
 };
 
@@ -10634,6 +10802,8 @@ FIN
    );
    return \%set_menu;
 };
+
+sub numerically { $a <=> $b }
 
 sub fa_login
 {
@@ -27618,7 +27788,8 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                         }
                      }
                      print "TLIN=$tline"
-                        if !$Net::FullAuto::FA_Core::cron || $Net::FullAuto::FA_Core::debug;
+                        if !$Net::FullAuto::FA_Core::cron ||
+                        $Net::FullAuto::FA_Core::debug;
                      print $Net::FullAuto::FA_Core::MRLOG "TLIN=$tline"
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
