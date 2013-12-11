@@ -911,12 +911,9 @@ if ($^O eq 'cygwin') {
 sub cleanup {
 
    my @topcaller=caller;
-   my $param_one=$_[0];
-   my $param_two=$_[1]||='';
+   my $param_one=$_[0]||'';
+   my $param_two=$_[1]||'';
    my ($stdout,$stderr,$track)=('','','');
-   unless (defined $param_one) {
-      $param_one='';
-   }
    print "\nINFO: main::cleanup() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
       if !$Net::FullAuto::FA_Core::cron &&
@@ -1568,7 +1565,8 @@ print $Net::FullAuto::FA_Core::MRLOG
          && $Hosts{"__Master_${$}__"}{'LogFile'}) {
       unlink $Hosts{"__Master_${$}__"}{'LogFile'};
    }
-   return 1 if $param_one;
+   return 1 if $param_one eq '__return__';
+   exit 1 if $param_one;
    exit 0;
 
 };
@@ -4480,11 +4478,15 @@ sub acquire_fa_lock
             print "\n";
             while (time<$expires) {
                $dotcount=0 if 2<$dotcount;
-               STDOUT->autoflush(1);
-               printf("\r% 0s","Waiting for another process with lock ID ".
-                      "[$lock_id] to finish (".$pollcount++.") ".
-                      $dots[$dotcount]);
-               STDOUT->autoflush(0);
+               if ((!$Net::FullAuto::FA_Core::cron
+                     || $Net::FullAuto::FA_Core::debug)
+                     && !$Net::FullAuto::FA_Core::quiet) {
+                  STDOUT->autoflush(1);
+                  printf("\r% 0s","Waiting for another process with lock ID ".
+                         "[$lock_id] to finish (".$pollcount++.") ".
+                         $dots[$dotcount]);
+                  STDOUT->autoflush(0);
+               }
                select(undef,undef,undef,$polling);
                $cache->set($cache->{'key'}, [0,
                   "Waiting for another process with lock ID [$lock_id] ".
@@ -5966,7 +5968,7 @@ sub handle_error
          if ($_[1] eq '__cleanup__') {
             $cleanup=1;
          } elsif ($_[1] eq '__return__') {
-            $return=1;
+            $return=$_[1];
          } elsif ($_[1] eq '__warn__') {
             $warn=1;
          } elsif ($_[1]=~/^\s*-(\d+)\s*$/) {
@@ -5985,7 +5987,7 @@ sub handle_error
          if ($_[2] eq '__cleanup__') {
             $cleanup=1;
          } elsif ($_[2] eq '__return__') {
-            $return=1;
+            $return=$_[2];
          } elsif ($_[2] eq '__warn__') {
             $warn=1;
          } elsif ($_[2]=~/^\s*-(\d+)\s*/) {
@@ -6004,7 +6006,7 @@ sub handle_error
          if ($_[3] eq '__cleanup__') {
             $cleanup=1;
          } elsif ($_[3] eq '__return__') {
-            $return=1;
+            $return=$_[3];
          } elsif ($_[3] eq '__warn__') {
             $warn=1;
          } elsif ($_[3]=~/^-(\d+)/) {
@@ -6023,7 +6025,7 @@ sub handle_error
          if ($_[4] eq '__cleanup__') {
             $cleanup=1;
          } elsif ($_[4] eq '__return__') {
-            $return=1;
+            $return=$_[4];
          } elsif ($_[4] eq '__warn__') {
             $warn=1;
          } elsif ($_[4]=~/^\s*-(\d+)\s*/) {
@@ -6042,7 +6044,7 @@ sub handle_error
          if ($_[5] eq '__cleanup__') {
             $cleanup=1;
          } elsif ($_[5] eq '__return__') {
-            $return=1;
+            $return=$_[5];
          } elsif ($_[5] eq '__warn__') {
             $warn=1;
          } elsif ($_[5]=~/^\s*-(\d+)\s*/) {
@@ -6061,7 +6063,7 @@ sub handle_error
          if ($_[6] eq '__cleanup__') {
             $cleanup=1;
          } elsif ($_[6] eq '__return__') {
-            $return=1;
+            $return=$_[6];
          } elsif ($_[6] eq '__warn__') {
             $warn=1;
          } elsif ($_[6]=~/^\s*-(\d+)\s*/) {
@@ -6179,7 +6181,7 @@ sub handle_error
          undef $bdb;
          $dbenv->close();
          undef $dbenv;
-         $return=1;
+         $return='__return__';
       }
       # loop the contents of the file
       my ($k,$v) = ("","") ;
@@ -15954,9 +15956,9 @@ sub cmd
          ($output,$stderr)=&Net::FullAuto::FA_Core::cmd($command);
       } 
    };
-   if ($@) {
-      print "$self->{_cmd_type} CMD ERROR! - $@\n";exit;
-   }
+   #if ($@) {
+   #   print "$self->{_cmd_type} CMD ERROR! - $@\n";exit;
+   #}
    if (wantarray) {
       return $output,$stderr;
    } elsif ($stderr) {
@@ -27443,9 +27445,13 @@ sub ftpcmd
                   } else { $prcnt=substr($prcnt,2,2) }
                   substr($prcnt,0,1)='' if unpack('a1',$prcnt) eq '0';
                   $plin.="${prcnt}% of $gpfile transferred  . . . ";
-                  STDOUT->autoflush(1);
-                  printf("\r% 0s",$plin);
-                  STDOUT->autoflush(0);
+                  if ((!$Net::FullAuto::FA_Core::cron
+                        || $Net::FullAuto::FA_Core::debug)
+                        && !$Net::FullAuto::FA_Core::quiet) {
+                     STDOUT->autoflush(1);
+                     printf("\r% 0s",$plin);
+                     STDOUT->autoflush(0);
+                  }
                   print $Net::FullAuto::FA_Core::MRLOG
                      "FTP STDOUT: ==>$plin<==\n"
                      if $Net::FullAuto::FA_Core::log && 
@@ -27483,25 +27489,37 @@ sub ftpcmd
                         my $tl=$line;
                         $tl=~s/[\r|\n]*//sg;
                         if ($line=~s/^\n*Uploading/\n\nUploading/gs) {
-                           STDOUT->autoflush(1);
-                           print $line."\n\n";
-                           STDOUT->autoflush(0);
+                           if ((!$Net::FullAuto::FA_Core::cron
+                                 || $Net::FullAuto::FA_Core::debug)
+                                 && !$Net::FullAuto::FA_Core::quiet) {
+                              STDOUT->autoflush(1);
+                              print $line."\n\n";
+                              STDOUT->autoflush(0);
+                           }
                            print $Net::FullAuto::FA_Core::MRLOG
                               uc($ftm_type)." STDOUT: ==>$line<==\n\n"
                               if $Net::FullAuto::FA_Core::log &&   
                               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         } elsif ($line=~s/^\n*Fetch/\n\nFetch/gs) {
-                           STDOUT->autoflush(1);
-                           print $line,"\n\n";
-                           STDOUT->autoflush(0);
+                           if ((!$Net::FullAuto::FA_Core::cron
+                                 || $Net::FullAuto::FA_Core::debug)
+                                 && !$Net::FullAuto::FA_Core::quiet) {
+                              STDOUT->autoflush(1);
+                              print $line,"\n\n";
+                              STDOUT->autoflush(0);
+                           }
                            print $Net::FullAuto::FA_Core::MRLOG
                               uc($ftm_type)." STDOUT: ==>$line<==\n\n"
                               if $Net::FullAuto::FA_Core::log &&
                               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         } elsif ($line=~/(stalled -|\d\d:\d\d *E*T*A*)$/) {
-                           STDOUT->autoflush(1);
-                           printf("\r% 0s",$line);
-                           STDOUT->autoflush(0);
+                           if ((!$Net::FullAuto::FA_Core::cron
+                                 || $Net::FullAuto::FA_Core::debug)
+                                 && !$Net::FullAuto::FA_Core::quiet) {
+                              STDOUT->autoflush(1);
+                              printf("\r% 0s",$line);
+                              STDOUT->autoflush(0);
+                           }
                            print $Net::FullAuto::FA_Core::MRLOG
                               uc($ftm_type)." STDOUT: ==>$line<==\n"
                               if $Net::FullAuto::FA_Core::log &&
@@ -28049,7 +28067,7 @@ print "DO WE HAVE LCD????=$Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}
          $stdout=~s/^$cmd\s*(.*)\s*sftp>\s*$/$1/s;
          $stdout=~tr/\r//d;
          $stdout=~s/\s*$//s;
-         if (exists $handle->{_cmd_handle}) {
+         if (exists $handle->{_cmd_handle} && $handle->{_cmd_handle}) {
             if ($stdout=~/Couldn\'t canonicalise:/s) {
                if ($cmd=~/^ls$|^ls /) {
                   ($output,$stderr)=$handle->cmd($cmd);

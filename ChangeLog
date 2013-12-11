@@ -19,6 +19,17 @@
 ################################################################
 
 
+2013-12-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999968 released.
+
+        * Fixed cwd() when used with sftp only connection.
+
+        * Reworked returning 1 on error requested with cleanup(1).
+
+        * Extended --quiet to include ftp output.
+
+
 2013-12-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999967 released.
