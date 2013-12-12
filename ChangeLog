@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-12-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999969 released.
+
+        * Can now send attachments with send_email().
+
+        * More work to extend --quiet to include ftp output.
+
+
 2013-12-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999968 released.
