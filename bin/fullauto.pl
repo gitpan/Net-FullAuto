@@ -45,7 +45,7 @@ BEGIN {
       $cnt++;
       if ($arg=~/^--ed*i*t*$/) {
          $edit=1;
-         if ($ARGV[$cnt+1]!~/^--/) {
+         if ($ARGV[$cnt+1] && $ARGV[$cnt+1]!~/^--/) {
             $earg=$ARGV[$cnt+1];last;
          } else { last }
       } elsif ($arg=~/^-[a-df-zA-Z]*e\s*(.*)/) {

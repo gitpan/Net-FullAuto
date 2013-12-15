@@ -2872,6 +2872,8 @@ sub edit {
       die $stderr if $stderr;
       my @files=split "\n", $stdout;
       my @file=();my $dirr='';
+      my $rx1=qr/\d+\s+\w\w\w\s+\d+\s+\d\d:\d\d\s+.*/;
+      my $rx2=qr/\d+\s+\w\w\w\s+\d+\s+\d\d\d\d\s+.*/;
       foreach my $file (@files) {
          next if $file=~/^\s*$/;
          next if unpack('a1',$file) eq 'd';
@@ -2885,8 +2887,21 @@ sub edit {
          chomp($file);
          next if $file=~/\/$/;
          next if $file eq 'README';
-         $file=~s/^.*\d\d:\d\d\s+(.*)$/$1/;
+         if ($file=~s/^.*\s+($rx1|$rx2)$/$1/) {
+            $file=~
+               s/^\d+\s+\w\w\w\s+\d+\s+(?:\d\d:\d\d\s+|\d\d\d\d\s+)+(.*)$/$1/;
+         }
          push @file,$username.'/'.$dirr.'/'.$file;
+      }
+      my $owner=getpwuid(${stat($path)}[4]);
+      if ($owner eq $username) {
+         ($stdout,$stderr)=cmd($Net::FullAuto::FA_Core::gbp->('ls').
+            "ls -1 ..");
+         die $stderr if $stderr;
+         foreach my $file (split "\n", $stdout) {
+            push @file, "Template $file" if $file=~/[.]pm$/;
+         }
+         push @file, "Global Settings fa_global.pm";
       }
       my %Menu_1=(
 
@@ -2906,6 +2921,8 @@ sub edit {
          exit;
       }
       chdir '..';
+      $file=~s/^Template (.*)/$1/;
+      chdir '..' if $file=~s/^Global Settings (.*)/$1/;
       system("\"$editor\" $file");
       chdir $savdir;
    }
@@ -3132,7 +3149,7 @@ my $select_time_result_sub = sub {
    use File::Path;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $progname=substr($0,(rindex $0,'/')+1,-3);
-   require "$loc/fa_defs.pm";
+   require "$loc/fa_global.pm";
    my $mkdflag=0;
    ($num,$type)=split /\s+/, $selection;
    if ($num!~/^\d/) {
@@ -3676,7 +3693,7 @@ my $generate_crontrab=sub {
    use File::Path;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $progname=substr($0,(rindex $0,'/')+1,-3);
-   require "$loc/fa_defs.pm";
+   require "$loc/fa_global.pm";
    my $data='][[ "select_recurrent_minutes" '.
             ']|[ ]P[{select_recurrent_months} '.
             ']|[ ]P[{select_recurrent_weekdays} '.
@@ -3859,18 +3876,18 @@ print "CRONSTRING=$cronstring and PLANSTRING=$planstring<==\n";<STDIN>;
    ($stdout,$stderr)=Net::FullAuto::FA_Core::cmd("${crontabpath}crontab -l");
 print "WAHT IS CRONTABSTDOUT=$stdout and STDERR=$stderr\n";<STDIN>;
    my $mkdflag=0;
-   unless (-d $fa_defs::FA_Secure.'Jobs') {
+   unless (-d $fa_global::FA_Secure.'Jobs') {
       $mkdflag=1;
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-              $m.$fa_defs::FA_Secure.'Jobs';
+              $m.$fa_global::FA_Secure.'Jobs';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&Net::FullAuto::FA_Core::setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
    my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $fa_defs::FA_Secure.'Jobs',
+      -Home  => $fa_global::FA_Secure.'Jobs',
       -Flags =>
          DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or &handle_error(
@@ -3886,7 +3903,7 @@ print "WAHT IS CRONTABSTDOUT=$stdout and STDERR=$stderr\n";<STDIN>;
    if ($mkdflag && $^O eq 'cygwin') {
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-              $fa_defs::FA_Secure.'Jobs/*';
+              $fa_global::FA_Secure.'Jobs/*';
       my ($stdout,$stderr)=&Net::FullAuto::FA_Core::setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
@@ -9308,10 +9325,10 @@ $main::get_default_modules=sub {
       }
    }
    $username=getlogin || getpwuid($<);
-   unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm') {
-      my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_defs.pm';
+   unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm') {
+      my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm';
       open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
-      print FD "package fa_defs;\n\n",
+      print FD "package fa_global;\n\n",
          "### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######\n",
          "#\n",
          "#    Net::FullAuto - Powerful Network Process Automation Software\n",
@@ -9510,20 +9527,20 @@ my $set_default_sub=sub {
    use File::Path;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $progname=substr($0,(rindex $0,'/')+1,-3);
-   require "$loc/fa_defs.pm";
+   require "$loc/fa_global.pm";
    my $mkdflag=0;
-   unless (-d $fa_defs::FA_Secure.'Sets') {
+   unless (-d $fa_global::FA_Secure.'Sets') {
       $mkdflag=1;
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-         $m.$fa_defs::FA_Secure.'Sets';
+         $m.$fa_global::FA_Secure.'Sets';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr; 
    }
    my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $fa_defs::FA_Secure.'Sets',
+      -Home  => $fa_global::FA_Secure.'Sets',
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or die(
       "cannot open environment for DB: ".
@@ -9737,20 +9754,20 @@ my $fasetdef=sub {
                   0,-3);
    my $progname=substr($0,(rindex $0,'/')
                        +1,-3);
-   require "$loc/fa_defs.pm";
+   require "$loc/fa_global.pm";
    my $mkdflag=0;
-   unless (-d $fa_defs::FA_Secure.'Defaults') {
+   unless (-d $fa_global::FA_Secure.'Defaults') {
       $mkdflag=1;
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-         $m.$fa_defs::FA_Secure.'Defaults';
+         $m.$fa_global::FA_Secure.'Defaults';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
    }
    my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $fa_defs::FA_Secure.
+      -Home  => $fa_global::FA_Secure.
                 'Defaults',
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or die(
@@ -9881,7 +9898,7 @@ my $default_sets_banner_sub=sub {
    use Data::Dump::Streamer;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $progname=substr($0,(rindex $0,'/')+1,-3);
-   require "$loc/fa_defs.pm";
+   require "$loc/fa_global.pm";
    my $mkdflag=0;
 
    my $dfbann=<<FIN;
@@ -9894,18 +9911,18 @@ my $default_sets_banner_sub=sub {
 
 FIN
 
-   unless (-d $fa_defs::FA_Secure.'Sets') {
+   unless (-d $fa_global::FA_Secure.'Sets') {
       $mkdflag=1;
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-              $m.$fa_defs::FA_Secure.'Sets';
+              $m.$fa_global::FA_Secure.'Sets';
       my $stdout='';my $stderr='';
       ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
    }
    my $sdbenv = BerkeleyDB::Env->new(
-         -Home  => $fa_defs::FA_Secure.'Sets',
+         -Home  => $fa_global::FA_Secure.'Sets',
          -Flags =>
              DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
       ) or die(
@@ -9986,9 +10003,9 @@ my $cacomm_sub=sub {
                                           0,-3);
                            my $progname=substr($0,(rindex $0,'/')
                                                +1,-3);
-                           require "$loc/fa_defs.pm";
+                           require "$loc/fa_global.pm";
                            my $mkdflag=0;
-                           unless (-d $fa_defs::FA_Secure.'Defaults') {
+                           unless (-d $fa_global::FA_Secure.'Defaults') {
                               $mkdflag=1;
                               my $mode=
                               $Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
@@ -10002,7 +10019,7 @@ my $cacomm_sub=sub {
                               die $stderr if $stderr;
                            }
                            my $dbenv = BerkeleyDB::Env->new(
-                               -Home  => $fa_defs::FA_Secure.
+                               -Home  => $fa_global::FA_Secure.
                                          'Defaults',
                                -Flags =>
                                DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
@@ -10020,7 +10037,7 @@ my $cacomm_sub=sub {
                               $Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
                               my $cmd=$Net::FullAuto::FA_Core::gbp->(
                                  'chmod')."chmod -Rv $mode ".
-                                 "${fa_defs::FA_Secure}.Defaults/*";
+                                 "${fa_global::FA_Secure}.Defaults/*";
                               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
                               die $stderr if $stderr &&
                                  -1==index $stderr,'mode of';
@@ -10362,20 +10379,20 @@ my $define_modules_commit_sub=sub {
             use Data::Dump::Streamer;
             my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
             my $progname=substr($0,(rindex $0,'/')+1,-3);
-            require "$loc/fa_defs.pm";
+            require "$loc/fa_global.pm";
             my $mkdflag=0;
-            unless (-d $fa_defs::FA_Secure.'Sets') {
+            unless (-d $fa_global::FA_Secure.'Sets') {
                $mkdflag=1;
                my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
                my $m=($^O eq 'cygwin')?"-m $mode ":'';
                my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').'mkdir '.
-                       $m.$fa_defs::FA_Secure.'Sets';
+                       $m.$fa_global::FA_Secure.'Sets';
                my $stdout='';my $stderr='';
                ($stdout,$stderr)=&setuid_cmd($cmd,5);
                die $stderr if $stderr;
             }
             my $dbenv = BerkeleyDB::Env->new(
-               -Home  => $fa_defs::FA_Secure.'Sets',
+               -Home  => $fa_global::FA_Secure.'Sets',
                -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
             ) or die(
                "cannot open environment for DB: ".
@@ -10710,21 +10727,21 @@ my $delete_sets_menu_sub=sub {
                                       0,-3);
                            my $progname=substr($0,(rindex $0,'/')
                                       +1,-3);
-                           require "$loc/fa_defs.pm";
+                           require "$loc/fa_global.pm";
                            my $mkdflag=0;
-                           unless (-d $fa_defs::FA_Secure.'Defaults') {
+                           unless (-d $fa_global::FA_Secure.'Defaults') {
                               $mkdflag=1;
                               my $mode=
                               $Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
                               my $m=($^O eq 'cygwin')?"-m $mode ":'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                 'mkdir '.$m.$fa_defs::FA_Secure.'Defaults';
+                                 'mkdir '.$m.$fa_global::FA_Secure.'Defaults';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);
                               die $stderr if $stderr;
                            }
                            my $dbenv = BerkeleyDB::Env->new(
-                              -Home  => $fa_defs::FA_Secure.
+                              -Home  => $fa_global::FA_Secure.
                                         'Defaults',
                               -Flags =>
                               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
@@ -10762,7 +10779,7 @@ my $delete_sets_menu_sub=sub {
                               $Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
                               my $cmd=$Net::FullAuto::FA_Core::gbp->(
                                  'chmod')."chmod -Rv $mode ".
-                                 "${fa_defs::FA_Secure}Defaults/*";
+                                 "${fa_global::FA_Secure}Defaults/*";
                               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
                               die $stderr if $stderr &&
                                   -1==index $stderr,'mode of';
@@ -10777,19 +10794,19 @@ my $delete_sets_menu_sub=sub {
                            $default_modules=eval $default_modules;
                            $default_modules||='';
                            $mkdflag=0;
-                           unless (-d $fa_defs::FA_Secure.'Sets') {
+                           unless (-d $fa_global::FA_Secure.'Sets') {
                               $mkdflag=1;
                               my $mode=
                               $Net::FullAuto::FA_Core::cygwin_berkeley_db_mode; 
                               my $m=($^O eq 'cygwin')?"-m $mode ":'';
                               my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                                 'mkdir '.$m.$fa_defs::FA_Secure.'Sets';
+                                 'mkdir '.$m.$fa_global::FA_Secure.'Sets';
                               my $stdout='';my $stderr='';
                               ($stdout,$stderr)=&setuid_cmd($cmd,5);
                               die $stderr if $stderr;
                            }
                            my $sdbenv = BerkeleyDB::Env->new(
-                              -Home  => $fa_defs::FA_Secure.'Sets',
+                              -Home  => $fa_global::FA_Secure.'Sets',
                               -Flags =>
                               DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                            ) or die(
@@ -10824,7 +10841,7 @@ my $delete_sets_menu_sub=sub {
                               $Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
                               my $cmd=$Net::FullAuto::FA_Core::gbp->(
                                  'chmod')."chmod -Rv $mode ".
-                                 "${fa_defs::FA_Secure}Sets/*";
+                                 "${fa_global::FA_Secure}Sets/*";
                               my ($stdout,$stderr)=&setuid_cmd($cmd,5);
                               die $stderr if $stderr &&
                                   -1==index $stderr,'mode of';
@@ -10938,7 +10955,7 @@ my $set_default_menu_in_db_sub=sub {
    use File::Path;
    my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $progname=substr($0,(rindex $0,'/')+1,-3);
-   require "$loc/fa_defs.pm";
+   require "$loc/fa_global.pm";
    my $selection=']S[';
    $selection=~s/^.*Label:\s+(.*?)\s+.*$/$1/s;
    $selection='none' if -1<index $selection,"'none'";
@@ -10946,7 +10963,7 @@ my $set_default_menu_in_db_sub=sub {
    $default_modules->{'set'}=$selection;
    &Net::FullAuto::FA_Core::acquire_fa_lock(9361);
    my $dbenv = BerkeleyDB::Env->new(
-      -Home  => $fa_defs::FA_Secure.'Defaults',
+      -Home  => $fa_global::FA_Secure.'Defaults',
       -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
    ) or die(
       "cannot open environment for DB: ".
@@ -14049,20 +14066,20 @@ sub fa_set {
    unless ($main::fa_code && $main::fa_conf && $main::fa_host
            && $main::fa_maps && $main::fa_menu) {
       my $progname=substr($0,(rindex $0,'/')+1,-3);
-      if (-f $fa_path.'/fa_defs.pm') {
-         if (-r $fa_path.'/fa_defs.pm') {
+      if (-f $fa_path.'/fa_global.pm') {
+         if (-r $fa_path.'/fa_global.pm') {
             {
                no strict 'subs';
-               require $fa_path.'/fa_defs.pm';
-               $fa_defs::FA_Secure||='';
-               if ($fa_defs::FA_Secure &&
-                     -d $fa_defs::FA_Secure.'Defaults') {
+               require $fa_path.'/fa_global.pm';
+               $fa_global::FA_Secure||='';
+               if ($fa_global::FA_Secure &&
+                     -d $fa_global::FA_Secure.'Defaults') {
                   BEGIN { $Term::Menus::facall=caller(2);
                           $Term::Menus::facall||='' };
                   use if (-1<index $Term::Menus::facall,'FullAuto'),
                       "BerkeleyDB";
                   my $dbenv = BerkeleyDB::Env->new(
-                     -Home  => $fa_defs::FA_Secure.'Defaults',
+                     -Home  => $fa_global::FA_Secure.'Defaults',
                      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                   ) or die(
                      "cannot open environment for DB: ".
@@ -14129,7 +14146,7 @@ sub fa_set {
                         $default_modules->{'set'} ne 'none') {
                      my $setname=$default_modules->{'set'};
                      my $stenv = BerkeleyDB::Env->new(
-                        -Home  => $fa_defs::FA_Secure.'Sets',
+                        -Home  => $fa_global::FA_Secure.'Sets',
                         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                      ) or die(
                         "cannot open environment for DB: ".
@@ -14207,7 +14224,7 @@ sub fa_set {
                }
             }
          } else {
-            warn("WARNING: Cannot read defaults file $fa_path/fa_defs.pm".
+            warn("WARNING: Cannot read defaults file $fa_path/fa_global.pm".
                  " - permission denied (Hint: Perhaps you need to 'Run as ".
                  "Administrator'?)");
          }
@@ -14243,9 +14260,9 @@ sub fa_set {
                no strict 'subs';
                my $setname=$A{$e};
                my $progname=substr($0,(rindex $0,'/')+1,-3);
-               if (-f $fa_path.'/fa_defs.pm') {
+               if (-f $fa_path.'/fa_global.pm') {
                   my $stenv = BerkeleyDB::Env->new(
-                     -Home  => $fa_defs::FA_Secure.'Sets',
+                     -Home  => $fa_global::FA_Secure.'Sets',
                      -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL
                   ) or die(
                      "cannot open environment for DB: ".

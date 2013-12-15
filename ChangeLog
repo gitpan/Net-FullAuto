@@ -19,6 +19,18 @@
 ################################################################
 
 
+2013-12-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999970 released.
+
+        * Owner of FullAuto folder can now edit templates
+          and fa_global.
+
+        * Changed fa_defs.pm to fa_global.pm.
+
+        * New version of Term::Menus paired with this release.
+
+
 2013-12-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999969 released.
