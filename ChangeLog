@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-12-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999972 released.
+
+        * fa_global.pm included in -V output.
+
+        * New version of Term::Menus paired with this release.
+
+
 2013-12-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999971 released.

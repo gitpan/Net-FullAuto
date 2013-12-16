@@ -2430,7 +2430,14 @@ sub VERSION
             push @Dist, $file;next;
          } elsif (-1<index $file,'Custom') {
             $Cust{$file}='';next;
-         } else { push @Core, $file;next }
+         } else {
+            push @Core, $file;
+            my $path=$file;
+            $path=~s/^(.*)\/.*$/$1/;
+            push @Core, "$path/fa_global.pm" if
+               -e "$path/fa_global.pm"; 
+            next
+         }
       } elsif ($file=~/\.pl$/) {
          push @pl, $file;next;
       } elsif ($file=~/fullauto(?:\.exe)*$/) {
