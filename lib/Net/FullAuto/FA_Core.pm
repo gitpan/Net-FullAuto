@@ -321,7 +321,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $cache_root $cache_key $admin_menu
                   acquire_fa_lock release_fa_lock
                   $choose_pass_expiration
-                  %monthconv %mimetypes);
+                  %monthconv %mimetypes username);
 
 {
    no warnings;
@@ -2126,7 +2126,8 @@ print $Net::FullAuto::FA_Core::MRLOG
    ($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
    ($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg);
    if (defined $master_hostlabel &&
-         defined $username && (-1<index $localhost,'=')) {
+         (-1<index $localhost,'=')) {
+      $username=&Net::FullAuto::FA_Core::username();
       &scrub_passwd_file($master_hostlabel,
          $username);
    }
@@ -2247,6 +2248,28 @@ $SIG{ CHLD } = 'IGNORE';
 
 my @Hosts=@{&check_Hosts($Net::FullAuto::FA_Core::fa_host)};
 
+sub username
+{
+
+   return $Net::FullAuto::FA_Core::username
+      if $Net::FullAuto::FA_Core::username;
+   eval {
+      die;
+   };
+   my $path=$@;
+   $path=~s/Died at (.*)FA_Core.pm.*$/$1/;
+   eval {
+      require "$path/fa_global.pm";
+      my $mod="fa_global";
+      import $mod;
+   };
+   $username=getlogin || getpwuid($<);
+   $username=$Net::FullAuto::fa_global::FA_Sudo{$username}
+      if exists $Net::FullAuto::fa_global::FA_Sudo{$username};
+   return $username;
+
+}
+
 sub grep_for_string_existence_only
 {
    my $file=$_[0];
@@ -2309,7 +2332,7 @@ sub users
    #}
    can_load(modules => { "Term::Menus" => 0 });
    can_load(modules => { "Net::FullAuto" => 0 });
-   my $username=getlogin || getpwuid($<);
+   my $username=&Net::FullAuto::FA_Core::username();
    my $term_menus_path=
       substr($INC{'Term/Menus.pm'},0,
       (rindex $INC{'Term/Menus.pm'},'Term'));
@@ -2368,7 +2391,7 @@ sub VERSION
 {
    can_load(modules => { "Term::Menus" => 0 });
    can_load(modules => { "Net::FullAuto" => 0 });
-   my $username=getlogin || getpwuid($<);
+   my $username=&Net::FullAuto::FA_Core::username();
    my $term_menus_path=
       substr($INC{'Term/Menus.pm'},0,
       (rindex $INC{'Term/Menus.pm'},'Term'));
@@ -2732,7 +2755,7 @@ sub cat {
    };
    my $path=$@;
    $path=~s/Died at (.*)FA_Core.pm.*$/$1/;
-   my $username=getlogin || getpwuid($<);
+   $username=&Net::FullAuto::FA_Core::username();
    chomp($path);
    my $cpath=$path."Custom/$username/";
    my $arg=$_[0];
@@ -2769,7 +2792,7 @@ sub edit {
    };
    my $path=$@;
    $path=~s/Died at (.*)FA_Core.pm.*$/$1/;
-   my $username=getlogin || getpwuid($<);
+   my $username=&Net::FullAuto::FA_Core::username();
    chomp($path);
    my $cpath=$path."Custom/$username/";
    my $tpath=$path;
@@ -3363,7 +3386,7 @@ my $ask_exp_banner_sub = sub {
       return "   Choose the Expiration Time for\n\n".
              "      $plan";
    } else {
-      my $username=getlogin || getpwuid($<);
+      my $username=&Net::FullAuto::FA_Core::username();
       return "   Choose the Expiration Time of the local saving\n".
              "   of ${username}\'s ".
              "Password via one of the following\n".
@@ -3907,8 +3930,9 @@ print "WAHT IS CRONTABSTDOUT=$stdout and STDERR=$stderr\n";<STDIN>;
       my ($stdout,$stderr)=&Net::FullAuto::FA_Core::setuid_cmd($cmd,5);
       &handle_error($stderr) if $stderr && -1==index $stderr,'mode of';
    }
+   my $username=&Net::FullAuto::FA_Core::username();
    my $cronentry="$cronstring /usr/local/bin/fa --login ".
-                 "$Net::FullAuto::FA_Core::username ".
+                 "$username ".
                  "--password --plan $planstring";
    if ($stderr && -1<index $stderr,'no crontab') {
       my $dig=sha256_hex($cronentry);
@@ -4480,6 +4504,7 @@ my $outp=join ' ', @{$output} if ref $output eq 'ARRAY';
 
 print "OUTPUT=$outp\n" if defined $outp && $outp;
 
+   my $username=&Net::FullAuto::FA_Core::username();
    if ($output ne ']quit[') {
       my $mkdflag=0;
       unless (-d $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Plans') {
@@ -4520,7 +4545,7 @@ print "OUTPUT=$outp\n" if defined $outp && $outp;
          undef $cursor;
          my $plann={ 'Number' =>$new_plan_number,
                      'Created'=>$Net::FullAuto::FA_Core::invoked[2],
-                     'Creator'=>$Net::FullAuto::FA_Core::username,
+                     'Creator'=>$username,
                      'Host'   =>$Net::FullAuto::FA_Core::local_hostname,
                      'Expires'=>'never',
                      'Plan'   =>[] };
@@ -4982,6 +5007,8 @@ sub acquire_fa_lock
         $letoct.=ord($c);
      }
    }
+
+   my $username=&Net::FullAuto::FA_Core::username();
 
    unless ($Net::FullAuto::FA_Core::bdb_locks) {
       my $mkdflag=0;
@@ -5707,7 +5734,7 @@ sub check_Hosts
       @Hosts=eval "\@${name}::Hosts";
    }
    my @Cycle=@Hosts;
-   my $username=getlogin || getpwuid($<);
+   my $username=&Net::FullAuto::FA_Core::username();
    HOST: foreach my $h (@Cycle) {
       my $host=$h;
       my $hostn='';my $ipn='';my $lh_key=0;
@@ -6503,7 +6530,7 @@ sub cache
    substr($caller,0,(index $caller,'::')+2)='';
    my $hostlabel=$_[0];
    my $path_to_cache_root=$_[1]||$master_transfer_dir;
-   my $namespace=$_[2]||$username;
+   my $namespace=$_[2]||&Net::FullAuto::FA_Core::username();
    my @called=caller(2);
    $caller=$called[3];
    $caller=(caller(0))[0] if $caller=~/[(]eval[)]/;
@@ -7308,12 +7335,12 @@ print "APACHE_LOGINCALLER=",caller,"\n";
    my $node=substr(${$DeploySMB_Proxy[0]}{'HostName'},0,
                   (index ${$DeploySMB_Proxy[0]}{'HostName'},'.'));
    my $an="${$DeploySMB_Proxy[0]}{'IP'}:80";
+   my $username=&Net::FullAuto::FA_Core::username();
    eval {
       #$apache_handle{$info[2]} = new LWP::UserAgent;
-      my $un=$username;
 #print "GP1\n";
       $apache_handle{$info[2]}->credentials(
-         $an,'WebRSH',$un,&getpasswd($hostlabel,$un));
+         $an,'WebRSH',$username,&getpasswd($hostlabel,$username));
       $apache_handle{$info[2]}->agent(
             "$progname " . $ua->agent);
    };
@@ -8113,6 +8140,7 @@ sub getpasswd
    my $cmd_type='';my $status='';
    my $encrypted_passwd='';
    my $bdb='';
+   my $username=&Net::FullAuto::FA_Core::username();
    if (defined $_[2] && $_[2]) {
       if ($_[2] eq '__force__') {
          $force=1;
@@ -8809,10 +8837,10 @@ sub apache_download
    my ($size,$start_t,$length,$flength,$last_dur)='';
 
    $ua->agent("$progname " . $ua->agent);
-   my $un=$username;
+   my $username=&Net::FullAuto::FA_Core::username();
 #print "GP3\n";
    $ua->credentials("$Hosts{\"__Master_${$}__\"}{'IP'}:80",'WebRSH',
-                       "$un",&getpasswd($hostlabel,$un));
+                       "$username",&getpasswd($hostlabel,$username));
    $ua->env_proxy;
 
    my $url="http://${$ApacheNode[0]}[0]/download/$_[0]";
@@ -8969,6 +8997,7 @@ sub send_email
    my $head='';my $mail_sender='';my %mail_sender_defaults=();
    my $mail_info=$_[0];my $ent='';
    my $warn=1 if grep { lc($_) eq '__warn__' } @_;
+   my $username=&Net::FullAuto::FA_Core::username();
    #tie *debug, "Net::FullAuto::MemoryHandle";
    if (ref $mail_info eq 'HASH') {
       if (exists $mail_info->{Usage}) {
@@ -9046,9 +9075,6 @@ sub send_email
             (exists $email_defaults{From})) {
          $ent->head->mime_attr(From=>$email_defaults{From});
       } else {
-         if (!$Net::FullAuto::FA_Core::username) {
-            $Net::FullAuto::FA_Core::username=getlogin || getpwuid($<)
-         }
          $ent->head->mime_attr(From=>
             "$Net::FullAuto::FA_Core::progname".
             "\@$Net::FullAuto::FA_Core::local_hostname");
@@ -9085,32 +9111,24 @@ sub send_email
                } else { $to=$mail_info->{To} }
             }
          }
-         if (!$Net::FullAuto::FA_Core::username) {
-            $Net::FullAuto::FA_Core::username=getlogin || getpwuid($<)
-         }
          if (ref $to eq 'ARRAY') {
             my $going_to='';
             foreach my $item (@{$to}) {
                if ($item=~/(__|\])USERNAME(\[|__)/i) {
-                  $going_to.="$email_addresses{
-                              $Net::FullAuto::FA_Core::username}\,"
-                     if exists $email_addresses{
-                               $Net::FullAuto::FA_Core::username};
+                  $going_to.="$email_addresses{$username}\,"
+                     if exists $email_addresses{$username};
                   next;
                } $going_to.="$item\,";
             } $to=substr($going_to,0,-1);
          } elsif ($to=~/(__|\])USERNAME(\[|__)/i) {
-            $to=$email_addresses{$Net::FullAuto::FA_Core::username}
-               if exists $email_addresses{$Net::FullAuto::FA_Core::username};
+            $to=$email_addresses{$username}
+               if exists $email_addresses{$username};
          }
          $ent->head->mime_attr(To=>$to);
          $sendemail=1;
       } elsif ($email_defaults &&
             (exists $email_defaults{To})) {
          $to=$email_defaults{To};
-         if (!$Net::FullAuto::FA_Core::username) {
-            $Net::FullAuto::FA_Core::username=getlogin || getpwuid($<)
-         }
          if (ref $to eq 'ARRAY') {
             my $going_to='';
             foreach my $item (@{$to}) {
@@ -9123,8 +9141,8 @@ sub send_email
                } $going_to.="$item\,";
             } $to=substr($going_to,0,-1);
          } elsif ($to=~/(__|\])USERNAME(\[|__)/i) {
-            $to=$email_addresses{$Net::FullAuto::FA_Core::username}
-               if exists $email_addresses{$Net::FullAuto::FA_Core::username};
+            $to=$email_addresses{$username}
+               if exists $email_addresses{$username};
          }
          $ent->head->mime_attr(To=>$to);
          $sendemail=1;
@@ -9324,7 +9342,7 @@ $main::get_default_modules=sub {
          &handle_error($die);
       }
    }
-   $username=getlogin || getpwuid($<);
+   my $username=&Net::FullAuto::FA_Core::username();
    unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm') {
       my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm';
       open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
@@ -9598,8 +9616,7 @@ my $get_modules=sub {
       my $ind=rindex $type,'fa_';
       $type=substr($type,$ind+3,$ind+7);
    }
-   my $username=getlogin || getpwuid($<);
-   #use if (!exists $INC{'Net/FullAuto.pm'}), 'Net::FullAuto';
+   my $username=&Net::FullAuto::FA_Core::username();
    my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
    my $mkdflag=0;
    unless (-d "$fadir/Custom/$username/$type") {
@@ -9749,12 +9766,11 @@ my $fasetdef=sub {
    use BerkeleyDB;
    use File::Path;
    no strict 'subs';
-   my $username=getlogin || getpwuid($<);
-   my $loc=substr($INC{'Net/FullAuto.pm'},
-                  0,-3);
-   my $progname=substr($0,(rindex $0,'/')
-                       +1,-3);
-   require "$loc/fa_global.pm";
+   my $username=&Net::FullAuto::FA_Core::username();
+   #my $loc=substr($INC{'Net/FullAuto.pm'},
+   #               0,-3);
+   my $progname=substr($0,(rindex $0,'/')+1,-3);
+   #require "$loc/fa_global.pm";
    my $mkdflag=0;
    unless (-d $fa_global::FA_Secure.'Defaults') {
       $mkdflag=1;
@@ -9998,12 +10014,12 @@ my $cacomm_sub=sub {
                            use BerkeleyDB;
                            use File::Path;
                            no strict 'subs';
-                           my $username=getlogin || getpwuid($<);
-                           my $loc=substr($INC{'Net/FullAuto.pm'},
-                                          0,-3);
+                           my $username=&Net::FullAuto::FA_Core::username();
+                           #my $loc=substr($INC{'Net/FullAuto.pm'},
+                           #               0,-3);
                            my $progname=substr($0,(rindex $0,'/')
                                                +1,-3);
-                           require "$loc/fa_global.pm";
+                           #require "$loc/fa_global.pm";
                            my $mkdflag=0;
                            unless (-d $fa_global::FA_Secure.'Defaults') {
                               $mkdflag=1;
@@ -10102,7 +10118,7 @@ my $custnd=<<FIN;
 
 
 FIN
-         my $username=getlogin || getpwuid($<);
+         my $username=&Net::FullAuto::FA_Core::username();
          return "$custnd    Code  =>  ".
                 "Net/FullAuto/Custom/$username/".
                 "]P[{cacode}\n".
@@ -10131,7 +10147,7 @@ my $camenu_sub=sub {
          Result => $cacomm_sub->(),
       },
       Banner => sub {
-         my $username=getlogin || getpwuid($<);
+         my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
          "]P[{cacode}\n".
          "   Conf  =>  Net/FullAuto/Custom/$username/".
@@ -10159,7 +10175,7 @@ my $camaps_sub=sub {
          Result => $camenu_sub->(),
       },
       Banner => sub {
-         my $username=getlogin || getpwuid($<);
+         my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
                 "]P[{cacode}\n".
                 "   Conf  =>  Net/FullAuto/Custom/$username/".
@@ -10186,7 +10202,7 @@ my $cahost_sub=sub {
          Result => $camaps_sub->(),
       },
       Banner => sub {
-         my $username=getlogin || getpwuid($<);
+         my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
                 "]P[{cacode}\n".
                 "   Conf  =>  Net/FullAuto/Custom/$username/".
@@ -10210,7 +10226,7 @@ my $caconf_sub=sub {
          Result => $cahost_sub->(),
       },
       Banner => sub {
-         my $username=getlogin || getpwuid($<);
+         $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
                 "]P[{cacode}\n\n".
                 "$custfm   Please select a fa_conf[.*].pm ".
@@ -10377,9 +10393,10 @@ my $define_modules_commit_sub=sub {
             use BerkeleyDB;
             use File::Path;
             use Data::Dump::Streamer;
-            my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
+            my $username=&Net::FullAuto::FA_Core::username();
+            #my $loc=substr($INC{'Net/FullAuto.pm'},0,-3);
             my $progname=substr($0,(rindex $0,'/')+1,-3);
-            require "$loc/fa_global.pm";
+            #require "$loc/fa_global.pm";
             my $mkdflag=0;
             unless (-d $fa_global::FA_Secure.'Sets') {
                $mkdflag=1;
@@ -10620,7 +10637,7 @@ my $define_modules_menu_fa_code_sub=sub {
                   "   for the new Set: ";
             $main::desc=<STDIN>;
             chomp($main::desc);
-            my $username=getlogin || getpwuid($<);
+            my $username=&Net::FullAuto::FA_Core::username();
             my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
             unless (-d "$fadir/Custom/$username/Code") {
                my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
@@ -10722,12 +10739,12 @@ my $delete_sets_menu_sub=sub {
                                  $res=eval $res;
                               }
                            }
-                           my $username=getlogin || getpwuid($<);
-                           my $loc=substr($INC{'Net/FullAuto.pm'},
-                                      0,-3);
+                           my $username=&Net::FullAuto::FA_Core::username();
+                           #my $loc=substr($INC{'Net/FullAuto.pm'},
+                           #           0,-3);
                            my $progname=substr($0,(rindex $0,'/')
                                       +1,-3);
-                           require "$loc/fa_global.pm";
+                           #require "$loc/fa_global.pm";
                            my $mkdflag=0;
                            unless (-d $fa_global::FA_Secure.'Defaults') {
                               $mkdflag=1;
@@ -11009,6 +11026,7 @@ my $set_default_menu_sub=sub {
    my $current_default_set=$default_modules->{'set'};
    my $sdf_banner="   Please Select a Default Module Set:\n\n";
    my $clearoption='';
+   my $username=&Net::FullAuto::FA_Core::username();
    if ($current_default_set eq 'none') {
       $sdf_banner.="      ** NO DEFAULT SET DEFINED **\n";
       $clearoption="Keep as 'none'\n\n";
@@ -11734,7 +11752,7 @@ sub fa_login
       $username_from='cmd_line_arg';
       $userflag=1;
    } else {
-      $username=getlogin || getpwuid($<);
+      $username=&Net::FullAuto::FA_Core::username();
    }
 
    if (-1<$#_ && $_[0] && $_[0]!~/^\d+$/) {
@@ -12319,7 +12337,7 @@ sub fa_login
                   use File::Path;
                   use File::Copy;
                   my $type=$_[0];
-                  my $username=getlogin || getpwuid($<);
+                  my $username=&Net::FullAuto::FA_Core::username();
                   my $fadir=substr($INC{'Net/FullAuto.pm'},0,-3);
                   unless (-d "$fadir/Custom/$username/$type") {
                      my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
@@ -13766,7 +13784,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
                $@=~s/INSECURE/Insecure/s;
             }
          }
-         $username=getlogin() || (getpwuid($<))[0]
+         $username=&Net::FullAuto::FA_Core::username()
             || "Intruder!!" if !$username;
          $login_id=$username if !$login_id;
          $login_Mast_error=$@;
@@ -14167,7 +14185,7 @@ sub fa_set {
                                " $BerkeleyDB::Error\n";
                         }
                      }
-                     my $username=getlogin || getpwuid($<);
+                     my $username=&Net::FullAuto::FA_Core::username();
                      my $set='';
                      my $status=$std->db_get(
                            $username,$set);
@@ -14283,7 +14301,7 @@ sub fa_set {
                             " $BerkeleyDB::Error\n";
                      }
                   }
-                  my $username=getlogin || getpwuid($<);
+                  my $username=&Net::FullAuto::FA_Core::username();
                   my $set='';
                   my $status=$std->db_get(
                         $username,$set);
@@ -16036,7 +16054,7 @@ sub new {
    my $chk_id='';
    if ($su_id) { $chk_id=$su_id }
    elsif ($login_id) { $chk_id=$login_id }
-   else { $chk_id=$Net::FullAuto::FA_Core::username }
+   else { $chk_id=&Net::FullAuto::FA_Core::username(); }
    if (!$new_master &&
          exists $Net::FullAuto::FA_Core::Connections{
          "${hostlabel}__%-$chk_id"}) {
@@ -16946,7 +16964,7 @@ sub ftr_cmd
    my $host= ($use eq 'ip') ? $ip : $hostname;
    $ms_share='' unless defined $ms_share;
    $ms_domain='' unless defined $ms_domain;
-   $login_id=$Net::FullAuto::FA_Core::username if !defined $su_id;
+   $login_id=&Net::FullAuto::FA_Core::username() if !defined $su_id;
    my $work_dirs={};my $ftr_cmd='';my $ms_su_id='';my $ms_login_id='';
    my $ms_hostlabel='';my $ms_host='';my $ms_ms_share='';
    my $local_transfer_dir='';my $cmd_type='';my $ms_ms_domain='';
@@ -17169,7 +17187,7 @@ print "FTR_RETURN3\n";
                   return Rem_Command::new('Rem_Command',$ip,
                                           $new_master,$_connect);
                } else {
-                  $login_id=$Net::FullAuto::FA_Core::username;
+                  $login_id=&Net::FullAuto::FA_Core::username();
                } 
             } my $ftr_cmd_error='';my $su_scrub='';my $retrys='';
             if ($ftr_cmd) {
@@ -17220,6 +17238,7 @@ print "FTR_RETURN3\n";
                      }
 
                      &Net::FullAuto::FA_Core::change_pw($ftr_cmd) if $newpw;
+                     my $username=&Net::FullAuto::FA_Core::username();
 
                      if ($su_scrub) {
                         my $kind='prod';
@@ -17302,8 +17321,7 @@ print "FTR_RETURN3\n";
                         my $status=$bdb->db_get($host,$href);
                         $href=~s/\$HASH\d*\s*=\s*//s;
                         $href=eval $href;
-                        my $key="${Net::FullAuto::FA_Core::username}_X_"
-                               ."${Net::FullAuto::FA_Core::username}_X_${host}";
+                        my $key="${username}_X_${username}_X_${host}";
                         while (delete $href->{$key}) {}
                         my $cipher='';
 #my $mr="__Master_${$}__";
@@ -17362,7 +17380,7 @@ print "FTR_CMD_ERROR=$ftr_cmd_error\n";<STDIN>;
 
                      if ($ftr_cmd_error=~/invalid log|ogin incor/) {
                         &Net::FullAuto::FA_Core::scrub_passwd_file(
-                           $hostlabel,$Net::FullAuto::FA_Core::username);
+                           $hostlabel,$username);
                         if ($^O eq 'cygwin' && $retrys==2) {
                            $ftr_cmd_error.="\nWARNING! - You may be in Danger"
                                          ." of locking out MS Domain ID - "
@@ -17453,7 +17471,7 @@ print "FTR_RETURN7\n";
          =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
          $Net::FullAuto::FA_Core::DeploySMB_Proxy[0]);
       $host=($use eq 'ip') ? $ip : $hostname;
-      $login_id=$Net::FullAuto::FA_Core::username if !$login_id;
+      $login_id=&Net::FullAuto::FA_Core::username() if !$login_id;
       $login_id=$su_id if $su_id;
       $hostlabel=$Net::FullAuto::FA_Core::DeploySMB_Proxy[0];
       if (defined $transfer_dir && $transfer_dir) {
@@ -17535,7 +17553,7 @@ sub ftm_login
    my $ftp_pid='';my $fpx_pid='';my $smb=0;
    my @errorstack=();
    my ($output,$stdout,$stderr)=('','','');
-   $login_id=$Net::FullAuto::FA_Core::username if !$login_id;
+   $login_id=&Net::FullAuto::FA_Core::username() if !$login_id;
    while (1) {
       eval {
          if (lc(${$ftr_cnct}[0]) eq 'smb') {
@@ -17565,7 +17583,7 @@ sub ftm_login
                $host=($use eq 'ip') ? $ip : $hostname;
 print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST1111=$host\n"
       if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               $login_id=$Net::FullAuto::FA_Core::username if !$login_id;
+               $login_id=&Net::FullAuto::FA_Core::username() if !$login_id;
                if ($su_id) {
                   $ftm_passwd=&Net::FullAuto::FA_Core::getpasswd(
                      $Net::FullAuto::FA_Core::DeploySMB_Proxy[0],$su_id,
@@ -18682,7 +18700,7 @@ print "RETURNTHREE and FTR_CMD=$ftr_cmd\n";<STDIN>;
 print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST5555=$host\n"
       if $Net::FullAuto::FA_Core::log &&
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                                 $login_id=$Net::FullAuto::FA_Core::username
+                                 $login_id=&Net::FullAuto::FA_Core::username()
                                     if !$login_id;
                                  $login_id=$su_id if $su_id;
                                  if (exists
@@ -20503,6 +20521,7 @@ sub mirror
          return '',$die;
       } else { &Net::FullAuto::FA_Core::handle_error($die) }
    }
+   my $username=&Net::FullAuto::FA_Core::username();
    my $dest_output='';my $base_output='';my $lsgnu=0;
    my $num_of_levels='';my $mirrormap='';my $trantar='';
    my $trandir='';my $chk_id='';my $local_transfer_dir='';
@@ -21142,7 +21161,7 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
       } else {
          if ($dsu_id) { $chk_id=$dsu_id }
          elsif ($dlogin_id) { $chk_id=$dlogin_id }
-         else { $chk_id=$Net::FullAuto::FA_Core::username }
+         else { $chk_id=$username }
          if (exists $Net::FullAuto::FA_Core::Connections{
                "${dhostlabel}__%-$chk_id"}) {
             $destFH=$Net::FullAuto::FA_Core::Connections{
@@ -22114,11 +22133,6 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WEX REALLY GET HERE11 and FILE=$file\n"
                   &Net::FullAuto::FA_Core::handle_error(
                      $stderr,'-1');
                }
-               #($output,$stderr)=$baseFH->cwd($curdir);
-               #if ($stderr) {
-               #   &Net::FullAuto::FA_Core::handle_error(
-               #      $stderr,'-1');
-               #}
                ($output,$stderr)=$baseFH->cmd(
                    "rm -rf $curdir/FA_Diff_Report_Zip");
                if ($stderr) {
@@ -26560,7 +26574,7 @@ sub new {
    my $chk_id='';
    if ($su_id) { $chk_id=$su_id }
    elsif ($login_id) { $chk_id=$login_id }
-   else { $chk_id=$Net::FullAuto::FA_Core::username }
+   else { $chk_id=&Net::FullAuto::FA_Core::username() }
    my $cmd_handle='';my $work_dirs='';my $cmd_type='';
    my $ftm_type='';my $stderr='';my $cmd_pid='';my $shell='';
    my $shell_pid=0;my $cygdrive='';my $smb='';
@@ -26790,7 +26804,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
    } elsif (!$cdtimeout) {
       $cdtimeout=$timeout if !$cdtimeout;
    }
-   $login_id=$Net::FullAuto::FA_Core::username if !$login_id;
+   $login_id=&Net::FullAuto::FA_Core::username() if !$login_id;
    my $cmd_handle='';my $work_dirs='';my $cmd_type='';my $smb=0;
    my $ftm_type='';my $use_su_login='';my $id='';my $cygwin='';
    my $su_login='';my $die='';my $login_passwd='';my $ms_su_id='';
@@ -26828,7 +26842,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
       $cdtimeout=$smbtimeout if $cdtimeout<$smbtimeout;
       $hostlabel=$Net::FullAuto::FA_Core::DeploySMB_Proxy[0];
       if (!$login_id && !$su_id) {
-         $ms_login_id=$login_id=$Net::FullAuto::FA_Core::username;
+         $ms_login_id=$login_id=&Net::FullAuto::FA_Core::username();
       }
       my $loginid = ($su_id) ? $su_id : $login_id;
       $use_su_login=1 if $su_id;
@@ -27353,7 +27367,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                         }
                         if (!$login_id && !$su_id) {
                            $ms_login_id=$login_id=
-                              $Net::FullAuto::FA_Core::username;
+                              &Net::FullAuto::FA_Core::username();
                         }
                      } my $loginid = ($su_id) ? $su_id : $login_id;
                      $use_su_login=1 if $su_id;

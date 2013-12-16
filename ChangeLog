@@ -19,6 +19,15 @@
 ################################################################
 
 
+2013-12-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999971 released.
+
+        * Implemented FA_Sudo to enable a user to emulate
+          another user. Useful for schedulers that run as
+          root or SYSTEM on Windows.
+
+
 2013-12-14  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999970 released.
