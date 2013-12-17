@@ -11063,20 +11063,21 @@ my $set_default_menu_sub=sub {
 
 my $insert_comp_sub=sub {
 
-   my $item_to_insert="]T[{select_how_to_insert}";
-   $item_to_insert=~s/^["](.*)["]$/$1/;
-   print "ITEM TO INSERT=$item_to_insert\n";<STDIN>;
-   my $compon="]!P[{select_component_dir}";
-   $compon=~s/^["](.*)["]$/$1/;
+   my $item_to_insert_around="]T[{select_how_to_insert}";
+   $item_to_insert_around=~s/^["](.*)["]$/$1/;
+   my $comp_dir="]!P[{select_component_dir}";
+   $comp_dir=~s/^["](.*)["]$/$1/;
+   my $comp_to_import="]!P[{select_comp_to_import}";
+   $comp_to_import=~s/^["](.*)["]$/$1/;
+   $comp_to_import=~s/\s+at Line.*$//;
    my $local_code=&Net::FullAuto::FA_Core::fa_set;
    require PPI;
    my %fa_subs=();
    foreach my $sub (keys %main::fa_subs) {
-      print "SUB=$sub and NAME=$main::fa_subs{$sub}->[0]<==\n";
       $fa_subs{$main::fa_subs{$sub}->[0]}=$main::fa_subs{$sub}->[1];
    }
    my %loc_subs=();
-   my $local_doc = PPI::Document->new($local_code->{lc($compon)});
+   my $local_doc = PPI::Document->new($local_code->{lc($comp_dir)});
    my $subs_ref =
          $local_doc->find(
          sub { $_[1]->isa('PPI::Statement::Sub') });
@@ -11088,49 +11089,34 @@ my $insert_comp_sub=sub {
          $refs{$ref->name}=$ref;
       }
    }
-   my @comp=();
-   my $ll=0;my $l=0;
-   foreach my $loc (keys %main::loc_subs) {
-      $l=length $loc_subs{$loc}->[0];
-      $ll=$l if $l>$ll;
-   }
-   $ll+=3;
-   foreach my $loc (sort numerically keys %loc_subs) {
-      push @comp, $loc_subs{$loc}->[0];
-   }
-
    my $replace_flag=0;
-   $replace_flag=1 if $item_to_insert=~s/^Replace\s+(.*)$/$1/;
-   my $item_above='';
-   my $item_below='';
-   my $found_item_flag=0;
-   foreach my $item (@comp) {
-      if ($item ne $item_to_insert && !$found_item_flag) {
-         $item_above=$item;
-         next;
-      } elsif ($found_item_flag) {
-         $item_below=$item;
-      } else {
-         $found_item_flag=1;
-         next;
-      }
+   my $where='above';
+   if ($item_to_insert_around=~s/^Replace\s+(.*)$/$1/) {
+      $replace_flag=1;
+   } else {
+      $item_to_insert_around=~s/^Insert (above|below)\s+(.*?)\s+at Line.*$/$2/;
+      $where=$1;
    }
-   if ($item_above) {
-      my $rm_sub=PPI::Document->new(\$fa_subs{$item_to_insert});
-      $refs{$item_above}->__insert_after($rm_sub);
-      $rm_sub=PPI::Document->new(\"\n\n");
-      $refs{$item_above}->__insert_after($rm_sub);
-      while (my $ws=$refs{$item_to_insert}->next_token) {
-         last if $ws ne "\n";
-         $ws->remove;
+   if ($where eq 'above') {
+      my $lines=PPI::Document->new(\"\n\n");
+      my $import_sub=PPI::Document->new(\$fa_subs{$comp_to_import});
+      $refs{$item_to_insert_around}->__insert_before($import_sub);
+      $refs{$item_to_insert_around}->__insert_before($lines);
+      if ($replace_flag) {
+         while (my $ws=$refs{$item_to_insert_around}->next_token) {
+            last if $ws ne "\n";
+            $ws->remove;
+         }
+         $refs{$item_to_insert_around}->remove if $replace_flag;
       }
-      $refs{$item_to_insert}->remove if $replace_flag;
-   } elsif ($item_below) {
-      my $rm_sub=PPI::Document->new(\$fa_subs{$item_to_insert});
-      $refs{$item_below}->insert_before($rm_sub);
+   } else {
+      my $import_sub=PPI::Document->new(\$fa_subs{$comp_to_import});
+      $refs{$item_to_insert_around}->__insert_after($import_sub);
+      my $lines=PPI::Document->new(\"\n\n");
+      $refs{$item_to_insert_around}->__insert_after($lines);
    }
 
-   $local_doc->save($local_code->{lc($compon)});
+   $local_doc->save($local_code->{lc($comp_dir)});
    return '{admin}<'
 
 };
@@ -11151,7 +11137,7 @@ my $select_location_to_insert_comp_sub=sub {
    my $subs_ref =
          $local_doc->find(
          sub { $_[1]->isa('PPI::Statement::Sub') });
-   my $replace_flag=1;
+   my $replace_flag=0;
    foreach my $ref (@$subs_ref) {
       unless ($ref->forward) {
          if ($ref->name eq $i_item) {
@@ -11298,7 +11284,7 @@ my $select_component_file_sub=sub {
    $component=~s/^["](.*)["]$/$1/;
    my $server="]!P[{im_from_remote}";
    $server=~s/^["]Import from (.*)["]$/$1/;
-   my $user="]!P[{remote_fa_users}";
+   my $user="]!S[{remote_fa_users}";
    $user=~s/^["](.*)["]$/$1/;
    my ($stdout,$stderr)=('','');
    ($stdout,$stderr)=$main::remote_host->cmd('/usr/local/bin/fullauto -V');
@@ -11323,7 +11309,7 @@ my $select_component_file_sub=sub {
    }
    my @comp=();
    foreach my $line (split "\n", $stdout) {
-      next if $line!~/$user\/$component/;
+      next if -1==index $line, "$user/$component";
       push @comp, $line;
    }
    my %select_user_comp_file=(
@@ -11340,8 +11326,6 @@ my $select_component_file_sub=sub {
 
    );
    return \%select_user_comp_file,
-#print "COMP=@comp\n";
-#return '{admin}<';
 
 };
 
