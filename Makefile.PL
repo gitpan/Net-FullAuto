@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999973';
+$main::VERSION='0.99999974';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -481,36 +481,41 @@ END
       }
    } elsif (!can_cc()) {
 
-      my $moreinfo='';
-      if ($Config{cc} and $Config{cc}!~/^\s*$/) {
-         $moreinfo="\n\n                      You are running $^X version $].\n".
-              "\n                      The Config.pm file for this perl installation".
-              "\n                      contains \"$Config{cc}\" as the compiler used".
-              "\n                      to build this perl, but this compiler does not".
-              "\n                      exist in the PATH and may not be installed on".
-              "\n                      this host.\n";
-              "\n                      Retrofitting an existing perl installation to".
-              "\n                      work properly with a new compiler for building".
-              "\n                      CPAN modules, is tricky and NOT recommended.".
-              "\n                      Often the available perl (especially on Unix".
-              "\n                      systems) is highly integrated with the host".
-              "\n                      OS and many of its features and utilities.".
-              "\n                      Upgrading the perl, but not the overall OS".
-              "\n                      is risky and may result in more than a few".
-              "\n                      system problems and instabilities.\n".
-              "\n                      The recommended approach is build a NEW perl".
-              "\n                      from source with your choice of newly installed".
-              "\n                      compiler (such as gcc) in a different location".
-              "\n                      (such as /usr/local/lib) or your home directory".
-              "\n                      if you lack root/admin privileges."
+      my $moreinfo='';my $s='          ';
+      if ($Config{cc} and $Config{cc}!~/^\s*$/ and $Config{cc}!~/gcc-4/) {
+         $moreinfo="\n\n$s            You are running $^X version $].\n".
+              "\n$s            The Config.pm file for this perl installation".
+              "\n$s            contains \"$Config{cc}\" as the compiler used".
+              "\n$s            to build this perl, but this compiler does not".
+              "\n$s            exist in the PATH and may not be installed on".
+              "\n$s            this host.\n".
+              "\n$s            Retrofitting an existing perl installation to".
+              "\n$s            work properly with a new compiler for building".
+              "\n$s            CPAN modules, is tricky and NOT recommended.".
+              "\n$s            Often the available perl (especially on Unix".
+              "\n$s            systems) is highly integrated with the host".
+              "\n$s            OS and many of its features and utilities.".
+              "\n$s            Upgrading the system perl, but not the overall".
+              "\n$s            OS is risky and may result in more than a".
+              "\n$s            few system problems and instabilities.\n".
+              "\n$s            The recommended approach is build a NEW perl".
+              "\n$s            from source with your choice of newly installed".
+              "\n$s            compiler (such as gcc) in a different location".
+              "\n$s            (such as /usr/local/lib) or your home directory".
+              "\n$s            if you lack root/admin privileges."
       }
+      if ($Config{cc}=~/gcc-4/) {
+         `cd /usr/bin;ln -s gcc.exe gcc-4`;
+         `ln -s g++.exe g++-4;cd $main::cwd`;
+      } else {
 
-      my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
-              "\n                      is required to install FullAuto".
-              $moreinfo.
-              "\n                      (Hint: goto www.gnu.org for gcc).".
-              "\n\n";
-      die $die;
+         my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
+                 "\n                      is required to install FullAuto".
+                 $moreinfo.
+                 "\n                      (Hint: goto www.gnu.org for gcc).".
+                 "\n\n";
+         die $die;
+      }
    }
    if ($incflag && ($main::PARdir ne $main::curdir)) {
       open(PD,">$main::PARdir/inc_exists.txt")
@@ -1707,10 +1712,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             }
          } elsif ($selection=~/(vim)/) {
             $selection=$1;
-            $editor='/bin/vim-nox.exe';
+            $editor='/bin/vim.exe';
          } elsif ($selection=~/(emacs)/) {
             $selection=$1;
-            $editor='/bin/emacs-nox.exe';
+            $editor='/bin/emacs.exe';
          } elsif ($selection=~/(joe)/) {
             $selection=$1;
             $editor='/bin/joe.exe';
@@ -2943,10 +2948,14 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                        "   editors.";
                $wordpad=1;
             }
-            if (-e '/bin/vim-nox.exe') {
+            if (-e '/bin/vim.exe') {
+               push @editors,'vim';
+            } elsif (-e '/bin/vim-nox.exe') {
                push @editors,'vim';
             }
-            if (-e '/bin/emacs-nox.exe') {
+            if (-e '/bin/emacs.exe') {
+               push @editors, 'emacs';
+            } elsif (-e '/bin/emacs-nox.exe') {
                push @editors, 'emacs';
             }
             if (-e '/bin/joe.exe') {
@@ -3010,9 +3019,17 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                   $editor="$mount/$tp";
                }
             } elsif ($selection=~s/(vim)/$1/) {
-               $editor='/bin/vim-nox.exe';
+               if (-e '/bin/vim-nox.exe') {
+                  $editor='/bin/vim-nox.exe';
+               } else {
+                  $editor='/bin/vim.exe';
+               }
             } elsif ($selection=~s/(emacs)/$1/) {
-               $editor='/bin/emacs-nox.exe';
+               if (-e '/bin/emacs-nox.exe') {
+                  $editor='/bin/emacs-nox.exe';
+               } else {
+                  $editor='/bin/emacs.exe';
+               }
             } elsif ($selection=~s/(joe)/$1/) {
                $editor='/bin/joe.exe';
             } elsif ($selection=~s/(mc)/$1/) {
@@ -3066,7 +3083,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
 
 if ($^O eq 'cygwin' && !can_cc()) {
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
-           "\n                      version 4 as provided by Cygwin".
+           "\n                      gcc-core as provided by Cygwin".
            "\n                      is required to install FullAuto".
            "\n                      on Windows.".
            "\n(Hint: Run Cygwin setup-x86.exe and install 'gcc-core' ".

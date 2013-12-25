@@ -19,6 +19,16 @@
 ################################################################
 
 
+2013-12-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999974 released.
+
+        * Merry Christmas!
+
+        * Updated Makefile.PL to accomodate latest Cygwin
+          changes for gcc and vim and emacs.
+
+
 2013-12-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999973 released.
