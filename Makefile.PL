@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999974';
+$main::VERSION='0.99999975';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -53,6 +53,8 @@ my $fa_banner=<<END;
 
 
 END
+
+   $main::legacy_cygwin=0;
 
    sub get_cygwin_location {
       my $cygwin_query=
@@ -481,6 +483,7 @@ END
       }
    } elsif (!can_cc()) {
 
+      $main::legacy_cygwin=1;
       my $moreinfo='';my $s='          ';
       if ($Config{cc} and $Config{cc}!~/^\s*$/ and $Config{cc}!~/gcc-4/) {
          $moreinfo="\n\n$s            You are running $^X version $].\n".
@@ -1754,6 +1757,8 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       }
 
       my $url='http://www.cygwin.com/setup-x86.exe';
+      $url='http://www.cygwin.com/setup-x86_64.exe'
+         if $^O eq 'MSWin64';
       if ($CPAN::META->has_usable('LWP')) {
          FA::LWP::UserAgent->config;
          print "Fetching with LWP:\n  $url\n";
@@ -1787,7 +1792,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                <STDIN>;
                exit 1;
             }
-            open(CP,">$main::root_dir\\setup-x86.exe") || die $!;
+            if ($^O eq 'MSWin64') {
+               open(CP,">$main::root_dir\\setup-x86_64.exe") || die $!;
+            } else {
+               open(CP,">$main::root_dir\\setup-x86.exe") || die $!;
+            }
             binmode(CP);
             print CP $res->content;
             my $cyghome=$Ua->get('http://www.cygwin.com');
@@ -1815,7 +1824,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                }
             } 
          } elsif ($res->status_line=~/403/) {
-            $url='http://www.fullautosoftware.net/download/setup-x86.exe'; 
+            if ($^O eq 'MSWin64') { 
+               $url='http://www.fullautosoftware.net/download/setup-x86_64.exe';
+            } else {
+               $url='http://www.fullautosoftware.net/download/setup-x86.exe';
+            }
             $req = HTTP::Request->new(GET => $url);
             $req->header('Accept' => 'text/html');
             $res = $Ua->request($req);
@@ -1823,7 +1836,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                print " + request successful.\n"
                   if $CPAN::DEBUG;
                mkpath($main::root_dir,1) unless -d $main::root_dir;
-               open(CP,">$main::root_dir\\setup-x86.exe") || die $!;
+               if ($^O eq 'MSWin64') {
+                  open(CP,">$main::root_dir\\setup-x86_64.exe") || die $!;
+               } else {
+                  open(CP,">$main::root_dir\\setup-x86.exe") || die $!;
+               }
                binmode(CP);
                print CP $res->content;
             } elsif ($res->status_line=~/403/) {
@@ -1853,7 +1870,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             die $res->status_line;
          }
          close(CP) || die $!;
-         chmod 0755, "$main::root_dir\\setup-x86.exe";
+         if ($^O eq 'MSWin64') {
+            chmod 0755, "$main::root_dir\\setup-x86.exe";
+         } else {
+            chmod 0755, "$main::root_dir\\setup-x86_64.exe";
+         }
         
          my $mirror_url='http://www.cygwin.com/mirrors.html';
          $req = HTTP::Request->new(GET => $mirror_url);
@@ -1881,24 +1902,49 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             } else {
                $selection=",$selection";
             }
-            $setup_cmd="$drlet & cd \"$main::root_dir\" & "
+            if ($^O eq 'MSWin64') {
+               $setup_cmd="$drlet & cd \"$main::root_dir\" & "
+                      .'setup-x86_64.exe -P gcc-core,'
+                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db,'
+                      .'libdb-devel,ncurses,cron,inetutils,procps,vim,unzip,'
+                      .'libmpfr4'.$selection.' -X -A -q '."-R $main::root_dir "
+                      .'-s '.$mirror_url;
+            } else {
+               $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86.exe -P gcc-core,'
                       .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
                       .'libmpfr4'.$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
+            }
          } elsif ($selection!~/MINIMAL/s) {
-            $setup_cmd="$drlet & cd \"$main::root_dir\" & "
+            if ($^O eq 'MSWin64') {
+               $setup_cmd="$drlet & cd \"$main::root_dir\" & "
+                      .'setup-x86_64.exe -P gcc-core,'
+                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db,'
+                      .'libdb-devel,ncurses,cron,inetutils,procps,vim,unzip,'
+                      .'libmpfr4 -X -A -q '."-R $main::root_dir "
+                      .'-s '.$mirror_url;
+            } else {
+               $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86.exe -P gcc-core,'
                       .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
                       .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
                       .'libmpfr4 -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
+            }
          } else {
-            $setup_cmd="$drlet & cd \"$main::root_dir\" & "
+            if ($^O eq 'MSWin64') {
+               $setup_cmd="$drlet & cd \"$main::root_dir\" & "
+                      .'setup-x86_64.exe -P openssh,ncurses,inetutils,procps,'
+                      .'vim,libmpfr4 -X -A -q '."-R $main::root_dir ".'-s '
+                      .$mirror_url;
+            } else {
+               $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86.exe -P openssh,ncurses,inetutils,procps,vim,'
                       .'libmpfr4 -X -A -q '."-R $main::root_dir ".'-s '
                       .$mirror_url;
+            }
          }
          
          my $wver=&windows_ver;
@@ -3082,11 +3128,14 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    (-1==index $main::install_firefox,'NOT'));
 
 if ($^O eq 'cygwin' && !can_cc()) {
+   my $uname=`/usr/bin/uname`;
+   my $stup='setup-x86.exe';
+   $stup='setup-x86_64.exe' if $uname=~/i686/;
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
            "\n                      gcc-core as provided by Cygwin".
            "\n                      is required to install FullAuto".
            "\n                      on Windows.".
-           "\n(Hint: Run Cygwin setup-x86.exe and install 'gcc-core' ".
+           "\n(Hint: Run Cygwin $stup and install 'gcc-core' ".
            "and 'gcc-g++' under the Category 'Devel' ).".
            "\n\n";
    die $die;
@@ -3097,13 +3146,16 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
    eval {
       $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;
+      my $uname=`/usr/bin/uname`;
+      my $stup='setup-x86.exe';
+      $stup='setup-x86_64.exe' if $uname=~/i686/;
       print "\n       *** THIS SCREEN WILL TIMEOUT IN 2 MINUTES ***\n". 
             "\n       WARNING! : The Secure Shell - 'ssh'".
             "\n                  and/or 'telnet' (via inetutils)".
             "\n                  as provided by Cygwin".
             "\n                  is required to install FullAuto".
             "\n                  on Windows.".
-            "\n(Hint: Run Cygwin setup-x86.exe and install OpenSSH ".
+            "\n(Hint: Run Cygwin $stup and install OpenSSH ".
             "under the Category 'Net' ).".
             "\n\n";
       print "Press <ENTER> if you wish to continue, or 'N' to quit . . . [Y] ";
@@ -3135,7 +3187,7 @@ if (-e "/bin/grep") {
 my $get_BerkeleyDB=0;
 eval { require BerkeleyDB };
 $get_BerkeleyDB=1 if $@;
-if ($get_BerkeleyDB && $^O ne 'cygwin') {
+if ($get_BerkeleyDB && !($^O eq 'cygwin' && !$main::legacy_cygwin)) {
    # Let's find if Berkeley DB is already on the system
    my $findpath='';
    if (-e "/bin/find") {
@@ -3213,7 +3265,30 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
       }
       my $major_minor_ver=substr($ver,0,(rindex $ver,'.'));
       $major_minor_ver=$ver if -1==index $major_minor_ver,'.';
-      if ($ENV{AUTOMATED_TESTING} || ($berkeleydb && $major_minor_ver>=5.1)) {
+      if ($main::legacy_cygwin) {
+         if ($berkeleydb && $major_minor_ver>=4.5) {
+            $berkeleydb=~s/^(.*)\/.*$/$1/;
+            $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
+            $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
+            $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
+            $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
+            $ENV{'DB_FILE_LIB'}=$berkeleydb;
+            $ENV{'DB_FILE_NAME'}="-ldb-$ver";
+            $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
+         } else {
+            my $uname=`/usr/bin/uname`;
+            my $dbdev="libdb${major_minor_ver}-devel";
+            $dbdev='libdb-devel' if $uname=~/i686/;
+            print "\n\n   Fatal Error!: The \'$dbdev\' package is".
+                  " missing from your Cygwin installation.\n".
+                  "\n\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                  exit 1;
+         }
+      } elsif ($ENV{AUTOMATED_TESTING} ||
+            ($berkeleydb && $major_minor_ver>=5.1)) {
          $berkeleydb=~s/^(.*)\/.*$/$1/;
          $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
          $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
@@ -3664,7 +3739,10 @@ $@
                   This 'c' library is required to install FullAuto.
 END
       if ($^O eq 'cygwin') {
-         $die.="\n(Hint: Run Cygwin setup-x86.exe and install Oracle Berkley ".
+         my $uname=`/usr/bin/uname`;
+         my $stup='setup-x86.exe';
+         $stup='setup-x86_64.exe' if $uname=~/i686/;
+         $die.="\n(Hint: Run Cygwin $stup and install Oracle Berkley ".
                "DB under the Category 'Database' ).";
       } else {
          $die.="\n(Hint: goto ->  http://www.oracle.com/technetwork/".

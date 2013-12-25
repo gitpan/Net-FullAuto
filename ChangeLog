@@ -21,6 +21,16 @@
 
 2013-12-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999975 released.
+
+        * Merry Christmas!
+
+        * Updated Makefile.PL to accomodate both Cygwin
+          and Cygwin64 setups.
+
+
+2013-12-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999974 released.
 
         * Merry Christmas!
