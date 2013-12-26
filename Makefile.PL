@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999975';
+$main::VERSION='0.99999976';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -215,22 +215,100 @@ END
    $main::root_dir=$main::curdir;
 
    my $incflag=0;my @drive_options=();
-   if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
+   if ($^O eq 'cygwin') {
+      my $cygcheck=`/bin/cygcheck -c` || die $!;
+      my $uname=`/bin/uname` || die $!;
+      my %need_packages=();
+      if ($uname=~/WOW64/) {
+         foreach my $package ('gcc-core','gcc-g++','make','openssh','openssl',
+                              'openssl-devel','perl','perl-libwin32','db',
+                              'libdb-devel','ncurses','cron','inetutils',
+                              'procps','vim','unzip','libmpfr4') {
+            unless (-1<index $cygcheck, "$package ") {
+               $need_packages{$package}='';
+            }
+         }
+         if (exists $need_packages{'libdb-devel'}) {
+            if (-1<index $cygcheck, 'libdb4.8-devel' ||
+                  -1<index $cygcheck, 'libdb4.5-devel') {
+               delete $need_packages{'libdb-devel'};
+            }
+         }
+         if (exists $need_packages{'db'}) {
+            if (-1<index $cygcheck, 'db4.8' ||
+                  -1<index $cygcheck, 'db4.5') {
+               delete $need_packages{'db'}
+            }
+         }
+      } else {
+         foreach my $package ('gcc-core','gcc-g++','make','openssh','openssl',
+                              'openssl-devel','perl','perl-libwin32','db4.8',
+                              'libdb4.8-devel','ncurses','cron','inetutils',
+                              'procps','vim','unzip','libmpfr4') {
+            unless (-1<index $cygcheck, "$package ") {
+               $need_packages{$package}='';
+            }
+         }
+      }
+      if (keys %need_packages) {
+         my $packs='';
+         foreach my $pack (sort keys %need_packages) {
+            $packs.="      $pack\n";
+         }
+         if ($packs) {
+            print "\n\n   Fatal Error!: The following Cygwin",
+                  "\n                 packages are missing from",
+                  "\n                 your installation:",
+                  "\n\n$packs",
+                  "\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                  exit 1;
+         }
+      }
+      my $services=`ps -e` || die $!;
+      my @required_cygwin_services=();
+      foreach my $cygwin_service ('sshd','cygserver') {
+         push @required_cygwin_services, $cygwin_service
+            if -1==index $services,$cygwin_service;
+      } 
+      if (-1<$#required_cygwin_services) {
+         my $services='';
+         foreach my $service (sort @required_cygwin_services) {
+            $services.="      $service\n";
+         }
+         if ($services) {
+            print "\n\n   Fatal Error!: The following Cygwin ".
+                  "services are not running on your system:".
+                  "\n\n$services".
+                  "\n\n   The FullAuto installation will not".
+                  "\n   succeed without these services installed".
+                  "\n   and running.".
+                  "\n\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                  exit 1;
+         }
+      }
+   } elsif ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       if (-1==index $0,'Setup-FullAuto-v') {
-         my $die="\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
-            "\n                      is required to use FullAuto".
-            "\n                      on Windows - goto www.cygwin.com.".
-            "\n\n           Be sure to install the following programs in ".
-            "\n           addition to the base package:".
-            "\n\n           inetutils and openssh [as provided by Cygwin]".
-            "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
-            "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
-            "\n           ncurses, cron, and procps [as provided by Cygwin]".
-            "\n           gcc-core and gcc-g++ [as provided by Cygwin]".
-            "\n           Oracle Berkeley DB [as provided by Cygwin or Oracle]".
-            "\n\n           **IMPORTANT** - the FullAuto install, either manual".
-            "\n           or via CPAN, must be run *inside* a Cygwin bash shell".
-            "\n           when installing FullAuto on Microsoft Windows.".
+         my $s='    ';
+         my $die="\n$s   FATAL ERROR! : Cygwin Linux Emulation Layer".
+            "\n$s                  is required to use FullAuto".
+            "\n$s                  on Windows - goto www.cygwin.com.".
+            "\n\n$s       Be sure to install the following programs in ".
+            "\n$s       addition to the base package:".
+            "\n\n$s       inetutils and openssh [as provided by Cygwin]".
+            "\n$s       perl [as provided by Cygwin] (*NOT* CPAN)".
+            "\n$s       perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
+            "\n$s       ncurses, cron, and procps [as provided by Cygwin]".
+            "\n$s       gcc-core and gcc-g++ [as provided by Cygwin]".
+            "\n$s       Oracle Berkeley DB [as provided by Cygwin or Oracle]".
+            "\n\n$s       **IMPORTANT** - the FullAuto install, either manual".
+            "\n$s       or via CPAN, must be run *inside* a Cygwin bash shell".
+            "\n$s       when installing FullAuto on Microsoft Windows.".
             "\n\n";
          unless ($ENV{'AUTOMATED_TESTING'}) {
             die $die;
@@ -939,6 +1017,29 @@ END
    &fa_err_exit($stderr,'LWP') if $stderr;
    eval { require Net::SSLeay };
    if ($@) {
+      if ($main::legacy_cygwin) {
+         my $check_ssl=`/usr/bin/cygcheck -c openssl`;
+         my $check_dev=`/usr/bin/cygcheck -c openssl-devel`;
+         if ($check_ssl!~/openssl/) {
+            print "\n\n   Fatal Error!: The \'openssl\' and\n",
+                  "\'openssl-devel\' packages are missing",
+                  " from your Cygwin installation.\n",
+                  "\n\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                  exit 1;
+         }
+         if ($check_dev!~/openssl-devel/) {
+            print "\n\n   Fatal Error!: The \'openssl-devel\' package is",
+                  " missing from your Cygwin installation.\n",
+                  "\n\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                  exit 1;
+         }
+      }
       ($stdout,$stderr)=&fa_install_module('Net::SSLeay','get');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Net::SSLeay') if $stderr;
@@ -1905,32 +2006,36 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             if ($^O eq 'MSWin64') {
                $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86_64.exe -P gcc-core,'
-                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db,'
-                      .'libdb-devel,ncurses,cron,inetutils,procps,vim,unzip,'
-                      .'libmpfr4'.$selection.' -X -A -q '."-R $main::root_dir "
+                      .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
+                      .'procps,vim,unzip,libmpfr4'
+                      .'perl-libwin32,db,libdb-devel,ncurses,cron,inetutils,'
+                      .$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
             } else {
                $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86.exe -P gcc-core,'
-                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
-                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
-                      .'libmpfr4'.$selection.' -X -A -q '."-R $main::root_dir "
+                      .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
+                      .'perl-libwin32,db4.8,libdb4.8-devel,ncurses,cron,'
+                      .'inetutils,procps,vim,unzip,libmpfr4'.
+                      $selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
             }
          } elsif ($selection!~/MINIMAL/s) {
             if ($^O eq 'MSWin64') {
                $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86_64.exe -P gcc-core,'
-                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db,'
-                      .'libdb-devel,ncurses,cron,inetutils,procps,vim,unzip,'
-                      .'libmpfr4 -X -A -q '."-R $main::root_dir "
+                      .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
+                      .'perl-libwin32,db,libdb-devel,ncurses,cron,inetutils,'
+                      .'procps,vim,unzip,libmpfr4'
+                      .' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
             } else {
                $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86.exe -P gcc-core,'
-                      .'gcc-g++,make,openssh,openssl,perl,perl-libwin32,db4.8,'
-                      .'libdb4.8-devel,ncurses,cron,inetutils,procps,vim,unzip,'
-                      .'libmpfr4 -X -A -q '."-R $main::root_dir "
+                      .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
+                      .'perl-libwin32,db4.8,libdb4.8-devel,ncurses,cron,'
+                      .'inetutils,procps,vim,unzip,libmpfr4'
+                      .' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
             }
          } else {
@@ -3128,9 +3233,9 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
    (-1==index $main::install_firefox,'NOT'));
 
 if ($^O eq 'cygwin' && !can_cc()) {
-   my $uname=`/usr/bin/uname`;
+   my $uname=`/bin/uname`;
    my $stup='setup-x86.exe';
-   $stup='setup-x86_64.exe' if $uname=~/i686/;
+   $stup='setup-x86_64.exe' if $uname=~/WOW64/;
    my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
            "\n                      gcc-core as provided by Cygwin".
            "\n                      is required to install FullAuto".
