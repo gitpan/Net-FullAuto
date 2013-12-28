@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999978';
+$main::VERSION='0.99999979';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -662,8 +662,8 @@ END
          next unless -d $d.'/'.$_;
          next if $_!~/^$look[-]\d/;
          $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
-         my @attrs = stat $file;
-         my $diff = time()-$attrs[9];
+         my $attrs = stat $file;
+         my $diff = time()-$attrs->[9];
          if ($temp == 0 && $_=~/^$look[-]\d/) {
            $temp=$diff;
            $new=$file;
@@ -715,22 +715,7 @@ END
          };
          if ($@) {
             $cpan_error="$@ $!";
-            print "CPAN Error: $cpan_error => will attempt CPANPLUS\n";
-            do {
-               print"==> $p required."
-               and print "*** Installing $p via CPANPLUS\n"
-               and
-               do {
-                  eval {
-                     require CPANPLUS::Backend;
-                     my $cb  = CPANPLUS::Backend->new;
-                     my $mod = $cb->parse_module(module=>$p);
-                     my $where = $cb->_fetch(module=>$mod,verbose=>1);
-                     $dir = $cb->_extract(module=>$mod,verbose=>1);
-                  };
-                  die "CPANPLUS Error: $@ $! and CPAN Error: $cpan_error" if $@;
-               }; 
-            };
+            die "CPAN Error: $cpan_error\n";
          }
          if ($task eq 'install') {
             $dir||=&fa_find_latest($p);
@@ -3772,18 +3757,10 @@ if ($get_BerkeleyDB) {
             if (-f '/etc/redhat-release' || -f '/etc/fedora-release') {
                $ENV{LD_RUN_PATH}=$ENV{LD_LIBRARY_PATH};
             }
-            eval {
-               require CPANPLUS::Shell;
-               my $u=CPANPLUS::Shell->new();
-               $u->shell;
-               $u->dispatch_on_input(input=>'o conf force 1');
-               $u->dispatch_on_input(input=>"install $p")
+            eval{
+               require CPAN;
+               CPAN::Shell->force('install',$p)
             };
-            eval "use $p;1"
-            or eval{
-                  require CPAN;
-                  CPAN::Shell->force('install',$p)
-               };
             eval "use $p;1" ||
                die "*** Please manually install $p from cpan.org first...\n"
          }

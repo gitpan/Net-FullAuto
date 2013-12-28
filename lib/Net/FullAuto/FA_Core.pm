@@ -82,6 +82,14 @@ package Net::FullAuto::FA_Core;
 #
 #  Also - in the /etc/ssh_config, set UseDNS to no.
 #
+## Cygwin sshd - /bin/bash: Operation not permitted.
+#
+#  Culprit is mostly permissions on /var/empty and /var/run
+#  chown cyg_server /var/empty
+#  chmod 755 /var/empty
+#  see cygwin_sshd.pdf (in FullAuto distribution) and at
+#  http://http://www.tux.org/~mayer/cygwin/cygwin_sshd.pdf
+#
 ## ASCII BANNER Courtesy of (small font):
 #
 #  http://www.network-science.de/ascii/
@@ -9632,39 +9640,39 @@ my $get_modules=sub {
       my $m=($^O eq 'cygwin')?"-m $mode ":'';
       unless (-d "$fadir/Custom") {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                 'mkdir '.$m."$fadir/Custom";
+                 'mkdir '.$m."\'$fadir/Custom\'";
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          die $stderr if $stderr;
       }
       unless (-d "$fadir/Custom/$username") {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                 'mkdir '.$m."$fadir/Custom/$username";
+                 'mkdir '.$m."\'$fadir/Custom/$username\'";
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          die $stderr if $stderr;
       }
       unless (-d "$fadir/Custom/$username/$type") {
          my $cmd=$Net::FullAuto::FA_Core::gbp->('mkdir').
-                 'mkdir '.$m."$fadir/Custom/$username/$type";
+                 'mkdir '.$m."\'$fadir/Custom/$username/$type\'";
          my $stdout='';my $stderr='';
          ($stdout,$stderr)=&setuid_cmd($cmd,5);
          die $stderr if $stderr;
       }
       my $cmd=$Net::FullAuto::FA_Core::gbp->('cp').'cp '.
-           "$fadir/Custom/fa_".lc($type).'.pm '.
-           "$fadir/Custom/$username/$type";
+           "\'$fadir/Custom/fa_".lc($type).'.pm\' '.
+           "\'$fadir/Custom/$username/$type\'";
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr;
    }
    if ($mkdflag && $^O eq 'cygwin') {
       my $mode=$Net::FullAuto::FA_Core::cygwin_berkeley_db_mode;
       my $cmd=$Net::FullAuto::FA_Core::gbp->('chmod')."chmod -Rv $mode ".
-              "$fadir/Custom/$username/$type/*";
+              "\'$fadir/Custom/$username/$type\'";
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr && -1==index $stderr,'mode of';
    }
-   opendir(DIR,"$fadir/Custom/$username/$type");
+   opendir(DIR,"\'$fadir/Custom/$username/$type\'");
    my @xfiles = readdir(DIR);
    my @return=();
    closedir(DIR);

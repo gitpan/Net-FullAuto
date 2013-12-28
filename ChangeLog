@@ -19,6 +19,17 @@
 ################################################################
 
 
+2013-12-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999979 released.
+
+        * Fixed routine for finding newest release in
+          Makefile.PL.
+
+        * Added quotes to handle dirs made from usernames
+          with spaces for mkdir.
+
+
 2013-12-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999978 released.
