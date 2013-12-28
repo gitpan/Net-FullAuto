@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999976';
+$main::VERSION='0.99999977';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -53,8 +53,6 @@ my $fa_banner=<<END;
 
 
 END
-
-   $main::legacy_cygwin=0;
 
    sub get_cygwin_location {
       my $cygwin_query=
@@ -290,6 +288,23 @@ END
                   "\n\n      Brian.Kelly\@fullautosoftware.net.",
                   "\n\n   Press ANY key to exit.\n\n";<STDIN>;
                   exit 1;
+         }
+      }
+      if (!can_cc()) {
+         if ($Config{cc} && $Config{cc}=~/gcc-4/) {
+            `cd /usr/bin;ln -s gcc.exe gcc-4`;
+            `ln -s g++.exe g++-4;cd $main::cwd`;
+         } else {
+            my $stup='setup-x86.exe';
+            $stup='setup-x86_64.exe' if $uname=~/WOW64/;
+            my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc': gcc-core".
+                    "\n                      & gcc-g++ as provided by Cygwin".
+                    "\n                      is required to install FullAuto".
+                    "\n                      on Windows.".
+                    "\n(Hint: Run Cygwin $stup and install 'gcc-core' ".
+                    "and 'gcc-g++' under the Category 'Devel' ).".
+                    "\n\n";
+            die $die;
          }
       }
    } elsif ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
@@ -561,9 +576,8 @@ END
       }
    } elsif (!can_cc()) {
 
-      $main::legacy_cygwin=1;
       my $moreinfo='';my $s='          ';
-      if ($Config{cc} and $Config{cc}!~/^\s*$/ and $Config{cc}!~/gcc-4/) {
+      if ($Config{cc} and $Config{cc}!~/^\s*$/) {
          $moreinfo="\n\n$s            You are running $^X version $].\n".
               "\n$s            The Config.pm file for this perl installation".
               "\n$s            contains \"$Config{cc}\" as the compiler used".
@@ -585,18 +599,13 @@ END
               "\n$s            (such as /usr/local/lib) or your home directory".
               "\n$s            if you lack root/admin privileges."
       }
-      if ($Config{cc}=~/gcc-4/) {
-         `cd /usr/bin;ln -s gcc.exe gcc-4`;
-         `ln -s g++.exe g++-4;cd $main::cwd`;
-      } else {
+      my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
+              "\n                      is required to install FullAuto".
+              $moreinfo.
+              "\n                      (Hint: goto www.gnu.org for gcc).".
+              "\n\n";
+      die $die;
 
-         my $die="\n       FATAL ERROR! : A C Compiler (such as cc or gcc)".
-                 "\n                      is required to install FullAuto".
-                 $moreinfo.
-                 "\n                      (Hint: goto www.gnu.org for gcc).".
-                 "\n\n";
-         die $die;
-      }
    }
    if ($incflag && ($main::PARdir ne $main::curdir)) {
       open(PD,">$main::PARdir/inc_exists.txt")
@@ -1017,29 +1026,6 @@ END
    &fa_err_exit($stderr,'LWP') if $stderr;
    eval { require Net::SSLeay };
    if ($@) {
-      if ($main::legacy_cygwin) {
-         my $check_ssl=`/usr/bin/cygcheck -c openssl`;
-         my $check_dev=`/usr/bin/cygcheck -c openssl-devel`;
-         if ($check_ssl!~/openssl/) {
-            print "\n\n   Fatal Error!: The \'openssl\' and\n",
-                  "\'openssl-devel\' packages are missing",
-                  " from your Cygwin installation.\n",
-                  "\n\n   Please report any bugs and send any",
-                  "\n   questions, thoughts or feedback to:",
-                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
-                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                  exit 1;
-         }
-         if ($check_dev!~/openssl-devel/) {
-            print "\n\n   Fatal Error!: The \'openssl-devel\' package is",
-                  " missing from your Cygwin installation.\n",
-                  "\n\n   Please report any bugs and send any",
-                  "\n   questions, thoughts or feedback to:",
-                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
-                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                  exit 1;
-         }
-      }
       ($stdout,$stderr)=&fa_install_module('Net::SSLeay','get');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Net::SSLeay') if $stderr;
@@ -3236,8 +3222,8 @@ if ($^O eq 'cygwin' && !can_cc()) {
    my $uname=`/bin/uname`;
    my $stup='setup-x86.exe';
    $stup='setup-x86_64.exe' if $uname=~/WOW64/;
-   my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc'".
-           "\n                      gcc-core as provided by Cygwin".
+   my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc': gcc-core".
+           "\n                      & gcc-g++ as provided by Cygwin".
            "\n                      is required to install FullAuto".
            "\n                      on Windows.".
            "\n(Hint: Run Cygwin $stup and install 'gcc-core' ".
@@ -3251,7 +3237,7 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
    eval {
       $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;
-      my $uname=`/usr/bin/uname`;
+      my $uname=`/bin/uname`;
       my $stup='setup-x86.exe';
       $stup='setup-x86_64.exe' if $uname=~/i686/;
       print "\n       *** THIS SCREEN WILL TIMEOUT IN 2 MINUTES ***\n". 
@@ -3292,7 +3278,7 @@ if (-e "/bin/grep") {
 my $get_BerkeleyDB=0;
 eval { require BerkeleyDB };
 $get_BerkeleyDB=1 if $@;
-if ($get_BerkeleyDB && !($^O eq 'cygwin' && !$main::legacy_cygwin)) {
+if ($get_BerkeleyDB && $^O ne 'cygwin') {
    # Let's find if Berkeley DB is already on the system
    my $findpath='';
    if (-e "/bin/find") {
@@ -3370,7 +3356,7 @@ if ($get_BerkeleyDB && !($^O eq 'cygwin' && !$main::legacy_cygwin)) {
       }
       my $major_minor_ver=substr($ver,0,(rindex $ver,'.'));
       $major_minor_ver=$ver if -1==index $major_minor_ver,'.';
-      if ($main::legacy_cygwin) {
+      if ($^O eq 'cygwin') {
          if ($berkeleydb && $major_minor_ver>=4.5) {
             $berkeleydb=~s/^(.*)\/.*$/$1/;
             $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
@@ -3381,9 +3367,9 @@ if ($get_BerkeleyDB && !($^O eq 'cygwin' && !$main::legacy_cygwin)) {
             $ENV{'DB_FILE_NAME'}="-ldb-$ver";
             $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
          } else {
-            my $uname=`/usr/bin/uname`;
+            my $uname=`/bin/uname`;
             my $dbdev="libdb${major_minor_ver}-devel";
-            $dbdev='libdb-devel' if $uname=~/i686/;
+            $dbdev='libdb-devel' if $uname=~/WOW64/;
             print "\n\n   Fatal Error!: The \'$dbdev\' package is".
                   " missing from your Cygwin installation.\n".
                   "\n\n   Please report any bugs and send any",
@@ -3844,7 +3830,7 @@ $@
                   This 'c' library is required to install FullAuto.
 END
       if ($^O eq 'cygwin') {
-         my $uname=`/usr/bin/uname`;
+         my $uname=`/bin/uname`;
          my $stup='setup-x86.exe';
          $stup='setup-x86_64.exe' if $uname=~/i686/;
          $die.="\n(Hint: Run Cygwin $stup and install Oracle Berkley ".
