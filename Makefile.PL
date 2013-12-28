@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999979';
+$main::VERSION='0.99999980';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -843,6 +843,10 @@ END
    ($stdout,$stderr)=&fa_install_mod('YAML','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'YAML') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'Algorithm::Diff','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       ($stdout,$stderr)=&fa_install_mod(
@@ -885,10 +889,6 @@ END
          'IO::Zlib','install','Makefile');
       print $stdout if $stdout;
       &fa_err_exit($stderr,'IO::Zlib') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Algorithm::Diff','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
       ($stdout,$stderr)=&fa_install_mod(
          'Text::Diff','install','Makefile');
       print $stdout if $stdout;
@@ -4076,14 +4076,15 @@ sub install_firefox {
       print CP $res->content;
       close CP;
       my $ff=$fftest.'\\firefox';
+      my $mP=$main::PARdir;
       if ($^O eq 'cygwin') {
          $mz=~s/\\/\\\\/g;
          my $output=
-            `$main::PARdir/bin/install_mozrepl_plugin \"$ff\" $mz 2>&1`;
+               `\"$mP/bin/install_mozrepl_plugin\" \"$ff\" \"$mz\" 2>&1`;
          print "OUTPUT=$output\n" if $output;
       } else {
          my $output=
-            `$main::PARdir\\bin\\install_mozrepl_plugin \"$ff\" $mz 2>&1`;
+               `\"$mP\\bin\\install_mozrepl_plugin\" \"$ff\" \"$mz\" 2>&1`;
          print "OUTPUT=$output\n" if $output;
       }
    }
