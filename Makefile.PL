@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999977';
+$main::VERSION='0.99999978';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -293,7 +293,7 @@ END
       if (!can_cc()) {
          if ($Config{cc} && $Config{cc}=~/gcc-4/) {
             `cd /usr/bin;ln -s gcc.exe gcc-4`;
-            `ln -s g++.exe g++-4;cd $main::cwd`;
+            `cd /usr/bin;ln -s g++.exe g++-4;cd $main::cwd`;
          } else {
             my $stup='setup-x86.exe';
             $stup='setup-x86_64.exe' if $uname=~/WOW64/;
