@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999980';
+$main::VERSION='0.99999981';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -733,7 +733,14 @@ END
          my $_p=$p;
          $_p=~s/::/\//g;
          $_p.='.pm';
-         require $_p;
+         unless (exists $INC{$_p}) {
+            eval {
+               require $_p;
+            };
+            if ($@ && -1==index $@,'Attempt to reload') {
+               warn $@;
+            }
+         }
       } else { print "*** $p Loaded Successfully\n" }
       return '';
    }
@@ -4079,13 +4086,16 @@ sub install_firefox {
       my $mP=$main::PARdir;
       if ($^O eq 'cygwin') {
          $mz=~s/\\/\\\\/g;
+         my $chmod_out=
+               `chmod -v 777 \"$mP/bin/install_mozrepl_plugin\" 2>&1`;
+         print "CYGCHMOD=$chmod_out\n" if $chmod_out;
          my $output=
                `\"$mP/bin/install_mozrepl_plugin\" \"$ff\" \"$mz\" 2>&1`;
-         print "OUTPUT=$output\n" if $output;
+         print "CYGOUTPUT=$output\n" if $output;
       } else {
          my $output=
                `\"$mP\\bin\\install_mozrepl_plugin\" \"$ff\" \"$mz\" 2>&1`;
-         print "OUTPUT=$output\n" if $output;
+         print "WINOUTPUT=$output\n" if $output;
       }
    }
 }
