@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999981';
+$main::VERSION='0.99999982';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3845,7 +3845,7 @@ sub find_windows_app {
    }
    close FF;
    chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
-   $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+   $firefox=~s/^.*Path(?:To)*Exe\s*REG_SZ\s*(.*\.exe).*$/$1/s;
    $firefox=~s/\s*$//s;
    my $fftest=substr($firefox,0,2) if 1<length $firefox;
    $fftest||='';
@@ -4029,7 +4029,7 @@ sub install_firefox {
          }
          close FF;
          chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
-         $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+         $firefox=~s/^.*Path(?:To)*Exe\s*REG_SZ\s*(.*\.exe).*$/$1/s;
          $firefox=~s/\s*$//s;
          $fftest=substr($firefox,0,2) if 1<length $firefox;
          $fftest||='';
@@ -4055,7 +4055,7 @@ sub install_firefox {
       }
       close FF;
       chomp($firefox=~tr/\0-\11\13-\37\177-\377//d);
-      $firefox=~s/^.*PathToExe\s*REG_SZ\s*(.*)\s*$/$1/s;
+      $firefox=~s/^.*Path(?:To)*Exe\s*REG_SZ\s*(.*\.exe).*$/$1/s;
       $firefox=~s/\s*$//s;
       $fftest=substr($firefox,0,2) if 1<length $firefox;
       $fftest||='';
@@ -4089,6 +4089,8 @@ sub install_firefox {
          my $chmod_out=
                `chmod -v 777 \"$mP/bin/install_mozrepl_plugin\" 2>&1`;
          print "CYGCHMOD=$chmod_out\n" if $chmod_out;
+         print "MOZREPL COMMAND=\"$mP/bin/install_mozrepl_plugin\" ".
+               "\"$ff\" \"$mz\" 2>&1\n";
          my $output=
                `\"$mP/bin/install_mozrepl_plugin\" \"$ff\" \"$mz\" 2>&1`;
          print "CYGOUTPUT=$output\n" if $output;

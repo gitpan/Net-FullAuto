@@ -30,7 +30,7 @@ Loop {
       Winactivate
       Sleep, 3000
       Send, {Enter}
-   } else IfWinActive, Mozilla Firefox ahk_class MozillaWindowClass
+   } else IfWinActive, Mozilla Firefox
    {
       Break
    } else IfWinActive, Import Wizard
@@ -38,12 +38,26 @@ Loop {
       Send !d
       Sleep,10
       Send !n
+   } else IfWinActive, Add-ons
+   {
+      ControlSend, MozillaWindowClass2, {Tab}!R, Add-ons
+      Break
+   }
+
+}
+WinWaitActive, Add-ons,,2
+Loop {
+   ifWinExist, Add-ons
+   {
+       WinClose, Add-ons
+       WinWaitActive, Mozilla Firefox,,2
+       Break
    }
 }
-WinWaitActive, Mozilla Firefox ahk_class MozillaWindowClass
-WinClose, Mozilla Firefox ahk_class MozillaWindowClass
+WinWaitActive, Mozilla Firefox
+WinClose, Mozilla Firefox
 Sleep, 1000
-IfWinExist, Mozilla Firefox ahk_class MozillaWindowClass and IfWinNotActive, Mozilla Firefox ahk_class MozillaWindowClass
+IfWinExist, Mozilla Firefox and IfWinNotActive, Mozilla Firefox
 {
    Send, {Enter}
 }
