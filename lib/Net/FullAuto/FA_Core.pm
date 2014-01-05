@@ -3,7 +3,7 @@ package Net::FullAuto::FA_Core;
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2000-2013  Brian M. Kelly
+#    Copyright (C) 2000-2014  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -2313,7 +2313,7 @@ my $version=<<VERSION;
 This is Net::FullAuto, v$Net::FullAuto::VERSION
 (See  fullauto -V  or  fa -V  for more detail)
 
-Copyright 2000-2013, Brian M. Kelly
+Copyright 2000-2014, Brian M. Kelly
 
 FullAuto may be copied only under the terms of the GNU General Public License,
 which may be found in the FullAuto source distribution.
@@ -5646,7 +5646,7 @@ sub testpid
                 ." | ${sedpath}sed -e \'s/^/stdout: /' 2>&1" ];
       my $mystdout='';
       IO::CaptureOutput::capture sub {
-         ($stdout,$stderr)=&setuid_cmd($cmd,5);
+         ($stdout,$stderr)=&setuid_cmd($cmd,5); # Save Pound Sign
               }, \$mystdout;
       chomp $mystdout;
       if ($mystdout=~s/^stdout: ?//) {
@@ -5678,6 +5678,8 @@ sub testpid
    } elsif ($stdout) {
       return $stdout;
    } elsif ($stderr!~/^\s*$/) {
+      chomp($stderr=~tr/\0-\11\13-\37\177-\377//d);
+print "XXERROR=$stderr<== and CALLER=",caller,"<==\n";<STDIN>;
       &Net::FullAuto::FA_Core::handle_error($stderr);
    } else { return $stdout }
 }
@@ -6926,6 +6928,7 @@ sub handle_error
       print "\nAttn: --> $errtxt\n\n";
       return
    } elsif ($track || $return || $cleanup) {
+print "ERROR CALLER=",caller,"\n";<STDIN>;
       print $Net::FullAuto::FA_Core::MRLOG "\n       $errtxt"
          if $Net::FullAuto::FA_Core::log &&
          -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -9365,7 +9368,7 @@ $main::get_default_modules=sub {
          "### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######\n",
          "#\n",
          "#    Net::FullAuto - Powerful Network Process Automation Software\n",
-         "#    Copyright (C) 2011  Brian M. Kelly\n",
+         "#    Copyright (C) 2000-2014  Brian M. Kelly\n",
          "#\n",
          "#    This program is free software: you can redistribute it and/or modify\n",
          "#    it under the terms of the GNU General Public License as published by\n",
@@ -13776,6 +13779,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
       if ($passerror) {
          $passerror=0;next;
       } elsif ($@) {
+print "WHAT IS THE ERRORRRRR=$@\n";<STDIN>;
          if (7<length $@) {
             if (unpack('a8',$@) eq 'Insecure') {
                print $@;cleanup();
@@ -15555,9 +15559,9 @@ sub cwd
 
 sub setuid_cmd
 {
-   my @topcaller=caller;
-   print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n"
-      if $Net::FullAuto::FA_Core::debug && $^O eq 'cygwin';
+   my @topcaller=caller; # Save Pound Sign
+   #print "setuid_cmd() CALLER=",(join ' ',@topcaller),"\n"
+   #   if $Net::FullAuto::FA_Core::debug && $^O eq 'cygwin';
    # NOTE: the CALLER line is commmented because it breaks
    #       this routine when set. Anything printing to
    #       stdout from this routine will clash with
@@ -15566,46 +15570,46 @@ sub setuid_cmd
    print $Net::FullAuto::FA_Core::MRLOG "setuid_cmd() CALLER=",
       (join ' ',@topcaller),"\n"
       if $Net::FullAuto::FA_Core::log &&
-      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $cmd=[];
-   $cmd = (ref $_[0] eq 'ARRAY') ? $_[0] : [ $_[0] ];
-   my $timeout=$_[1]||0;
-   my $regex='';
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*'; # Save Pound Sign
+   my $cmd=[]; # Save Pound Sign
+   $cmd = (ref $_[0] eq 'ARRAY') ? $_[0] : [ $_[0] ]; # Save Pound Sign
+   my $timeout=$_[1]||0; # Save Pound Sign
+   my $regex=''; # Save Pound Sign
    if ($timeout) {
-      alarm($timeout+10);
+      alarm($timeout+10); # Save Pound Sign
       if (7<length $timeout &&
              unpack('a8',$timeout) eq '(?-xism:') {
-         $regex=$timeout;
-         $timeout=shift;
-         $timeout||='';
+         $regex=$timeout; # Save Pound Sign
+         $timeout=shift; # Save Pound Sign
+         $timeout||=''; # Save Pound Sign
       }
       if ($timeout!~/^\d+$/) {
-         undef $timeout;
+         undef $timeout; # Save Pound Sign
       }
    } else { alarm($Net::FullAuto::FA_Core::timeout) }
-   my $flag=shift;
-   $flag||='';
-   my $cmd_err='';
-   $cmd_err=join ' ',@{$cmd} if ref $cmd eq 'ARRAY';
-   my $one=${$cmd}[0]||'';my $two='';
-   $two=${$cmd}[1] if 0<$#{$cmd};
-   my $three='';
-   $three=${$cmd}[2] if 1<$#{$cmd};
-   my $four='';
-   $four=${$cmd}[3] if 2<$#{$cmd};
-   my $five='';
-   $five=${$cmd}[4] if 3<$#{$cmd};
-   my $six='';
-   $six=${$cmd}[5] if 4<$#{$cmd};
-   my $seven='';
-   $seven=${$cmd}[6] if 5<$#{$cmd};
-   my $eight='';
-   $eight=${$cmd}[7] if 6<$#{$cmd};
+   my $flag=shift; # Save Pound Sign
+   $flag||=''; # Save Pound Sign
+   my $cmd_err=''; # Save Pound Sign
+   $cmd_err=join ' ',@{$cmd} if ref $cmd eq 'ARRAY'; # Save Pound Sign
+   my $one=${$cmd}[0]||'';my $two=''; # Save Pound Sign
+   $two=${$cmd}[1] if 0<$#{$cmd}; # Save Pound Sign
+   my $three=''; # Save Pound Sign
+   $three=${$cmd}[2] if 1<$#{$cmd}; # Save Pound Sign
+   my $four=''; # Save Pound Sign
+   $four=${$cmd}[3] if 2<$#{$cmd}; # Save Pound Sign
+   my $five=''; # Save Pound Sign
+   $five=${$cmd}[4] if 3<$#{$cmd}; # Save Pound Sign
+   my $six=''; # Save Pound Sign
+   $six=${$cmd}[5] if 4<$#{$cmd}; # Save Pound Sign
+   my $seven=''; # Save Pound Sign
+   $seven=${$cmd}[6] if 5<$#{$cmd}; # Save Pound Sign
+   my $eight=''; # Save Pound Sign
+   $eight=${$cmd}[7] if 6<$#{$cmd}; # Save Pound Sign
    if (!$one && ref $cmd ne 'ARRAY') {
-      $one=$cmd;$cmd_err=$cmd;
+      $one=$cmd;$cmd_err=$cmd; # Save Pound Sign
    }
-   $regex||='';my $pid='';my $output='';
-   my $stdout='';my $stderr='';
+   $regex||='';my $pid='';my $output=''; # Save Pound Sign
+   my $stdout='';my $stderr=''; # Save Pound Sign
    &handle_error("Can't fork: $!")
       unless defined($pid=open(KID, "-|")); # Save Pound Sign
    if ($pid) { # parent
@@ -15656,24 +15660,24 @@ sub setuid_cmd
    }
    if ($regex && $output!~/$regex/s) {
       if (wantarray) {
-         alarm(0);return '',"Cmd $cmd_err returned tainted data";
+         alarm(0);return '',"Cmd $cmd_err returned tainted data"; # Save Pound Sign
       } else {
          &Net::FullAuto::FA_Core::handle_error(
-            "Cmd $cmd_err returned tainted data");
+            "Cmd $cmd_err returned tainted data"); # Save Pound Sign
       }
-   } $output=~s/^\s*//s;
+   } $output=~s/^\s*//s; # Save Pound Sign
    if ($one!~/^[^ ]*clear$/) {
-      my @outlines=();my @errlines=();
+      my @outlines=();my @errlines=(); # Save Pound Sign
       foreach my $line (split /^/,$output) {
          if ($line=~s/^[\t ]*stdout: //) {
-            push @outlines, $line;
+            push @outlines, $line; # Save Pound Sign
          } else { push @errlines, $line }
-      } $stdout=join '', @outlines;$stderr=join '',@errlines;
+      } $stdout=join '', @outlines;$stderr=join '',@errlines; # Save Pound Sign
    } else { $stdout=$output }
-   chomp $stdout;chomp $stderr;
-   alarm(0);
+   chomp $stdout;chomp $stderr; # Save Pound Sign
+   alarm(0); # Save Pound Sign
    if (wantarray) {
-      return $stdout,$stderr;
+      return $stdout,$stderr; # Save Pound Sign
    } else { return $stdout }
 }
 
@@ -16851,11 +16855,20 @@ sub get
             "get \"$file\"",$cache);
          &Net::FullAuto::FA_Core::release_fa_lock($file_arg);
          if ($stderr) {
-           if (wantarray) {
+            if ((!$Net::FullAuto::FA_Core::cron
+                  || $Net::FullAuto::FA_Core::debug)
+                  && !$Net::FullAuto::FA_Core::quiet) {
+               print "GET ERROR! - $stderr\n";
+            }
+            if (wantarray) {
                return '',$stderr;
             } else {
                &Net::FullAuto::FA_Core::handle_error($stderr,'-5');
             }
+         } elsif (wantarray) {
+            return $output,'';
+         } else {
+            return $output;
          }
       } elsif (wantarray) {
          return '',
@@ -16894,10 +16907,27 @@ sub put
             "put $file",$cache);
          &Net::FullAuto::FA_Core::release_fa_lock($file);
          if ($stderr) {
-            print "ERROR! - $stderr\n";
-         } 
+            if ((!$Net::FullAuto::FA_Core::cron
+                  || $Net::FullAuto::FA_Core::debug)
+                  && !$Net::FullAuto::FA_Core::quiet) {
+               print "PUT ERROR! - $stderr\n";
+            }
+            if (wantarray) {
+               return '',$stderr;
+            } else {
+               &Net::FullAuto::FA_Core::handle_error($stderr,'-5');
+            }
+         } elsif (wantarray) {
+            return $output,'';
+         } else {
+            return $output;
+         }
+      } elsif (wantarray) {
+         return '',
+            "YOU ARE TRYING TO FTP PUT FILE TO THE SAME BOX :\n        ".($!);
       } else {
-         print "YOU ARE TRYING TO FTP PUT FILE TO THE SAME BOX\n$!";
+         &Net::FullAuto::FA_Core::handle_error(
+            "YOU ARE TRYING TO FTP PUT FILE TO THE SAME BOX :\n        ".($!));
       }
    }
 }
@@ -19249,7 +19279,6 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                      $ftp_handle->print(
                         $Net::FullAuto::FA_Core::gbp->('sftp').'sftp '.
                         "${sshport}$login_id\@$host");
-
                      ## Wait for password prompt.
                      ($key_authentication,$stderr)=
                         &wait_for_passwd_prompt(
@@ -28230,6 +28259,10 @@ sub ftpcmd
                      $line=~tr/\0-\11\13-\37\177-\377//d;
                      $line=~tr/#//d;
                      $line=~s/s*ftp> ?$//s if !($line=~s/^\s*$//m);
+                     print $Net::FullAuto::FA_Core::MRLOG
+                        uc($ftm_type)." STDOUT: ==>$line<==\n\n"
+                        if $Net::FullAuto::FA_Core::log &&
+                        -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      my $upcnt=$line=~/Upload/gs;
                      $upcnt||=0;
                      if ($upcnt) {
@@ -28251,7 +28284,9 @@ sub ftpcmd
                            || (-1==index $line,'421 User limit')
                            || (-1==index $line,'421 You are not')
                            || (-1==index $line,'421 Max con')
-                           || (-1==index $line,'426 Connection')) {
+                           || (-1==index $line,'426 Connection')
+                           || (-1==index $line,'not found')
+                           || (-1==index $line,"Couldn't")) {
                         my $tl=$line;
                         $tl=~s/[\r|\n]*//sg;
                         if ($line=~s/^\n*Uploading/\n\nUploading/gs) {
@@ -28262,10 +28297,6 @@ sub ftpcmd
                               print $line."\n\n";
                               STDOUT->autoflush(0);
                            }
-                           print $Net::FullAuto::FA_Core::MRLOG
-                              uc($ftm_type)." STDOUT: ==>$line<==\n\n"
-                              if $Net::FullAuto::FA_Core::log &&   
-                              -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         } elsif ($line=~s/^\n*Fetch/\n\nFetch/gs) {
                            if ((!$Net::FullAuto::FA_Core::cron
                                  || $Net::FullAuto::FA_Core::debug)
@@ -28274,10 +28305,6 @@ sub ftpcmd
                               print $line,"\n\n";
                               STDOUT->autoflush(0);
                            }
-                           print $Net::FullAuto::FA_Core::MRLOG
-                              uc($ftm_type)." STDOUT: ==>$line<==\n\n"
-                              if $Net::FullAuto::FA_Core::log &&
-                              -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         } elsif ($line=~/(stalled -|\d\d:\d\d *E*T*A*)$/) {
                            if ((!$Net::FullAuto::FA_Core::cron
                                  || $Net::FullAuto::FA_Core::debug)
@@ -28286,10 +28313,6 @@ sub ftpcmd
                               printf("\r% 0s",$line);
                               STDOUT->autoflush(0);
                            }
-                           print $Net::FullAuto::FA_Core::MRLOG
-                              uc($ftm_type)." STDOUT: ==>$line<==\n"
-                              if $Net::FullAuto::FA_Core::log &&
-                              -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                         } elsif (!$cmdflag &&
                               $stdout=~/^((?:get|put) ["][^"]+["]).*/s) {
                            my $printthis=$1;
@@ -28409,10 +28432,21 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
          $line=~s/[ ]*\015//g;
          $line=~tr/\0-\37\177-\377//d;
          $stderr="$line\n       $!" if $line!~/^\d+\s+bytes/;
+      } elsif ((-1<index $stdout,'file access p')
+               || (-1<index $stdout,'not found')
+               || (-1<index $stdout,"Couldn't")) {
+         print $Net::FullAuto::FA_Core::MRLOG
+            "$ftm_type File ERROR: ==>$stdout<==\n\n".
+            "       and HOSTLABEL=$hostlabel\n\n"
+            if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         if (wantarray) {
+            return '',$stdout;
+         } else {
+            return $stdout;
+         }
       } elsif ((-1<index $stdout,'421 Service not')
                || (-1<index $stdout,'421 Timeout')
                || (-1<index $stdout,'Not connected')
-               || (-1<index $stdout,'file access p')
                || (-1<index $stdout,'421 User limit')
                || (-1<index $stdout,'421 You are not')
                || (-1<index $stdout,'421 Max con')

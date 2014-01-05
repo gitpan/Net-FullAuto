@@ -1,7 +1,7 @@
 ### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2000-2013  Brian M. Kelly
+#    Copyright (C) 2000-2014  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999982';
+$main::VERSION='0.99999983';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -49,7 +49,7 @@ my $fa_banner=<<END;
 
 
 
-   Copyright (C) 2000-2013  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
+   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
 
 
 END
@@ -447,7 +447,7 @@ END
          },
          Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
             "      Net::FullAuto INSTALLATION PROGRAM\n\n".
-            "      Copyright (C) 2000-2013  Brian M. Kelly\n\n".
+            "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
             "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
             "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
             "   select  2.  This is free software, and you are welcome to\n".
@@ -4014,6 +4014,14 @@ sub install_firefox {
          binmode(CP);
          print CP $res->content;
          close CP;
+         if ($^O eq 'cygwin') {
+            `/usr/bin/chmod 777 \"$main::root_dir/${exe_name}.exe\"`;
+         } else {
+            my $cygwin_loc=get_cygwin_location();
+            system('SET CYGWIN=nodosfilewarning & '.
+                "cmd /c $cygwin_loc\\bin\\bash -lc ".
+                "/usr/bin/chmod 777 \"$main::root_dir/${exe_name}.exe\"");
+         }
          `"$main::root_dir/${exe_name}.exe" -ms`;
          # Let's look for Firefox
          my $firefox='REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\'.
@@ -4469,6 +4477,7 @@ requires        'IO::Pty'                   => 0;
 requires        'IO::Capture::Stderr'       => 0;
 requires        'Capture::Tiny'             => 0;
 requires        'Net::Telnet'               => 0;
+requires        'Pod::Man'                  => 2.28;
 requires        'Term::RawInput'            => 0;
 requires        'Term::ReadKey'             => 0;
 requires        'Test::Deep'                => 0;

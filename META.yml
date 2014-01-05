@@ -43,6 +43,7 @@ requires:
   Module::Load::Conditional: 0
 #  Data::Dump::Streamer: 0
 #  Term::Menus: 2.54
+  Pod::Man: 2.28
   Tie::Cache: 0
   Sort::Versions: 0
   Crypt::CBC: 0
