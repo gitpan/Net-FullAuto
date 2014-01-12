@@ -720,7 +720,7 @@ our @DeploySMB_Proxy=('');our @DeployRCM_Proxy=('');
 our @DeployFTM_Proxy=('');our $master_transfer_dir='';
 our %perms=();our @ApacheNode=();our $test=0;our %days=();
 our $prod=0;our $force_pause_for_exceed=0;our $tosspass=0;
-our $timeout=30;our $cltimeout='X';our $slave=0;our $dcipher='';
+our $timeout=60;our $cltimeout='X';our $slave=0;our $dcipher='';
 our %email_defaults=();our $increment=0;our %tosspass=();
 our $email_defaults='';our %semaphores=();our $batch='';
 our $unattended='';our %month=();our $fullauto='';our $service='';
@@ -6928,7 +6928,6 @@ sub handle_error
       print "\nAttn: --> $errtxt\n\n";
       return
    } elsif ($track || $return || $cleanup) {
-print "ERROR CALLER=",caller,"\n";<STDIN>;
       print $Net::FullAuto::FA_Core::MRLOG "\n       $errtxt"
          if $Net::FullAuto::FA_Core::log &&
          -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -15824,7 +15823,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
          $cmd_handle->binmode(1);
          my $first=0;
          eval {
-            while (my $line=$cmd_handle->get(Timeout=>10)) {
+            while (my $line=$cmd_handle->get(Timeout=>$cmtimeout)) {
                chomp($line=~tr/\0-\11\13-\37\177-\377//d);
                next if $line=~/^\s*$/ && !$first;
                $first=1;
@@ -28389,6 +28388,8 @@ print $Net::FullAuto::FA_Core::MRLOG "TOO MANY LOOPS - GOING TO RETRY11<=======\
                      $stdout=~s/^(.*?)(\012|\013)+//s;
                      $stdout=~s/s*ftp> ?$//s;
                      $stdout=~tr/#//d;
+                     select(undef,undef,undef,0.02);
+                     # sleep for 1/50th second;
                      last
                   }
                } $starttime=time();

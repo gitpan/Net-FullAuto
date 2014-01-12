@@ -24,11 +24,18 @@ SetWorkingDir, %A_ScriptDir%
 DetectHiddenWindows, On
 Run %1% %2%
 WinWaitActive, Import Wizard,,2
-Loop {
-   IfWinExist, Software Installation
+Loop, 20 {
+   Sleep, 3000
+   IfWinExist, Default Browser
    {
       Winactivate
-      Sleep, 3000
+      Send, !n
+   }
+   IfWinExist, Software Installation
+   {
+      MsgBox,4,FullAuto Installer Message,Wait for FireFox to ReStart,2
+      Winactivate
+      Sleep, 4000
       Send, {Enter}
    } else IfWinActive, Mozilla Firefox
    {
@@ -46,15 +53,16 @@ Loop {
 
 }
 WinWaitActive, Add-ons,,2
-Loop {
+Loop, 3
+{
    ifWinExist, Add-ons
    {
        WinClose, Add-ons
-       WinWaitActive, Mozilla Firefox,,2
        Break
    }
+   Sleep, 1000
 }
-WinWaitActive, Mozilla Firefox
+WinWaitActive, Mozilla Firefox,,10
 WinClose, Mozilla Firefox
 Sleep, 1000
 IfWinExist, Mozilla Firefox and IfWinNotActive, Mozilla Firefox

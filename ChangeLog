@@ -19,6 +19,17 @@
 ################################################################
 
 
+2014-01-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999984 released.
+
+        * Change global timeout to 60 seconds.
+
+        * Added 1/50 second delay to end of ftp cmds.
+
+        * Put in more fixes for MozRepl installation.
+
+
 2014-01-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999983 released.
