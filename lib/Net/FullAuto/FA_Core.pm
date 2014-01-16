@@ -28206,6 +28206,10 @@ sub ftpcmd
             } elsif (!$stdout) {
                $starttime=time();
             }
+            print $Net::FullAuto::FA_Core::MRLOG
+               "(S)FTP-OUTPUT: ==>$output<==\n"
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             $output=~s/[ ]*\015//g;
             $output=~tr/\0-\11\13-\37\177-\377//d;
             $stdout.=$output;
@@ -28357,20 +28361,24 @@ sub ftpcmd
                      }
                      if ($allbytes && $line=~/(\d+) bytes/) {
                         my $bytestransferred=$1;
-                        my $warn="WARNING! - The transfer of file $gf\n             "
-                                ."size $allbytes bytes\, aborted at $bytestransferred "
+                        my $warn="WARNING! - The transfer of file $gf\n"
+                                ."             size $allbytes bytes\, "
+                                ."aborted at $bytestransferred "
                                 ."\n             bytes transferred.";
-                        &Net::FullAuto::FA_Core::handle_error($warn,'__return__','__warn__')
+                        &Net::FullAuto::FA_Core::handle_error(
+                           $warn,'__return__','__warn__')
                            if $allbytes ne $bytestransferred;
                      }
                   }
                }
             }
             if ($output || $stdout=~/s*ftp> ?$/s) {
-               if ((-1<index $stdout,'bash: ') || (-1<index $stdout,'age too lo')) {
-print $Net::FullAuto::FA_Core::MRLOG "TOO MANY LOOPS - GOING TO RETRY11<=======\n"
-      if $Net::FullAuto::FA_Core::log &&
-      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               if ((-1<index $stdout,'bash: ') ||
+                     (-1<index $stdout,'age too lo')) {
+                  print $Net::FullAuto::FA_Core::MRLOG
+                     "TOO MANY LOOPS - GOING TO RETRY11<=======\n"
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   $handle->{_ftp_handle}->print("\004");
                   die "421 Timeout - $ftm_type read timed out";
                }
@@ -28386,11 +28394,13 @@ print $Net::FullAuto::FA_Core::MRLOG "TOO MANY LOOPS - GOING TO RETRY11<=======\
                      $more=1;next;
                   } else {
                      $stdout=~s/^(.*?)(\012|\013)+//s;
-                     $stdout=~s/s*ftp> ?$//s;
+                     my $last=0;
+                     if ($stdout=~s/s*ftp> ?$//s) {
+                        $last=1;
+                     }
                      $stdout=~tr/#//d;
-                     select(undef,undef,undef,0.02);
-                     # sleep for 1/50th second;
-                     last
+                     last if $last;
+                     next;
                   }
                } $starttime=time();
             } elsif ((!$gpfile && $loop++==10) || (-1<index $stdout,'bash: ')) {
@@ -28410,8 +28420,8 @@ print "$ftm_type read timed out1 and OUTPUT=$output<=======\n";
                   __LINE__;die
                } else {
                   my $tmot="421 Timeout - $ftm_type read timed out\n"
-                          ."       Timeout=".$handle->{_ftp_handle}->timeout."\n"
-                          ."       at Line: ".__LINE__;
+                          ."       Timeout=".$handle->{_ftp_handle}->timeout
+                          ."\n       at Line: ".__LINE__;
                   &Net::FullAuto::FA_Core::handle_error($tmot,'__cleanup__');
                }
             }
@@ -28487,17 +28497,22 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                &Net::FullAuto::FA_Core::handle_error($stderr,'-1') if $stderr;
                $handle->{_ftp_handle}=$ftp_handle->{_cmd_handle};
                foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
-                  foreach my $sid (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
-                     foreach my $type (keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
-                              {$sid}}) {
-                        if ($sav_ftp_handle eq $Net::FullAuto::FA_Core::Processes
+                  foreach my $sid (
+                        keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}}) {
+                     foreach my $type (
+                           keys %{$Net::FullAuto::FA_Core::Processes{$hlabel}
+                           {$sid}}) {
+                        if ($sav_ftp_handle eq 
+                              $Net::FullAuto::FA_Core::Processes
                               {$hlabel}{$sid}{$type}) {
                            delete $Net::FullAuto::FA_Core::Processes{$hlabel}
                                   {$sid}{$type};
-                        } elsif ($handle->{_ftp_handle} eq $Net::FullAuto::FA_Core::Processes
+                        } elsif ($handle->{_ftp_handle} eq
+                              $Net::FullAuto::FA_Core::Processes
                               {$hlabel}{$sid}{$type}) {
                            substr($type,0,3)='ftp';
-                           $Net::FullAuto::FA_Core::Processes{$hlabel}{$sid}{$type}=
+                           $Net::FullAuto::FA_Core::Processes
+                              {$hlabel}{$sid}{$type}=
                               $handle->{_ftp_handle};
                         }
                      }
@@ -28555,8 +28570,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                      if (-1<index $tline,'ftp: connect:') {
                         $tline=~/^.*connect:\s*(.*?\n).*$/s;
                         if ((-1==index $tline,'Address already in use')
-                              && (-1==index $tline,'Connection timed out'
-                              )) {
+                              && (-1==index $tline,'Connection timed out')) {
                            if ($fm_cnt==$#{$ftr_cnct}) {
                               $go_next=1;last;
                            } else {
@@ -28682,7 +28696,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                   if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                      return '',$stderr;
                   } else {
-                     $handle->{_ftp_handle}->print("bye");
+                     $handle->{_ftp_handle}->print('bye');
                      my $cfh_ignore='';my $cfh_error='';
                      ($cfh_ignore,$cfh_error)=
                         &Net::FullAuto::FA_Core::clean_filehandle(
@@ -28788,8 +28802,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                return $stderr;
             }
          }
-         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-               'binary',$cache)
+         ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,'binary',$cache)
             if $ftm_type ne 'sftp';
          if ($stderr) {
             if (wantarray) {
@@ -28812,7 +28825,8 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                   return $stderr;
                }
             }
-         } elsif (exists $Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}}{cd}) {
+         } elsif (exists
+               $Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}}{cd}) {
             ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
                "cd $Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}}{cd}",
                $cache);
@@ -28824,6 +28838,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                }
             }
          }
+
 if (0) {
 ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,'pwd',$cache)
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -28846,9 +28861,10 @@ print "DO WE HAVE LCD????=$Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}
                   return $stderr;
                }
             }
-         } elsif (exists $Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}}{lcd}) {
-            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,
-               "lcd $Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}}{lcd}",
+         } elsif (exists
+               $Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}}{lcd}) {
+            ($output,$stderr)=&Rem_Command::ftpcmd(\%ftp,'lcd '.
+               $Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}}{lcd},
                $cache);
             if ($stderr) {
                if (wantarray) {
@@ -28927,7 +28943,8 @@ print "DO WE HAVE LCD????=$Net::FullAuto::FA_Core::ftpcwd{$handle->{_ftp_handle}
                            if (exists $handle->{_work_dirs}->{_tmp}) { 
                               ($output,$stder)=$handle->cmd("cp -p $path ".
                                  $handle->{_work_dirs}->{_tmp});
-                              &Net::FullAuto::FA_Core::handle_error($stder) if $stder;
+                              &Net::FullAuto::FA_Core::handle_error($stder)
+                                 if $stder;
                               $getfile=$handle->{_work_dirs}->{_tmp}.
                                       '/'.$file;
 print "COPIED and GETFILE=$getfile<==\n";#<STDIN>;
@@ -28936,16 +28953,19 @@ print "COPIED and GETFILE=$getfile<==\n";#<STDIN>;
 print "COPIED and GETFILE222=$getfile<==\n";#<STDIN>;
                               ($output,$stder)=$handle->cmd("cp -p $path ".
                                  $handle->{_work_dirs}->{_tmp_mswin});
-                              &Net::FullAuto::FA_Core::handle_error($stder) if $stder;
+                              &Net::FullAuto::FA_Core::handle_error($stder)
+                                 if $stder;
                               $getfile=$handle->{_work_dirs}->{_tmp_mswin}.
                                       '\\'.$file;
                            }
                            ($output,$stderr)=
-                              &Rem_Command::ftpcmd($handle,"get $getfile",$cache);
+                              &Rem_Command::ftpcmd(
+                              $handle,"get $getfile",$cache);
                            if (!$stderr) {
                               ($output,$stderr)=$handle->cmd(
                                  "rm -f $getfile");
-                              &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
+                              &Net::FullAuto::FA_Core::handle_error($stderr)
+                                 if $stderr;
                            } $stdout=$output;
                         }
                      }

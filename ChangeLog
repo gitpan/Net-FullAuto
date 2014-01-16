@@ -19,6 +19,13 @@
 ################################################################
 
 
+2014-01-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999985 released.
+
+        * Fix for (s)ftp output parsing.
+
+
 2014-01-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999984 released.
