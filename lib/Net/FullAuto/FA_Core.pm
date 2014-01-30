@@ -9674,11 +9674,18 @@ my $get_modules=sub {
       my ($stdout,$stderr)=&setuid_cmd($cmd,5);
       die $stderr if $stderr && -1==index $stderr,'mode of';
    }
-   opendir(DIR,"\'$fadir/Custom/$username/$type\'");
-   my @xfiles = readdir(DIR);
+   my $cmd=$Net::FullAuto::FA_Core::gbp->('ls')."ls -1 ".
+        "\'$fadir/Custom/$username/$type\' 2>&1";
+   my $sedpath=$Net::FullAuto::FA_Core::gbp->('sed');
+   if (exists $Hosts{"__Master_${$}__"}{'sed'}) {
+      $sedpath=$Hosts{"__Master_${$}__"}{'sed'};
+      $sedpath.='/' if $sedpath!~/\/$/;
+   }
+   $cmd="$cmd | ${sedpath}sed -e \'s/^/stdout: /\' 2>&1";
    my @return=();
-   closedir(DIR);
-   foreach my $entry (@xfiles) {
+   my ($stdout,$stderr)=&setuid_cmd($cmd,5);
+   die $stderr if $stderr;
+   foreach my $entry (split "\n",$stdout) {
       next if $entry eq '.';
       next if $entry eq '..';
       next if -d $entry;
@@ -10243,7 +10250,7 @@ my $caconf_sub=sub {
          Result => $cahost_sub->(),
       },
       Banner => sub {
-         $username=&Net::FullAuto::FA_Core::username();
+         my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
                 "]P[{cacode}\n\n".
                 "$custfm   Please select a fa_conf[.*].pm ".

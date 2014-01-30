@@ -19,6 +19,13 @@
 ################################################################
 
 
+2014-01-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999986 released.
+
+        * Removed dir open for setuid and replaced with ls
+
+
 2014-01-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999985 released.
