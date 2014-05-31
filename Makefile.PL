@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999987';
+$main::VERSION='0.99999988';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -661,12 +661,12 @@ END
          die "ERROR - Can't read Directory $d: $!\n";
       while ($_ = readdir(DH)) {
          next if ($_ eq ".") || ($_ eq "..");
-         #next unless -d $d.'/'.$_;
-         if (-d $d.'/'.$_) {
-            my $dr=$d.'/'.$_;
-            last if $new=&look_inside_dir($dr,$look);
-         } else {
-            next if $_!~/^$look[-]\d/;
+         if ($_!~/^$look[-]\d/) {
+            if (-d $d.'/'.$_) {
+               my $dr=$d.'/'.$_;
+               $new=&look_inside_dir($dr,$look);
+               last if $new;
+            } next
          }
          $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
          my $attrs = stat $file;
@@ -691,19 +691,21 @@ END
       my $d=$_[0];
       my $look=$_[1];
       my $found='';
-      opendir(DH,$d) or
+      opendir(LI,$d) or
          die "ERROR - Can't read Directory $d: $!\n";
       my $tar='';
-      while ($_ = readdir(DH)) {
+      while ($_ = readdir(LI)) {
          next if ($_ eq ".") || ($_ eq "..");
          if ($_=~/[.]tar$/ && $_=~/^$look[-]\d/) {
             $tar=$_;
             next;
          }
-         $tar='' if $_=~/^$look[-]\d/;
-         last;
+         if ($_=~/^$look[-]\d/ && -d $_) {
+            $tar='';
+            last;
+         }
       }
-      close(DH);
+      close(LI);
       if ($tar) {
          unless ($CPAN::Config->{tar}) {
             if (-e '/usr/bin/tar') {
@@ -741,6 +743,7 @@ END
       my $butil=$_[2]||'';
       my $force=$_[3]||'';
       my $version=$_[4]||'';
+      my $echo=$_[5]||'';
       my $dir='';
       my $cpan_error='';
       eval "require $p;1";
@@ -775,7 +778,11 @@ END
          if ($task eq 'install') {
             $dir||=&fa_find_latest($p);
             print "*** Running $butil.PL\n";
-            system("cd \"$dir\";$^X $butil.PL");
+            if ($echo) {
+               system("cd \"$dir\";echo $echo | $^X $butil.PL");
+            } else {
+               system("cd \"$dir\";$^X $butil.PL");
+            }
             if ($butil eq 'Makefile') {
                print "*** Running make install\n";
                system("cd \"$dir\";make install");
@@ -1081,7 +1088,7 @@ END
       system("cd \"$dir\";make install;");
    }
    ($stdout,$stderr)=&fa_install_module('IO::Socket::SSL','install',
-      'Makefile');
+      'Makefile','','','n');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'IO::Socket::SSL') if $stderr;
    ($stdout,$stderr)=&fa_install_module('LWP::Protocol::https','install',

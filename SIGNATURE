@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 adc1369761cda71b3b7570ec93dd35bdc69ac6b2 ChangeLog
+SHA1 515b2e84001ca0cae972a6fa7bab408e0c359a44 ChangeLog
 SHA1 5437f164ae11b18bb58a8576204254a1b4a9334b LICENSE
 SHA1 1d292a0e6dba2ce264985cc3004ff0dc9b298bfc MANIFEST
-SHA1 06524d5023062e5ba96852a4e0e509f1a15ef579 META.yml
-SHA1 60d306d85e189311bc99c7629af6eb1601e34d6e Makefile.PL
+SHA1 83fb9307615910d1497e5a397b5d02b7dd2640e6 META.yml
+SHA1 d0eb19b23080e1f2322392ea5d7ba408074e2e64 Makefile.PL
 SHA1 7250b2f536fe8a96fb25fc7435146bc006aaefe1 README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 1a82e9f1eb270bb77e3349f83cf2bcea32b30102 bin/fullauto.pl
@@ -37,7 +37,7 @@ SHA1 d3a4c720c6ec7f8fce7df37002fbc9177fb77050 inc/Module/Install/Scripts.pm
 SHA1 5457015ea5a50e93465bf2dafa29feebd547f85b inc/Module/Install/Win32.pm
 SHA1 051e7fa8063908befa3440508d0584a2497b97db inc/Module/Install/WriteAll.pm
 SHA1 fb2c2f6e2ade19cd024dad15dd25bebf85023a4b install_mozrepl_plugin.ahk
-SHA1 4dcbf57ad2dd876029e5cc0c08c4e71290ebcb3a lib/Net/FullAuto.pm
+SHA1 d4a3926ab99d28b6bc0e26f2c3a3bdf58ac064e3 lib/Net/FullAuto.pm
 SHA1 dabbf5e523732ed0d3084fb91dcccb4f1c330ceb lib/Net/FullAuto/Custom/BackUp/README
 SHA1 c2219c6cd1af2a775ebd3b90e0d4731ef0aededc lib/Net/FullAuto/Custom/README
 SHA1 32064cac342c1fab8377c4b9fe5c41be23a92e78 lib/Net/FullAuto/Distro/fa_code.pm
@@ -54,11 +54,11 @@ SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJTied0AAoJEBa/9Pad787EQMAIALerKZbPOo9GfeXwmoSy+7uM
-P7NGHxl8fwEjr0E+QqFw2Iql/szJuA44bDApWKA3yYl76rY26opirpv61U/hvIJg
-yHi+Be3qXozf1ysMxskpT1xlsE3nuJzvH8Uidzke28ajB0qgwnjPBvwwROkTrx+C
-g9KuYZdmi2HSKznCT2dX7MP3UcWktCJYDIQtehW/i2iWP7oxTC06BwFNvv0PjWaa
-YrjBcFya2jMsy835WCnS6wF7YgAsUE8pdlghfeNc6/p53sRD1RorKHMj+zDS5YT7
-VEK0omepGhhhy5x7wBWArUaOtv58G+lEzRLgmUzWQ27dbV0QvY8nLew3XRo3ZJU=
-=bMfW
+iQEcBAEBAgAGBQJTigLWAAoJEBa/9Pad787EMs8IAMVq2vK1Y4QpRr4aTj7QCj8+
+xzwBNXdF9Cx2EW3AznGdXHaqrhAy9RjWpyenfhIt8A5n6ZoexWVB+0lAxky2xPpT
+Eh8HSx/Ww93jX7/havXgk9pzzl/jGUeg5fUffEt9b0ssx/5XVWkG5/kuE3k0GuUZ
+dhPs0arVf0gV4YkjnNEO//jzIfOi/zYteVg2N//M+yWXVwgP+koLh8Gqthk3/LmC
++00+eHXl6x38fhwlGFX3CN3O7LaHFGO0VQSPfnnDQxvpDzi0+qzC2xNiLzxnp75a
+IGe1Y0ZL767+7EjS1XrMBwcFXs+6BGgbNdAv6Hu+bksAbc60rOSEeKkSWZf2bEQ=
+=S250
 -----END PGP SIGNATURE-----
