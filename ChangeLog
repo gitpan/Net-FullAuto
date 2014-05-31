@@ -19,6 +19,14 @@
 ################################################################
 
 
+2014-05-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999987 released.
+
+        * Changed Makefile.PL to look inside of author dir
+          in cpan build directory when building.
+
+
 2014-01-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999986 released.

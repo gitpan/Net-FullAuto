@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999986';
+$main::VERSION='0.99999987';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -216,12 +216,14 @@ END
    if ($^O eq 'cygwin') {
       my $cygcheck=`/bin/cygcheck -c` || die $!;
       my $uname=`/bin/uname` || die $!;
+      my $uname_all=`/bin/uname -a` || die $!;
+      $uname_all.=$uname;
       my %need_packages=();
-      if ($uname=~/WOW64/) {
+      if ($uname=~/x86_64/) {
          foreach my $package ('gcc-core','gcc-g++','make','openssh','openssl',
-                              'openssl-devel','perl','perl-libwin32','db',
-                              'libdb-devel','ncurses','cron','inetutils',
-                              'procps','vim','unzip','libmpfr4') {
+                              'openssl-devel','perl','db','libdb-devel',
+                              'ncurses','cron','inetutils','procps','vim',
+                              'unzip','libmpfr4','libcrypt-devel') {
             unless (-1<index $cygcheck, "$package ") {
                $need_packages{$package}='';
             }
@@ -659,8 +661,13 @@ END
          die "ERROR - Can't read Directory $d: $!\n";
       while ($_ = readdir(DH)) {
          next if ($_ eq ".") || ($_ eq "..");
-         next unless -d $d.'/'.$_;
-         next if $_!~/^$look[-]\d/;
+         #next unless -d $d.'/'.$_;
+         if (-d $d.'/'.$_) {
+            my $dr=$d.'/'.$_;
+            last if $new=&look_inside_dir($dr,$look);
+         } else {
+            next if $_!~/^$look[-]\d/;
+         }
          $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
          my $attrs = stat $file;
          my $diff = time()-$attrs->[9];
@@ -677,6 +684,54 @@ END
       $new=$file if !$new && $file;
       print "***** Module Directory ",$new,"\n";
       return $new; 
+   }
+
+   sub look_inside_dir {
+
+      my $d=$_[0];
+      my $look=$_[1];
+      my $found='';
+      opendir(DH,$d) or
+         die "ERROR - Can't read Directory $d: $!\n";
+      my $tar='';
+      while ($_ = readdir(DH)) {
+         next if ($_ eq ".") || ($_ eq "..");
+         if ($_=~/[.]tar$/ && $_=~/^$look[-]\d/) {
+            $tar=$_;
+            next;
+         }
+         $tar='' if $_=~/^$look[-]\d/;
+         last;
+      }
+      close(DH);
+      if ($tar) {
+         unless ($CPAN::Config->{tar}) {
+            if (-e '/usr/bin/tar') {
+               $CPAN::Config->{tar}='/usr/bin/tar';
+            } elsif (-e '/usr/local/bin/tar') {
+               $CPAN::Config->{tar}='/usr/local/bin/tar';
+            } else {
+               print "\n\n   Fatal Error!: The 'tar' utility is".
+                  " missing.\n".
+                  "\n\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                  exit 1;
+            }
+         }
+         chdir $d;
+         open(FH, $CPAN::Config->{tar}." xvf $tar|");
+         while (my $line=<FH>) {
+            print $line;
+         }
+         close FH;
+         chdir $CPAN::Config->{build_dir};
+         $tar=~s/[.]tar$//;
+         return "$d/$tar";
+      }
+      return '';
+
    }
    
    sub fa_install_mod {
@@ -3360,8 +3415,10 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
             $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
          } else {
             my $uname=`/bin/uname`;
+            my $uname_all=`/bin/uname -a`;
+            $uname_all.=$uname;
             my $dbdev="libdb${major_minor_ver}-devel";
-            $dbdev='libdb-devel' if $uname=~/WOW64/;
+            $dbdev='libdb-devel' if $uname=~/WOW64|x86_64/;
             print "\n\n   Fatal Error!: The \'$dbdev\' package is".
                   " missing from your Cygwin installation.\n".
                   "\n\n   Please report any bugs and send any",
@@ -3741,12 +3798,20 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
       }
    }
 } elsif ($^O eq 'cygwin') {
+   my $uname=`/bin/uname` || die $!;
+   my $uname_all=`/bin/uname -a` || die $!;
+   $uname_all.=$uname;
    $ENV{'BERKELEYDB_INCLUDE'}='/usr/include';
    $ENV{'BERKELEYDB_LIB'}='/usr/lib';
-   $ENV{'BERKELEYDB_NAME'}='-ldb-4.8';
+   if ($uname_all=~/WOW64|x86_64/) {
+      $ENV{'BERKELEYDB_NAME'}='-ldb';
+      $ENV{'DB_FILE_NAME'}='-ldb';
+   } else {
+      $ENV{'BERKELEYDB_NAME'}='-ldb-4.8';
+      $ENV{'DB_FILE_NAME'}='-ldb-4.8';
+   }
    $ENV{'DB_FILE_INCLUDE'}='/usr/include';
    $ENV{'DB_FILE_LIB'}='/usr/lib';
-   $ENV{'DB_FILE_NAME'}='-ldb-4.8';
 }
 
 chdir $main::curdir;
