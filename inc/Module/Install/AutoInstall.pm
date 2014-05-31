@@ -1,4 +1,3 @@
-#line 1
 package Module::Install::AutoInstall;
 
 use strict;
@@ -6,7 +5,7 @@ use Module::Install::Base ();
 
 use vars qw{$VERSION @ISA $ISCORE};
 BEGIN {
-	$VERSION = '1.00';
+	$VERSION = '1.08';
 	@ISA     = 'Module::Install::Base';
 	$ISCORE  = 1;
 }
@@ -71,6 +70,17 @@ sub auto_install {
         "# --- $class section:\n" .
         Module::AutoInstall::postamble()
     );
+}
+
+sub installdeps_target {
+    my ($self, @args) = @_;
+
+    $self->include('Module::AutoInstall');
+    require Module::AutoInstall;
+
+    Module::AutoInstall::_installdeps_target(1);
+
+    $self->auto_install(@args);
 }
 
 sub auto_install_now {

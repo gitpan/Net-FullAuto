@@ -14,30 +14,40 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 515b2e84001ca0cae972a6fa7bab408e0c359a44 ChangeLog
+SHA1 285df3231c8c5f227ef9471db37d5b065855c7c3 ChangeLog
 SHA1 5437f164ae11b18bb58a8576204254a1b4a9334b LICENSE
-SHA1 1d292a0e6dba2ce264985cc3004ff0dc9b298bfc MANIFEST
-SHA1 83fb9307615910d1497e5a397b5d02b7dd2640e6 META.yml
-SHA1 d0eb19b23080e1f2322392ea5d7ba408074e2e64 Makefile.PL
+SHA1 2405b691fcb18b468ccb31cab97babb75e4d1f30 MANIFEST
+SHA1 d7587bdb931e8d3a7321684ce7e9407fb11b1245 META.yml
+SHA1 bf70778db28ca8b67f77e2e907d443012c1319bc Makefile.PL
 SHA1 7250b2f536fe8a96fb25fc7435146bc006aaefe1 README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 1a82e9f1eb270bb77e3349f83cf2bcea32b30102 bin/fullauto.pl
 SHA1 967864161cdddec872e6ea5fc18c37776cb1641a bin/install_mozrepl_plugin.exe
-SHA1 20c73697e1713638140c719d8eaa19a275ed43a5 inc/Module/AutoInstall.pm
-SHA1 7305dbe2904416e28decb05396988a5d51d578be inc/Module/Install.pm
-SHA1 1549721e44d5fc5a9ad4d9cbf39e78c2ba4388d4 inc/Module/Install/Admin.pm
-SHA1 ca13d9875e1249f6e84f7070be8152c34837955e inc/Module/Install/AutoInstall.pm
-SHA1 129960509127732258570c122042bc48615222e1 inc/Module/Install/Base.pm
-SHA1 cf3356ed9a5bd2f732527ef9e7bc5ef4458c8a93 inc/Module/Install/Can.pm
-SHA1 bf0a3e1977effc2832d7a813a76dce3f31b437b6 inc/Module/Install/Fetch.pm
-SHA1 b501b0df59a5cd235cca473889f82c3d3429f39e inc/Module/Install/Include.pm
-SHA1 b721c93ca5bc9a6aa863b49af15f1b1de6125935 inc/Module/Install/Makefile.pm
-SHA1 026cc0551a0ad399d195e395b46bdf842e115192 inc/Module/Install/Metadata.pm
-SHA1 d3a4c720c6ec7f8fce7df37002fbc9177fb77050 inc/Module/Install/Scripts.pm
-SHA1 5457015ea5a50e93465bf2dafa29feebd547f85b inc/Module/Install/Win32.pm
-SHA1 051e7fa8063908befa3440508d0584a2497b97db inc/Module/Install/WriteAll.pm
+SHA1 a0d5dfdc1172c70fe1760e351024287e23eea486 inc/Module/AutoInstall.pm
+SHA1 61da5f5b15bb5e3ed01095d3b826a606513c4418 inc/Module/Install.pm
+SHA1 b0f1371ec0a3d767fabba75caea1c1d8cfc1aa5c inc/Module/Install/Admin.pm
+SHA1 f4bc71d78eb96c6ad59ac8e54dccc25d6297f29d inc/Module/Install/AutoInstall.pm
+SHA1 0843648925cfc1e1b0df472642b261998d76b702 inc/Module/Install/Base.pm
+SHA1 91c4de62ba040da0463cb4cfcbcaf00a25743716 inc/Module/Install/Bundle.pm
+SHA1 af9dcf10181be3b9c0e100f42cebdd7214f8a107 inc/Module/Install/Can.pm
+SHA1 7d2076b322b00fb8401123cdc556f81e49ea1e3f inc/Module/Install/Compiler.pm
+SHA1 faa58bf95724921c7ac4e815c696a78d57a132e8 inc/Module/Install/Deprecated.pm
+SHA1 85c1881c36dd137bbd1dda6eaeaa780f9c75df5f inc/Module/Install/External.pm
+SHA1 86567ee79a04081f4f21a66cd94bc39f370bc064 inc/Module/Install/Fetch.pm
+SHA1 0cdc8f1bd080d263f4062e6e78df0e9a268dd82b inc/Module/Install/Include.pm
+SHA1 0a53f0c2c58cbcc25ba64db0877432205401d96d inc/Module/Install/Inline.pm
+SHA1 30247245713ece1d6aae5706a54cc71bec78b258 inc/Module/Install/MakeMaker.pm
+SHA1 d45039112f0662c8a27080cf517421460b19d782 inc/Module/Install/Makefile.pm
+SHA1 6b925bc42db6fe198948351f5af31378cfe18643 inc/Module/Install/Metadata.pm
+SHA1 7881c79df9f5d9c95ae020b2a79a465d9bf8939e inc/Module/Install/PAR.pm
+SHA1 a549f7b19c843f6daeb33b5efb6689e4b7b7fd9c inc/Module/Install/Run.pm
+SHA1 22535baa14d0d882b6a820522536e29485c3a0c3 inc/Module/Install/Scripts.pm
+SHA1 98d3e5685466098b1314bbb053147ed7010d9e06 inc/Module/Install/Share.pm
+SHA1 6fed559b971e9d2f091e0776ddbb131be5225a36 inc/Module/Install/Win32.pm
+SHA1 ea528c813c3473a2674fcbed06531c2f795116ce inc/Module/Install/WriteAll.pm
+SHA1 00bb8470354d11bd7c2c74633083ebe627eb2b7e inc/Module/Install/with.pm
 SHA1 fb2c2f6e2ade19cd024dad15dd25bebf85023a4b install_mozrepl_plugin.ahk
-SHA1 d4a3926ab99d28b6bc0e26f2c3a3bdf58ac064e3 lib/Net/FullAuto.pm
+SHA1 4a8868055c6f9fe33b35db4c8ff7a6cb195b89c6 lib/Net/FullAuto.pm
 SHA1 dabbf5e523732ed0d3084fb91dcccb4f1c330ceb lib/Net/FullAuto/Custom/BackUp/README
 SHA1 c2219c6cd1af2a775ebd3b90e0d4731ef0aededc lib/Net/FullAuto/Custom/README
 SHA1 32064cac342c1fab8377c4b9fe5c41be23a92e78 lib/Net/FullAuto/Distro/fa_code.pm
@@ -54,11 +64,11 @@ SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJTigLWAAoJEBa/9Pad787EMs8IAMVq2vK1Y4QpRr4aTj7QCj8+
-xzwBNXdF9Cx2EW3AznGdXHaqrhAy9RjWpyenfhIt8A5n6ZoexWVB+0lAxky2xPpT
-Eh8HSx/Ww93jX7/havXgk9pzzl/jGUeg5fUffEt9b0ssx/5XVWkG5/kuE3k0GuUZ
-dhPs0arVf0gV4YkjnNEO//jzIfOi/zYteVg2N//M+yWXVwgP+koLh8Gqthk3/LmC
-+00+eHXl6x38fhwlGFX3CN3O7LaHFGO0VQSPfnnDQxvpDzi0+qzC2xNiLzxnp75a
-IGe1Y0ZL767+7EjS1XrMBwcFXs+6BGgbNdAv6Hu+bksAbc60rOSEeKkSWZf2bEQ=
-=S250
+iQEcBAEBAgAGBQJTih/eAAoJEBa/9Pad787EZlwIALQ/SMgaXqiKMKpX4HT+xRYm
+T0ITQ6Sc/lNEIJlgHX0hpNbi4YzJ170T07UD1PrflDREuhoOECbbag7ustKn1deK
+jWjIFbOz//lSea+v4HtUVAZ5vQxVO+cPhBJDOKwbdJ3FKITHhso9bcPuiVBPPq1d
+arnSVQDXD9mRlbhfJsZobEYRMxPdcFfGXIHq3mg3Mg542jzhg0XMGdxwYgAOaRN6
+sG+YTTJEK/6wepT7/4Is4512344mEKReIu16FNoOzIMg+/MIAUuFzYFGWuxW6lmb
+0wnm9G8R4VUpu50JJN/L9248KWxo7ogxH/f+5M6jjcRWgWEimwE86N9twPW0Xw4=
+=aT+r
 -----END PGP SIGNATURE-----
