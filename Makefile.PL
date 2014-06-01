@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999989';
+$main::VERSION='0.99999990';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -577,6 +577,26 @@ END
          }
       }
    } elsif (!can_cc()) {
+
+      my $uname_a=`/bin/uname -a`;
+      if (-1<index lc($uname_a), 'ubuntu') {
+         my $dpkg=`/bin/dpckg -l`;
+         if (-1==index $dpkg,'build-essential') {
+            open(AG,"sudo apt-get install 'build-essential'|");
+            while (my $line=<AG>) {
+               print $line;
+            }
+            close AG;
+         }
+         if (-1==index $dpkg,'libssl-dev') {
+            open(LD,"sudo apt-get install 'libssl-dev'|");
+            while (my $line=<LD>) {
+               print $line;
+            }
+            close LD;
+         }
+
+      }
 
       my $moreinfo='';my $s='          ';
       if ($Config{cc} and $Config{cc}!~/^\s*$/) {
@@ -1140,6 +1160,10 @@ END
    print $stdout if $stdout;
    &fa_err_exit($stderr,
       'Class::Method::Modifiers') if $stderr;
+   ($stdout,$stderr)=&fa_install_module('common::sense','install',
+      'Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'common::sense') if $stderr;
    ($stdout,$stderr)=&fa_install_module('Types::Serialiser','install',
       'Makefile');
    print $stdout if $stdout;
@@ -4620,6 +4644,9 @@ if ($banner) {
       exit;
    }
 }
+
+print "$main::curdir\n";
+chdir $main::curdir;
 
 open(FH,">fullauto.c");
 

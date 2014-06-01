@@ -21,6 +21,13 @@
 
 2014-05-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999990 released.
+
+        * More fixes for Makefile.PL.
+
+
+2014-05-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999989 released.
 
         * Updated Module directory from Module::Install.
