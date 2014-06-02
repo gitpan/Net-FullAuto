@@ -19,6 +19,15 @@
 ################################################################
 
 
+2014-06-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999991 released.
+
+        * More fixes for Makefile.PL.
+
+        * ssh identity_file now implemented option for ssh and sftp.
+
+
 2014-05-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999990 released.

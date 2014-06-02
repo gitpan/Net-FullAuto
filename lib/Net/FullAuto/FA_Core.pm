@@ -692,7 +692,8 @@ BEGIN {
 # Getopt::Long needs it this way for some args to work properly. 
 our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,$cat,
      $default,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
-     $users,$usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL);
+     $users,$usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL,
+     $identityfile);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -727,7 +728,7 @@ our $unattended='';our %month=();our $fullauto='';our $service='';
 our @dhostlabels=();our %monthconv=();our $cache_root='';
 our $cache_key='';our $admin='';our $menu='';our $welcome='';
 our %hourconv=();our @weekdays=();our %weekdaysconv=();
-our %mimetypes=();
+our %mimetypes=();our $identity_file='';
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
 our $specialperms='none';
@@ -11683,6 +11684,8 @@ sub fa_login
                 'scrub'                 => \$scrub,
                 'help|?'                => \$help,
                 'h|?'                   => \$help,
+                'i=s'                   => \$identityfile,
+                'identity_file=s'       => \$identityfile,
                 'log:s'                 => \$log,
                 'l:s'                   => \$log, 
                  man                    => \$man,
@@ -11761,6 +11764,21 @@ sub fa_login
       $userflag=1;
    } else {
       $username=&Net::FullAuto::FA_Core::username();
+   }
+   if (defined $identityfile) {
+      $identity_file=$identityfile;
+   } elsif (exists $Hosts{'localhost'}{'identity_file'}) {
+      $identity_file=$Hosts{'localhost'}{'identity_file'};
+   }
+   if ($identity_file && !(-r $identity_file)) {
+      my $login_Mast_error="SSH identity_file  $identity_file  cannot be read.";
+      my $die="\n       FATAL ERROR! - The Host "
+         ."$Net::FullAuto::FA_Core::local_hostname Returned"
+         ."\n              the Following Unrecoverable Error Condition\,"
+         ."\n              Rejecting the Login Attempt of the ID"
+         ."\n              -> $username :\n\n       "
+         ."$login_Mast_error\n";
+      &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
    }
 
    if (-1<$#_ && $_[0] && $_[0]!~/^\d+$/) {
@@ -12911,7 +12929,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
             }
          } elsif ((!$Net::FullAuto::FA_Core::dcipher ||
                !$Net::FullAuto::FA_Core::dcipher->decrypt($passetts->[0]))
-               && !$Net::FullAuto::FA_Core::cron) {
+               && !$Net::FullAuto::FA_Core::cron && !$identity_file) {
             my $passwd_timeout=350;
             my $pas='';
             my $te_time=time;
@@ -13176,7 +13194,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                } last 
             } elsif (lc($connect_method) eq 'ssh') {
                $cmd_type='ssh';
-               my $sshpath=$Net::FullAuto::FA_Core::gbp->('ssh');
+               my $sshpath='';my $idntfil='';
                if (exists $Hosts{"__Master_${$}__"}{'ssh'}) {
                   $sshpath=$Hosts{"__Master_${$}__"}{'ssh'};
                   $sshpath.='/' if $sshpath!~/\/$/;
@@ -13184,15 +13202,38 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                if (exists $Hosts{"__Master_${$}__"}{'sshport'}) {
                   $sshport=$Hosts{"__Master_${$}__"}{'sshport'};
                }
+               if (exists $Hosts{"__Master_${$}__"}{'identity_file'}) {
+                  $idntfil=$Hosts{"__Master_${$}__"}{'identity_file'};
+               }
+               $idntfil=$identity_file if $identity_file;
                my $try_count=0;
                while (1) {
                   if ($sshport) {
+                     if ($idntfil) {
+                        ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                           #["${sshpath}ssh","-caes128-ctr","-p$sshport",
+                           ["${sshpath}ssh","-p$sshport","-i$idntfil",
+                            "$login_id\@localhost",'',
+                            $Net::FullAuto::FA_Core::slave])
+                            or (&release_fa_lock(6543) &&
+                                &Net::FullAuto::FA_Core::handle_error(
+                                "couldn't launch ssh subprocess"));
+                     } else {
+                        ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                           #["${sshpath}ssh","-caes128-ctr","-p$sshport",
+                           ["${sshpath}ssh","-p$sshport",
+                            "$login_id\@localhost",'',
+                            $Net::FullAuto::FA_Core::slave])
+                            or (&release_fa_lock(6543) && 
+                                &Net::FullAuto::FA_Core::handle_error(
+                                "couldn't launch ssh subprocess"));
+                     }
+                  } elsif ($idntfil) {
                      ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                        #["${sshpath}ssh","-caes128-ctr","-p$sshport",
-                        ["${sshpath}ssh","-p$sshport",
-                         "$login_id\@localhost",'',
-                         $Net::FullAuto::FA_Core::slave])
-                         or (&release_fa_lock(6543) && 
+                        #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
+                        ["${sshpath}ssh","-i$idntfil","$login_id\@localhost",
+                         '',$Net::FullAuto::FA_Core::slave])
+                         or (&release_fa_lock(6543) &&
                              &Net::FullAuto::FA_Core::handle_error(
                              "couldn't launch ssh subprocess"));
                   } else {
@@ -13221,28 +13262,30 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $localhost->{_cmd_handle}->close()
                      if exists $localhost->{_cmd_handle};
                   $localhost->{_cmd_handle}=$local_host;
-                  ## Wait for password prompt.
-                  my $ignore='';
-                  ($ignore,$stderr)=
-                     &File_Transfer::wait_for_passwd_prompt(
-                        { _cmd_handle=>$local_host,
-                          _hostlabel=>[ "__Master_${$}__",'' ],
-                          _cmd_type=>'ssh',
-                          _connect=>$_connect },$timeout);
-                  if ($stderr) {
-                     if ($lc_cnt==$#RCM_Link) {
-                        &release_fa_lock(6543);
-                        die $stderr;
-                     } elsif (-1<index $stderr,'read timed-out:do_slave') {
+                  unless ($idntfil) {
+                     ## Wait for password prompt.
+                     my $ignore='';
+                     ($ignore,$stderr)=
+                        &File_Transfer::wait_for_passwd_prompt(
+                           { _cmd_handle=>$local_host,
+                             _hostlabel=>[ "__Master_${$}__",'' ],
+                             _cmd_type=>'ssh',
+                             _connect=>$_connect },$timeout);
+                     if ($stderr) {
+                        if ($lc_cnt==$#RCM_Link) {
+                           &release_fa_lock(6543);
+                           die $stderr;
+                        } elsif (-1<index $stderr,'read timed-out:do_slave') {
 # TEST HERE FOR NO LOCALHOST SSH CONNECTIVITY
-                        my $kill_arg=($^O eq 'cygwin')?'f':9;
-                        ($stdout,$stderr)=&kill($cmd_pid,$kill_arg)
-                           if &testpid($cmd_pid);
-                        $Net::FullAuto::FA_Core::slave='_slave_';next
-                     } elsif (3<$try_count++) {
-                        &release_fa_lock(6543);
-                        &Net::FullAuto::FA_Core::handle_error($stderr)
-                     } else { sleep 1;next }
+                           my $kill_arg=($^O eq 'cygwin')?'f':9;
+                           ($stdout,$stderr)=&kill($cmd_pid,$kill_arg)
+                              if &testpid($cmd_pid);
+                          $Net::FullAuto::FA_Core::slave='_slave_';next
+                        } elsif (3<$try_count++) {
+                           &release_fa_lock(6543);
+                           &Net::FullAuto::FA_Core::handle_error($stderr)
+                        } else { sleep 1;next }
+                     } last
                   } last
                } last
             }
@@ -17775,7 +17818,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTPLOGINLINE=$line and MS_SHARE=$ms_share\
                            if $Net::FullAuto::FA_Core::sftppath!~/\/$/;
                      }
 print "WHAT IS SLAVE=$Net::FullAuto::FA_Core::slave<==\n";
-                     my $sshport='';
+                     my $sshport='';my $idntfil='';
                      if (exists $Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'sshport'}) {
                         $Net::FullAuto::FA_Core::gbp->('sftp');
@@ -17783,8 +17826,13 @@ print "WHAT IS SLAVE=$Net::FullAuto::FA_Core::slave<==\n";
                         $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'sshport'}.' ';
                      }
+                     if (exists $Net::FullAuto::FA_Core::Hosts{
+                           $hostlabel}{'identity_file'}) {
+                        $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                           $hostlabel}{'identity_file'}.' ';
+                     }
                      ($fpx_handle,$fpx_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                        [$Net::FullAuto::FA_Core::gbp->('sftp')."sftp",
+                        [$Net::FullAuto::FA_Core::gbp->('sftp').'sftp',
                         "${sshport}$sftploginid\@$host",
                         '',$Net::FullAuto::FA_Core::slave])
                         or &Net::FullAuto::FA_Core::handle_error(
@@ -18216,6 +18264,11 @@ print "WHAT IS THE FTP_EVAL_ERROR1111=$@\n";
                      $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                         $hostlabel}{'sshport'}.' ';
                   }
+                  if (exists $Net::FullAuto::FA_Core::Hosts{
+                        $hostlabel}{'identity_file'}) {
+                     $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                        $hostlabel}{'identity_file'}.' ';
+                  }
                   $ftp_handle->print($Net::FullAuto::FA_Core::gbp->('sftp').
                      "sftp ${sshport}$sftploginid\@$host");
                   $ftm_type='sftp';
@@ -18582,6 +18635,11 @@ print "FTP_PID=$ftp_pid<== and ==>$localhost->{_cmd_pid}<==\n";
                                           $Net::FullAuto::FA_Core::Hosts{
                                           $hostlabel}{'sshport'}.' ';
                                     }
+                                    if (exists $Net::FullAuto::FA_Core::Hosts{
+                                          $hostlabel}{'identity_file'}) {
+                                       $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                                          $hostlabel}{'identity_file'}.' ';
+                                    }
                                     $ftp_handle->print(
                                        $Net::FullAuto::FA_Core::gbp->('sftp').
                                        "sftp ${sshport}$sftploginid\@$host");
@@ -18825,6 +18883,12 @@ print "RETURNFOUR and FTR_CMD=$ftr_cmd\n";<STDIN>;
                                                 $Net::FullAuto::FA_Core::Hosts{
                                                 $hostlabel}{'sshport'}.' ';
                                           }
+                                          if (exists $Net::FullAuto::FA_Core::Hosts{
+                                                $hostlabel}{'identity_file'}) {
+                                             $sshport.='-i'.
+                                                $Net::FullAuto::FA_Core::Hosts{
+                                                $hostlabel}{'identity_file'}.' ';
+                                          }
                                           my $s='sftp';
                                           $ftp_handle->print(
                                              $Net::FullAuto::FA_Core::gbp->($s).
@@ -18931,6 +18995,11 @@ print $Net::FullAuto::FA_Core::MRLOG
                   my $sp=$Net::FullAuto::FA_Core::sftpport;
                   $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                      $hostlabel}{'sshport'}.' ';
+               }
+               if (exists $Net::FullAuto::FA_Core::Hosts{
+                     $hostlabel}{'identity_file'}) {
+                  $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                     $hostlabel}{'identity_file'}.' ';
                }
 #####4444444
                $ftp_handle->print($Net::FullAuto::FA_Core::gbp->('sftp').
@@ -19155,6 +19224,11 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                        $Net::FullAuto::FA_Core::Hosts{
                                        $hostlabel}{'sshport'}.' ';
                                  }
+                                 if (exists $Net::FullAuto::FA_Core::Hosts{
+                                       $hostlabel}{'identity_file'}) {
+                                    $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                                       $hostlabel}{'identity_file'}.' ';
+                                 }
                                  &Net::FullAuto::FA_Core::su_scrub(
                                     $hostlabel,$su_id,$ftm_type);
                                  &Net::FullAuto::FA_Core::passwd_db_update(
@@ -19281,6 +19355,11 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                         my $sp=$Net::FullAuto::FA_Core::sftpport;
                         $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'sshport'}.' ';
+                     }
+                     if (exists $Net::FullAuto::FA_Core::Hosts{
+                           $hostlabel}{'identity_file'}) {
+                        $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                           $hostlabel}{'identity_file'}.' ';
                      }
                      $ftp_handle->print(
                         $Net::FullAuto::FA_Core::gbp->('sftp').'sftp '.
@@ -24118,6 +24197,11 @@ sub ftm_connect
                my $sp=$Net::FullAuto::FA_Core::sftpport;
                $sshport=$sp.
                   $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+            } 
+            if (exists $Net::FullAuto::FA_Core::Hosts{
+                  $hostlabel}{'identity_file'}) {
+               $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                  $hostlabel}{'identity_file'}.' ';
             }
             if ($su_id) {
                $ftpFH->{_cmd_handle}->print( 
@@ -24236,7 +24320,8 @@ eval {
                                  $lin='';last;
                               }
                            } else {
-                              &Net::FullAuto::FA_Core::su_scrub($hostlabel,$su_id,$ftm_type);
+                              &Net::FullAuto::FA_Core::su_scrub(
+                                 $hostlabel,$su_id,$ftm_type);
                               &Net::FullAuto::FA_Core::passwd_db_update(
                                  $hostlabel,$su_id,'DoNotSU!',
                                  $ftm_type);
@@ -24251,21 +24336,22 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                               }
                               my $sshport='';
                               if (exists
-                                    $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}) {
+                                    $Net::FullAuto::FA_Core::Hosts{
+                                    $hostlabel}{'sshport'}) {
                                  $Net::FullAuto::FA_Core::gbp->('sftp');
                                  my $sp=$Net::FullAuto::FA_Core::sftpport;
                                  $sshport=$sp.
-                                    $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+                                    $Net::FullAuto::FA_Core::Hosts{
+                                    $hostlabel}{'sshport'}.' ';
                               }
-                              if ($sshport) {
-                                 $ftpFH->{_cmd_handle}->print(
-                                    $Net::FullAuto::FA_Core::gbp->('sftp').
-                                    'sftp '."${sshport}$login_id\@$host");
-                              } else {
-                                 $ftpFH->{_cmd_handle}->print(
-                                    $Net::FullAuto::FA_Core::gbp->('sftp').
-                                    'sftp '."${sshport}$login_id\@$host");
+                              if (exists $Net::FullAuto::FA_Core::Hosts{
+                                    $hostlabel}{'identity_file'}) {
+                                 $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
+                                    $hostlabel}{'identity_file'}.' ';
                               }
+                              $ftpFH->{_cmd_handle}->print(
+                                 $Net::FullAuto::FA_Core::gbp->('sftp').
+                                 'sftp '."${sshport}$login_id\@$host");
 
                               ## Wait for password prompt.
                               my $ignore='';
@@ -24422,6 +24508,10 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
             $Net::FullAuto::FA_Core::gbp->('sftp');
             my $sp=$Net::FullAuto::FA_Core::sftpport;
             $sshport=$sp.$Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+         }
+         if (exists $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'identity_file'}) {
+            $sshport.='-i'.
+               $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'identity_file'}.' ';
          }
          my $ftp__cmd="${Net::FullAuto::FA_Core::ftppath}ftp $host";
          if ($ftm_type eq 'ftp') {
@@ -27300,11 +27390,32 @@ print $Net::FullAuto::FA_Core::MRLOG
                         if (exists $Hosts{$hostlabel}{'sshport'}) {
                            $sshport=$Hosts{$hostlabel}{'sshport'};
                         }
+                        my $idntfil='';
+                        if (exists $Hosts{$hostlabel}{'identity_file'}) {
+                           $idntfil=$Hosts{$hostlabel}{'identity_file'};
+                        }
                         if ($sshport) {
+                           if ($idntfil) {
+                              ($cmd_handle,$cmd_pid)=
+                                 &Net::FullAuto::FA_Core::pty_do_cmd(
+                                 ["${sshpath}ssh",'-v',"-i$idntfil","-p$sshport",
+                                 "$sshloginid\@$host",
+                                 $Net::FullAuto::FA_Core::slave])
+                                 or &Net::FullAuto::FA_Core::handle_error(
+                                 "couldn't launch ssh subprocess");
+                           } else {
+                              ($cmd_handle,$cmd_pid)=
+                                 &Net::FullAuto::FA_Core::pty_do_cmd(
+                                 ["${sshpath}ssh",'-v',"-p$sshport",
+                                 "$sshloginid\@$host",
+                                 $Net::FullAuto::FA_Core::slave])
+                                 or &Net::FullAuto::FA_Core::handle_error(
+                                 "couldn't launch ssh subprocess");
+                           }
+                        } elsif ($idntfil) {
                            ($cmd_handle,$cmd_pid)=
                               &Net::FullAuto::FA_Core::pty_do_cmd(
-                              ["${sshpath}ssh",'-v',"-p$sshport",
-                              "$sshloginid\@$host",
+                              ["${sshpath}ssh",'-v',"-i$idntfil","$sshloginid\@$host",
                               $Net::FullAuto::FA_Core::slave])
                               or &Net::FullAuto::FA_Core::handle_error(
                               "couldn't launch ssh subprocess");
@@ -28720,6 +28831,11 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                   my $sp=$Net::FullAuto::FA_Core::sftpport;
                   $sshport=$sp.
                      $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'sshport'}.' ';
+               }
+               if (exists
+                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'identity_file'}) {
+                  $sshport.='-i'.
+                     $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'identity_file'}.' ';
                }
                $handle->{_ftp_handle}->print(
                   $Net::FullAuto::FA_Core::gbp->('sftp').'sftp '.
