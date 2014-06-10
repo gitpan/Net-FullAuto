@@ -19,6 +19,15 @@
 ################################################################
 
 
+2014-06-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999992 released.
+
+        * Beginning work on New User Experience & Tutorial.
+
+        * New version of Term::Menus paired with this release.
+
+
 2014-06-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999991 released.

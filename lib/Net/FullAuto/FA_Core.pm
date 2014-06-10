@@ -693,7 +693,7 @@ BEGIN {
 our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,$cat,
      $default,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
      $users,$usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL,
-     $identityfile);
+     $identityfile,$tutorial);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -728,7 +728,7 @@ our $unattended='';our %month=();our $fullauto='';our $service='';
 our @dhostlabels=();our %monthconv=();our $cache_root='';
 our $cache_key='';our $admin='';our $menu='';our $welcome='';
 our %hourconv=();our @weekdays=();our %weekdaysconv=();
-our %mimetypes=();our $identity_file='';
+our %mimetypes=();our $identity_file='';our $skip_host_hash='';
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
 our $specialperms='none';
@@ -2394,6 +2394,15 @@ sub users
    exit;
    #&Net::FullAuto::FA_Core::cleanup();
 
+}
+
+sub tutorial
+{
+   can_load(modules => { "Term::Menus" => 0 });
+   can_load(modules => { "Net::FullAuto" => 0 });
+   my $username=&Net::FullAuto::FA_Core::username(); 
+print "USERNAME=$username\n";
+   exit;
 }
 
 sub VERSION
@@ -11577,6 +11586,132 @@ FIN
    return \%set_menu;
 };
 
+my $fa_welcome=<<END;
+
+
+
+    __       __)
+   (, )  |  /      /)
+      | /| /   _  // _  ______    _    _/_ ___
+      |/ |/  _(/_(/_(__(_) // (__(/_   (__(_)
+      /  |
+
+
+
+           _   _      _         _____      _ _    _         _
+          | \\ | | ___| |_      |  ___|   _| | |  / \\  _   _| |_ ___
+          |  \\| |/ _ \\ __| o o | |_ | | | | | | / _ \\| | | | __/ _ \\
+          | |\\  |  __/ ||  o o |  _|| |_| | | |/ ___ \\ |_| | || (_) |
+          |_| \\_|\\___|\\__|     |_|   \\__,_|_|_/_/   \\_\\__,_|\\__\\___/
+
+
+
+   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
+
+
+END
+
+my $fa_tutorial=<<END;
+
+
+
+    _____      _ _    _         _
+   |  ___|   _| | |  / \\  _   _| |_ ___
+   | |_ | | | | | | / _ \\| | | | __/ _ \\
+   |  _|| |_| | | |/ ___ \\ |_| | || (_) |
+   |_|   \\__,_|_|_/_/   \\_\\__,_|\\__\\___/
+    _____      _             _       _
+   |_   _|   _| |_ ___  _ __(_) __ _| |
+     | || | | | __/ _ \\| '__| |/ _` | |
+     | || |_| | || (_) | |  | | (_| | |
+     |_| \\__,_|\\__\\___/|_|  |_|\\__,_|_|
+
+
+
+END
+
+my $fa_fullauto=<<END;
+
+
+
+    _____      _ _    _         _
+   |  ___|   _| | |  / \\  _   _| |_ ___
+   | |_ | | | | | | / _ \\| | | | __/ _ \\
+   |  _|| |_| | | |/ ___ \\ |_| | || (_) |
+   |_|   \\__,_|_|_/_/   \\_\\__,_|\\__\\___/
+ 
+END
+
+my $fa_mini_welcome=" (   /_ /_   _  _ \n".
+                    "       |/|/(-(( ()//)(- ";
+
+sub new_user_experience {
+
+   print $fa_welcome;
+   sleep 3;
+   my $new_user=$_[0]||'';
+   my $welcome=$_[1]||'';
+   my $banner='';my $text=[];
+   my %welcome_menu=();
+   if ($new_user) {
+
+      $text=[ 
+              "Go to FullAuto Tutorial",
+              "Continue with Login &\n       ".
+              "            Do Not Show this Sreen Again",
+              "Continue with Login" ],
+
+      $banner="$fa_fullauto\n      $fa_mini_welcome $username!\n"
+             ."\n      It appears "
+             ."that $username is new to FullAuto,"
+             ."\n      for there is no FullAuto "
+             ."Account for this user.";
+      %welcome_menu=(
+
+         Label  => 'welcome_menu',
+         Item_1 => {
+            Text   => "Create Account for $username\n".
+                      "                   Recommended!\n\n",
+            Default => "*",
+         },
+         Item_2 => {
+
+            Text   => ']C[',
+            Convey => $text,
+
+         },
+         Banner => $banner,
+
+      );
+
+   } elsif ($welcome) {
+
+      $text=[ "Admin Menu",
+              "User Accounts" ];
+
+      $banner=$fa_tutorial
+             ."      Please select a subject to explore:";
+      %welcome_menu=(
+
+         Label  => 'welcome_menu',
+         Item_1 => {
+
+            Text   => ']C[',
+            Convey => $text,
+
+         },
+         Banner => $banner,
+
+      );
+
+   }
+   my $choice=Menu(\%welcome_menu);
+   if (-1<index $choice,'Create Account') {
+print "YEP, CREATE ACCOUNT\n";<STDIN>;
+   }
+
+}
+
 sub numerically { $a <=> $b }
 
 sub fa_login
@@ -11603,7 +11738,7 @@ sub fa_login
    $tosspass_= eval $tosspass_;
    $tosspass_=0 if $@ || !$tosspass_;
    ## end Term::Menus defs ###########
-   
+
    my $fhtimeout='X';
    my $fatimeout=$timeout;
    my $tst='$' . (caller)[0] . '::test';
@@ -11676,6 +11811,7 @@ sub fa_login
                 'admin'                 => \$admin,
                 'menu'                  => \$menu,
                 'welcome'               => \$welcome,
+                #'tutorial'              => \$tutorial,
                 'about'                 => \$version,
                 'authorize_connect'     => \$authorize_connect,
                 'cache_root=s'          => \$cache_root,
@@ -11827,6 +11963,11 @@ sub fa_login
       $unattended=']Unattended[';
       $fullauto=']FullAuto[';
       $cron=']Cron[';
+   }
+   if ($Term::Menus::new_user_flag or $welcome) {
+      $Net::FullAuto::FA_Core::skip_host_hash=1;
+      &new_user_experience($Term::Menus::new_user_flag,
+         $welcome);
    }
    my $cache='';
    foreach my $hl ('cache','localhost') {
@@ -13210,40 +13351,81 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                while (1) {
                   if ($sshport) {
                      if ($idntfil) {
-                        ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                        if ($Net::FullAuto::FA_Core::debug) {
+                           ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
                            #["${sshpath}ssh","-caes128-ctr","-p$sshport",
-                           ["${sshpath}ssh","-p$sshport","-i$idntfil",
-                            "$login_id\@localhost",'',
-                            $Net::FullAuto::FA_Core::slave])
+                              ["${sshpath}ssh","-p$sshport","-i$idntfil",
+                               "-vvv","$login_id\@localhost",'',
+                               $Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                   &Net::FullAuto::FA_Core::handle_error(
+                                   "couldn't launch ssh subprocess"));
+                        } else {
+                           ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                              ["${sshpath}ssh","-p$sshport","-i$idntfil",
+                               "$login_id\@localhost",'',
+                               $Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                   &Net::FullAuto::FA_Core::handle_error(
+                                   "couldn't launch ssh subprocess"));
+                        }
+                     } else {
+                        if ($Net::FullAuto::FA_Core::debug) {
+                           ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                              #["${sshpath}ssh","-caes128-ctr","-p$sshport",
+                              ["${sshpath}ssh","-p$sshport",
+                               "-vvv","$login_id\@localhost",'',
+                               $Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) && 
+                                   &Net::FullAuto::FA_Core::handle_error(
+                                   "couldn't launch ssh subprocess"));
+                        } else {
+                           ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                              ["${sshpath}ssh","-p$sshport",
+                               "$login_id\@localhost",'',
+                               $Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                   &Net::FullAuto::FA_Core::handle_error(
+                                   "couldn't launch ssh subprocess"));
+                        }
+                     }
+                  } elsif ($idntfil) {
+                     if ($Net::FullAuto::FA_Core::debug) {
+                        ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                           #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
+                           ["${sshpath}ssh","-i$idntfil","$login_id\@localhost",
+                            '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
                                 &Net::FullAuto::FA_Core::handle_error(
                                 "couldn't launch ssh subprocess"));
                      } else {
                         ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                           #["${sshpath}ssh","-caes128-ctr","-p$sshport",
-                           ["${sshpath}ssh","-p$sshport",
-                            "$login_id\@localhost",'',
-                            $Net::FullAuto::FA_Core::slave])
-                            or (&release_fa_lock(6543) && 
+                           #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
+                           ["${sshpath}ssh","-vvv","-i$idntfil",
+                            "$login_id\@localhost",
+                            '',$Net::FullAuto::FA_Core::slave])
+                            or (&release_fa_lock(6543) &&
                                 &Net::FullAuto::FA_Core::handle_error(
                                 "couldn't launch ssh subprocess"));
                      }
-                  } elsif ($idntfil) {
-                     ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                        #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
-                        ["${sshpath}ssh","-i$idntfil","$login_id\@localhost",
-                         '',$Net::FullAuto::FA_Core::slave])
-                         or (&release_fa_lock(6543) &&
-                             &Net::FullAuto::FA_Core::handle_error(
-                             "couldn't launch ssh subprocess"));
                   } else {
-                     ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                        #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
-                        ["${sshpath}ssh","$login_id\@localhost",
-                         '',$Net::FullAuto::FA_Core::slave])
-                         or (&release_fa_lock(6543) &&
-                             &Net::FullAuto::FA_Core::handle_error(
-                             "couldn't launch ssh subprocess"));
+                     if ($Net::FullAuto::FA_Core::debug) {
+                        ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                           #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
+                           ["${sshpath}ssh","-vvv","$login_id\@localhost",
+                            '',$Net::FullAuto::FA_Core::slave])
+                            or (&release_fa_lock(6543) &&
+                                &Net::FullAuto::FA_Core::handle_error(
+                                "couldn't launch ssh subprocess"));
+                     } else {
+                        ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                           #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
+                           ["${sshpath}ssh","$login_id\@localhost",
+                            '',$Net::FullAuto::FA_Core::slave])
+                            or (&release_fa_lock(6543) &&
+                                &Net::FullAuto::FA_Core::handle_error(
+                                "couldn't launch ssh subprocess"));
+                     }
                   }
                   $localhost->{_cmd_pid}=$cmd_pid;
                   print $Net::FullAuto::FA_Core::MRLOG
@@ -14457,7 +14639,7 @@ sub fa_set {
    $fullpath_files{'code'}=$net_path.$fa_code->[0] if $fa_code->[0];
    $fullpath_files{'code'}||='';
    my $argv=join " ",@ARGV;
-   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*/) {
       if ($fa_code->[0]) {
          if ($Term::Menus::canload->($fa_code->[0])) {
             require $fa_code->[0];
@@ -14485,7 +14667,7 @@ sub fa_set {
    $fa_conf->[0]||='';
    $fullpath_files{'conf'}=$net_path.$fa_conf->[0] if $fa_conf->[0];
    $fullpath_files{'conf'}||='';
-   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*/) {
       if ($fa_conf->[0]) {
          if ($Term::Menus::canload->($fa_conf->[0])) {
             require $fa_conf->[0];
@@ -14513,7 +14695,7 @@ sub fa_set {
    $fa_host->[0]||='';
    $fullpath_files{'host'}=$net_path.$fa_host->[0] if $fa_host->[0];
    $fullpath_files{'host'}||='';
-   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*/) {
       if ($fa_host->[0]) {
          if ($Term::Menus::canload->($fa_host->[0])) {
             require $fa_host->[0];
@@ -14541,7 +14723,7 @@ sub fa_set {
    $fa_maps->[0]||='';
    $fullpath_files{'maps'}=$net_path.$fa_maps->[0] if $fa_maps->[0];
    $fullpath_files{'maps'}||='';
-   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*/) {
       if ($fa_maps->[0]) {
          if ($Term::Menus::canload->($fa_maps->[0])) {
             require $fa_maps->[0];
@@ -14569,7 +14751,7 @@ sub fa_set {
    $fa_menu->[0]||='';
    $fullpath_files{'menu'}=$net_path.$fa_menu->[0] if $fa_menu->[0];
    $fullpath_files{'menu'}||='';
-   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*|--welcome/) {
+   if ($argv!~/--edi*t* *|-e[a-z]|--admin|-V|-v|--VE*R*S*I*O*N*/) {
       if ($fa_menu->[0]) {
          if ($Term::Menus::canload->($fa_menu->[0])) {
             require $fa_menu->[0];
@@ -14599,7 +14781,8 @@ sub fa_set {
 our $adminmenu=sub {
 
    my $invoke_menu_here=0;
-   unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
+   unless (-1<index $Net::FullAuto::FA_Core::localhost,'='
+         && $Net::FullAuto::FA_Core::skip_host_hash) {
       $invoke_menu_here=1;
       can_load(modules => { "Term::Menus" => 0 });
       can_load(modules => { "Net::FullAuto" => 0 });
