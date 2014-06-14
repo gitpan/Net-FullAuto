@@ -11614,18 +11614,15 @@ END
 my $fa_tutorial=<<END;
 
 
+    ___     _ _   _       _
+   | __|  _| | | /_\\ _  _| |_ ___
+   | _| || | | |/ _ \\ || |  _/ _ \\
+   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/
 
-    _____      _ _    _         _
-   |  ___|   _| | |  / \\  _   _| |_ ___
-   | |_ | | | | | | / _ \\| | | | __/ _ \\
-   |  _|| |_| | | |/ ___ \\ |_| | || (_) |
-   |_|   \\__,_|_|_/_/   \\_\\__,_|\\__\\___/
-    _____      _             _       _
-   |_   _|   _| |_ ___  _ __(_) __ _| |
-     | || | | | __/ _ \\| '__| |/ _` | |
-     | || |_| | || (_) | |  | | (_| | |
-     |_| \\__,_|\\__\\___/|_|  |_|\\__,_|_|
-
+    _____     _           _      _ 
+   |_   _|  _| |_ ___ _ _(_)__ _| |
+     | || || |  _/ _ \\ '_| / _` | |
+     |_| \\_,_|\\__\\___/_| |_\\__,_|_|
 
 
 END
@@ -11633,17 +11630,60 @@ END
 my $fa_fullauto=<<END;
 
 
+    ___     _ _   _       _       
+   | __|  _| | | /_\\ _  _| |_ ___ 
+   | _| || | | |/ _ \\ || |  _/ _ \\
+   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/
 
-    _____      _ _    _         _
-   |  ___|   _| | |  / \\  _   _| |_ ___
-   | |_ | | | | | | / _ \\| | | | __/ _ \\
-   |  _|| |_| | | |/ ___ \\ |_| | || (_) |
-   |_|   \\__,_|_|_/_/   \\_\\__,_|\\__\\___/
- 
 END
 
 my $fa_mini_welcome=" (   /_ /_   _  _ \n".
                     "       |/|/(-(( ()//)(- ";
+
+my $fa_new_user=<<END;
+
+
+    _  _              _   _             
+   | \\| |_____ __ __ | | | |___ ___ _ _ 
+   | .` / -_) V  V / | |_| (_-</ -_) '_|
+   |_|\\_\\___|\\_/\\_/   \\___//__/\\___|_| 
+
+
+   FullAuto is a SECURE Automation Framework.
+   Security is a necessary evil. Everybody
+   needs it, but nobody wants to focus on it.
+   It is inconvenient, and productivity suffers
+   from the burden it imposes. Yet, it is an
+   unavoidable requirement. FullAuto was built
+   from the ground up to be SECURE. User Accounts
+   are therefore a REQUIREMENT. One FullAuto
+   installation can service any number of users.
+   FullAuto has a number of built in utilities
+   to setup and manage user accounts.
+END
+
+my $setup_new_user2=sub {
+
+   my %setup_new_user2=(
+
+      Name   => 'setup_new_user2',
+      #Result => $setup_new_user3,
+      Banner => $fa_new_user,
+  );
+  return \%setup_new_user2;
+};
+
+my $setup_new_user=sub {
+
+   my %setup_new_user=(
+
+      Name   => 'setup_new_user',
+      Result => $setup_new_user2,
+      Banner => "THIS IS THE BANNER FOR SETUP2\n",
+
+   );
+   return \%setup_new_user;
+};
 
 sub new_user_experience {
 
@@ -11673,6 +11713,7 @@ sub new_user_experience {
             Text   => "Create Account for $username\n".
                       "                   Recommended!\n\n",
             Default => "*",
+            Result  => $setup_new_user,
          },
          Item_2 => {
 
@@ -11705,7 +11746,7 @@ sub new_user_experience {
       );
 
    }
-   my $choice=Menu(\%welcome_menu);
+   my $choice=Menu(\%welcome_menu)||'';
    if (-1<index $choice,'Create Account') {
 print "YEP, CREATE ACCOUNT\n";<STDIN>;
    }
