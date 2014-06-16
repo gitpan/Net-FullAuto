@@ -716,7 +716,7 @@ our %same_host_as_Master=("__Master_${$}__"=>'-','localhost'=>'-');
 our @same_host_as_Master=();our $dest_first_hash='';
 our %file_rename=();our %rename_file=();our $quiet='';
 our %filerename=();our %renamefile=();our %fullmonth=();
-our %Processes=();our %shellpids=();our %ftpcwd=();
+our %Processes=();our %shellpids=();our %ftpcwd=();our $newuser='';
 our @DeploySMB_Proxy=('');our @DeployRCM_Proxy=('');
 our @DeployFTM_Proxy=('');our $master_transfer_dir='';
 our %perms=();our @ApacheNode=();our $test=0;our %days=();
@@ -11634,7 +11634,6 @@ my $fa_fullauto=<<END;
    | __|  _| | | /_\\ _  _| |_ ___ 
    | _| || | | |/ _ \\ || |  _/ _ \\
    |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/
-
 END
 
 my $fa_mini_welcome=" (   /_ /_   _  _ \n".
@@ -11662,13 +11661,68 @@ my $fa_new_user=<<END;
    to setup and manage user accounts.
 END
 
+my $fa_basics=<<END;
+
+    ___                  ___          _
+   / __| ___ _ __  ___  | _ ) __ _ __(_)__ ___
+   \\__ \\/ _ \\ '  \\/ -_) | _ \\/ _` (_-< / _(_-<
+   |___/\\___/_|_|_\\___| |___/\\__,_/__/_\\__/__/
+
+   This wizard is interactive. You can go backwards
+   and forwards. Just press SHIFT '<' or the LEFTARROW
+   key to navigate backwards, and SHIFT '>' or the
+   RIGHTARROW key to go forward. Try it now!
+
+   Notice at the bottom are commands you can type:
+
+   'help'  to get the help or man (for 'manual') screen
+   'admin' to get the admin menu
+
+   When you quit either help or admin, you automatically
+   return to this screen. To quit admin, type 'quit',
+   and to quit the man page, type :q - Try it now!
+END
+
+my $fa_intro=<<END;
+
+
+    ___     _               _         _   _          
+   |_ _|_ _| |_ _ _ ___  __| |_  _ __| |_(_)___ _ _  
+    | || ' \\  _| '_/ _ \\/ _` | || / _|  _| / _ \\ ' \\ 
+   |___|_||_\\__|_| \\___/\\__,_|\\_,_\\__|\\__|_\\___/_||_|
+
+   FullAuto is an Automation Framework. With this program,
+   nearly *ANY* computer process can be automated! But first
+   a person has to tell it what to do. This wizard will help
+   do that. This command environment wizard is an important
+   innovation of FullAuto. Everything you are experiencing
+   now, can be used used to make *YOUR* automation projects
+   easier to create and maintain. Your project can and SHOULD
+   tell a story just like this one.
+
+   You can revisit this story anytime - at the command line:
+
+   fa --new-user
+END
+
+my $setup_new_user3=sub{
+
+   my %setup_new_user3=(
+
+      Name   => 'setup_new_user3',
+      #Result => $setup_new_user4,
+      Banner => $fa_new_user,
+  );
+  return \%setup_new_user3;
+};
+
 my $setup_new_user2=sub {
 
    my %setup_new_user2=(
 
       Name   => 'setup_new_user2',
-      #Result => $setup_new_user3,
-      Banner => $fa_new_user,
+      Result => $setup_new_user3,
+      Banner => $fa_basics,
   );
   return \%setup_new_user2;
 };
@@ -11679,7 +11733,7 @@ my $setup_new_user=sub {
 
       Name   => 'setup_new_user',
       Result => $setup_new_user2,
-      Banner => "THIS IS THE BANNER FOR SETUP2\n",
+      Banner => $fa_intro,
 
    );
    return \%setup_new_user;
@@ -11691,14 +11745,15 @@ sub new_user_experience {
    sleep 3;
    my $new_user=$_[0]||'';
    my $welcome=$_[1]||'';
+   my $newuser=$_[2]||'';
    my $banner='';my $text=[];
    my %welcome_menu=();
-   if ($new_user) {
+   if ($new_user or $newuser) {
 
       $text=[ 
               "Go to FullAuto Tutorial",
               "Continue with Login &\n       ".
-              "            Do Not Show this Sreen Again",
+              "            Do Not Show this Screen Again",
               "Continue with Login" ],
 
       $banner="$fa_fullauto\n      $fa_mini_welcome $username!\n"
@@ -11852,7 +11907,10 @@ sub fa_login
                 'admin'                 => \$admin,
                 'menu'                  => \$menu,
                 'welcome'               => \$welcome,
-                #'tutorial'              => \$tutorial,
+                'new_user'              => \$newuser,
+                'newuser'               => \$newuser,
+                'new-user'              => \$newuser,
+                'tutorial'              => \$tutorial,
                 'about'                 => \$version,
                 'authorize_connect'     => \$authorize_connect,
                 'cache_root=s'          => \$cache_root,
@@ -12005,10 +12063,10 @@ sub fa_login
       $fullauto=']FullAuto[';
       $cron=']Cron[';
    }
-   if ($Term::Menus::new_user_flag or $welcome) {
+   if ($Term::Menus::new_user_flag or $welcome or $newuser) {
       $Net::FullAuto::FA_Core::skip_host_hash=1;
       &new_user_experience($Term::Menus::new_user_flag,
-         $welcome);
+         $welcome,$newuser);
    }
    my $cache='';
    foreach my $hl ('cache','localhost') {
@@ -14822,8 +14880,9 @@ sub fa_set {
 our $adminmenu=sub {
 
    my $invoke_menu_here=0;
-   unless (-1<index $Net::FullAuto::FA_Core::localhost,'='
-         && $Net::FullAuto::FA_Core::skip_host_hash) {
+   $Net::FullAuto::FA_Core::skip_host_hash||=0;
+   if ((-1==index $Net::FullAuto::FA_Core::localhost,'=')
+         && ($Net::FullAuto::FA_Core::skip_host_hash==0)) {
       $invoke_menu_here=1;
       can_load(modules => { "Term::Menus" => 0 });
       can_load(modules => { "Net::FullAuto" => 0 });
@@ -14864,6 +14923,7 @@ FAM
       },
       Banner => $fam,
    );
+
    unless ($invoke_menu_here) {
       return \%admin;
    } else {

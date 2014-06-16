@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999994';
+$main::VERSION='0.99999995';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1212,7 +1212,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.57');
+      '','2.58');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
@@ -4560,7 +4560,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.57;
+#requires        'Term::Menus'               => 2.58;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;
