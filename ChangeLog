@@ -21,6 +21,13 @@
 
 2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999901 released.
+
+        * Added sudo to make and Build commands for Ubuntu.
+
+
+2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999999 released.
 
         * Added print to debug tar in Makefile.PL for Ubuntu.

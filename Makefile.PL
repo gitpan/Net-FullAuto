@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999999';
+$main::VERSION='0.9999999901';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -755,10 +755,10 @@ END
          }
          chdir $d;
          if (-1<index lc($main::uname_a), 'ubuntu') {
-            print "***** Untar: sudo ",$CPAN::Config->{tar},"xvf $tar\n";
+            print "***** Untar: sudo ",$CPAN::Config->{tar}," xvf $tar\n";
             open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
          } else {
-            print "***** Untar: ",$CPAN::Config->{tar},"xvf $tar\n";
+            print "***** Untar: ",$CPAN::Config->{tar}," xvf $tar\n";
             open(FH, $CPAN::Config->{tar}." xvf $tar|");
          }
          while (my $line=<FH>) {
@@ -813,19 +813,23 @@ END
             die "CPAN Error: $cpan_error\n";
          }
          if ($task eq 'install') {
+            my $sudo='';
+            if (-1<index lc($main::uname_a), 'ubuntu') {
+               $sudo='sudo ';
+            }
             $dir||=&fa_find_latest($p);
-            print "*** Running $butil.PL\n";
+            print "*** Running $sudo$butil.PL\n";
             if ($echo) {
-               system("cd \"$dir\";echo $echo | $^X $butil.PL");
+               system("cd \"$dir\";echo $echo | $sudo$^X $butil.PL");
             } else {
-               system("cd \"$dir\";$^X $butil.PL");
+               system("cd \"$dir\";$sudo$^X $butil.PL");
             }
             if ($butil eq 'Makefile') {
-               print "*** Running make install\n";
-               system("cd \"$dir\";make install");
+               print "*** Running ${sudo}make install\n";
+               system("cd \"$dir\";${sudo}make install");
             } else {
-               print "*** Running Build install\n";
-               system("cd \"$dir\";./Build build;./Build install");
+               print "*** Running ${sudo}Build install\n";
+               system("cd \"$dir\";./Build build;${sudo}./Build install");
             }
          }
          chdir $main::curdir;
@@ -3746,10 +3750,10 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                }
                $filename=~s/\.gz$//;
                if (-1<index lc($main::uname_a), 'ubuntu') {
-                  print "***** Untar2: sudo ",$CPAN::Config->{tar},"xvf $filename\n";
+                  print "***** Untar2: sudo ",$CPAN::Config->{tar}," xvf $filename\n";
                   open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
                } else {
-                  print "***** Untar2: ",$CPAN::Config->{tar},"xvf $filename\n";
+                  print "***** Untar2: ",$CPAN::Config->{tar}," xvf $filename\n";
                   open(FH, $CPAN::Config->{tar}." xvf $filename|");
                }
                while (my $line=<FH>) {
