@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999997';
+$main::VERSION='0.99999998';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -213,10 +213,10 @@ END
    $main::root_dir=$main::curdir;
 
    my $incflag=0;my @drive_options=();
-   my $uname_a='';
+   $main::uname_a='';
    my $perl_version=$^V;
    $perl_version=~s/^v//;
-   $uname_a=`/bin/uname -a` if $^O eq 'linux';
+   $main::uname_a=`/bin/uname -a` if $^O eq 'linux';
    if ($^O eq 'cygwin') {
       my $cygcheck=`/bin/cygcheck -c` || die $!;
       my $uname=`/bin/uname` || die $!;
@@ -581,7 +581,7 @@ END
             exit 1;
          }
       }
-   } elsif (!can_cc() && (-1<index lc($uname_a), 'ubuntu')
+   } elsif (!can_cc() && (-1<index lc($main::uname_a), 'ubuntu')
          && ($perl_version>=5.18.2)) {
 
       my $dpkg=`/bin/dpckg -l`;
@@ -754,7 +754,11 @@ END
             }
          }
          chdir $d;
-         open(FH, $CPAN::Config->{tar}." xvf $tar|");
+         if (-1<index lc($main::uname_a), 'ubuntu') {
+            open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
+         } else {
+            open(FH, $CPAN::Config->{tar}." xvf $tar|");
+         }
          while (my $line=<FH>) {
             print $line;
          }
@@ -3739,7 +3743,11 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                   }
                }
                $filename=~s/\.gz$//;
-               open(FH, $CPAN::Config->{tar}." xvf $filename|");
+               if (-1<index lc($main::uname_a), 'ubuntu') {
+                  open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
+               } else {
+                  open(FH, $CPAN::Config->{tar}." xvf $filename|");
+               }
                while (my $line=<FH>) {
                   print $line;
                }
