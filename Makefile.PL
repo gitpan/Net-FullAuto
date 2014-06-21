@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999901';
+$main::VERSION='0.9999999902';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -818,18 +818,23 @@ END
                $sudo='sudo ';
             }
             $dir||=&fa_find_latest($p);
-            print "*** Running $sudo$butil.PL\n";
+            print "*** Running $sudo $^X $butil.PL\n";
+            print "*** cd to $dir\n";
             if ($echo) {
                system("cd \"$dir\";echo $echo | $sudo$^X $butil.PL");
+               print "ERROR: $!\n" if $!;
             } else {
                system("cd \"$dir\";$sudo$^X $butil.PL");
+               print "ERROR: $!\n" if $!;
             }
             if ($butil eq 'Makefile') {
                print "*** Running ${sudo}make install\n";
                system("cd \"$dir\";${sudo}make install");
+               print "ERROR: $!\n" if $!;
             } else {
                print "*** Running ${sudo}Build install\n";
                system("cd \"$dir\";./Build build;${sudo}./Build install");
+               print "ERROR: $!\n" if $!;
             }
          }
          chdir $main::curdir;
