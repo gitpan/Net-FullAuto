@@ -19,6 +19,17 @@
 ################################################################
 
 
+2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.99999996 released.
+
+        * More work on New User Experience.
+
+        * Updated Makefile.PL for AWS Ubuntu installations.
+
+        * New version of Term::Menus paired with this release.
+
+
 2014-06-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.99999995 released.

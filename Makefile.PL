@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999995';
+$main::VERSION='0.99999996';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -213,6 +213,10 @@ END
    $main::root_dir=$main::curdir;
 
    my $incflag=0;my @drive_options=();
+   my $uname_a='';
+   my $perl_version=$^V;
+   $perl_version=~s/^v//;
+   $uname_a=`/bin/uname -a` if $^O eq 'linux';
    if ($^O eq 'cygwin') {
       my $cygcheck=`/bin/cygcheck -c` || die $!;
       my $uname=`/bin/uname` || die $!;
@@ -299,7 +303,8 @@ END
          } else {
             my $stup='setup-x86.exe';
             $stup='setup-x86_64.exe' if $uname=~/WOW64/;
-            my $die="\n       FATAL ERROR! : The Gnu C Compiler 'gcc': gcc-core".
+            my $die="\n       FATAL ERROR! : ".
+                    "The Gnu C Compiler 'gcc': gcc-core".
                     "\n                      & gcc-g++ as provided by Cygwin".
                     "\n                      is required to install FullAuto".
                     "\n                      on Windows.".
@@ -576,27 +581,33 @@ END
             exit 1;
          }
       }
-   } elsif (!can_cc()) {
+   } elsif (!can_cc() && (-1<index lc($uname_a), 'ubuntu')
+         && ($perl_version>=5.18.2)) {
 
-      my $uname_a=`/bin/uname -a`;
-      if (-1<index lc($uname_a), 'ubuntu') {
-         my $dpkg=`/bin/dpckg -l`;
-         if (-1==index $dpkg,'build-essential') {
-            open(AG,"sudo apt-get install 'build-essential'|");
-            while (my $line=<AG>) {
-               print $line;
-            }
-            close AG;
+      my $dpkg=`/bin/dpckg -l`;
+      if (-1==index $dpkg,'build-essential') {
+         open(AG,"sudo apt-get -y install 'build-essential'|");
+         while (my $line=<AG>) {
+            print $line;
          }
-         if (-1==index $dpkg,'libssl-dev') {
-            open(LD,"sudo apt-get install 'libssl-dev'|");
-            while (my $line=<LD>) {
-               print $line;
-            }
-            close LD;
-         }
-
+         close AG;
       }
+      if (-1==index $dpkg,'libssl-dev') {
+         open(LD,"sudo apt-get -y install 'libssl-dev'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      if (-1==index $dpkg,'figlet') {
+         open(LD,"sudo apt-get -y install 'figlet'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+
+   } elsif (!can_cc()) {
 
       my $moreinfo='';my $s='          ';
       if ($Config{cc} and $Config{cc}!~/^\s*$/) {
@@ -1212,7 +1223,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.58');
+      '','2.59');
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
    print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
@@ -2071,7 +2082,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86_64.exe -P gcc-core,'
                       .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
-                      .'procps,vim,unzip,libmpfr4'
+                      .'procps,vim,unzip,libmpfr4,figlet,'
                       .'perl-libwin32,db,libdb-devel,ncurses,cron,inetutils,'
                       .$selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
@@ -2080,7 +2091,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'setup-x86.exe -P gcc-core,'
                       .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
                       .'perl-libwin32,db4.8,libdb4.8-devel,ncurses,cron,'
-                      .'inetutils,procps,vim,unzip,libmpfr4'.
+                      .'inetutils,procps,vim,unzip,libmpfr4,figlet'.
                       $selection.' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
             }
@@ -2090,7 +2101,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'setup-x86_64.exe -P gcc-core,'
                       .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
                       .'perl-libwin32,db,libdb-devel,ncurses,cron,inetutils,'
-                      .'procps,vim,unzip,libmpfr4'
+                      .'procps,vim,unzip,libmpfr4,figlet'
                       .' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
             } else {
@@ -2098,7 +2109,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                       .'setup-x86.exe -P gcc-core,'
                       .'gcc-g++,make,openssh,openssl,openssl-devel,perl,'
                       .'perl-libwin32,db4.8,libdb4.8-devel,ncurses,cron,'
-                      .'inetutils,procps,vim,unzip,libmpfr4'
+                      .'inetutils,procps,vim,unzip,libmpfr4,figlet'
                       .' -X -A -q '."-R $main::root_dir "
                       .'-s '.$mirror_url;
             }
@@ -2106,12 +2117,12 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             if ($^O eq 'MSWin64') {
                $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86_64.exe -P openssh,ncurses,inetutils,procps,'
-                      .'vim,libmpfr4 -X -A -q '."-R $main::root_dir ".'-s '
+                      .'vim,libmpfr4,figlet -X -A -q '."-R $main::root_dir ".'-s '
                       .$mirror_url;
             } else {
                $setup_cmd="$drlet & cd \"$main::root_dir\" & "
                       .'setup-x86.exe -P openssh,ncurses,inetutils,procps,vim,'
-                      .'libmpfr4 -X -A -q '."-R $main::root_dir ".'-s '
+                      .'libmpfr4,figlet -X -A -q '."-R $main::root_dir ".'-s '
                       .$mirror_url;
             }
          }
@@ -4560,7 +4571,7 @@ requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
 requires        'Digest::SHA'               => 0;
 requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.58;
+#requires        'Term::Menus'               => 2.59;
 requires        'Tie::Cache'                => 0;
 requires        'Sort::Versions'            => 0;
 requires        'Crypt::CBC'                => 0;

@@ -10036,8 +10036,55 @@ FIN
    return $banner;
 };
 
+my $fa_congrats=<<END;
+
+     ___                        _        _      _   _             _ 
+    / __|___ _ _  __ _ _ _ __ _| |_ _  _| |__ _| |_(_)___ _ _  __| |
+   | (__/ _ \\ ' \\/ _` | '_/ _` |  _| || | / _` |  _| / _ \\ ' \\(_-<_|
+    \\___\\___/_||_\\__, |_| \\__,_|\\__|\\_,_|_\\__,_|\\__|_\\___/_||_/__(_)
+                 |___/
+
+   You have QUICKLY gotten started with FullAuto! The goal of this new
+   user wizard experience was to acquaint you both with managing your
+   automation code files, and demonstrating how FullAuto wizards and Menus
+   (using Term::Menus) can break down and make the most complex and difficult
+   tasks EASY! Imagine transforming ALL the processes in your organization
+   into self-documenting presentations that anyone can follow - and that
+   unlike ordinary documentation, actually DOES STUFF! It can be achieved
+   with FullAuto! But only the surface has been scratched - FullAuto
+   is really all about AUTOMATION - and we will get into that NEXT. THANKS!
+END
+
+my $setup_new_user11=sub{
+
+   my %setup_new_user11=(
+
+      Name => 'setup_new_user11',
+      Item_1 => {
+         Text => 'Continue with AUTOMATING *any* process with FullAuto!',
+      },
+      Item_2 => {
+         Text => 'Exit FullAuto',
+      },
+      Banner => $fa_congrats,
+   );
+   return \%setup_new_user11;
+
+};
+
 my $cacomm_sub=sub {
 
+   my $new_user_flag=0;my $item_2={};
+   if (defined $main::new_user_flag and $main::new_user_flag) {
+      $item_2={
+         Text => "No",
+         Result => $setup_new_user11,
+      },
+   } else {
+      $item_2={
+         Text => "No  ( FullAuto [fa --set] will EXIT )",
+      },
+   }
    my %cacomm=(
 
       Name   => 'cacomm',
@@ -10137,12 +10184,14 @@ my $cacomm_sub=sub {
                                  "Net/FullAuto/Custom/$username/".
                                  "]P[{camenu}\n   Set   =>  ".
                                  "\'none\'\n\n";
+                           if (defined $main::new_user_flag &&
+                                 $main::new_user_flag) {
+                              return $setup_new_user11;
+                           }
                            return "Finished Defining Defaults";
                         }
       },
-      Item_2 => {
-         Text => "No  ( FullAuto [fa --defaults] will EXIT )",
-      },
+      Item_2 => $item_2,
       Banner => sub {
 my $custnd=<<FIN;
     _  _              ___       __           _ _      
@@ -10310,7 +10359,6 @@ my $vdbanner=sub {
    | __|  _| | | /_\\ _  _| |_ ___   |   \\ ___ / _|__ _ _  _| | |_ ___
    | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
    |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
-
 
 FIN
    my $default_modules=$_[0] || $main::get_default_modules->();
@@ -11641,24 +11689,89 @@ my $fa_mini_welcome=" (   /_ /_   _  _ \n".
 
 my $fa_new_user=<<END;
 
-
     _  _              _   _             
    | \\| |_____ __ __ | | | |___ ___ _ _ 
    | .` / -_) V  V / | |_| (_-</ -_) '_|
-   |_|\\_\\___|\\_/\\_/   \\___//__/\\___|_| 
+   |_|\\_\\___|\\_/\\_/   \\___//__/\\___|_|
+  
+END
 
+my $fa_process_lifecycle=<<END;
 
-   FullAuto is a SECURE Automation Framework.
-   Security is a necessary evil. Everybody
-   needs it, but nobody wants to focus on it.
-   It is inconvenient, and productivity suffers
-   from the burden it imposes. Yet, it is an
-   unavoidable requirement. FullAuto was built
-   from the ground up to be SECURE. User Accounts
-   are therefore a REQUIREMENT. One FullAuto
-   installation can service any number of users.
-   FullAuto has a number of built in utilities
-   to setup and manage user accounts.
+    ___                          _    _  __                _     
+   | _ \\_ _ ___  __ ___ ______  | |  (_)/ _|___ __ _  _ __| |___ 
+   |  _/ '_/ _ \\/ _/ -_|_-<_-<  | |__| |  _/ -_) _| || / _| / -_)
+   |_| |_| \\___/\\__\\___/__/__/  |____|_|_| \\___\\__|\\_, \\__|_\\___|
+                                                   |__/ 
+
+   In large organizations, development of any software or business
+   process takes place in stages, and the code travels through multiple
+   tiers or environments before it reaches "production" (or the "live"
+   environment that serves customers and end-users). Therefore, it is
+   likely that components developed in YOUR configuration "set" (which
+   includes the all important fa_code.pm file) will migrate to other
+   environments, other computers, even other users. You are likely to
+   eventually have MULTIPLE copies of a single process in different
+   stages of it's lifecycle - one in active development, one in testing,
+   and one in use for live processing.
+
+END
+
+my $fa_organization=<<END;
+
+     ___                     _         _   _          
+    / _ \\ _ _ __ _ __ _ _ _ (_)_____ _| |_(_)___ _ _  
+   | (_) | '_/ _` / _` | ' \\| |_ / _` |  _| / _ \\ ' \\ 
+    \\___/|_| \\__, \\__,_|_||_|_/__\\__,_|\\__|_\\___/_||_|
+             |___/ 
+
+   "A place for everything, everything in its place." - Benjamin Franklin
+
+   FullAuto organizes everything for you. A FullAuto working configuration
+   consists of five files. The files are listed below. You can a read brief
+   summary of each one, or move on to creating KB06606's own FullAuto setup!
+END
+
+my $fa_privacy=<<END;
+
+    ___     _
+   | _ \\_ _(_)_ ____ _ __ _  _
+   |  _/ '_| \\ V / _` / _| || |
+   |_| |_| |_|\\_/\\__,_\\__|\\_, |
+                          |__/
+
+   FullAuto users OWN their setup. Nothing is shared
+   without an express intent to share it. That means
+   other FullAuto users cannot see or access your
+   automation projects. Sensitive projects can be
+   automated with TRUE privacy!
+
+   Additionally, no passwords are stored in clear
+   text. Even in memory, passwords are encrypted and
+   remain so until fed directly to an authenticating
+   process, safe even from core dumps!
+
+END
+
+my $fa_security=<<END;
+
+    ___                  _ _        
+   / __| ___ __ _  _ _ _(_) |_ _  _ 
+   \\__ \\/ -_) _| || | '_| |  _| || |
+   |___/\\___\\__|\\_,_|_| |_|\\__|\\_, |
+                               |__/ 
+
+   FullAuto is a SECURE Automation Framework. Security
+   is a necessary evil. Everybody needs it, but few want
+   to focus on it. It is inconvenient, and productivity
+   suffers from the burden it imposes. Yet, it is an
+   unavoidable requirement.
+
+   FullAuto was built from the ground up to be SECURE. User
+   authentication is therefore a REQUIREMENT. One FullAuto
+   installation, on one computer, can service any number
+   of users. FullAuto has built in utilities to setup and
+   manage user code, files, and configuration - securely!
 END
 
 my $fa_basics=<<END;
@@ -11668,19 +11781,18 @@ my $fa_basics=<<END;
    \\__ \\/ _ \\ '  \\/ -_) | _ \\/ _` (_-< / _(_-<
    |___/\\___/_|_|_\\___| |___/\\__,_/__/_\\__/__/
 
-   This wizard is interactive. You can go backwards
-   and forwards. Just press SHIFT '<' or the LEFTARROW
-   key to navigate backwards, and SHIFT '>' or the
-   RIGHTARROW key to go forward. Try it now!
+   This wizard is interactive. You can go backwards and
+   forwards. Just press the LEFTARROW < key to navigate
+   backwards, the RIGHTARROW > key to go forward. Try it!
 
    Notice at the bottom are commands you can type:
 
-   'help'  to get the help or man (for 'manual') screen
+   'help'  to get the help or man (for "manual") screen
    'admin' to get the admin menu
 
    When you quit either help or admin, you automatically
    return to this screen. To quit admin, type 'quit',
-   and to quit the man page, type :q - Try it now!
+   and to quit the help page, type 'q'. Try it!
 END
 
 my $fa_intro=<<END;
@@ -11705,13 +11817,403 @@ my $fa_intro=<<END;
    fa --new-user
 END
 
+my $fa_continue_setup=<<END;
+END
+
+my $fa_fa_code_banner=<<END;
+
+      __                      _                  
+    _/ _)__ _      __ ___  __| |___   _ __ _ __  
+   (   _/ _` |    / _/ _ \\/ _` / -_)_| '_ \\ '  \\ 
+    |_| \\__,_|====\\__\\___/\\__,_\\___(_) .__/_|_|_|
+                                     |_|
+
+   This is the single most important file in FullAuto. In
+   this file, 90% of all automation development work takes
+   place. This is the FullAuto Custom Code file. This file
+   is where you give FullAuto its "marching orders".
+
+   You can always access this file - and all your user
+   files from the the 'edit' menu:
+
+   fa --edit
+
+   You can also use a shortcut to access it directly:  fa -ec
+END
+
+my $fa_fa_conf_banner=<<END;
+
+      __                         __
+    _/ _)__ _      __ ___ _ _  _/ _)  _ __ _ __
+   (   _/ _` |    / _/ _ \\ ' \\(   _/_| '_ \\ '  \\
+    |_| \\__,_|====\\__\\___/_||_||_| (_) .__/_|_|_|
+                                     |_| 
+
+   This is the user's FullAuto Configuration File. This file
+   contains personal preferences such as choice of editor.
+
+   (Currently this file does not have much use beyond the
+   editor setting. But as FullAuto grows and matures, it
+   is certain that more settings will be developed).
+
+
+
+END
+
+my $fa_fa_host_banner=<<END;
+
+      __           _           _                
+    _/ _)__ _     | |_  ___ __| |_   _ __ _ __  
+   (   _/ _` |    | ' \\/ _ (_-<  _|_| '_ \\ '  \\ 
+    |_| \\__,_|====|_||_\\___/__/\\__(_) .__/_|_|_|
+                                    |_|
+
+   This is the user's FullAuto Host File. The host file
+   is used to store connection and authentication settings
+   for individual computers and devices. This enables
+   processes to be developed in different environments,
+   but sharing the same custom code (in the fa_code.pm
+   file).
+
+   FullAuto was designed to make automation code as
+   portable as possible. This file makes that goal easy!
+
+   This file can be accessed with the shortcut:  fa -eh
+END
+
+my $fa_fa_maps_banner=<<END;
+
+      __                                        
+    _/ _)__ _      _ __  __ _ _ __ ___  _ __ _ __  
+   (   _/ _` |    | '  \\/ _` | '_ (_-<_| '_ \\ '  \\ 
+    |_| \\__,_|====|_|_|_\\__,_| .__/__(_) .__/_|_|_|
+                             |_|       |_|  
+
+   This is the FullAuto Maps File. Often there is a need
+   for intermediate or proxy connections to gain access
+   to other computers in other networks. This file is
+   intended to store mappings of chained connections.
+   Those mappings can then be accessed via a label name
+   in the fa_code.pm file. This will make automation
+   code smaller and easier to read, since FullAuto will
+   handle all these chained connections seamlessly.
+
+   (This feature is not yet fully implemented.)
+
+END
+
+my $fa_fa_menu_banner=<<END;
+
+      __                                        
+    _/ _|__ _      _ __  ___ _ _ _  _   _ __ _ __  
+   (   _/ _` |    | '  \\/ -_) ' \\ || |_| '_ \\ '  \\ 
+    |_| \\__,_|====|_|_|_\\___|_||_\\_,_(_) .__/_|_|_|
+                                       |_|     
+
+   This is the FullAuto Menu File. Net::FullAuto has
+   a sister module also written by Brian Kelly called
+   Term::Menus. Any process can contain Term::Menus
+   menus, but this file solves the problem of menu-zing
+   the process itself. When FullAuto is started without
+   a specifc --code argument (which specifies a single
+   process), a menu showing all available processes is
+   displayed.
+
+   This file can be accessed with the shortcut:  fa -em
+
+END
+
+my $fa_batter_up=<<END;
+
+    ___       _   _             _   _ ___ _ 
+   | _ ) __ _| |_| |_ ___ _ _  | | | | _ \\ |
+   | _ \\/ _` |  _|  _/ -_) '_| | |_| |  _/_|
+   |___/\\__,_|\\__|\\__\\___|_|    \\___/|_| (_)
+
+   In baseball, there are many players on a team, but
+   only ONE player at a time can pick up a bat and step
+   up to the plate. Similarly, only one file "SET" can
+   be active in FullAuto at any one time. As mentioned
+   earlier, they are the five files listed two screens
+   ago. (You can navigate backwards and review them at
+   any time.) As mentioned in the last screen, there
+   may be multiple copies of any or all of the five files.
+
+   How does FullAuto know which five to use?
+
+
+END
+
+my $fa_fa_defaults2=<<END;
+
+    _  _     _      __  __         ___       __           _ _      _ 
+   | \\| |___| |_   |  \\/  |_  _   |   \\ ___ / _|__ _ _  _| | |_ __| |
+   | .` / _ \\  _|  | |\\/| | || |  | |) / -_)  _/ _` | || | |  _(_-<_|
+   |_|\\_\\___/\\__|  |_|  |_|\\_, |  |___/\\___|_| \\__,_|\\_,_|_|\\__/__(_)
+                           |__/                                      
+
+   The --defaults utility also (conveniently) displays what your current
+END
+
+my $fa_set_defaults=<<END;
+
+    ___ _            _     ___      _           _ 
+   / __| |_ __ _ _ _| |_  |   \\ ___(_)_ _  __ _| |
+   \\__ \\  _/ _` | '_|  _| | |) / _ \\ | ' \\/ _` |_|
+   |___/\\__\\__,_|_|  \\__| |___/\\___/_|_||_\\__, (_)
+                                          |___/   
+
+   It's time to do you FIRST FullAuto activity! It's time to
+   select your very first "set" of the five required files. For
+   your first file set, you will simply be choosing the templates
+   supplied with FullAuto - and there are only one of each.
+   It's REALLY EASY - the next screen is the actual utility
+   you will always use to choose and change your defaults.
+   Choose the first option and follow the instructions.
+
+   When finished you can choose to commit the changes - or not.
+   If not, you will get this "new user wizard" the next time you
+   run FullAuto. (Which is great if you're just exploring!)
+END
+
+my $fa_fa_defaults_sub=sub {
+
+   $fa_fa_defaults2.=
+   '   "defaults" are. Below are the actual defaults currently set. ';
+   my $username=&Net::FullAuto::FA_Core::username();
+   my $default_modules=$main::get_default_modules->();
+   if (-1<index $default_modules->{'fa_code'},'/Distro/') {
+      $fa_fa_defaults2.="Since $username\n".
+         "   is a new user, you see the word 'Distro' in the five ".
+         "file locations below.\n\n";
+   } else {
+      $fa_fa_defaults2.="You can see\n".
+         "   the full paths to these files anytime by using the ".
+         "command:  fa -V\n\n";
+   }
+   my $banner=$fa_fa_defaults2;
+   $banner.="    Code  =>  "
+          .$default_modules->{'fa_code'}
+          ."\n    Conf  =>  "
+          .$default_modules->{'fa_conf'}
+          ."\n    Host  =>  "
+          .$default_modules->{'fa_host'}
+          ."\n    Maps  =>  "
+          .$default_modules->{'fa_maps'}
+          ."\n    Menu  =>  "
+          .$default_modules->{'fa_menu'}
+          ."\n\n";
+   return $banner;
+
+};
+
+my $fa_fa_defaults=<<END;
+
+    ___     _ _   _       _          ___       __           _ _      
+   | __|  _| | | /_\\ _  _| |_ ___   |   \\ ___ / _|__ _ _  _| | |_ ___
+   | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
+   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
+
+   Most of the time you'll be working with the same five file set. It would
+   get VERY tiring to have to choose these files manually every time you
+   went to work with FullAuto. Not to mention trying to keep the same five
+   files bundled together accurately! (Which is critical for proper
+   functioning of your automation code.)
+
+   For that reason, one of the most important features of FullAuto is the
+   --defaults utility - which is built into FullAuto itself. The defaults
+   utility is a menu-ized wizard just like this presentation you are now
+   enjoying (hopefully!)
+
+
+END
+
+my $fa_fa_code=sub {
+
+   my %fa_fa_code=(
+
+      Name   => 'fa_fa_code',
+      Result => sub { return '{setup_new_user5}<' },
+      Banner => $fa_fa_defaults_sub,
+  );
+  return \%fa_fa_code;
+
+};
+
+my $fa_fa_conf=sub {
+
+   my %fa_fa_conf=(
+
+      Name   => 'fa_fa_conf',
+      Result => sub { return '{setup_new_user5}<' },
+      Banner => $fa_fa_conf_banner,
+  );
+  return \%fa_fa_conf;
+
+};
+
+my $fa_fa_host=sub {
+
+   my %fa_fa_host=(
+
+      Name   => 'fa_fa_host',
+      Result => sub { return '{setup_new_user5}<' },
+      Banner => $fa_fa_host_banner,
+  );
+  return \%fa_fa_host;
+
+};
+
+my $fa_fa_maps=sub {
+
+   my %fa_fa_maps=(
+
+      Name   => 'fa_fa_maps',
+      Result => sub { return '{setup_new_user5}<' }, 
+      Banner => $fa_fa_maps_banner,
+  );
+  return \%fa_fa_maps;
+
+};
+
+my $fa_fa_menu=sub {
+
+   my %fa_fa_menu=(
+
+      Name   => 'fa_fa_menu',
+      Result => sub { return '{setup_new_user5}<' },
+      Banner => $fa_fa_menu_banner,
+  );
+  return \%fa_fa_menu;
+
+};
+
+my $setup_new_user10=sub{
+
+   $main::new_user_flag=1;
+   my %setup_new_user10=(
+
+      Name => 'setup_new_user10',
+      Result => $viewdefaults_sub,
+      Banner => $fa_set_defaults,
+   );
+   return \%setup_new_user10;
+
+};
+
+my $setup_new_user9=sub{
+
+   my %setup_new_user9=(
+
+      Name => 'setup_new_user9',
+      Result => $setup_new_user10,
+      Banner => $fa_fa_defaults_sub,
+   );
+   return \%setup_new_user9;
+
+};
+
+my $setup_new_user8=sub{
+
+   my %setup_new_user8=(
+
+      Name => 'setup_new_user8',
+      Result => $setup_new_user9,
+      Banner => $fa_fa_defaults,
+   );
+   return \%setup_new_user8;
+
+};
+
+my $setup_new_user7=sub{
+
+   my %setup_new_user7=(
+
+      Name => 'setup_new_user7',
+      Result => $setup_new_user8,
+      Banner => $fa_batter_up,
+   );
+   return \%setup_new_user7; 
+
+};
+
+my $setup_new_user6=sub{
+
+   my %setup_new_user6=(
+
+      Name => 'setup_new_user6',
+      Result => $setup_new_user7,
+      Banner => $fa_process_lifecycle,
+
+   );
+   return \%setup_new_user6;
+
+};
+
+my $setup_new_user5=sub{
+
+   my %setup_new_user5=(
+
+      Name   => 'setup_new_user5',
+      Item_1 => {
+
+          Text => 'fa_code.pm',
+          Result => $fa_fa_code,
+
+      },
+      Item_2 => {
+
+          Text => 'fa_conf.pm',
+          Result => $fa_fa_conf,
+
+      },
+      Item_3 => {
+
+          Text => 'fa_host.pm',
+          Result => $fa_fa_host,
+
+      },
+      Item_4 => {
+
+          Text => 'fa_maps.pm',
+          Result => $fa_fa_maps,
+
+      },
+      Item_5 => {
+
+          Text => 'fa_menu.pm',
+          Result => $fa_fa_menu,
+
+      },
+      Item_6 => {
+
+          Text => 'Continue GETTING STARTED with FullAuto!',
+          Result => $setup_new_user6,
+
+      },
+      Banner => $fa_organization,
+  );
+  return \%setup_new_user5;
+};
+
+my $setup_new_user4=sub{
+
+   my %setup_new_user4=(
+
+      Name   => 'setup_new_user4',
+      Result => $setup_new_user5,
+      Banner => $fa_privacy,
+  );
+  return \%setup_new_user4;
+};
+
 my $setup_new_user3=sub{
 
    my %setup_new_user3=(
 
       Name   => 'setup_new_user3',
-      #Result => $setup_new_user4,
-      Banner => $fa_new_user,
+      Result => $setup_new_user4,
+      Banner => $fa_security,
   );
   return \%setup_new_user3;
 };
@@ -11751,22 +12253,23 @@ sub new_user_experience {
    if ($new_user or $newuser) {
 
       $text=[ 
-              "Go to FullAuto Tutorial",
-              "Continue with Login &\n       ".
+              "Setup User $username (Advanced Users)",
+              "Continue with Login (No setup for $username) &\n       ".
               "            Do Not Show this Screen Again",
-              "Continue with Login" ],
+              "Continue with Login (No setup for $username)" ],
 
       $banner="$fa_fullauto\n      $fa_mini_welcome $username!\n"
              ."\n      It appears "
              ."that $username is new to FullAuto,"
              ."\n      for there is no FullAuto "
-             ."Account for this user.";
+             ."Setup for this user.";
       %welcome_menu=(
 
          Label  => 'welcome_menu',
          Item_1 => {
-            Text   => "Create Account for $username\n".
-                      "                   Recommended!\n\n",
+            Text   => "Getting Started (QUICKLY) with FullAuto!\n".
+                      "                   ".
+                      "HIGHLY Recommended for Beginners!\n\n",
             Default => "*",
             Result  => $setup_new_user,
          },
