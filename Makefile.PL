@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999998';
+$main::VERSION='0.99999999';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -755,8 +755,10 @@ END
          }
          chdir $d;
          if (-1<index lc($main::uname_a), 'ubuntu') {
+            print "***** Untar: sudo ",$CPAN::Config->{tar},"xvf $tar\n";
             open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
          } else {
+            print "***** Untar: ",$CPAN::Config->{tar},"xvf $tar\n";
             open(FH, $CPAN::Config->{tar}." xvf $tar|");
          }
          while (my $line=<FH>) {
@@ -3744,8 +3746,10 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                }
                $filename=~s/\.gz$//;
                if (-1<index lc($main::uname_a), 'ubuntu') {
+                  print "***** Untar2: sudo ",$CPAN::Config->{tar},"xvf $filename\n";
                   open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
                } else {
+                  print "***** Untar2: ",$CPAN::Config->{tar},"xvf $filename\n";
                   open(FH, $CPAN::Config->{tar}." xvf $filename|");
                }
                while (my $line=<FH>) {
