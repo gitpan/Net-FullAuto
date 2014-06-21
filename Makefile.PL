@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.99999996';
+$main::VERSION='0.99999997';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1010,7 +1010,7 @@ END
       print $stdout if $stdout;
       &fa_err_exit($stderr,'Module::Build') if $stderr;
    }
-   ($stdout,$stderr)=&fa_install_mod('IO::CaptureOutput','install','Build');
+   ($stdout,$stderr)=&fa_install_mod('IO::CaptureOutput','install','Makefile');
    print $stdout if $stdout;
    &fa_err_exit($stderr,'IO::CaptureOutput') if $stderr;
    if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {

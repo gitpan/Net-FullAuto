@@ -21,6 +21,14 @@
 
 2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.99999997 released.
+
+        * Update Makefile.PL to use Makefile.PL rather than 
+          Build.PL for IO::CaptureOuput.
+
+
+2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.99999996 released.
 
         * More work on New User Experience.
