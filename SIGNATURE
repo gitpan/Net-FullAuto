@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 c43975630fbbefc874b765702dcdba8d6f25a7c8 ChangeLog
+SHA1 cb18eb9b8fcde73212aad9dd7e454a2521e30451 ChangeLog
 SHA1 5437f164ae11b18bb58a8576204254a1b4a9334b LICENSE
 SHA1 2405b691fcb18b468ccb31cab97babb75e4d1f30 MANIFEST
-SHA1 9104807742fc6068fbad6e8f7cbb00b70b87d9dc META.yml
-SHA1 b70563365710bbbbd7a48026465ef778128f252b Makefile.PL
+SHA1 f8b749e0212189438c4cd11d26833ca0dd144493 META.yml
+SHA1 1d031a07bfb2882c871ed1eb9deedbf70fcd0baa Makefile.PL
 SHA1 7250b2f536fe8a96fb25fc7435146bc006aaefe1 README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 b49ee0f29a9e578dfc05ac8a69ceee952810622d bin/fullauto.pl
@@ -47,7 +47,7 @@ SHA1 6fed559b971e9d2f091e0776ddbb131be5225a36 inc/Module/Install/Win32.pm
 SHA1 ea528c813c3473a2674fcbed06531c2f795116ce inc/Module/Install/WriteAll.pm
 SHA1 00bb8470354d11bd7c2c74633083ebe627eb2b7e inc/Module/Install/with.pm
 SHA1 fb2c2f6e2ade19cd024dad15dd25bebf85023a4b install_mozrepl_plugin.ahk
-SHA1 b74576bd0927f7fe3545dbb927eec9909dbc995f lib/Net/FullAuto.pm
+SHA1 b7510a9bd017b5a4d9577d097c42d223618f6667 lib/Net/FullAuto.pm
 SHA1 dabbf5e523732ed0d3084fb91dcccb4f1c330ceb lib/Net/FullAuto/Custom/BackUp/README
 SHA1 c2219c6cd1af2a775ebd3b90e0d4731ef0aededc lib/Net/FullAuto/Custom/README
 SHA1 32064cac342c1fab8377c4b9fe5c41be23a92e78 lib/Net/FullAuto/Distro/fa_code.pm
@@ -64,11 +64,11 @@ SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJTpbiPAAoJEBa/9Pad787E2lMH/312P2FjT9JtHwfIh71swWLd
-NnIdIJWAXlzsYSVOYHS+5jmV8A3WKkUX7zi02NIw0dMjNf2FZxteuaupX/pNdwDN
-XiW3EWYjolRRdA/YkMbxZHXFh/svghMhWYk+zZFM84HDI0Lf2kWeyFR7dvkex9pT
-/tIl+MF3EcTiSohQYuayWQcUInAIvNAMyZDJzpQ17xZ8s0Ywmm+GAZuLfJ5mxdO+
-J0CvbIdwvBrPYPOXT/inNt8bYEDjW9hmI6j2x93VqNrrgsVoS5LZfTb4vMNFWRWp
-ROjvLTnrs+tNUAjoZdTJ6XHOso4TQ3qjf3K0UGaiz/2oKpkekvVtkSFh0jpzXB0=
-=Zf/M
+iQEcBAEBAgAGBQJTpcyNAAoJEBa/9Pad787E3rgH/RcGic02CvH1B/CZzdAQUr52
+yNxZ/Tjhcl1vntJtE37SCXfFD5z6mjcr63hC+feHfvPCkQyGzDM6ZGTadbeSV8IX
+h//765p/Q7HbNss4DsPeLhxQSNQAd6VZ1mNRmt9gJUuk0Qq1od16KF5l5+hjpx+w
+ivkuOffOLL0YUbI298ptVpf2+xzjwvgxqVtQ7qLP0K/ZqAvhysanLJB9QXjiE89e
+bd8Mubbm4HhSrdW4+UJiPN+rjEfuSkqJq/3yIQlh0oknv7atfTDGend/NUz99qy2
+1bayK94mmToGhPmZjXsSUaipyb6BwZRbu0zoUIAhy7FNj/97H1P0kT8yAgzvDVk=
+=MPwU
 -----END PGP SIGNATURE-----

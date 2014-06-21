@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999902';
+$main::VERSION='0.9999999903';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -807,6 +807,7 @@ END
          eval {
             require CPAN;
             CPAN::Shell->notest('get',$p);
+            CPAN::Shell->bye;
          };
          if ($@) {
             $cpan_error="$@ $!";
@@ -3894,7 +3895,8 @@ if ($get_BerkeleyDB) {
             }
             eval{
                require CPAN;
-               CPAN::Shell->force('install',$p)
+               CPAN::Shell->force('install',$p);
+               CPAN::Shell->bye;
             };
             eval "use $p;1" ||
                die "*** Please manually install $p from cpan.org first...\n"

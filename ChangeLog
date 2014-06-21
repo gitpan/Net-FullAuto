@@ -21,6 +21,13 @@
 
 2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999903 released.
+
+        * Added CPAN::Shell->bye to Makefile.PL.
+
+
+2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999902 released.
 
         * Added debugging for Ubuntu install.
