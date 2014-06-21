@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999903';
+$main::VERSION='0.9999999904';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -823,19 +823,15 @@ END
             print "*** cd to $dir\n";
             if ($echo) {
                system("cd \"$dir\";echo $echo | $sudo$^X $butil.PL");
-               print "ERROR: $!\n" if $!;
             } else {
                system("cd \"$dir\";$sudo$^X $butil.PL");
-               print "ERROR: $!\n" if $!;
             }
             if ($butil eq 'Makefile') {
                print "*** Running ${sudo}make install\n";
                system("cd \"$dir\";${sudo}make install");
-               print "ERROR: $!\n" if $!;
             } else {
                print "*** Running ${sudo}Build install\n";
                system("cd \"$dir\";./Build build;${sudo}./Build install");
-               print "ERROR: $!\n" if $!;
             }
          }
          chdir $main::curdir;
@@ -851,6 +847,8 @@ END
             }
          }
       } else { print "*** $p Loaded Successfully\n" }
+      Class::Unload->unload($p) if $p ne 'Class::Unload'
+                                && $p ne 'version';
       return '';
    }
    
@@ -908,6 +906,10 @@ END
    }
 
    my $stdout='';my $stderr='';
+   ($stdout,$stderr)=&fa_install_mod(
+      'Class::Unload','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Class::Unload') if $stderr;
    ($stdout,$stderr)=&fa_install_mod(
       'ExtUtils::MakeMaker','install','Makefile','','6.59');
    print $stdout if $stdout;
