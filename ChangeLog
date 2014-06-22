@@ -19,6 +19,17 @@
 ################################################################
 
 
+2014-06-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999905 released.
+
+        * Modified Makefile.PL to use less memory.
+
+        * Added most dependencies to install during Makefile.PL.
+          This is to allow FullAuto to install fully functional
+          on AWS mini free tier Ubuntu servers.
+
+
 2014-06-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999904 released.

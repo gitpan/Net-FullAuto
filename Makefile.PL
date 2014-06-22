@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999904';
+$main::VERSION='0.9999999905';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -807,7 +807,6 @@ END
          eval {
             require CPAN;
             CPAN::Shell->notest('get',$p);
-            CPAN::Shell->bye;
          };
          if ($@) {
             $cpan_error="$@ $!";
@@ -848,7 +847,8 @@ END
          }
       } else { print "*** $p Loaded Successfully\n" }
       Class::Unload->unload($p) if $p ne 'Class::Unload'
-                                && $p ne 'version';
+                                && $p ne 'version'
+                                && $p ne 'Class::Inspector';
       return '';
    }
    
@@ -858,9 +858,7 @@ END
        if ($@) {
           eval { &fa_install_mod(@_) };
           if ($@) {
-             return '',$@;
-          } else {
-             return '','';
+             &fa_err_exit($@,$_[0]);
           }
        } else {
           eval {
@@ -869,7 +867,8 @@ END
                 &fa_install_mod(@_)
              } \$stdout, \$stderr;
           };
-          return $stdout,$stderr;
+          print $stdout if $stdout;
+          &fa_err_exit($stderr,$_[0]) if $stderr;
        }
    }
    
@@ -906,6 +905,10 @@ END
    }
 
    my $stdout='';my $stderr='';
+   ($stdout,$stderr)=&fa_install_mod(
+      'Class::Inspector','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Class::Inspector') if $stderr;
    ($stdout,$stderr)=&fa_install_mod(
       'Class::Unload','install','Makefile');
    print $stdout if $stdout;
@@ -1242,11 +1245,44 @@ END
    }
    ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
       '','2.59');
+   print $stdout if $stdout;
    &fa_err_exit($stderr,'Term::Menus') if $stderr;
-   print $stdout if $stdout;
    ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
-   &fa_err_exit($stderr,'Mozilla::CA') if $stderr;
    print $stdout if $stdout;
+   &fa_err_exit($stderr,'Mozilla::CA') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('Crypt::CBC','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Crypt::CBC') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('Crypt::DES','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Crypt::DES') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('PPI','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'PPI') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('Tie::Cache','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Tie::Cache') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('String::Random','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'String::Random') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('Net::Telnet','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Net::Telnet') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('Sort::Versions','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Sort::Versions') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod('Capture::Tiny','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Capture::Tiny') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'IO::Capture::Stderr','install','Makefile');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'IO::Capture::Stderr') if $stderr;
+   ($stdout,$stderr)=&fa_install_mod(
+      'Pod::Man','install','Makefile','','2.28');
+   print $stdout if $stdout;
+   &fa_err_exit($stderr,'Pod::Man') if $stderr;
+
 };
 
 sub ws_info {
@@ -3898,7 +3934,6 @@ if ($get_BerkeleyDB) {
             eval{
                require CPAN;
                CPAN::Shell->force('install',$p);
-               CPAN::Shell->bye;
             };
             eval "use $p;1" ||
                die "*** Please manually install $p from cpan.org first...\n"
@@ -4586,40 +4621,40 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 }
 
 #Specific dependencies
-requires        'Module::Build'             => 0.3601;
-requires        'Module::Load::Conditional' => 0;
-requires        'Task::Weaken'              => 0;
-requires        'ExtUtils::Depends'         => 0;
-requires        'ExtUtils::MakeMaker'       => 6.59;
-requires        'ExtUtils::CBuilder'        => 0;
-requires        'B::Utils'                  => 0;
+#requires        'Module::Build'             => 0.3601;
+#requires        'Module::Load::Conditional' => 0;
+#requires        'Task::Weaken'              => 0;
+#requires        'ExtUtils::Depends'         => 0;
+#requires        'ExtUtils::MakeMaker'       => 6.59;
+#requires        'ExtUtils::CBuilder'        => 0;
+#requires        'B::Utils'                  => 0;
 #requires        'Data::Dump::Streamer'      => 0;
-requires        'Digest::SHA'               => 0;
-requires        'Digest::MD5'               => 0;
+#requires        'Digest::SHA'               => 0;
+#requires        'Digest::MD5'               => 0;
 #requires        'Term::Menus'               => 2.59;
-requires        'Tie::Cache'                => 0;
-requires        'Sort::Versions'            => 0;
-requires        'Crypt::CBC'                => 0;
-requires        'Crypt::DES'                => 0;
+#requires        'Tie::Cache'                => 0;
+#requires        'Sort::Versions'            => 0;
+#requires        'Crypt::CBC'                => 0;
+#requires        'Crypt::DES'                => 0;
 requires        'Cache::Cache'              => 0;
 requires        'CHI'                       => 0;
-requires        'HTTP::Date'                => 0;
-requires        'JSON'                      => 2.14;
-requires        'IO::Pty'                   => 0;
-requires        'IO::Capture::Stderr'       => 0;
-requires        'Capture::Tiny'             => 0;
-requires        'Net::Telnet'               => 0;
-requires        'Pod::Man'                  => 2.28;
-requires        'Term::RawInput'            => 0;
-requires        'Term::ReadKey'             => 0;
-requires        'Test::Deep'                => 0;
-requires        'PPI'                       => 0;
-requires        'URI'                       => 0;
+#requires        'HTTP::Date'                => 0;
+#requires        'JSON'                      => 2.14;
+#requires        'IO::Pty'                   => 0;
+#requires        'IO::Capture::Stderr'       => 0;
+#requires        'Capture::Tiny'             => 0;
+#requires        'Net::Telnet'               => 0;
+#requires        'Pod::Man'                  => 2.28;
+#requires        'Term::RawInput'            => 0;
+#requires        'Term::ReadKey'             => 0;
+#requires        'Test::Deep'                => 0;
+#requires        'PPI'                       => 0;
+#requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
 requires        'MIME::Entity'              => 0;
 requires        'Data::Password::Check'     => 0;
-requires        'String::Random'            => 0;
-requires        'YAML'                      => 0;
+#requires        'String::Random'            => 0;
+#requires        'YAML'                      => 0;
 recommends      'Crypt::Rijndael'           => 0;
 
 auto_install();
