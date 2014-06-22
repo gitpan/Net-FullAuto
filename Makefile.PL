@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999906';
+$main::VERSION='0.9999999907';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -677,6 +677,8 @@ END
          $look='MailTools' ;
       } elsif ($look eq 'Date-Format') {
          $look='TimeDate';
+      } elsif ($look eq 'Pod-Man') {
+         $look='podlators';
       }
       print "***** Looking for Most Recent \"$look Dir\" \n";
       CPAN::HandleConfig->load;
@@ -1026,6 +1028,7 @@ END
    &fa_install_mod('List::MoreUtils','install','Makefile');
    &fa_install_mod('Params::Util','install','Makefile');
    &fa_install_mod('Test::Object','install','Makefile');
+   &fa_install_mod('Hook::LexWrap','install','Makefile');
    &fa_install_mod('Test::SubCalls','install','Makefile');
    &fa_install_mod('PPI','install','Makefile');
    &fa_install_mod('Tie::Cache','install','Makefile');
@@ -1035,6 +1038,21 @@ END
    &fa_install_mod('Capture::Tiny','install','Makefile');
    &fa_install_mod('IO::Capture','install','Makefile');
    &fa_install_mod('Pod::Man','install','Makefile','','2.28');
+   &fa_install_mod('Sub::Exporter::Progressive','Install','Makefile');
+   &fa_install_mod('MRO::Compat','Install','Makefile');
+   &fa_install_mod('Data::OptList','Install','Makefile');
+   &fa_install_mod('Sub::Install','Install','Makefile','','0.921');
+   &fa_install_mod('B::Hooks::OP::Check','Install','Makefile');
+   &fa_install_mod('Lexical::SealRequireHints','Install','Makefile');
+   &fa_install_mod('multidimensional','Install','Makefile');
+   &fa_install_mod('bareword::filehandles','Install','Makefile');
+   &fa_install_mod('strictures','Install','Makefile');
+   &fa_install_mod('Role::Tiny','Install','Makefile');
+   &fa_install_mod('indirect','Install','Makefile');
+   &fa_install_mod('Devel::GlobalDestruction','Install','Makefile');
+   &fa_install_mod('Import::Into','Install','Makefile');
+   &fa_install_mod('Sub::Quote','Install','Makefile');
+   &fa_install_mod('Try::Tiny','Install','Makefile');
 
 };
 
