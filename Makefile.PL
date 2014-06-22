@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999905';
+$main::VERSION='0.9999999906';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -818,7 +818,7 @@ END
                $sudo='sudo ';
             }
             $dir||=&fa_find_latest($p);
-            print "*** Running $sudo $^X $butil.PL\n";
+            print "*** Running $sudo$^X $butil.PL\n";
             print "*** cd to $dir\n";
             if ($echo) {
                system("cd \"$dir\";echo $echo | $sudo$^X $butil.PL");
@@ -905,383 +905,136 @@ END
    }
 
    my $stdout='';my $stderr='';
-   ($stdout,$stderr)=&fa_install_mod(
-      'Class::Inspector','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Class::Inspector') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Class::Unload','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Class::Unload') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'ExtUtils::MakeMaker','install','Makefile','','6.59');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::MakeMaker') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Perl::OSType','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Perl::OSType') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Locale::Maketext::Simple','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Locale::Maketext::Simple') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Test::Simple','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Test::Simple') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Params::Check','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Params::Check') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Module::CoreList','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Module::CoreList') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Module::Load','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Module::Load') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'version','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'version') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Module::Metadata','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Module::Metadata') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Module::Load::Conditional','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Module::Load::Conditional') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'IPC::Cmd','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'IPC::Cmd') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'ExtUtils::CBuilder','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::CBuilder') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('YAML','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'YAML') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Algorithm::Diff','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Algorithm::Diff') if $stderr;
+   &fa_install_mod('Class::Inspector','install','Makefile');
+   &fa_install_mod('Class::Unload','install','Makefile');
+   &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.59');
+   &fa_install_mod('Perl::OSType','install','Makefile');
+   &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
+   &fa_install_mod('Test::Simple','install','Makefile');
+   &fa_install_mod('Params::Check','install','Makefile');
+   &fa_install_mod('Module::CoreList','install','Makefile');
+   &fa_install_mod('Module::Load','install','Makefile');
+   &fa_install_mod('version','install','Makefile');
+   &fa_install_mod('Module::Metadata','install','Makefile');
+   &fa_install_mod('Module::Load::Conditional','install','Makefile');
+   &fa_install_mod('IPC::Cmd','install','Makefile');
+   &fa_install_mod('ExtUtils::CBuilder','install','Makefile');
+   &fa_install_mod('YAML','install','Makefile');
+   &fa_install_mod('Algorithm::Diff','install','Makefile');
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
-      ($stdout,$stderr)=&fa_install_mod(
-         'CPAN::Meta::YAML','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'CPAN::Meta::YAML') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'JSON::PP','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'JSON::PP') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Parse::CPAN::Meta','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Parse::CPAN::Meta') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'CPAN::Meta::Requirements','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'CPAN::Meta','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'ExtUtils::ParseXS','install','Makefile','force');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'ExtUtils::ParseXS') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Compress::Raw::Bzip2','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Compress::Raw::Bzip2') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Compress::Raw::Zlib','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Compress::Raw::Zlib') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Compress::Zlib','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Compress::Zlib') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'IO::Zlib','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'IO::Zlib') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Text::Diff','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Text::Diff') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Archive::Tar','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Archive::Tar') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Regexp::Common','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Regexp::Common') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Pod::Readme','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Pod::Readme') if $stderr;
-      ($stdout,$stderr)=&fa_install_mod(
-         'Module::Build','install','Build','force');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Module::Build') if $stderr;
+      &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
+      &fa_install_mod('JSON::PP','install','Makefile');
+      &fa_install_mod('Parse::CPAN::Meta','install','Makefile');
+      &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
+      &fa_install_mod('CPAN::Meta','install','Makefile');
+      &fa_install_mod('ExtUtils::ParseXS','install','Makefile','force');
+      &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
+      &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
+      &fa_install_mod('Compress::Zlib','install','Makefile');
+      &fa_install_mod('IO::Zlib','install','Makefile');
+      &fa_install_mod('Text::Diff','install','Makefile');
+      &fa_install_mod('Archive::Tar','install','Makefile');
+      &fa_install_mod('Regexp::Common','install','Makefile');
+      &fa_install_mod('Pod::Readme','install','Makefile');
+      &fa_install_mod('Module::Build','install','Build','force');
    }
-   ($stdout,$stderr)=&fa_install_mod('IO::CaptureOutput','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'IO::CaptureOutput') if $stderr;
+   &fa_install_mod('IO::CaptureOutput','install','Makefile');
    if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {
-      ($stdout,$stderr)=&fa_install_module('IO::Pty','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'IO::Pty') if $stderr;
+      &fa_install_module('IO::Pty','install','Makefile');
       my $argv0=$ARGV[0]||'';
       exit if $argv0 eq 'install_IO_Pty_from_CPAN';
    }
-   ($stdout,$stderr)=&fa_install_module('HTML::Tagset','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'HTML::Tagset') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('HTML::Parser','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'HTML::Parser') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('URI','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'URI') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('HTTP::Date','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'HTTP::Date') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Digest::MD5','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Digest::MD5') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'LWP::MediaTypes','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'LWP::MediaTypes') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'Encode::Locale','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Encode::Locale') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'IO::HTML','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'IO::HTML') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('HTTP::Message','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'HTTP::Message') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('File::Listing','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'File::Listing') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('HTTP::Cookies','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'HTTP::Cookies') if $stderr;
+   &fa_install_module('HTML::Tagset','install','Makefile');
+   &fa_install_module('HTML::Parser','install','Makefile');
+   &fa_install_module('URI','install','Makefile');
+   &fa_install_module('HTTP::Date','install','Makefile');
+   &fa_install_module('Digest::MD5','install','Makefile');
+   &fa_install_module('LWP::MediaTypes','install','Makefile');
+   &fa_install_module('Encode::Locale','install','Makefile');
+   &fa_install_module('IO::HTML','install','Makefile');
+   &fa_install_module('HTTP::Message','install','Makefile');
+   &fa_install_module('File::Listing','install','Makefile');
+   &fa_install_module('HTTP::Cookies','install','Makefile');
    if ($^O ne 'MSWin32' && $^O ne 'MSWin64' && $^O ne 'cygwin') {
-      ($stdout,$stderr)=&fa_install_module('HTTP::Daemon','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'HTTP::Daemon') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'Encode::Locale','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Encode::Locale') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'WWW::RobotRules','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'WWW::RobotRules') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'Date::Format','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Date::Format') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'Date::Parse','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Date::Parse') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'Mail::Internet','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Mail::Internet') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'Test::NoWarnings','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Test::NoWarnings') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'Test::Tester','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Test::Tester') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'Test::Deep','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Test::Deep') if $stderr;
-      ($stdout,$stderr)=&fa_install_module(
-         'MIME::Entity','install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'MIME::Entity') if $stderr;
+      &fa_install_module('HTTP::Daemon','install','Makefile');
+      &fa_install_module('Encode::Locale','install','Makefile');
+      &fa_install_module('WWW::RobotRules','install','Makefile');
+      &fa_install_module('Date::Format','install','Makefile');
+      &fa_install_module('Date::Parse','install','Makefile');
+      &fa_install_module('Mail::Internet','install','Makefile');
+      &fa_install_module('Test::NoWarnings','install','Makefile');
+      &fa_install_module('Test::Tester','install','Makefile');
+      &fa_install_module('Test::Deep','install','Makefile');
+      &fa_install_module('MIME::Entity','install','Makefile');
    }
-   ($stdout,$stderr)=&fa_install_module('LWP::MediaTypes','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'LWP::MediaTypes') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('HTTP::Negotiate','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'HTTP::Negotiate') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Net::HTTP','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Net::HTTP') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('LWP','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'LWP') if $stderr;
+   &fa_install_module('LWP::MediaTypes','install','Makefile');
+   &fa_install_module('HTTP::Negotiate','install','Makefile');
+   &fa_install_module('Net::HTTP','install','Makefile');
+   &fa_install_module('LWP','install','Makefile');
    eval { require Net::SSLeay };
    if ($@) {
-      ($stdout,$stderr)=&fa_install_module('Net::SSLeay','get');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Net::SSLeay') if $stderr;
+      &fa_install_module('Net::SSLeay','get');
       my $dir=&fa_find_latest('Net-SSLeay');
       system("cd \"$dir\";echo n | $^X Makefile.PL;");
       system("cd \"$dir\";make install;");
    }
-   ($stdout,$stderr)=&fa_install_module('IO::Socket::SSL','install',
-      'Makefile','','','n');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'IO::Socket::SSL') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('LWP::Protocol::https','install',
-      'Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'LWP::Protocol::https') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Task::Weaken','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Task::Weaken') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'ExtUtils::Depends','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::Depends') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('B::Utils','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'B::Utils') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'ExtUtils::Config','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::Config') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'ExtUtils::InstallPaths','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::InstallPaths') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'ExtUtils::Helpers','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'ExtUtils::Helpers') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'Test::Harness','install','Makefile','','3.30');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Test::Harness') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'CPAN::Meta::Requirements','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'CPAN::Meta::Requirements') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'CPAN::Meta','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'CPAN::Meta') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'Module::Build::Tiny','install',
-      'Build');
-   &fa_err_exit($stderr,
-      'Module::Build::Tiny') if $stderr;
-   ($stdout,$stderr)=&fa_install_module(
-      'Class::Method::Modifiers','install',
-      'Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,
-      'Class::Method::Modifiers') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('common::sense','install',
-      'Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'common::sense') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Types::Serialiser','install',
-      'Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Types::Serialiser') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Term::ReadKey','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Term::ReadKey') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Term::RawInput','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Term::RawInput') if $stderr;
+   &fa_install_module('IO::Socket::SSL','install','Makefile','','','n');
+   &fa_install_module('LWP::Protocol::https','install','Makefile');
+   &fa_install_module('Task::Weaken','install','Makefile');
+   &fa_install_module('ExtUtils::Depends','install','Makefile');
+   &fa_install_module('B::Utils','install','Makefile');
+   &fa_install_module('ExtUtils::Config','install','Makefile');
+   &fa_install_module('ExtUtils::InstallPaths','install','Makefile');
+   &fa_install_module('ExtUtils::Helpers','install','Makefile');
+   &fa_install_module('Test::Harness','install','Makefile','','3.30');
+   &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
+   &fa_install_module('CPAN::Meta','install','Makefile');
+   &fa_install_module('Module::Build::Tiny','install','Build');
+   &fa_install_module('Class::Method::Modifiers','install','Makefile');
+   &fa_install_module('common::sense','install','Makefile');
+   &fa_install_module('Types::Serialiser','install','Makefile');
+   &fa_install_module('Term::ReadKey','install','Makefile');
+   &fa_install_module('Term::RawInput','install','Makefile');
    if ($^O eq 'cygwin') {
-      ($stdout,$stderr)=&fa_install_module('Win32::API',
-         'install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Win32::API') if $stderr;
-      ($stdout,$stderr)=&fa_install_module('Win32::DriveInfo',
-         'install','Makefile');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Win32::DriveInfo') if $stderr;
+      &fa_install_module('Win32::API','install','Makefile');
+      &fa_install_module('Win32::DriveInfo','install','Makefile');
    }
    my $cpanvalue=$ENV{PERL5_CPAN_IS_RUNNING}||'';
    my $cpanmvalue=$ENV{PERL5_CPANM_IS_RUNNING}||'';
    undef $ENV{PERL5_CPAN_IS_RUNNING};
    undef $ENV{PERL5_CPANM_IS_RUNNING};
-   ($stdout,$stderr)=&fa_install_module('JSON::XS','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'JSON::XS') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('JSON','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'JSON') if $stderr;
+   &fa_install_module('JSON::XS','install','Makefile');
+   &fa_install_module('JSON','install','Makefile');
    $ENV{PERL5_CPAN_IS_RUNNING}=$cpanvalue if $cpanvalue;
    $ENV{PERL5_CPANM_IS_RUNNING}=$cpanmvalue if $cpanmvalue;
-   ($stdout,$stderr)=&fa_install_module('Devel::Symdump','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Devel::Symdump') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('PadWalker','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'PadWalker') if $stderr;
+   &fa_install_module('Devel::Symdump','install','Makefile');
+   &fa_install_module('PadWalker','install','Makefile');
    eval { require Data::Dump::Streamer };
    if ($@) {
-      ($stdout,$stderr)=&fa_install_module('Data::Dump::Streamer','get');
-      print $stdout if $stdout;
-      &fa_err_exit($stderr,'Data::Dump::Streamer') if $stderr;
+      &fa_install_module('Data::Dump::Streamer','get');
       my $dir=&fa_find_latest('Data-Dump-Streamer');
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   ($stdout,$stderr)=&fa_install_module('Term::Menus','install','Makefile',
-      '','2.59');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Term::Menus') if $stderr;
-   ($stdout,$stderr)=&fa_install_module('Mozilla::CA','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Mozilla::CA') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('Crypt::CBC','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Crypt::CBC') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('Crypt::DES','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Crypt::DES') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('PPI','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'PPI') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('Tie::Cache','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Tie::Cache') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('String::Random','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'String::Random') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('Net::Telnet','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Net::Telnet') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('Sort::Versions','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Sort::Versions') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod('Capture::Tiny','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Capture::Tiny') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'IO::Capture::Stderr','install','Makefile');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'IO::Capture::Stderr') if $stderr;
-   ($stdout,$stderr)=&fa_install_mod(
-      'Pod::Man','install','Makefile','','2.28');
-   print $stdout if $stdout;
-   &fa_err_exit($stderr,'Pod::Man') if $stderr;
+   &fa_install_module('Term::Menus','install','Makefile','','2.59');
+   &fa_install_module('Mozilla::CA','install','Makefile');
+   &fa_install_mod('Crypt::CBC','install','Makefile');
+   &fa_install_mod('Crypt::DES','install','Makefile');
+   &fa_install_mod('Clone','install','Makefile');
+   &fa_install_mod('File::Remove','install','Makefile');
+   &fa_install_mod('List::MoreUtils','install','Makefile');
+   &fa_install_mod('Params::Util','install','Makefile');
+   &fa_install_mod('Test::Object','install','Makefile');
+   &fa_install_mod('Test::SubCalls','install','Makefile');
+   &fa_install_mod('PPI','install','Makefile');
+   &fa_install_mod('Tie::Cache','install','Makefile');
+   &fa_install_mod('String::Random','install','Build');
+   &fa_install_mod('Net::Telnet','install','Makefile');
+   &fa_install_mod('Sort::Versions','install','Makefile');
+   &fa_install_mod('Capture::Tiny','install','Makefile');
+   &fa_install_mod('IO::Capture','install','Makefile');
+   &fa_install_mod('Pod::Man','install','Makefile','','2.28');
 
 };
 
@@ -4651,7 +4404,7 @@ requires        'CHI'                       => 0;
 #requires        'PPI'                       => 0;
 #requires        'URI'                       => 0;
 requires        'Email::Sender'             => 0;
-requires        'MIME::Entity'              => 0;
+#requires        'MIME::Entity'              => 0;
 requires        'Data::Password::Check'     => 0;
 #requires        'String::Random'            => 0;
 #requires        'YAML'                      => 0;
