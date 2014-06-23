@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999907';
+$main::VERSION='0.9999999908';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -850,7 +850,8 @@ END
       } else { print "*** $p Loaded Successfully\n" }
       Class::Unload->unload($p) if $p ne 'Class::Unload'
                                 && $p ne 'version'
-                                && $p ne 'Class::Inspector';
+                                && $p ne 'Class::Inspector'
+                                && $p ne 'IO::CaptureOutput';
       return '';
    }
    
@@ -1021,38 +1022,39 @@ END
    }
    &fa_install_module('Term::Menus','install','Makefile','','2.59');
    &fa_install_module('Mozilla::CA','install','Makefile');
-   &fa_install_mod('Crypt::CBC','install','Makefile');
-   &fa_install_mod('Crypt::DES','install','Makefile');
-   &fa_install_mod('Clone','install','Makefile');
-   &fa_install_mod('File::Remove','install','Makefile');
-   &fa_install_mod('List::MoreUtils','install','Makefile');
-   &fa_install_mod('Params::Util','install','Makefile');
-   &fa_install_mod('Test::Object','install','Makefile');
-   &fa_install_mod('Hook::LexWrap','install','Makefile');
-   &fa_install_mod('Test::SubCalls','install','Makefile');
-   &fa_install_mod('PPI','install','Makefile');
-   &fa_install_mod('Tie::Cache','install','Makefile');
-   &fa_install_mod('String::Random','install','Build');
-   &fa_install_mod('Net::Telnet','install','Makefile');
-   &fa_install_mod('Sort::Versions','install','Makefile');
-   &fa_install_mod('Capture::Tiny','install','Makefile');
-   &fa_install_mod('IO::Capture','install','Makefile');
-   &fa_install_mod('Pod::Man','install','Makefile','','2.28');
-   &fa_install_mod('Sub::Exporter::Progressive','Install','Makefile');
-   &fa_install_mod('MRO::Compat','Install','Makefile');
-   &fa_install_mod('Data::OptList','Install','Makefile');
-   &fa_install_mod('Sub::Install','Install','Makefile','','0.921');
-   &fa_install_mod('B::Hooks::OP::Check','Install','Makefile');
-   &fa_install_mod('Lexical::SealRequireHints','Install','Makefile');
-   &fa_install_mod('multidimensional','Install','Makefile');
-   &fa_install_mod('bareword::filehandles','Install','Makefile');
-   &fa_install_mod('strictures','Install','Makefile');
-   &fa_install_mod('Role::Tiny','Install','Makefile');
-   &fa_install_mod('indirect','Install','Makefile');
-   &fa_install_mod('Devel::GlobalDestruction','Install','Makefile');
-   &fa_install_mod('Import::Into','Install','Makefile');
-   &fa_install_mod('Sub::Quote','Install','Makefile');
-   &fa_install_mod('Try::Tiny','Install','Makefile');
+   &fa_install_module('Crypt::CBC','install','Makefile');
+   &fa_install_module('Crypt::DES','install','Makefile');
+   &fa_install_module('Clone','install','Makefile');
+   &fa_install_module('File::Remove','install','Makefile');
+   &fa_install_module('List::MoreUtils','install','Makefile');
+   &fa_install_module('Params::Util','install','Makefile');
+   &fa_install_module('Test::Object','install','Makefile');
+   &fa_install_module('Hook::LexWrap','install','Makefile');
+   &fa_install_module('Test::SubCalls','install','Makefile');
+   &fa_install_module('PPI','install','Makefile');
+   &fa_install_module('Tie::Cache','install','Makefile');
+   &fa_install_module('String::Random','install','Build');
+   &fa_install_module('Net::Telnet','install','Makefile');
+   &fa_install_module('Sort::Versions','install','Makefile');
+   &fa_install_module('Capture::Tiny','install','Makefile');
+   &fa_install_module('IO::Capture','install','Makefile');
+   &fa_install_module('Pod::Man','install','Makefile','','2.28');
+#print "WHAT ARE MODS1=",(join "\n",keys %INC),"\n";<STDIN>;
+   &fa_install_module('Sub::Exporter::Progressive','Install','Makefile');
+   &fa_install_module('MRO::Compat','Install','Makefile');
+   &fa_install_module('Data::OptList','Install','Makefile');
+   &fa_install_module('Sub::Install','Install','Makefile','','0.921');
+   &fa_install_module('B::Hooks::OP::Check','Install','Makefile');
+   &fa_install_module('Lexical::SealRequireHints','Install','Makefile');
+   &fa_install_module('multidimensional','Install','Makefile');
+   &fa_install_module('bareword::filehandles','Install','Makefile');
+   &fa_install_module('strictures','Install','Makefile');
+   &fa_install_module('Role::Tiny','Install','Makefile');
+   &fa_install_module('indirect','Install','Makefile');
+   &fa_install_module('Devel::GlobalDestruction','Install','Makefile');
+   &fa_install_module('Import::Into','Install','Makefile');
+   &fa_install_module('Sub::Quote','Install','Makefile');
+   &fa_install_module('Try::Tiny','Install','Makefile');
 
 };
 
