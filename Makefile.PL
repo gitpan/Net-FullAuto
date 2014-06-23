@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999910';
+$main::VERSION='0.9999999911';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -992,7 +992,7 @@ END
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
-   &fa_install_module('Term::RawInput','install','Makefile');
+   &fa_install_module('Term::RawInput','install','Makefile','','1.16');
    if ($^O eq 'cygwin') {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
@@ -1048,7 +1048,7 @@ END
    &fa_install_module('Import::Into','install','Makefile');
    &fa_install_module('Sub::Quote','install','Makefile');
    &fa_install_module('Try::Tiny','install','Makefile');
-   &fa_install_module('Throwable::Error','install','Makefile');
+   &fa_install_module('Throwable','install','Makefile');
    &fa_install_module('Sub::Exporter','install','Makefile');
    &fa_install_module('Sub::Exporter::Util','install','Makefile');
    &fa_install_module('Module::Runtime','install','Makefile');
@@ -4424,7 +4424,7 @@ requires        'CHI'                       => 0;
 #requires        'Capture::Tiny'             => 0;
 #requires        'Net::Telnet'               => 0;
 #requires        'Pod::Man'                  => 2.28;
-#requires        'Term::RawInput'            => 0;
+#requires        'Term::RawInput'            => 1.16;
 #requires        'Term::ReadKey'             => 0;
 #requires        'Test::Deep'                => 0;
 #requires        'PPI'                       => 0;

@@ -15,7 +15,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.9999999910
+    version: 0.9999999911
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -58,7 +58,7 @@ requires:
   Capture::Tiny: 0
   Net::Telnet: 0
   Test::Deep : 0
-  Term::RawInput : 0
+  Term::RawInput : 1.16
   Term::ReadKey: 0
   URI: 0
   Email::Sender: 0
@@ -74,4 +74,4 @@ requires:
   YAML: 0
 resources:
   license: http://opensource.org/licenses/gpl-3.0.html
-version: 0.9999999910
+version: 0.9999999911

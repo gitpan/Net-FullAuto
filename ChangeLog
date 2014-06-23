@@ -19,6 +19,17 @@
 ################################################################
 
 
+2014-06-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999911 released.
+
+        * More work on New User Experience.
+
+        * Updated Makefile.PL for AWS Ubuntu installations.
+
+        * New version of Term::RawInput paired with this release.
+
+
 2014-06-22  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999910 released.
