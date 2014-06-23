@@ -21,6 +21,13 @@
 
 2014-06-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999912 released.
+
+        * Relocated 'Throwable' installation in Makefile.PL.
+
+
+2014-06-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999911 released.
 
         * More work on New User Experience.

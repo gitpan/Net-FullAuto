@@ -5591,17 +5591,15 @@ sub kill
          if ($^O eq 'cygwin') {
             $cmd=[ "${killpath}kill -$arg $pid" ]
          } else {
-            #$cmd=[ "${bashpath}bash",'-c',
-            #       "\\\"${killpath}kill","-$arg","$pid\\\"","2>&1" ];
-            $cmd=[ "${killpath}kill","-$arg",$pid ];
+            $cmd=[ "${bashpath}bash",'-c',
+                   "\"${killpath}kill -$arg $pid\" 2>&1" ]
          }
       } else {
          if ($^O eq 'cygwin') {
             $cmd=[ "${killpath}kill $pid" ]
          } else {
-            #$cmd=[ "${bashpath}bash",'-c',
-            #       "\\\"${killpath}kill $pid\\\" 2>&1" ]
-            $cmd=[ "${killpath}kill",$pid ];
+            $cmd=[ "${bashpath}bash",'-c',
+                   "\"${killpath}kill $pid\" 2>&1" ]
          }
       }
    }
@@ -12036,7 +12034,7 @@ my $fa_fa_code=sub {
 
       Name   => 'fa_fa_code',
       Result => sub { return '{setup_new_user5}<' },
-      Banner => $fa_fa_defaults_sub,
+      Banner => $fa_fa_code_banner,
   );
   return \%fa_fa_code;
 
@@ -13995,11 +13993,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      }
                   } elsif ($idntfil) {
                      if ($Net::FullAuto::FA_Core::debug) {
-                        ($local_host,$cmd_pid)=
-                           &Net::FullAuto::FA_Core::pty_do_cmd(
+                        ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
                            #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
-                           ["${sshpath}ssh","-vvv","-i$idntfil",
-                            "$login_id\@localhost",
+                           ["${sshpath}ssh","-i$idntfil","$login_id\@localhost",
                             '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
                                 &Net::FullAuto::FA_Core::handle_error(
@@ -14007,7 +14003,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      } else {
                         ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
                            #["${sshpath}ssh","-caes128-ctr","$login_id\@localhost",
-                           ["${sshpath}ssh","-i$idntfil","$login_id\@localhost",
+                           ["${sshpath}ssh","-vvv","-i$idntfil",
+                            "$login_id\@localhost",
                             '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
                                 &Net::FullAuto::FA_Core::handle_error(
@@ -14123,7 +14120,6 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
          }
          my $newpw='';$passline=__LINE__+1;
          while (my $line=$local_host->get) {
-            chomp($line=~tr/\0-\11\13-\37\177-\377//d);
             print "WAITING FOR CMDPROMPT=$line<== at Line ",__LINE__,"\n"
                if !$Net::FullAuto::FA_Core::cron &&
                $Net::FullAuto::FA_Core::debug;
@@ -14261,10 +14257,6 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING LAST TWO<==\n"
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   last;
                }
-            } elsif ($line=~/ssh_askpass:.*No such file or directory/) {
-               next;
-            } elsif ($line=~/debug\d+: /) {
-               next;
             } elsif ($line=~/[:\$%>#-] ?/m) {
 print $Net::FullAuto::FA_Core::MRLOG "<==\n"
    if $Net::FullAuto::FA_Core::log &&

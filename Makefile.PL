@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999911';
+$main::VERSION='0.9999999912';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1048,7 +1048,6 @@ END
    &fa_install_module('Import::Into','install','Makefile');
    &fa_install_module('Sub::Quote','install','Makefile');
    &fa_install_module('Try::Tiny','install','Makefile');
-   &fa_install_module('Throwable','install','Makefile');
    &fa_install_module('Sub::Exporter','install','Makefile');
    &fa_install_module('Sub::Exporter::Util','install','Makefile');
    &fa_install_module('Module::Runtime','install','Makefile');
@@ -1056,6 +1055,7 @@ END
    &fa_install_module('Moo::Role','install','Makefile');
    &fa_install_module('MooX::Types::MooseLike','install','Makefile');
    &fa_install_module('MooX::Types::MooseLike::Base','install','Makefile');
+   &fa_install_module('Throwable','install','Makefile');
    &fa_install_module('Email::Simple','install','Makefile');
    &fa_install_module('Email::Address','install','Makefile');
    &fa_install_module('Email::Abstract','install','Makefile');
@@ -4588,6 +4588,8 @@ if ($^O eq 'cygwin') {
 install_script('bin/fullauto.pl');
 
 WriteAll();
+
+print "Exiting Makefile.PL";
 
 sub fa_find_editor {
    my $editor=$_[0];
