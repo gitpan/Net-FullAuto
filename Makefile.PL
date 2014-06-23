@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999908';
+$main::VERSION='0.9999999909';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -814,7 +814,7 @@ END
             $cpan_error="$@ $!";
             die "CPAN Error: $cpan_error\n";
          }
-         if ($task eq 'install') {
+         if (lc($task) eq 'install') {
             my $sudo='';
             if (-1<index lc($main::uname_a), 'ubuntu') {
                $sudo='sudo ';
@@ -848,10 +848,10 @@ END
             }
          }
       } else { print "*** $p Loaded Successfully\n" }
-      Class::Unload->unload($p) if $p ne 'Class::Unload'
-                                && $p ne 'version'
-                                && $p ne 'Class::Inspector'
-                                && $p ne 'IO::CaptureOutput';
+      #Class::Unload->unload($p) if $p ne 'Class::Unload'
+      #                          && $p ne 'version'
+      #                          && $p ne 'Class::Inspector'
+      #                          && $p ne 'IO::CaptureOutput';
       return '';
    }
    
@@ -908,8 +908,8 @@ END
    }
 
    my $stdout='';my $stderr='';
-   &fa_install_mod('Class::Inspector','install','Makefile');
-   &fa_install_mod('Class::Unload','install','Makefile');
+   #&fa_install_mod('Class::Inspector','install','Makefile');
+   #&fa_install_mod('Class::Unload','install','Makefile');
    &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.59');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
@@ -1039,22 +1039,21 @@ END
    &fa_install_module('Capture::Tiny','install','Makefile');
    &fa_install_module('IO::Capture','install','Makefile');
    &fa_install_module('Pod::Man','install','Makefile','','2.28');
-#print "WHAT ARE MODS1=",(join "\n",keys %INC),"\n";<STDIN>;
-   &fa_install_module('Sub::Exporter::Progressive','Install','Makefile');
-   &fa_install_module('MRO::Compat','Install','Makefile');
-   &fa_install_module('Data::OptList','Install','Makefile');
-   &fa_install_module('Sub::Install','Install','Makefile','','0.921');
-   &fa_install_module('B::Hooks::OP::Check','Install','Makefile');
-   &fa_install_module('Lexical::SealRequireHints','Install','Makefile');
-   &fa_install_module('multidimensional','Install','Makefile');
-   &fa_install_module('bareword::filehandles','Install','Makefile');
-   &fa_install_module('strictures','Install','Makefile');
-   &fa_install_module('Role::Tiny','Install','Makefile');
-   &fa_install_module('indirect','Install','Makefile');
-   &fa_install_module('Devel::GlobalDestruction','Install','Makefile');
-   &fa_install_module('Import::Into','Install','Makefile');
-   &fa_install_module('Sub::Quote','Install','Makefile');
-   &fa_install_module('Try::Tiny','Install','Makefile');
+   &fa_install_module('Sub::Exporter::Progressive','install','Makefile');
+   &fa_install_module('MRO::Compat','install','Makefile');
+   &fa_install_module('Data::OptList','install','Makefile');
+   &fa_install_module('Sub::Install','install','Makefile','','0.921');
+   &fa_install_module('B::Hooks::OP::Check','install','Makefile');
+   &fa_install_module('Lexical::SealRequireHints','install','Makefile');
+   &fa_install_module('multidimensional','install','Makefile');
+   &fa_install_module('bareword::filehandles','install','Makefile');
+   &fa_install_module('strictures','install','Makefile');
+   &fa_install_module('Role::Tiny','install','Makefile');
+   &fa_install_module('indirect','install','Makefile');
+   &fa_install_module('Devel::GlobalDestruction','install','Makefile');
+   &fa_install_module('Import::Into','install','Makefile');
+   &fa_install_module('Sub::Quote','install','Makefile');
+   &fa_install_module('Try::Tiny','install','Makefile');
 
 };
 
