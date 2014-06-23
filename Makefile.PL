@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999909';
+$main::VERSION='0.9999999910';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -848,10 +848,6 @@ END
             }
          }
       } else { print "*** $p Loaded Successfully\n" }
-      #Class::Unload->unload($p) if $p ne 'Class::Unload'
-      #                          && $p ne 'version'
-      #                          && $p ne 'Class::Inspector'
-      #                          && $p ne 'IO::CaptureOutput';
       return '';
    }
    
@@ -908,8 +904,6 @@ END
    }
 
    my $stdout='';my $stderr='';
-   #&fa_install_mod('Class::Inspector','install','Makefile');
-   #&fa_install_mod('Class::Unload','install','Makefile');
    &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.59');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
@@ -1054,6 +1048,19 @@ END
    &fa_install_module('Import::Into','install','Makefile');
    &fa_install_module('Sub::Quote','install','Makefile');
    &fa_install_module('Try::Tiny','install','Makefile');
+   &fa_install_module('Throwable::Error','install','Makefile');
+   &fa_install_module('Sub::Exporter','install','Makefile');
+   &fa_install_module('Sub::Exporter::Util','install','Makefile');
+   &fa_install_module('Module::Runtime','install','Makefile');
+   &fa_install_module('Moo','install','Makefile');
+   &fa_install_module('Moo::Role','install','Makefile');
+   &fa_install_module('MooX::Types::MooseLike','install','Makefile');
+   &fa_install_module('MooX::Types::MooseLike::Base','install','Makefile');
+   &fa_install_module('Email::Simple','install','Makefile');
+   &fa_install_module('Email::Address','install','Makefile');
+   &fa_install_module('Email::Abstract','install','Makefile');
+   &fa_install_module('Email::Sender','install','Makefile');
+   &fa_install_module('Data::Password::Check','install','Makefile');
 
 };
 
@@ -4422,9 +4429,9 @@ requires        'CHI'                       => 0;
 #requires        'Test::Deep'                => 0;
 #requires        'PPI'                       => 0;
 #requires        'URI'                       => 0;
-requires        'Email::Sender'             => 0;
+#requires        'Email::Sender'             => 0;
 #requires        'MIME::Entity'              => 0;
-requires        'Data::Password::Check'     => 0;
+#requires        'Data::Password::Check'     => 0;
 #requires        'String::Random'            => 0;
 #requires        'YAML'                      => 0;
 recommends      'Crypt::Rijndael'           => 0;
