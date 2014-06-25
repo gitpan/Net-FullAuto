@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999912';
+$main::VERSION='0.9999999913';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -206,6 +206,45 @@ END
    unless (exists $ENV{FA_EDITOR}) {
       print $fa_banner;
       sleep 2;
+   }
+   if ($^O eq 'linux') {
+      my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
+      if (-1<index $cat_amazon,'amazon') {
+         my $meminfo=`cat /proc/meminfo`;
+         my $memtotal=~s/^MemTotal:\s*(\d+)$/$1/m;
+         my $memfree=~s/^MemFree:\s*(\d+)$/$1/m;
+         if ($memtotal<1000000) {
+            my $timeout=120;my $a='';
+            eval {
+               $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+               alarm $timeout;
+               print "\n       *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH".
+                  "\n           FullAuto INSTALLATION IN 2 MINUTES ***\n".
+                  "\n       IMPORTANT! : You are installing FullAuto on an".
+                  "\n                  Amazon Web Services EC2 MICRO Ubuntu".
+                  "\n                  Linux Server. Being a MICRO Server,".
+                  "\n                  there is very limited memory - just".
+                  "\n                  ${memfree}kB altogther. As a result".
+                  "\n                  it is likely the FullAuto installation".
+                  "\n                  will run out of memory before".
+                  "\n                  completion.".
+                  "\n\n                  If the installation stops - RESTART".
+                  "\n                  IT. In fact, you may need to restart".
+                  "\n                  it more than once. However, it WILL run".
+                  "\n                  to completion.".
+                  "\n\n            NOTE! : The advantage of the MICRO server".
+                  "\n                  is that it is FREE for one year.".
+                  "\n                  However, if you wish to ever use".
+                  "\n                  FullAuto for anything but the simplest".
+                  "\n                  projects, it is recommended to use a".
+                  "\n                  a more robust server installation.\n\n";
+               print "Press <ENTER> if you wish to continue, ".
+                     "or 'N' to quit . . . [Y] ";$
+               a=<STDIN>;
+               alarm 0;
+            };
+         }
+      }
    }
    use CPAN;
    use File::Path;
@@ -1618,11 +1657,11 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
    }
    if ($selection!~/will END/s) {
       if ($selection!~/MINIMAL/s) {
-         my @editors=('vim     ( ViIMproved - enhanced vi editor )',
+         my @editors=('nano      ( Easiest - Recommended for Beginners )',
+                      'vim     ( ViIMproved - enhanced vi editor )',
                       "emacs   ( The extensible, customizable,\n           ".
                       "              self-documenting real-time\n         ".
                       "                display editor )",
-                      'mc      ( Midnight Commander visual shell )',
                       "joe     ( Fast and simple editor that\n             ".
                       '            emulates 5 other editors )', 
                      );
@@ -1731,9 +1770,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          } elsif ($selection=~/(joe)/) {
             $selection=$1;
             $editor='/bin/joe.exe';
-         } elsif ($selection=~/(mc)/) {
+         } elsif ($selection=~/(nano)/) {
             $selection=$1;
-            $editor='/bin/mc.exe';
+            $editor='/bin/nano.exe';
          }
 
          my $p_one='Install with Full Access Permissions (Default)';
@@ -3020,8 +3059,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
             if (-e '/bin/joe.exe') {
                push @editors, 'joe';
             }
-            if (-e '/bin/mc.exe') {
-               push @editors, 'mc';
+            if (-e '/bin/nano.exe') {
+               push @editors, 'nano';
             }
             my %Menu_select_editor=();
             if ($wordpad) {
@@ -3091,8 +3130,8 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                }
             } elsif ($selection=~s/(joe)/$1/) {
                $editor='/bin/joe.exe';
-            } elsif ($selection=~s/(mc)/$1/) {
-               $editor='/bin/mc.exe';
+            } elsif ($selection=~s/(nano)/$1/) {
+               $editor='/bin/nano.exe';
             }
             exit if $selection eq ']quit[';
          }
@@ -4587,9 +4626,67 @@ if ($^O eq 'cygwin') {
 }
 install_script('bin/fullauto.pl');
 
-WriteAll();
+my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
+if (-1<index $cat_amazon,'amazon') {
+   my @editors=('vim     ( ViIMproved - enhanced vi editor )',
+                "emacs   ( The extensible, customizable,\n           ".
+                "              self-documenting real-time\n         ".
+                "                display editor )",
+                "joe     ( Fast and simple editor that\n             ".
+                '            emulates 5 other editors )',
+               );
+   my $banner="   In order to use the integrated edit features\n".
+              "   you will need to choose an editor.";
+   my %Menu_select_editor=();
+   %Menu_select_editor=(
 
-print "Exiting Makefile.PL";
+         Label  => 'Menu_select_editor',
+         Item_1 => {
+            Text    => "nano      ( Easiest - Recommended for Beginners )\n\n",
+            Default => "*",
+         },
+         Item_1 => {
+
+            Text    => "]C[",
+            Convey  => \@editors,
+
+         },
+         Banner => $banner,
+
+   );
+   my $selection=Term::Menus::Menu(\%Menu_select_editor);
+   chomp($selection);
+   exit if $selection eq ']quit[';
+   $editor='nano';
+   if ($selection=~/joe/) {
+      open(AG,"sudo apt-get -y install 'joe'|");
+      while (my $line=<AG>) {
+         print $line;
+      }
+      close AG;
+      $editor='joe';
+   } elsif ($selection=~/emacs/) {
+      open(AG,"sudo apt-get -y install 'e3'|");
+      while (my $line=<AG>) {
+         print $line;
+      }
+      close AG;
+      $editor='emacs';
+   } elsif ($selection=~/vim/) {
+      $editor='vi';
+   }
+   #my $sed_cmd="/usr/bin/sed 's/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
+   #      'our \\1'."editor = \"$editor\";/g\' $Config{installsitelib}".
+   #      "/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm";
+   #my $mv_cmd="/usr/bin/mv tmp_conf.pm $Config{installsitelib}". 
+   #      "/lib/Net/FullAuto/Custom/fa_conf.pm";
+   #`$sed_cmd`;
+   #`$mv_cmd`;
+   #`fa --new-user`; 
+
+}
+
+WriteAll();
 
 sub fa_find_editor {
    my $editor=$_[0];

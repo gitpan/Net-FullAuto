@@ -11661,7 +11661,6 @@ END
 
 my $fa_tutorial=<<END;
 
-
     ___     _ _   _       _
    | __|  _| | | /_\\ _  _| |_ ___
    | _| || | | |/ _ \\ || |  _/ _ \\
@@ -11676,7 +11675,6 @@ my $fa_tutorial=<<END;
 END
 
 my $fa_fullauto=<<END;
-
 
     ___     _ _   _       _       
    | __|  _| | | /_\\ _  _| |_ ___ 
@@ -11728,8 +11726,8 @@ my $fa_organization=<<END;
    "A place for everything, everything in its place." - Benjamin Franklin
 
    FullAuto organizes everything for you. A FullAuto working configuration
-   consists of five files. The files are listed below. You can a read brief
-   summary of each one, or move on to creating KB06606's own FullAuto setup!
+   consists of five files which are listed below. You can read a summary
+   of each, or move on to creating ${username}'s own FullAuto setup!
 END
 
 my $fa_privacy=<<END;
@@ -11795,8 +11793,28 @@ my $fa_basics=<<END;
    and to quit the help page, type 'q'. Try it!
 END
 
-my $fa_intro=<<END;
+my $fa_no_web=<<END;
 
+    _  _      __      __   _      ___              ___ _
+   | \\| |___  \\ \\    / /__| |__  | _ \\__ _ __ _ __|__ \\ |
+   | .` / _ \\  \\ \\/\\/ / -_) '_ \\ |  _/ _` / _` / -_)/_/_|
+   |_|\\_\\___/   \\_/\\_/\\___|_.__/ |_| \\__,_\\__, \\___(_)(_)
+                                          |___/
+
+   YES! FullAuto is Automation Software. Ever see a furnace room
+   with marble tile? Or a fully enclosed car trunk with rich soft
+   leather? We decorate what we SEE and spend lots of time around.
+   Things we rarely access, we keep simple and utilitarian.
+                 __ _____        __ __  __  __  _____ 
+                (_ |_  |   _|_  |_ /  \\|__)/ _ |_  |  
+   FullAuto is  __)|__ |    |   |  \\__/| \\ \\__)|__ |  software.
+
+   Hence the name Full - Auto (as in 'full' or 'complete' AUTOMATION).
+   You tell it what to do, you turn it on - and you MOVE ON to more
+   enjoyable or urgent activities!
+END
+
+my $fa_intro=<<END;
 
     ___     _               _         _   _          
    |_ _|_ _| |_ _ _ ___  __| |_  _ __| |_(_)___ _ _  
@@ -12229,13 +12247,25 @@ my $setup_new_user2=sub {
   return \%setup_new_user2;
 };
 
+my $setup_new_user_a=sub {
+
+   my %setup_new_user_a=(
+
+      Name   => 'setup_new_user_a',
+      Result => $setup_new_user2,
+      Banner => $fa_intro,
+
+   );
+   return \%setup_new_user_a;
+};
+
 my $setup_new_user=sub {
 
    my %setup_new_user=(
 
       Name   => 'setup_new_user',
-      Result => $setup_new_user2,
-      Banner => $fa_intro,
+      Result => $setup_new_user_a,
+      Banner => $fa_no_web,
 
    );
    return \%setup_new_user;
