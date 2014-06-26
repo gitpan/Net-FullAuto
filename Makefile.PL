@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999914';
+$main::VERSION='0.9999999915';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -211,33 +211,33 @@ END
       my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
       if (-1<index $cat_amazon,'amazon') {
          my $meminfo=`cat /proc/meminfo`;
-         my $memtotal=~s/^MemTotal:\s*(\d+)$/$1/m;
-         my $memfree=~s/^MemFree:\s*(\d+)$/$1/m;
+         my $memtotal=$meminfo;
+         my $memfree=$meminfo;
+         $memtotal=~s/^.*MemTotal:\s*(\d+) kB.*$/$1/s;
+         $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
          if ($memtotal<1000000) {
             my $timeout=120;my $a='';
             eval {
                $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-               alarm $timeout;
+               alarm $timeout;my $w='      ';
                print "\n       *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH".
-                  "\n           FullAuto INSTALLATION IN 2 MINUTES ***\n".
-                  "\n       IMPORTANT! : You are installing FullAuto on an".
-                  "\n                  Amazon Web Services EC2 MICRO Ubuntu".
-                  "\n                  Linux Server. Being a MICRO Server,".
-                  "\n                  there is very limited memory - just".
-                  "\n                  ${memfree}kB altogther. As a result".
-                  "\n                  it is likely the FullAuto installation".
-                  "\n                  will run out of memory before".
-                  "\n                  completion.".
-                  "\n\n                  If the installation stops - RESTART".
-                  "\n                  IT. In fact, you may need to restart".
-                  "\n                  it more than once. However, it WILL run".
-                  "\n                  to completion.".
-                  "\n\n            NOTE! : The advantage of the MICRO server".
-                  "\n                  is that it is FREE for one year.".
-                  "\n                  However, if you wish to ever use".
-                  "\n                  FullAuto for anything but the simplest".
-                  "\n                  projects, it is recommended to use a".
-                  "\n                  a more robust server installation.\n\n";
+                  "\n$w     FullAuto INSTALLATION IN 2 MINUTES ***\n".
+                  "\n$w IMPORTANT! : You are installing FullAuto on an Amazon".
+                  "\n$w            Web Services EC2 MICRO Ubuntu Linux Server.".
+                  "\n$w            Being a MICRO Server, there is very limited".
+                  "\n$w            memory - just ${memfree} kB altogether.".
+                  "\n$w            As a result it is likely the FullAuto".
+                  "\n$w            installation will run out of memory before".
+                  "\n$w            completion.".
+                  "\n\n$w            If the installation stops - RESTART IT.".
+                  "\n$w            In fact, you may need to restart it more".
+                  "\n$w            than once. It *WILL* run to completion.".
+                  "\n\n$w      NOTE! : The advantage of the MICRO server is".
+                  "\n$w            that it is FREE for one year. However, if".
+                  "\n$w            you wish to ever use FullAuto for anything".
+                  "\n$w            but the simplest projects, it is recommended"
+                 ."\n$w            you use a more robust server installation.".
+                  "\n$w            \n\n";
                print "Press <ENTER> if you wish to continue, ".
                      "or 'N' to quit . . . [Y] ";$
                a=<STDIN>;
