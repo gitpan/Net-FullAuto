@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999913';
+$main::VERSION='0.9999999914';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4645,7 +4645,7 @@ if (-1<index $cat_amazon,'amazon') {
             Text    => "nano      ( Easiest - Recommended for Beginners )\n\n",
             Default => "*",
          },
-         Item_1 => {
+         Item_2 => {
 
             Text    => "]C[",
             Convey  => \@editors,
