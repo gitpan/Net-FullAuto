@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999915';
+$main::VERSION='0.9999999916';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -225,7 +225,7 @@ END
                   "\n$w IMPORTANT! : You are installing FullAuto on an Amazon".
                   "\n$w            Web Services EC2 MICRO Ubuntu Linux Server.".
                   "\n$w            Being a MICRO Server, there is very limited".
-                  "\n$w            memory - just ${memfree} kB altogether.".
+                  "\n$w            memory - just ${memfree} kB available.".
                   "\n$w            As a result it is likely the FullAuto".
                   "\n$w            installation will run out of memory before".
                   "\n$w            completion.".
@@ -1053,7 +1053,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.59');
+   &fa_install_module('Term::Menus','install','Makefile','','2.60');
    &fa_install_module('Mozilla::CA','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -1657,7 +1657,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
    }
    if ($selection!~/will END/s) {
       if ($selection!~/MINIMAL/s) {
-         my @editors=('nano      ( Easiest - Recommended for Beginners )',
+         my @editors=('nano    ( Easiest - Recommended for Beginners )',
                       'vim     ( ViIMproved - enhanced vi editor )',
                       "emacs   ( The extensible, customizable,\n           ".
                       "              self-documenting real-time\n         ".
@@ -4449,7 +4449,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 #requires        'Data::Dump::Streamer'      => 0;
 #requires        'Digest::SHA'               => 0;
 #requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.59;
+#requires        'Term::Menus'               => 2.60;
 #requires        'Tie::Cache'                => 0;
 #requires        'Sort::Versions'            => 0;
 #requires        'Crypt::CBC'                => 0;
@@ -4642,7 +4642,7 @@ if (-1<index $cat_amazon,'amazon') {
 
          Label  => 'Menu_select_editor',
          Item_1 => {
-            Text    => "nano      ( Easiest - Recommended for Beginners )\n\n",
+            Text    => "nano    ( Easiest - Recommended for Beginners )\n\n",
             Default => "*",
          },
          Item_2 => {
@@ -4675,14 +4675,6 @@ if (-1<index $cat_amazon,'amazon') {
    } elsif ($selection=~/vim/) {
       $editor='vi';
    }
-   #my $sed_cmd="/usr/bin/sed 's/^#[ ]*our[ ]*\\(.\\)editor[ ]*[=].*/".
-   #      'our \\1'."editor = \"$editor\";/g\' $Config{installsitelib}".
-   #      "/lib/Net/FullAuto/Custom/fa_conf.pm >tmp_conf.pm";
-   #my $mv_cmd="/usr/bin/mv tmp_conf.pm $Config{installsitelib}". 
-   #      "/lib/Net/FullAuto/Custom/fa_conf.pm";
-   #`$sed_cmd`;
-   #`$mv_cmd`;
-   #`fa --new-user`; 
 
 }
 
