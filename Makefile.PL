@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999916';
+$main::VERSION='0.9999999917';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1053,7 +1053,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.60');
+   &fa_install_module('Term::Menus','install','Makefile','','2.61');
    &fa_install_module('Mozilla::CA','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -4449,7 +4449,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 #requires        'Data::Dump::Streamer'      => 0;
 #requires        'Digest::SHA'               => 0;
 #requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.60;
+#requires        'Term::Menus'               => 2.61;
 #requires        'Tie::Cache'                => 0;
 #requires        'Sort::Versions'            => 0;
 #requires        'Crypt::CBC'                => 0;
@@ -4626,6 +4626,97 @@ if ($^O eq 'cygwin') {
 }
 install_script('bin/fullauto.pl');
 
+my $good_choice=<<END;
+
+     ___               _     ___ _        _        _ 
+    / __| ___  ___  __| |   / __| |_  ___(_)__ ___| |
+   | (_ |/ _ \\/ _ \\/ _` |  | (__| ' \\/ _ \\ / _/ -_)_|
+    \\___|\\___/\\___/\\__,_|   \\___|_||_\\___/_\\__\\___(_)
+
+   The Nano Editor is widely considered to be the easiest
+   Terminal Editor to learn. Here are a couple of important
+   things to remember. When you look at the bottom of the
+   screen, you will see character combinations like this:
+
+   ^E ^W ^O  -->  the caret symbol followed by a letter.
+
+   This means the ctrl key pressed in combination with the
+   displayed letter next to it. For example, to exit Nano (^E),
+    ________     ____                    _______     ____ 
+   || ctrl ||   ||e ||                  || alt ||   ||c ||
+   ||______|| + ||__||  M-C  is  alt c  ||_____|| + ||__||
+   |/______\\|   |/__\\|                  |/_____\\|   |/__\\|
+END
+
+my $nano_banner=<<END;
+
+   .e.f8 ee.     88**8.  e888 88**8. .d88b.
+   i '8f'  Q,    88  88 88 88 88  88 88  88
+      8.   8:    88  88 "Y888 88  88 "t88P"   Text Editor
+      8.   8:
+      W.   8:
+           8:    In Terminal Environments, Documentation
+           8:    for Nano can be seen anytime by typing:
+           tD
+                 man nano    at the command line.
+
+   You can also see online documentation at:
+
+   http://www.nano-editor.org/docs.php
+END
+
+my $learn_nano=sub {
+
+   my %learn_nano=(
+
+      Name => 'learn_nano',
+      Item_1 => {
+
+         Text => "Go to Nano man page",
+         Result => sub { `man nano` },
+
+      },
+      Item_2 => {
+
+         Text => "Continue Installing FullAuto",
+
+      },
+      Banner => $nano_banner,
+
+   );
+   return \%learn_nano;
+
+};
+
+my $goodchoice=sub {
+
+   my %goodchoice=(
+
+      Name => 'goodchoice',
+      Item_1 => {
+
+         Text   => "Learn more about Nano",
+         Result => $learn_nano, 
+
+      },
+      Item_2 => {
+
+         Text   => "Launch and explore Nano",
+         Result => sub { `nano` },
+
+      },
+      Item_3 => {
+
+         Text   => "Continue Installing FullAuto",
+
+      },
+      Banner => $good_choice,
+
+   );
+   return \%goodchoice;
+
+};
+
 my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
 if (-1<index $cat_amazon,'amazon') {
    my @editors=('vim     ( ViIMproved - enhanced vi editor )',
@@ -4635,8 +4726,17 @@ if (-1<index $cat_amazon,'amazon') {
                 "joe     ( Fast and simple editor that\n             ".
                 '            emulates 5 other editors )',
                );
-   my $banner="   In order to use the integrated edit features\n".
-              "   you will need to choose an editor.";
+   my $banner=<<END;
+
+    ___      _        _      ___    _ _ _           
+   / __| ___| |___ __| |_   | __|__| (_) |_ ___ _ _ 
+   \\__ \\/ -_) / -_) _|  _|  | _|/ _` | |  _/ _ \\ '_|
+   |___/\\___|_\\___\\__|\\__|  |___\\__,_|_|\\__\\___/_| 
+
+   In order to use the integrated edit features
+   you will need to choose an editor. You can
+   later change the selection in the Admin menu.
+END
    my %Menu_select_editor=();
    %Menu_select_editor=(
 
@@ -4644,6 +4744,7 @@ if (-1<index $cat_amazon,'amazon') {
          Item_1 => {
             Text    => "nano    ( Easiest - Recommended for Beginners )\n\n",
             Default => "*",
+            Result  => $goodchoice,
          },
          Item_2 => {
 
