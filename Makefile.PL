@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999919';
+$main::VERSION='0.9999999920';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1062,7 +1062,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.61');
+   &fa_install_module('Term::Menus','install','Makefile','','2.62');
    &fa_install_module('Mozilla::CA','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -3670,6 +3670,11 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                close FH;
                if (-1==index $savlines[$#savlines],
                      'Installing documentation:') {
+                  my $cat_amazon=
+                        `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
+                  if (-1<index $cat_amazon,'amazon') {
+                     exec 'sudo','perl','Makefile.PL';
+                  }
                   die join "\n", @savlines;
                } else {
                   $ver=$filename;
@@ -4458,7 +4463,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 #requires        'Data::Dump::Streamer'      => 0;
 #requires        'Digest::SHA'               => 0;
 #requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.61;
+#requires        'Term::Menus'               => 2.62;
 #requires        'Tie::Cache'                => 0;
 #requires        'Sort::Versions'            => 0;
 #requires        'Crypt::CBC'                => 0;
@@ -4679,13 +4684,13 @@ my $learn_nano=sub {
       Name => 'learn_nano',
       Item_1 => {
 
-         Text => "Go to Nano man page (type 'q' to return)",
+         Text => "Go to Nano man page (type q to return)",
          Result => sub { system('man nano');return '<' },
 
       },
       Item_2 => {
 
-         Text   => "Launch and explore Nano",
+         Text   => "Launch and explore Nano (type ctrl + e to return)",
          Result => sub { system('nano');return '<' },
 
       },
@@ -4885,7 +4890,55 @@ END
 WriteAll();
 
 if (-1<index $cat_amazon,'amazon') {
-   print "LOOKING REAL GOOD\n";
+   my $meminfo=`cat /proc/meminfo`;
+   my $memtotal=$meminfo;
+   my $memfree=$meminfo;
+   $memtotal=~s/^.*MemTotal:\s*(\d+) kB.*$/$1/s;
+   $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
+   if ($memtotal<1000000) {
+
+my $almost_there=<<END;
+
+       ___    __                     __     ________                   __
+      /   |  / /___ ___  ____  _____/ /_   /_  __/ /_  ___  ________  / /
+     / /| | / / __ `__ \\/ __ \\/ ___/ __/    / / / __ \\/ _ \\/ ___/ _ \\/ / 
+    / ___ |/ / / / / / / /_/ (__  ) /_     / / / / / /  __/ /  /  __/_/  
+   /_/  |_/_/_/ /_/ /_/\\____/____/\\__/    /_/ /_/ /_/\\___/_/   \\___(_)   
+
+   Normally, FullAuto is installed via the CPAN utility - but because of
+   memory limits, you were instructed to setup via Makefile.PL. Usually
+   this file does not do the entire setup, but rather "makes a Makefile",
+   and the Unix build utility 'make' does the actual building and
+   installation. Since we've broken so many "rules" already, there is
+   no reason not to finish at this point. However, as a courtesy to
+   advanced users, FullAuto setup offers the option to exit setup here.
+END
+
+      my %finish_setup=(
+
+         Name => 'finish_setup',
+         Item_1 => {
+
+            Text => "Complete *ALL* FullAuto setup\n             ".
+                    "            ( HIGHLY recommended for Beginners! )\n\n",
+            Default => '*',
+
+         },
+         Item_2 => {
+
+            Text => "Exit Makefile.PL ('make' must be run separately)",
+
+         },
+         Banner => $almost_there,
+
+      );
+      my $selection=Menu(\%finish_setup);
+      if (-1<index $selection, 'Complete') {
+         system('sudo make install');
+         system('fa');
+      }
+   }
+
 }
 
 sub fa_find_editor {
