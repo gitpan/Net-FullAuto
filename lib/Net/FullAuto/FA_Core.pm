@@ -10064,7 +10064,7 @@ my $setup_new_user11=sub{
          Text => 'Continue with AUTOMATING *any* process with FullAuto!',
       },
       Item_2 => {
-         Text => 'Exit FullAuto',
+         Text => "Exit FullAuto  (Setup is COMPLETE! Use 'fa' to run FullAuto)",
       },
       Banner => $fa_congrats,
    );

@@ -21,7 +21,7 @@ package Net::FullAuto;
 ################################################################
 
 
-our $VERSION='0.9999999920';
+our $VERSION='0.9999999921';
 
 
 use 5.005;
@@ -137,8 +137,6 @@ Net::FullAuto - Perl Based Secure Distributed Computing Network Process
 Automation Utility
 
 =head1 NOTE TO USERS
-
-This is a BETA RELEASE of Net::FullAuto.
 
 Please contact me at my email address -
 
@@ -1543,8 +1541,7 @@ Brian M. Kelly <Brian.Kelly@fullautosoftware.net>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-              2008, 2009, 2010, 2011, 2012
+Copyright (C) 2000-2014
 
 by Brian M. Kelly.
 

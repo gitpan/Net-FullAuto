@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999920';
+$main::VERSION='0.9999999921';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1669,10 +1669,10 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
          my @editors=('nano    ( Easiest - Recommended for Beginners )',
                       'vim     ( ViIMproved - enhanced vi editor )',
                       "emacs   ( The extensible, customizable,\n           ".
-                      "              self-documenting real-time\n         ".
+                      "               self-documenting real-time\n         ".
                       "                display editor )",
                       "joe     ( Fast and simple editor that\n             ".
-                      '            emulates 5 other editors )', 
+                      '             emulates 5 other editors )', 
                      );
          my $tp='';
          unless ($tp=&fa_find_editor('TextPad.exe')) {
@@ -3396,45 +3396,66 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                $ver=$file;
                $ver=~s/_.*$//;
                $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-               my $timeout=120;my $a='';
-               eval {
-                  $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-                  alarm $timeout;
-                  print "\n       *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH".
-                        "\n           BerkeleyDB INSTALLATION IN 2 MINUTES ***\n".
-                        "\n       IMPORTANT! : BerkeleyDB - a C Library used".
-                        "\n                  by FullAuto to create a binary".
-                        "\n                  file-based (lightweight) database".
-                        "\n                  for storing and retrieving".
-                        "\n                  credentials and persistance data,".
-                        "\n                  was not located on this ".
+               my $timeout=120;my $a='';my $w="      ";
+               opendir(CD,'.') or
+                  die "ERROR - Can't read Current Directory: $!\n";
+               my @contents = readdir(DIR);
+               closedir(CD);
+               my $skip_flag=0;
+               my $meminfo=`cat /proc/meminfo`;
+               my $memtotal=$meminfo;
+               my $memfree=$meminfo;
+               $memtotal=~s/^.*MemTotal:\s*(\d+) kB.*$/$1/s;
+               $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
+               if ($memtotal<1000000) {
+                  foreach my $item (@contents) {
+                     if ($item=~/db-.*gz/) {
+                        $skip_flag=1;
+                        last;
+                     }
+                  }
+               } 
+               unless ($skip_flag) {
+                  eval {
+                     $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                     alarm $timeout;
+                     print
+                        "\n$w *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH".
+                        "\n$w     BerkeleyDB INSTALLATION IN 2 MINUTES ***\n".
+                        "\n$w IMPORTANT! : BerkeleyDB - a C Library used".
+                        "\n$w            by FullAuto to create a binary".
+                        "\n$w            file-based (lightweight) database".
+                        "\n$w            for storing and retrieving".
+                        "\n$w            credentials and persistance data,".
+                        "\n$w            was not located on this ".
                         "host/system.".
-                        "\n\n       IMPORTANT! : This FullAuto setup process".
+                        "\n\n$w IMPORTANT! : This FullAuto setup process".
                         " will".
-                        "\n                  now attempt to download ".
+                        "\n$w            now attempt to download ".
                         "BerkeleyDB".
-                        "\n                  source code from Oracle.com and".
-                        "\n                  and compile it for use by ".
+                        "\n$w            source code from Oracle.com and".
+                        "\n$w            and compile it for use by ".
                         "FullAuto.\n";
-                  my $pre="/usr/local/BerkeleyDB.$ver";
-                  $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
-                  print "\n       IMPORTANT! : BerkeleyDB will be installed".
-                        "\n                  in $pre".
-                        "\n\n       If you do not wish FullAuto setup to".
-                        "\n       perform this step, type 'N' and setup will".
-                        "\n       will exit. Please install BerkeleyDB manually".
-                        "\n       before attempting another installation of".
-                        "\n       FullAuto.\n\n";
-                  print "Press <ENTER> if you wish to continue, ".
-                        "or 'N' to quit . . . [Y] ";$
-                  a=<STDIN>;
-                  alarm 0;
-               };
-               if ($@) {
-                  # timed out
-                  #exit;
-               } elsif ($a=~/^[Nn]$/s) {
-                  exit;
+                     my $pre="/usr/local/BerkeleyDB.$ver";
+                     $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
+                     print "\n$w IMPORTANT! : BerkeleyDB will be installed".
+                           "\n$w            in $pre".
+                           "\n\n$w If you do not wish FullAuto setup to".
+                           "\n$w perform this step, type 'N' and setup will".
+                           "\n$w will exit. Please install BerkeleyDB manually".
+                           "\n$w before attempting another installation of".
+                           "\n$w FullAuto.\n\n";
+                     print "Press <ENTER> if you wish to continue, ".
+                           "or 'N' to quit . . . [Y] ";$
+                     a=<STDIN>;
+                     alarm 0;
+                  };
+                  if ($@) {
+                     # timed out
+                     #exit;
+                  } elsif ($a=~/^[Nn]$/s) {
+                     exit;
+                  }
                }
                my $fh='';my $filename='';
                if ($CPAN::META->has_usable("File::Temp")) {
@@ -4831,10 +4852,10 @@ if (-1<index $cat_amazon,'amazon') {
    my @editors=('vim     ( ViIMproved - enhanced vi editor )',
                 "emacs   ( The extensible, customizable, ".
                 "self-documenting\n           ".
-                "              real-time display editor )",
+                "               real-time display editor )",
                 "joe     ( Fast and simple editor that emulates".
                 "\n             ".
-                '            5 other editors )',
+                '             5 other editors )',
                );
    my $banner=<<END;
     ___      _        _      ___    _ _ _
@@ -4906,12 +4927,8 @@ my $almost_there=<<END;
    /_/  |_/_/_/ /_/ /_/\\____/____/\\__/    /_/ /_/ /_/\\___/_/   \\___(_)   
 
    Normally, FullAuto is installed via the CPAN utility - but because of
-   memory limits, you were instructed to setup via Makefile.PL. Usually
-   this file does not do the entire setup, but rather "makes a Makefile",
-   and the Unix build utility 'make' does the actual building and
-   installation. Since we've broken so many "rules" already, there is
-   no reason not to finish at this point. However, as a courtesy to
-   advanced users, FullAuto setup offers the option to exit setup here.
+   memory limits, you were instructed to setup via Makefile.PL. As a
+   courtesy to advanced users, FullAuto setup offers the option to exit here.
 END
 
       my %finish_setup=(
@@ -4935,7 +4952,7 @@ END
       my $selection=Menu(\%finish_setup);
       if (-1<index $selection, 'Complete') {
          system('sudo make install');
-         system('fa');
+         exec fa;
       }
    }
 
