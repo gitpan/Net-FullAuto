@@ -10092,6 +10092,8 @@ my $cacomm_sub=sub {
          Text   => "YES",
          Result  => sub {
                            package del_sets;
+                           $main::get_default_modules->()
+                              unless defined $Net::FullAuto::FA_Core::fa_global;
                            use BerkeleyDB;
                            use File::Path;
                            no strict 'subs';
@@ -12596,7 +12598,8 @@ sub fa_login
       $fullauto=']FullAuto[';
       $cron=']Cron[';
    }
-   if ($Term::Menus::new_user_flag or $welcome or $newuser) {
+   if (($Term::Menus::new_user_flag or $welcome or $newuser) &&
+         !$default) {
       $Net::FullAuto::FA_Core::skip_host_hash=1;
       &new_user_experience($Term::Menus::new_user_flag,
          $welcome,$newuser);

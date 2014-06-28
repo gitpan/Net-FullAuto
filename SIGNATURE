@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 1c2a5e14a8aedf5397d69b9a6e5952bf8f249322 ChangeLog
+SHA1 571013de9b039139fecc4f3750fa5daa8ca92ff1 ChangeLog
 SHA1 5437f164ae11b18bb58a8576204254a1b4a9334b LICENSE
 SHA1 2405b691fcb18b468ccb31cab97babb75e4d1f30 MANIFEST
 SHA1 2f9225b67b64a008571b5d5fb2cb99be0ddd41ff META.yml
-SHA1 f64c9c75695a534ed26d92d28c72bbd463f3187c Makefile.PL
+SHA1 f4a1bc4421ab863417a075c77dbcda0593770f96 Makefile.PL
 SHA1 7250b2f536fe8a96fb25fc7435146bc006aaefe1 README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 b49ee0f29a9e578dfc05ac8a69ceee952810622d bin/fullauto.pl
@@ -47,7 +47,7 @@ SHA1 6fed559b971e9d2f091e0776ddbb131be5225a36 inc/Module/Install/Win32.pm
 SHA1 ea528c813c3473a2674fcbed06531c2f795116ce inc/Module/Install/WriteAll.pm
 SHA1 00bb8470354d11bd7c2c74633083ebe627eb2b7e inc/Module/Install/with.pm
 SHA1 fb2c2f6e2ade19cd024dad15dd25bebf85023a4b install_mozrepl_plugin.ahk
-SHA1 ec14c66a68dc0f0b4d8e7e0185c57397e0ef6317 lib/Net/FullAuto.pm
+SHA1 4300647192655c254e78270bf1839a09deeec0e4 lib/Net/FullAuto.pm
 SHA1 dabbf5e523732ed0d3084fb91dcccb4f1c330ceb lib/Net/FullAuto/Custom/BackUp/README
 SHA1 c2219c6cd1af2a775ebd3b90e0d4731ef0aededc lib/Net/FullAuto/Custom/README
 SHA1 32064cac342c1fab8377c4b9fe5c41be23a92e78 lib/Net/FullAuto/Distro/fa_code.pm
@@ -58,17 +58,17 @@ SHA1 680c63d1c164c10ec6f4496f37ca9068fd53ef68 lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 60e3a5d57225134e18d71fd252ea960c9ca6f2ae lib/Net/FullAuto/Distro/fa_menu.pm
 SHA1 863e8ae080491966fa2acf721aca8a8b000dc602 lib/Net/FullAuto/Distro/fa_menu_demo.pm
 SHA1 c61c03f9beda14559fdf07e569e813a2bd553a53 lib/Net/FullAuto/Distro/fullautologo.jpg
-SHA1 191f4956731bc3b8f1a4e60d6187c500ae5838ab lib/Net/FullAuto/FA_Core.pm
+SHA1 d638bf58e9fc7feded0f2c584fc22ce72a973487 lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJTrXfuAAoJEBa/9Pad787E2fwIANkzJnAJmgHz3CqIlVQSWMmR
-jfjqrwsiLy5iEJ+Av0EnnPxsDi6Nc2X7SeTCSAlWWCwaojtcr9qDDxJyTpP1U2c2
-x85ONxDSDlzVFjHpV+Abs9/2ngUMX6ISUgfHJFdN3DKt9kpuYHl9gwQ2Lz67ag8v
-7i4h+39klYgsgnmwKoNHyV45yd+sLkKCk84rN0HhjsfVulQ/M+usO2grXwQWjh1J
-FNeSTs0U3RtbFyYPw/v3BjzF0cOcvLwoy+oPbHebXYxLKfsl7ohJYIMfVryC5EPh
-Q4hF2Gv2Iftbj7m6yUlZgFe1pYAdRiDsc8SI77m0z9ZkUCRELjS4C5j08N1yZYs=
-=02nJ
+iQEcBAEBAgAGBQJTrpAHAAoJEBa/9Pad787EuV0IAK/WPea/3594XYqIQ1I1r+Q5
+bubNXmZZOJ3hIqFDnh16dC8FS3QmxfdRq19sN6ln1Zzb+uXJptEDJNKZZtNFM8qr
+ccfkcGt0WqIIro0cwbfN8pr9TMfLWNbek3r1QUxtAjjcOniPocXM1JDQBb+i8Vr2
+gCvks3tdthPQ6sWPzTcHlnMbjoBLIoGsNI02X5cOI0WMZaPX6dECAhf+g+s/5xZd
+0q13jKdV3oWz1Ophrgr4vmI9fnFabA8D38utpoLGlQlm1eIhR7TgF+hLyW/tR4mB
+kf/biKgS6VmLY79UZpgXxv1ilxDuculGlLMVBPO584v3kgjm5v27DcgF5AqTnSI=
+=+sgr
 -----END PGP SIGNATURE-----

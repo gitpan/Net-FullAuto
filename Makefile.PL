@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999917';
+$main::VERSION='0.9999999918';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -53,6 +53,141 @@ my $fa_banner=<<END;
 
 
 END
+
+   sub license {
+
+      my %read_license=(
+
+         Label => 'read_license',
+         Item_1 => {
+
+            Text => "]C[",
+            Convey => sub {
+
+               my $endcount=30;
+               my @content=();my $tl=0;
+               my $linenumber="]P[";
+               $linenumber||=1;
+               my $choice=$linenumber;
+               if (-1==index $linenumber,'Review') {
+                  if ($linenumber=~/Next|Previous/) {
+                     $linenumber=~s/^(?:Next|Previous) Page\s*//;
+                  }
+                  ($linenumber,$endcount)=split '-', $linenumber;
+                  open (FH,"<$main::PARdir/inc/LICENSE")
+                     or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
+                  @content=<FH>;
+                  close FH;
+                  $tl=$#content+1;
+                  my $lt=$linenumber+13;
+                  $endcount=($lt<$tl)?$lt:$tl;
+               } elsif (-1<index $linenumber,'WARRANTY') {
+                  $linenumber=588;
+                  $endcount=599;
+               } else { $linenumber=1 }
+               my $ec=$endcount-1;
+               if (-1==index $choice,'WARRANTY') {
+                  if ($ec == $#content) {
+                     my $lm=$linenumber-13;
+                     return ("Previous Page $lm-$linenumber");
+                  } elsif ($linenumber==1) {
+                     my $lo=$linenumber+13;
+                     my $ln=$lo+13;
+                     return ("Next Page $lo-$ln");
+                  } else {
+                     my $lo=$linenumber+13;
+                     my $ln=$lo+29;
+                     my $el=$linenumber-1;
+                     my $pl=$linenumber-13;
+                     return ("Next Page $lo-$ln","Previous Page $pl-$el");
+                  }
+               }
+            },
+            Result => { 'read_license'=>'recurse' },
+
+         },
+         Item_2 => {
+            Text => "I accept the license provisions",
+         },
+         Item_3 => {
+            Text => "I do *NOT* accept the license provisions ".
+                    "(Install will Exit)",
+         },
+         Banner => sub {
+               my $linenumber="]P[";
+               open (FH,"<$main::PARdir/inc/LICENSE")
+                  or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
+               my @content=<FH>;
+               close FH;
+               my $co=$#content+1;
+               my $endcount=(13<$co)?13:$co;
+               if (-1==index $linenumber,'Review') {
+                  if ($linenumber=~/Next|Previous/) {
+                     $linenumber=~s/^(?:Next|Previous) Page\s*//;
+                  }
+                  ($linenumber,$endcount)=split '-', $linenumber;
+                  my $tl=$#content+1;
+                  my $lt=$linenumber+13;
+                  $endcount=($lt<$tl)?$lt:$tl;
+               } elsif (-1<index $linenumber,'WARRANTY') {
+                  $linenumber=588;
+                  $endcount=599;
+               } else { $linenumber=1 }
+               $linenumber=0 if $linenumber==1;
+               --$endcount;
+               return (join "", @content[$linenumber..$endcount]);
+            }
+
+      );
+      my %license_agree=(
+         Label => 'license_agree',
+         Item_1 => {
+
+            Text => "I agree to the license provisions",
+
+         },
+         Item_2 => {
+
+            Text => "Review the GNU Public License Version 3\n".
+                    "                   WARRANTY DISCLAIMER",
+            Result => \%read_license,
+
+         },
+         Item_3 => {
+
+            Text => "Review the GNU Public License Version 3\n".
+                    "                   in its entirety",
+            Result => \%read_license,
+
+         },
+         Item_4 => {
+
+            Text => "I DO NOT AGREE to the license provisions\n".
+                    "                   ( FullAuto Install will EXIT )",
+         },
+         Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
+            "      Net::FullAuto INSTALLATION PROGRAM\n\n".
+            "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
+            "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
+            "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
+            "   select  2.  This is free software, and you are welcome to\n".
+            "   redistribute it under certain conditions; select  3  for\n".
+            "   details.\n",
+
+      );
+      my $lic_sel=Menu(\%license_agree);
+      chomp($lic_sel);
+      exit if $lic_sel eq ']quit[';
+      if (-1<index $lic_sel, 'NOT') {
+         print "\n\n   You have elected *NOT* to install FullAuto.",
+               "\n\n   Please report any bugs and send any",
+               "\n   questions, thoughts or feedback to:",
+               "\n\n      Brian.Kelly\@fullautosoftware.net.",
+               "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+         exit;
+      }
+
+   }
 
    sub get_cygwin_location {
       my $cygwin_query=
@@ -210,6 +345,7 @@ END
    if ($^O eq 'linux') {
       my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
       if (-1<index $cat_amazon,'amazon') {
+         license();
          my $meminfo=`cat /proc/meminfo`;
          my $memtotal=$meminfo;
          my $memfree=$meminfo;
@@ -382,6 +518,9 @@ END
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Win32::DriveInfo";
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Term::Menus";
 
+      license();
+
+if (0) {
       my %read_license=(
 
          Label => 'read_license',
@@ -512,6 +651,7 @@ END
                "\n\n   Press ANY key to exit.\n\n";<STDIN>;
          exit;
       }
+}
       my $cygwin_loc=get_cygwin_location();
       if ($cygwin_loc) {
          my $drv=substr($cygwin_loc,0,1);
@@ -4633,32 +4773,29 @@ my $good_choice=<<END;
    | (_ |/ _ \\/ _ \\/ _` |  | (__| ' \\/ _ \\ / _/ -_)_|
     \\___|\\___/\\___/\\__,_|   \\___|_||_\\___/_\\__\\___(_)
 
-   The Nano Editor is widely considered to be the easiest
-   Terminal Editor to learn. Here are a couple of important
-   things to remember. When you look at the bottom of the
-   screen, you will see character combinations like this:
+   The Nano Editor is widely considered to be the easiest Terminal Editor to
+   learn. Here are a couple of important things to remember. When you look at
+   at the bottom of the screen, you will see character combinations like this:
 
-   ^E ^W ^O  -->  the caret symbol followed by a letter.
+   ^E ^W ^O  -->  the caret symbol (for Ctrl key) followed by a letter.
 
-   This means the ctrl key pressed in combination with the
-   displayed letter next to it. For example, to exit Nano (^E),
+   Ctrl key is pressed with letter next to it. For example, to exit Nano (^E)
     ________     ____                    _______     ____ 
-   || ctrl ||   ||e ||                  || alt ||   ||c ||
+   || Ctrl ||   ||E ||                  || Alt ||   ||C ||
    ||______|| + ||__||  M-C  is  alt c  ||_____|| + ||__||
    |/______\\|   |/__\\|                  |/_____\\|   |/__\\|
 END
 
 my $nano_banner=<<END;
 
-   .e.f8 ee.     88**8.  e888 88**8. .d88b.
+   .e.f8 ee.     88**8.  e888 88**8. .d88b.   GNU
    i '8f'  Q,    88  88 88 88 88  88 88  88
       8.   8:    88  88 "Y888 88  88 "t88P"   Text Editor
       8.   8:
-      W.   8:
-           8:    In Terminal Environments, Documentation
+      W.   8:    In Terminal Environments, Documentation
            8:    for Nano can be seen anytime by typing:
-           tD
-                 man nano    at the command line.
+           8:    
+           tD    man nano    at the command line.
 
    You can also see online documentation at:
 
@@ -4673,10 +4810,16 @@ my $learn_nano=sub {
       Item_1 => {
 
          Text => "Go to Nano man page",
-         Result => sub { `man nano` },
+         Result => sub { system('man nano');return '<' },
 
       },
       Item_2 => {
+
+         Text   => "Launch and explore Nano",
+         Result => sub { system('nano');return '<' },
+
+      },
+      Item_3 => {
 
          Text => "Continue Installing FullAuto",
 
@@ -4701,12 +4844,6 @@ my $goodchoice=sub {
       },
       Item_2 => {
 
-         Text   => "Launch and explore Nano",
-         Result => sub { `nano` },
-
-      },
-      Item_3 => {
-
          Text   => "Continue Installing FullAuto",
 
       },
@@ -4728,21 +4865,19 @@ if (-1<index $cat_amazon,'amazon') {
                );
    my $banner=<<END;
 
-    ___      _        _      ___    _ _ _           
-   / __| ___| |___ __| |_   | __|__| (_) |_ ___ _ _ 
-   \\__ \\/ -_) / -_) _|  _|  | _|/ _` | |  _/ _ \\ '_|
-   |___/\\___|_\\___\\__|\\__|  |___\\__,_|_|\\__\\___/_| 
+       *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH FullAuto
+                      INSTALLATION IN 5 MINUTES ***
 
-   In order to use the integrated edit features
-   you will need to choose an editor. You can
-   later change the selection in the Admin menu.
+   In order to use the integrated edit features you will need to choose
+   an editor. You can later change the selection in the Admin menu.
 END
+
    my %Menu_select_editor=();
    %Menu_select_editor=(
 
          Label  => 'Menu_select_editor',
          Item_1 => {
-            Text    => "nano    ( Easiest - Recommended for Beginners )\n\n",
+            Text    => "nano    ( Easiest - Recommended for Beginners )",
             Default => "*",
             Result  => $goodchoice,
          },
@@ -4755,8 +4890,13 @@ END
          Banner => $banner,
 
    );
-   my $selection=Term::Menus::Menu(\%Menu_select_editor);
-   chomp($selection);
+   my $selection='';
+   my $timeout=300;my $a='';
+   eval {
+      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+      alarm $timeout;
+      $selection=Term::Menus::Menu(\%Menu_select_editor);
+   };
    exit if $selection eq ']quit[';
    $editor='nano';
    if ($selection=~/joe/) {
@@ -4780,6 +4920,10 @@ END
 }
 
 WriteAll();
+
+if (-1<index $cat_amazon,'amazon') {
+   print "LOOKING REAL GOOD\n";
+}
 
 sub fa_find_editor {
    my $editor=$_[0];
