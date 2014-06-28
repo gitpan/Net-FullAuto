@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999922';
+$main::VERSION='0.9999999923';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -956,6 +956,7 @@ END
    &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.59');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
+   &fa_install_mod('Test::Tester','install','Makefile');
    &fa_install_mod('Test::Simple','install','Makefile');
    &fa_install_mod('Params::Check','install','Makefile');
    &fa_install_mod('Module::CoreList','install','Makefile');
@@ -1009,7 +1010,6 @@ END
       &fa_install_module('Date::Format','install','Makefile');
       &fa_install_module('Date::Parse','install','Makefile');
       &fa_install_module('Mail::Internet','install','Makefile');
-      &fa_install_module('Test::Tester','install','Makefile');
       &fa_install_module('Test::NoWarnings','install','Makefile');
       &fa_install_module('Test::Deep','install','Makefile');
       &fa_install_module('MIME::Entity','install','Makefile');
@@ -3391,9 +3391,9 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                my $source=$res->content;
                my $site='download.oracle.com';
                $source=~
-                  s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+                 s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.NC.tar.gz).*$/$1$2/s;
                my $file=$2;
-               my $file=substr($file,(index $file,'/')+1,-7);
+               my $file=substr($file,(index $file,'/')+1,-10);
                $ver=$file;
                $ver=~s/_.*$//;
                $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
@@ -3463,13 +3463,13 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                   $fh = File::Temp->new(
                         dir      => cwd(),
                         template => "${file}_XXXXXX",
-                        suffix => ".tar.gz",
+                        suffix => ".NC.tar.gz",
                         unlink => 0,
                        );
                   $filename = $fh->filename;
                } else {
                   $fh = FileHandle->new;
-                  $filename = "${file}_$$.tar.gz";
+                  $filename = "${file}_$$.NC.tar.gz";
                }
                chomp($filename);
                my $end_flag=0;
@@ -3503,11 +3503,11 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         );
                         if (!$end_flag && ($status_line eq '404')) {
                            $source=$last_known_good_location;
-                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
+                           $end_flag=1;my $rt=qr/b.*?\d.NC.tar.gz/;
                            $source=~
                               s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
                            $file=$2;
-                           $file=substr($file,(index $file,'/')+1,-7);
+                           $file=substr($file,(index $file,'/')+1,-10);
                            $ver=$file;
                            $ver=~s/_.*$//;
                            $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
@@ -3530,13 +3530,13 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                      $md5fh = File::Temp->new(
                            dir      => cwd(),
                            template => "${file}_XXXXXX",
-                           suffix => ".tar.gz.md5",
+                           suffix => ".NC.tar.gz.md5",
                            unlink => 0,
                      );
                      $md5filename = $md5fh->filename;
                   } else {
                      $md5fh = FileHandle->new;
-                     $md5filename = "${file}_$$.tar.gz.md5";
+                     $md5filename = "${file}_$$.NC.tar.gz.md5";
                   }
                   $req = HTTP::Request->new(GET => $source.'.md5');
                   $req->header('Accept-Encoding' => 'gzip, compress');
@@ -3559,11 +3559,11 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         );
                         if (!$end_flag && ($status_line eq '404')) {
                            $source=$last_known_good_location;
-                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
+                           $end_flag=1;my $rt=qr/b.*?\d.NC.tar.gz/;
                            $source=~
                               s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
                            $file=$2;
-                           $file=substr($file,(index $file,'/')+1,-7);
+                           $file=substr($file,(index $file,'/')+1,-10);
                            $ver=$file;
                            $ver=~s/_.*$//;
                            $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;

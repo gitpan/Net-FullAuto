@@ -20,7 +20,18 @@
 #######################################################################
 
 
-2014-06-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2014-06-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999923 released.
+
+        * Updated Makefile.PL for AWS Ubuntu installations.
+
+        * Using Non-Encrypted version of Berkeley DB.
+
+        * Loading Test::Tester earlier.
+
+
+2014-06-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999922 released.
 
@@ -32,14 +43,14 @@
         * New version of Term::Menus paired with this release. 
  
 
-2014-06-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2014-06-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999921 released.
 
         * Updated Makefile.PL for AWS Ubuntu installations.
 
 
-2014-06-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+2014-06-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999920 released.
 
