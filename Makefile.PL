@@ -1,22 +1,23 @@
-### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
+### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
 #    Copyright (C) 2000-2014  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    any later version.
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or any later version.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but **WITHOUT ANY WARRANTY**; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
+#    GNU Affero General Public License for more details.
 #
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#    You should have received a copy of the GNU Affero General Public
+#    License along with this program.  If not, see:
+#    <http://www.gnu.org/licenses/agpl.html>.
 #
-################################################################
+#######################################################################
 
 ################################################################
 #
@@ -26,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999921';
+$main::VERSION='0.9999999922';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -483,14 +484,14 @@ END
          },
          Item_2 => {
 
-            Text => "Review the GNU Public License Version 3\n".
+            Text => "Review the GNU Affero Public License Version 3\n".
                     "                   WARRANTY DISCLAIMER",
             Result => \%read_license,
 
          },
          Item_3 => {
 
-            Text => "Review the GNU Public License Version 3\n".
+            Text => "Review the GNU Affero Public License Version 3\n".
                     "                   in its entirety",
             Result => \%read_license,
 
@@ -1008,8 +1009,8 @@ END
       &fa_install_module('Date::Format','install','Makefile');
       &fa_install_module('Date::Parse','install','Makefile');
       &fa_install_module('Mail::Internet','install','Makefile');
-      &fa_install_module('Test::NoWarnings','install','Makefile');
       &fa_install_module('Test::Tester','install','Makefile');
+      &fa_install_module('Test::NoWarnings','install','Makefile');
       &fa_install_module('Test::Deep','install','Makefile');
       &fa_install_module('MIME::Entity','install','Makefile');
    }
@@ -1062,7 +1063,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.62');
+   &fa_install_module('Term::Menus','install','Makefile','','2.63');
    &fa_install_module('Mozilla::CA','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -1508,7 +1509,7 @@ version         $main::VERSION;
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
-license         'GPL-3.0';
+license         'AGPL-3.0';
 perl_version    '5.006';
 
 #unshift @INC, $main::PARdir if $main::unshift_incdir;
@@ -3399,7 +3400,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                my $timeout=120;my $a='';my $w="      ";
                opendir(CD,'.') or
                   die "ERROR - Can't read Current Directory: $!\n";
-               my @contents = readdir(DIR);
+               my @contents = readdir(CD);
                closedir(CD);
                my $skip_flag=0;
                my $meminfo=`cat /proc/meminfo`;
@@ -3439,12 +3440,12 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                      my $pre="/usr/local/BerkeleyDB.$ver";
                      $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
                      print "\n$w IMPORTANT! : BerkeleyDB will be installed".
-                           "\n$w            in $pre".
-                           "\n\n$w If you do not wish FullAuto setup to".
-                           "\n$w perform this step, type 'N' and setup will".
-                           "\n$w will exit. Please install BerkeleyDB manually".
-                           "\n$w before attempting another installation of".
-                           "\n$w FullAuto.\n\n";
+                           "\n$w            in $pre\n".
+                           "\n$w If you do not wish FullAuto setup to perform".
+                           "\n$w this step, type 'N' and setup will exit.".
+                           "\n$w Please install BerkeleyDB manually before".
+                           "\n$w attempting another installation of FullAuto.".
+                           "\n\n";
                      print "Press <ENTER> if you wish to continue, ".
                            "or 'N' to quit . . . [Y] ";$
                      a=<STDIN>;
@@ -3693,7 +3694,9 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                      'Installing documentation:') {
                   my $cat_amazon=
                         `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
+print "CAT_AMAZON=$cat_amazon\n";
                   if (-1<index $cat_amazon,'amazon') {
+print "WE ARE HERE\n";
                      exec 'sudo','perl','Makefile.PL';
                   }
                   die join "\n", @savlines;
@@ -4484,7 +4487,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 #requires        'Data::Dump::Streamer'      => 0;
 #requires        'Digest::SHA'               => 0;
 #requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.62;
+#requires        'Term::Menus'               => 2.63;
 #requires        'Tie::Cache'                => 0;
 #requires        'Sort::Versions'            => 0;
 #requires        'Crypt::CBC'                => 0;
@@ -4804,14 +4807,14 @@ sub fa_license {
       },
       Item_2 => {
 
-         Text => "Review the GNU Public License Version 3\n".
+         Text => "Review the GNU Affero Public License Version 3\n".
                  "                   WARRANTY DISCLAIMER",
          Result => \%read_license,
 
       },
       Item_3 => {
 
-         Text => "Review the GNU Public License Version 3\n".
+         Text => "Review the GNU Affero Public License Version 3\n".
                  "                   in its entirety".
                  " (type 'q' to return)",
          Result => sub { system('less LICENSE');return '<' },

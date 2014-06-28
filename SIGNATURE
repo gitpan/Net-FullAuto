@@ -14,14 +14,14 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 a04d161641c5e6760aaf09dd4bbff8d270753ff7 ChangeLog
-SHA1 5437f164ae11b18bb58a8576204254a1b4a9334b LICENSE
+SHA1 d742533d00cec66a8977407371effb4052b7a9e6 ChangeLog
+SHA1 62647027745e394450492878f8d8730548d83fa2 LICENSE
 SHA1 2405b691fcb18b468ccb31cab97babb75e4d1f30 MANIFEST
-SHA1 5893b7caf00a6ae089654b581dd59c30ef8927c6 META.yml
-SHA1 75c7e1bddbd236a8e2e731dd151b9205b9c5b0f1 Makefile.PL
-SHA1 7250b2f536fe8a96fb25fc7435146bc006aaefe1 README
+SHA1 97e1c9b8e385cb52887a8fb6d70c87a04e735f01 META.yml
+SHA1 e4d3278f05cc100a16fb266f9b9a26f9eb714abc Makefile.PL
+SHA1 05aead0f26b0f71a00bad5badbf390f2c92dcd1d README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
-SHA1 b49ee0f29a9e578dfc05ac8a69ceee952810622d bin/fullauto.pl
+SHA1 aa152c829fcf86957fd2012f6c30e5e18d3c76b2 bin/fullauto.pl
 SHA1 967864161cdddec872e6ea5fc18c37776cb1641a bin/install_mozrepl_plugin.exe
 SHA1 a0d5dfdc1172c70fe1760e351024287e23eea486 inc/Module/AutoInstall.pm
 SHA1 61da5f5b15bb5e3ed01095d3b826a606513c4418 inc/Module/Install.pm
@@ -46,29 +46,29 @@ SHA1 98d3e5685466098b1314bbb053147ed7010d9e06 inc/Module/Install/Share.pm
 SHA1 6fed559b971e9d2f091e0776ddbb131be5225a36 inc/Module/Install/Win32.pm
 SHA1 ea528c813c3473a2674fcbed06531c2f795116ce inc/Module/Install/WriteAll.pm
 SHA1 00bb8470354d11bd7c2c74633083ebe627eb2b7e inc/Module/Install/with.pm
-SHA1 fb2c2f6e2ade19cd024dad15dd25bebf85023a4b install_mozrepl_plugin.ahk
-SHA1 96f0cfc7ae5bd7aae70229c6a8f0a9c30c68e8ec lib/Net/FullAuto.pm
-SHA1 dabbf5e523732ed0d3084fb91dcccb4f1c330ceb lib/Net/FullAuto/Custom/BackUp/README
-SHA1 c2219c6cd1af2a775ebd3b90e0d4731ef0aededc lib/Net/FullAuto/Custom/README
-SHA1 32064cac342c1fab8377c4b9fe5c41be23a92e78 lib/Net/FullAuto/Distro/fa_code.pm
-SHA1 379383e9f26769ebaf19cf9d1fc3282d727dea7b lib/Net/FullAuto/Distro/fa_code_demo.pm
-SHA1 7ad6cf37309df48ee63d9fd8440d16dfc62f126a lib/Net/FullAuto/Distro/fa_conf.pm
-SHA1 1a511a6d57499ab3dc99d3c83dd1b3e2d6889cb7 lib/Net/FullAuto/Distro/fa_host.pm
-SHA1 680c63d1c164c10ec6f4496f37ca9068fd53ef68 lib/Net/FullAuto/Distro/fa_maps.pm
-SHA1 60e3a5d57225134e18d71fd252ea960c9ca6f2ae lib/Net/FullAuto/Distro/fa_menu.pm
-SHA1 863e8ae080491966fa2acf721aca8a8b000dc602 lib/Net/FullAuto/Distro/fa_menu_demo.pm
+SHA1 e1d3650b6801a3cb2e6de38574e9327914c96d40 install_mozrepl_plugin.ahk
+SHA1 b4cc6e6ee25c73d95c53941d7c294d3db9654b25 lib/Net/FullAuto.pm
+SHA1 cc3f8588c96516de2802c68be465447d17f781aa lib/Net/FullAuto/Custom/BackUp/README
+SHA1 5032ba28f88dbf163b0d4dd158948af9124568c9 lib/Net/FullAuto/Custom/README
+SHA1 5b1702f20efb104e3375934cf55a7438c19e109a lib/Net/FullAuto/Distro/fa_code.pm
+SHA1 5e5d30339f8f596acbcd5e0d6c9f047ab97728f7 lib/Net/FullAuto/Distro/fa_code_demo.pm
+SHA1 bf71f582bc36937f8cd65567e7e4fa1d22263022 lib/Net/FullAuto/Distro/fa_conf.pm
+SHA1 ff8b16e3960e2aeed967cbcddd72b554b9d76155 lib/Net/FullAuto/Distro/fa_host.pm
+SHA1 fe312c3ed58aac44bd3bebb39bef97df2c70ecad lib/Net/FullAuto/Distro/fa_maps.pm
+SHA1 1e9cdb0a94c0e832ac6240d6ae26fcab0cfebbc0 lib/Net/FullAuto/Distro/fa_menu.pm
+SHA1 c6096414c9970ce64beb619cc9f0d78fe4d69993 lib/Net/FullAuto/Distro/fa_menu_demo.pm
 SHA1 c61c03f9beda14559fdf07e569e813a2bd553a53 lib/Net/FullAuto/Distro/fullautologo.jpg
-SHA1 3232fb6e249ec3c2207fc1b82b0aa7a72e02f8aa lib/Net/FullAuto/FA_Core.pm
+SHA1 791fcade67c31ddfdc330f7bfcd0bd3f24e2eceb lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJTrvw0AAoJEBa/9Pad787EM6QIAI5iwoCLeW1GPKiSZCNhjNDA
-Pu0eHjjvHt9POcRZ3m0iMXQQ9JMMA3Aj9PkxnjO+u42IkkHUeMjJ9DbWLOqQk6/y
-HdFRuH2K3sD1ruZLYIh6m5OeNbjlagLKoZHqtfUU8UIXvPhMvvjtc2ajG3Msm5oN
-SC6fBcwuhw3FTpZKcydAksHjgYsRYo2ok4Up4J1+IdI/8RzpzqQQrqfD8O7ZTnfI
-SHBcTDbwQ7I35GZg1dGYUR7RRd53AMXx8DXnr0nptlTcAUaf06uRkPtYhP29dXYT
-wZvkbk59T+NSIfUXZmolGsdumG5j9jJ/JoN+guT85Ewmh/2GrW6jgczG3Vifp1A=
-=m8Xj
+iQEcBAEBAgAGBQJTrz/hAAoJEBa/9Pad787Ej6UIAKx4drQBGgHkFsQpKSpo9Td8
+bNbzKQcxsknVlXjDVsFg+J+SaQaONSFo6bwUaCaaj/3Mgi44+2NG0hze7lII4F3G
+CxE62nPde10BuPr7uHXx6CmGq4LBAAn8vd78jgLlv8qer58tYNqfn0TGCQK/F8qE
+bL4IclmtchweytHVBgXuZrYqqiSjHbzaig90/Vvxe7d9RqDHsI4Gwl0wRDH4p0cF
+BmihbroOAbJ+3BoaLHqVFaL98/QB4iUJ149ISdeRTgTfHoR5u5Ri6Cy97hUtRGbJ
+jxVwC1ffiEQ694FyV74s4mMg2f+0Tt2jvEQpn3O4EC85uFwUvYLKQNdi30VlFtw=
+=98D4
 -----END PGP SIGNATURE-----

@@ -1,24 +1,25 @@
 package Net::FullAuto::FA_Core;
 
-### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
+### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
 #    Copyright (C) 2000-2014  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    any later version.
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or any later version.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but **WITHOUT ANY WARRANTY**; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
+#    GNU Affero General Public License for more details.
 #
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#    You should have received a copy of the GNU Affero General Public
+#    License along with this program.  If not, see:
+#    <http://www.gnu.org/licenses/agpl.html>.
 #
-################################################################
+#######################################################################
 
 ## ******* Misc Notes ******************************************
 ## For Testing Multiple Iterations in a BASH shell environment
@@ -2316,8 +2317,8 @@ This is Net::FullAuto, v$Net::FullAuto::VERSION
 
 Copyright 2000-2014, Brian M. Kelly
 
-FullAuto may be copied only under the terms of the GNU General Public License,
-which may be found in the FullAuto source distribution.
+FullAuto may be copied only under the terms of the GNU Affero General Public
+License, which may be found in the FullAuto source distribution.
 
 Complete documentation for FullAuto, including FAQ lists, should be found on
 this system using "man fullauto" or "perldoc fullauto".  If you have access
@@ -9373,26 +9374,32 @@ $main::get_default_modules=sub {
    unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm') {
       my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm';
       open (FD,">$fd") or &handle_error("Cannot open $fd: $!\n");
-      print FD "package fa_global;\n\n",
-         "### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######\n",
-         "#\n",
-         "#    Net::FullAuto - Powerful Network Process Automation Software\n",
-         "#    Copyright (C) 2000-2014  Brian M. Kelly\n",
-         "#\n",
-         "#    This program is free software: you can redistribute it and/or modify\n",
-         "#    it under the terms of the GNU General Public License as published by\n",
-         "#    the Free Software Foundation, either version 3 of the License, or\n",
-         "#    any later version.\n",
-         "#\n",
-         "#    This program is distributed in the hope that it will be useful,\n",
-         "#    but **WITHOUT ANY WARRANTY**; without even the implied warranty of\n",
-         "#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n",
-         "#    GNU General Public License for more details.\n",
-         "#\n",
-         "#    You should have received a copy of the GNU General Public License\n",
-         "#    along with this program.  If not, see <http://www.gnu.org/licenses/>.\n",
-         "#\n",
-         "################################################################\n\n",
+      print FD "package fa_global;";
+
+my $affero=<<END;
+
+### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
+#
+#    Net::FullAuto - Powerful Network Process Automation Software
+#    Copyright (C) 2000-2014  Brian M. Kelly
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but **WITHOUT ANY WARRANTY**; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public
+#    License along with this program.  If not, see:
+#    <http://www.gnu.org/licenses/agpl.html>.
+#
+#######################################################################
+END
+   print FD $affero."\n",
          "use strict;\n",
          "use warnings;\n\n",
          "#################################################################\n",
