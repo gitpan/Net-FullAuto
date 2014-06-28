@@ -26,7 +26,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999918';
+$main::VERSION='0.9999999919';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -53,141 +53,6 @@ my $fa_banner=<<END;
 
 
 END
-
-   sub license {
-
-      my %read_license=(
-
-         Label => 'read_license',
-         Item_1 => {
-
-            Text => "]C[",
-            Convey => sub {
-
-               my $endcount=30;
-               my @content=();my $tl=0;
-               my $linenumber="]P[";
-               $linenumber||=1;
-               my $choice=$linenumber;
-               if (-1==index $linenumber,'Review') {
-                  if ($linenumber=~/Next|Previous/) {
-                     $linenumber=~s/^(?:Next|Previous) Page\s*//;
-                  }
-                  ($linenumber,$endcount)=split '-', $linenumber;
-                  open (FH,"<$main::PARdir/inc/LICENSE")
-                     or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
-                  @content=<FH>;
-                  close FH;
-                  $tl=$#content+1;
-                  my $lt=$linenumber+13;
-                  $endcount=($lt<$tl)?$lt:$tl;
-               } elsif (-1<index $linenumber,'WARRANTY') {
-                  $linenumber=588;
-                  $endcount=599;
-               } else { $linenumber=1 }
-               my $ec=$endcount-1;
-               if (-1==index $choice,'WARRANTY') {
-                  if ($ec == $#content) {
-                     my $lm=$linenumber-13;
-                     return ("Previous Page $lm-$linenumber");
-                  } elsif ($linenumber==1) {
-                     my $lo=$linenumber+13;
-                     my $ln=$lo+13;
-                     return ("Next Page $lo-$ln");
-                  } else {
-                     my $lo=$linenumber+13;
-                     my $ln=$lo+29;
-                     my $el=$linenumber-1;
-                     my $pl=$linenumber-13;
-                     return ("Next Page $lo-$ln","Previous Page $pl-$el");
-                  }
-               }
-            },
-            Result => { 'read_license'=>'recurse' },
-
-         },
-         Item_2 => {
-            Text => "I accept the license provisions",
-         },
-         Item_3 => {
-            Text => "I do *NOT* accept the license provisions ".
-                    "(Install will Exit)",
-         },
-         Banner => sub {
-               my $linenumber="]P[";
-               open (FH,"<$main::PARdir/inc/LICENSE")
-                  or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
-               my @content=<FH>;
-               close FH;
-               my $co=$#content+1;
-               my $endcount=(13<$co)?13:$co;
-               if (-1==index $linenumber,'Review') {
-                  if ($linenumber=~/Next|Previous/) {
-                     $linenumber=~s/^(?:Next|Previous) Page\s*//;
-                  }
-                  ($linenumber,$endcount)=split '-', $linenumber;
-                  my $tl=$#content+1;
-                  my $lt=$linenumber+13;
-                  $endcount=($lt<$tl)?$lt:$tl;
-               } elsif (-1<index $linenumber,'WARRANTY') {
-                  $linenumber=588;
-                  $endcount=599;
-               } else { $linenumber=1 }
-               $linenumber=0 if $linenumber==1;
-               --$endcount;
-               return (join "", @content[$linenumber..$endcount]);
-            }
-
-      );
-      my %license_agree=(
-         Label => 'license_agree',
-         Item_1 => {
-
-            Text => "I agree to the license provisions",
-
-         },
-         Item_2 => {
-
-            Text => "Review the GNU Public License Version 3\n".
-                    "                   WARRANTY DISCLAIMER",
-            Result => \%read_license,
-
-         },
-         Item_3 => {
-
-            Text => "Review the GNU Public License Version 3\n".
-                    "                   in its entirety",
-            Result => \%read_license,
-
-         },
-         Item_4 => {
-
-            Text => "I DO NOT AGREE to the license provisions\n".
-                    "                   ( FullAuto Install will EXIT )",
-         },
-         Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
-            "      Net::FullAuto INSTALLATION PROGRAM\n\n".
-            "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
-            "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
-            "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
-            "   select  2.  This is free software, and you are welcome to\n".
-            "   redistribute it under certain conditions; select  3  for\n".
-            "   details.\n",
-
-      );
-      my $lic_sel=Menu(\%license_agree);
-      chomp($lic_sel);
-      exit if $lic_sel eq ']quit[';
-      if (-1<index $lic_sel, 'NOT') {
-         print "\n\n   You have elected *NOT* to install FullAuto.",
-               "\n\n   Please report any bugs and send any",
-               "\n   questions, thoughts or feedback to:",
-               "\n\n      Brian.Kelly\@fullautosoftware.net.",
-               "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-         exit;
-      }
-
-   }
 
    sub get_cygwin_location {
       my $cygwin_query=
@@ -315,7 +180,10 @@ END
          return $cygwin_query;
       } return 0
    }
-
+   $SIG{ INT } = sub{ eval { Term::ReadKey };
+                      unless ($@) { Term::ReadKey::ReadMode(0) };
+                      print "\n";
+                      exit };
    use Cwd qw/cwd/;
    use lib '.';
    use lib './inc';
@@ -342,10 +210,12 @@ END
       print $fa_banner;
       sleep 2;
    }
+
    if ($^O eq 'linux') {
       my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
-      if (-1<index $cat_amazon,'amazon') {
-         license();
+      my $can_tm='';
+      eval { require Data::Password::Check };
+      if ((-1<index $cat_amazon,'amazon') && ($@!~/^\s*$/)) {
          my $meminfo=`cat /proc/meminfo`;
          my $memtotal=$meminfo;
          my $memfree=$meminfo;
@@ -518,9 +388,6 @@ END
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Win32::DriveInfo";
       use if ($^O eq 'MSWin32' || $^O eq 'MSWin64'), "Term::Menus";
 
-      license();
-
-if (0) {
       my %read_license=(
 
          Label => 'read_license',
@@ -533,6 +400,7 @@ if (0) {
                my @content=();my $tl=0;
                my $linenumber="]P[";
                $linenumber||=1;
+               $linenumber=~s/["]//g;
                my $choice=$linenumber;
                if (-1==index $linenumber,'Review') {
                   if ($linenumber=~/Next|Previous/) {
@@ -580,6 +448,8 @@ if (0) {
          },
          Banner => sub {
                my $linenumber="]P[";
+               $linenumber||=1;
+               $linenumber=~s/["]//g;
                open (FH,"<$main::PARdir/inc/LICENSE")
                   or die "Cannot open $main::PARdir/inc/LICENSE: $!\n";
                my @content=<FH>;
@@ -651,7 +521,6 @@ if (0) {
                "\n\n   Press ANY key to exit.\n\n";<STDIN>;
          exit;
       }
-}
       my $cygwin_loc=get_cygwin_location();
       if ($cygwin_loc) {
          my $drv=substr($cygwin_loc,0,1);
@@ -4773,6 +4642,7 @@ my $good_choice=<<END;
    | (_ |/ _ \\/ _ \\/ _` |  | (__| ' \\/ _ \\ / _/ -_)_|
     \\___|\\___/\\___/\\__,_|   \\___|_||_\\___/_\\__\\___(_)
 
+
    The Nano Editor is widely considered to be the easiest Terminal Editor to
    learn. Here are a couple of important things to remember. When you look at
    at the bottom of the screen, you will see character combinations like this:
@@ -4809,7 +4679,7 @@ my $learn_nano=sub {
       Name => 'learn_nano',
       Item_1 => {
 
-         Text => "Go to Nano man page",
+         Text => "Go to Nano man page (type 'q' to return)",
          Result => sub { system('man nano');return '<' },
 
       },
@@ -4854,19 +4724,118 @@ my $goodchoice=sub {
 
 };
 
+sub fa_license {
+
+   use if ($^O eq 'linux'), "Term::Menus";
+
+   my %read_license=(
+
+      Label => 'read_license',
+      Item_1 => {
+         Text => "Return to previous screen",
+         Result => sub { return '{license_agree}<' },
+      },
+      Item_2 => {
+         Text => "I accept the license provisions",
+      },
+      Item_3 => {
+         Text => "I do *NOT* accept the license provisions ".
+                 "(Install will Exit)",
+      },
+      Banner => sub {
+            my $linenumber="]P[";
+            open (FH,"<LICENSE")
+               or die "Cannot open LICENSE: $!\n";
+            my @content=<FH>;
+            close FH;
+            my $co=$#content+1;
+            my $endcount=(13<$co)?13:$co;
+            if (-1==index $linenumber,'Review') {
+               if ($linenumber=~/Next|Previous/) {
+                  $linenumber=~s/^(?:Next|Previous) Page\s*//;
+                }
+               ($linenumber,$endcount)=split '-', $linenumber;
+               my $tl=$#content+1;
+               my $lt=$linenumber+13;
+               $endcount=($lt<$tl)?$lt:$tl;
+            } elsif (-1<index $linenumber,'WARRANTY') {
+               $linenumber=588;
+               $endcount=599;
+            } else { $linenumber=1 }
+            $linenumber=0 if $linenumber==1;
+            --$endcount;
+            return (join "", @content[$linenumber..$endcount]);
+         }
+
+   );
+
+   my %license_agree=(
+      Label => 'license_agree',
+      Item_1 => {
+
+         Text => "I agree to the license provisions",
+
+      },
+      Item_2 => {
+
+         Text => "Review the GNU Public License Version 3\n".
+                 "                   WARRANTY DISCLAIMER",
+         Result => \%read_license,
+
+      },
+      Item_3 => {
+
+         Text => "Review the GNU Public License Version 3\n".
+                 "                   in its entirety".
+                 " (type 'q' to return)",
+         Result => sub { system('less LICENSE');return '<' },
+
+      },
+      Item_4 => {
+
+         Text => "I DO NOT AGREE to the license provisions\n".
+                 "                   ( FullAuto Install will EXIT )",
+      },
+      Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
+         "      Net::FullAuto INSTALLATION PROGRAM\n\n".
+         "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
+         "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
+         "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
+         "   select  2.  This is free software, and you are welcome to\n".
+         "   redistribute it under certain conditions; select  3  for\n".
+         "   details.\n",
+
+   );
+   my $lic_sel=Menu(\%license_agree);
+   chomp($lic_sel);
+   exit if $lic_sel eq ']quit[';
+   if (-1<index $lic_sel, 'NOT') {
+      print "\n\n   You have elected *NOT* to install FullAuto.",
+            "\n\n   Please report any bugs and send any",
+            "\n   questions, thoughts or feedback to:",
+            "\n\n      Brian.Kelly\@fullautosoftware.net.",
+            "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+      exit;
+   }
+
+}
+
 my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
 if (-1<index $cat_amazon,'amazon') {
+   fa_license();
    my @editors=('vim     ( ViIMproved - enhanced vi editor )',
-                "emacs   ( The extensible, customizable,\n           ".
-                "              self-documenting real-time\n         ".
-                "                display editor )",
-                "joe     ( Fast and simple editor that\n             ".
-                '            emulates 5 other editors )',
+                "emacs   ( The extensible, customizable, ".
+                "self-documenting\n           ".
+                "              real-time display editor )",
+                "joe     ( Fast and simple editor that emulates".
+                "\n             ".
+                '            5 other editors )',
                );
    my $banner=<<END;
-
-       *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH FullAuto
-                      INSTALLATION IN 5 MINUTES ***
+    ___      _        _      ___    _ _ _
+   / __| ___| |___ __| |_   | __|__| (_) |_ ___ _ _
+   \\__ \\/ -_) / -_) _|  _|  | _|/ _` | |  _/ _ \\ '_|
+   |___/\\___|_\\___\\__|\\__|  |___\\__,_|_|\\__\\___/_|
 
    In order to use the integrated edit features you will need to choose
    an editor. You can later change the selection in the Admin menu.
@@ -4890,13 +4859,7 @@ END
          Banner => $banner,
 
    );
-   my $selection='';
-   my $timeout=300;my $a='';
-   eval {
-      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-      alarm $timeout;
-      $selection=Term::Menus::Menu(\%Menu_select_editor);
-   };
+   my $selection=Term::Menus::Menu(\%Menu_select_editor);
    exit if $selection eq ']quit[';
    $editor='nano';
    if ($selection=~/joe/) {
