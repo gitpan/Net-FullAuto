@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999927';
+$main::VERSION='0.9999999928';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -213,10 +213,10 @@ END
    }
 
    if ($^O eq 'linux') {
-      my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
+      $main::amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
       my $can_tm='';
       eval { require Data::Password::Check };
-      if ((-1<index $cat_amazon,'amazon') && ($@!~/^\s*$/)) {
+      if ((-1<index $main::amazon,'amazon') && ($@!~/^\s*$/)) {
          my $meminfo=`cat /proc/meminfo`;
          my $memtotal=$meminfo;
          my $memfree=$meminfo;
@@ -1116,6 +1116,8 @@ END
    &fa_install_module('Data::Password::Check','install','Makefile');
 
 };
+
+$main::amazon||='';
 
 sub ws_info {
    my $selection='';
@@ -3736,6 +3738,11 @@ END
                }
                $filename=~s/\.gz$//;
                if (-1<index lc($main::uname_a), 'ubuntu') {
+print "MEM=",`cat /proc/meminfo`,"\n";
+                  if (-1<index $main::amazon,'amazon' &&
+                        $ARGV[0] ne 'proceed_with_untar') {
+                     exec 'sudo','perl','Makefile.PL','proceed_with_untar';
+                  }
                   print "***** Untar2: sudo ",
                      $CPAN::Config->{tar}," xvf $filename\n";
                   open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
@@ -3808,14 +3815,8 @@ END
                close FH;
                if (-1==index $savlines[$#savlines],
                      'Installing documentation:') {
-                  my $cat_amazon='';
-                  eval {
-                     $cat_amazon=
-                     `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
-                  };
-                  push @savlines, $@ if $@;
                   push @savlines, $! if $!;
-                  if (-1<index $cat_amazon,'amazon') {
+                  if (-1<index $main::amazon,'amazon') {
                      exec 'sudo','perl','Makefile.PL';
                   }
                   die join "\n", @savlines;
@@ -4971,8 +4972,7 @@ sub fa_license {
 
 }
 
-my $cat_amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
-if (-1<index $cat_amazon,'amazon') {
+if (-1<index $main::amazon,'amazon') {
    fa_license();
    my @editors=('vim     ( ViIMproved - enhanced vi editor )',
                 "emacs   ( The extensible, customizable, ".
@@ -5035,7 +5035,7 @@ END
 
 WriteAll();
 
-if (-1<index $cat_amazon,'amazon') {
+if (-1<index $main::amazon,'amazon') {
    my $meminfo=`cat /proc/meminfo`;
    my $memtotal=$meminfo;
    my $memfree=$meminfo;
