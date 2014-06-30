@@ -22,6 +22,15 @@
 
 2014-06-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999929 released.
+
+        * Updated Makefile.PL for AWS Ubuntu installations.
+
+        * Fixed exec for AWS Micro Server.
+
+
+2014-06-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999928 released.
 
         * Updated Makefile.PL for AWS Ubuntu installations.

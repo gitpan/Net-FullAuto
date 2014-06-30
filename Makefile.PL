@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999928';
+$main::VERSION='0.9999999929';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1066,6 +1066,7 @@ END
       system("cd \"$dir\";./Build install;");
    }
    &fa_install_module('Term::Menus','install','Makefile','','2.64');
+   &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
    &fa_install_module('Clone','install','Makefile');
@@ -3528,23 +3529,29 @@ END
 
                   );
                   my $selection='';
-                  eval {
-                     $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-                     alarm $timeout;
-                     $BDB_selection=Menu(\%berkeley_menu);
-                     alarm 0;
-                  };
-                  if ($@) {
-                     # timed out
-                     $BDB_selection='NON-ENCRYPTED';
-                     $source=~s/tar.gz/NC.tar.gz/;
-                  } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
-                     print "\n";
-                     exit;
-                  } elsif (-1<index $BDB_selection,'Encrypted') {
-                     $BDB_selection='Encrypted';
+                  if (-1<index $main::amazon,'amazon' &&
+                        $ARGV[0] ne 'Encrypted' &&
+                        $ARGV[0] ne 'NON-ENCRYPTED') {
+                     eval {
+                        $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                        alarm $timeout;
+                        $BDB_selection=Menu(\%berkeley_menu);
+                        alarm 0;
+                     };
+                     if ($@) {
+                        # timed out
+                        $BDB_selection='NON-ENCRYPTED';
+                        $source=~s/tar.gz/NC.tar.gz/;
+                     } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
+                        print "\n";
+                        exit;
+                     } elsif (-1<index $BDB_selection,'Encrypted') {
+                        $BDB_selection='Encrypted';
+                     } else {
+                        $source=~s/tar.gz/NC.tar.gz/;
+                     }
                   } else {
-                     $source=~s/tar.gz/NC.tar.gz/;
+                     $BDB_selection=$ARGV[0];
                   }
                } elsif ($skip_flag ne 'NC') {
                   $BDB_selection='Encrypted';
@@ -3740,14 +3747,15 @@ END
                if (-1<index lc($main::uname_a), 'ubuntu') {
 print "MEM=",`cat /proc/meminfo`,"\n";
                   if (-1<index $main::amazon,'amazon' &&
-                        $ARGV[0] ne 'proceed_with_untar') {
-                     exec 'sudo','perl','Makefile.PL','proceed_with_untar';
+                        $ARGV[0] ne 'Encrypted' &&
+                        $ARGV[0] ne 'NON-ENCRYPTED') {
+                     exec 'sudo','perl','Makefile.PL',$BDB_selection;
                   }
                   print "***** Untar2: sudo ",
                      $CPAN::Config->{tar}," xvf $filename\n";
                   open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
                } else {
-                  print "***** Untar2: ",
+                  print "***** Untar3: ",
                      $CPAN::Config->{tar}," xvf $filename\n";
                   open(FH, $CPAN::Config->{tar}." xvf $filename|");
                }
