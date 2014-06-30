@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999926';
+$main::VERSION='0.9999999927';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1095,7 +1095,6 @@ END
    &fa_install_module('indirect','install','Makefile');
    &fa_install_module('strictures','install','Makefile');
    &fa_install_module('Role::Tiny','install','Makefile');
-   &fa_install_module('Sub::Quote','install','Makefile');
    &fa_install_module('Devel::GlobalDestruction','install','Makefile');
    &fa_install_module('Import::Into','install','Makefile');
    &fa_install_module('Try::Tiny','install','Makefile');

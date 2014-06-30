@@ -22,6 +22,15 @@
 
 2014-06-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999927 released.
+
+        * Updated Makefile.PL for AWS Ubuntu installations.
+
+        * Removed Sub::Quote from Makefile.PL
+
+
+2014-06-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999926 released.
 
         * Updated Makefile.PL for AWS Ubuntu installations.
