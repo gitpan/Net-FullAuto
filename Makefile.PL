@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999924';
+$main::VERSION='0.9999999925';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1084,8 +1084,8 @@ END
    &fa_install_module('Pod::Man','install','Makefile','','2.28');
    &fa_install_module('Sub::Exporter::Progressive','install','Makefile');
    &fa_install_module('MRO::Compat','install','Makefile');
-   &fa_install_module('Data::OptList','install','Makefile');
    &fa_install_module('Sub::Install','install','Makefile','','0.921');
+   &fa_install_module('Data::OptList','install','Makefile');
    &fa_install_module('B::Hooks::OP::Check','install','Makefile');
    &fa_install_module('Lexical::SealRequireHints','install','Makefile');
    &fa_install_module('multidimensional','install','Makefile');
@@ -1093,9 +1093,9 @@ END
    &fa_install_module('strictures','install','Makefile');
    &fa_install_module('Role::Tiny','install','Makefile');
    &fa_install_module('indirect','install','Makefile');
+   &fa_install_module('Sub::Quote','install','Makefile');
    &fa_install_module('Devel::GlobalDestruction','install','Makefile');
    &fa_install_module('Import::Into','install','Makefile');
-   &fa_install_module('Sub::Quote','install','Makefile');
    &fa_install_module('Try::Tiny','install','Makefile');
    &fa_install_module('Sub::Exporter','install','Makefile');
    &fa_install_module('Sub::Exporter::Util','install','Makefile');
@@ -3445,6 +3445,12 @@ END
          *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH BerkeleyDB
                       INSTALLATION in 5 MINUTES ***
 
+
+
+
+
+
+
 END
 
                   my $encrypted_banner=<<END;
@@ -3798,8 +3804,13 @@ END
                close FH;
                if (-1==index $savlines[$#savlines],
                      'Installing documentation:') {
-                  my $cat_amazon=
-                        `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
+                  my $cat_amazon='';
+                  eval {
+                     $cat_amazon=
+                     `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
+                  };
+                  push @savlines, $@ if $@;
+                  push @savlines, $! if $!;
                   if (-1<index $cat_amazon,'amazon') {
                      exec 'sudo','perl','Makefile.PL';
                   }
