@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999925';
+$main::VERSION='0.9999999926';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1017,6 +1017,7 @@ END
    &fa_install_module('LWP::MediaTypes','install','Makefile');
    &fa_install_module('HTTP::Negotiate','install','Makefile');
    &fa_install_module('Net::HTTP','install','Makefile');
+   &fa_install_module('Data::Dump','install','Makefile');
    &fa_install_module('LWP','install','Makefile');
    eval { require Net::SSLeay };
    if ($@) {
@@ -1026,6 +1027,7 @@ END
       system("cd \"$dir\";make install;");
    }
    &fa_install_module('IO::Socket::SSL','install','Makefile','','','n');
+   &fa_install_module('Mozilla::CA','install','Makefile');
    &fa_install_module('LWP::Protocol::https','install','Makefile');
    &fa_install_module('Task::Weaken','install','Makefile');
    &fa_install_module('ExtUtils::Depends','install','Makefile');
@@ -1064,7 +1066,6 @@ END
       system("cd \"$dir\";./Build install;");
    }
    &fa_install_module('Term::Menus','install','Makefile','','2.64');
-   &fa_install_module('Mozilla::CA','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
    &fa_install_module('Clone','install','Makefile');
@@ -1074,6 +1075,7 @@ END
    &fa_install_module('Test::Object','install','Makefile');
    &fa_install_module('Hook::LexWrap','install','Makefile');
    &fa_install_module('Test::SubCalls','install','Makefile');
+   &fa_install_module('Class::Inspector','install','Makefile');
    &fa_install_module('PPI','install','Makefile');
    &fa_install_module('Tie::Cache','install','Makefile');
    &fa_install_module('String::Random','install','Build');
@@ -1090,9 +1092,9 @@ END
    &fa_install_module('Lexical::SealRequireHints','install','Makefile');
    &fa_install_module('multidimensional','install','Makefile');
    &fa_install_module('bareword::filehandles','install','Makefile');
+   &fa_install_module('indirect','install','Makefile');
    &fa_install_module('strictures','install','Makefile');
    &fa_install_module('Role::Tiny','install','Makefile');
-   &fa_install_module('indirect','install','Makefile');
    &fa_install_module('Sub::Quote','install','Makefile');
    &fa_install_module('Devel::GlobalDestruction','install','Makefile');
    &fa_install_module('Import::Into','install','Makefile');
@@ -1102,9 +1104,12 @@ END
    &fa_install_module('Module::Runtime','install','Makefile');
    &fa_install_module('Moo','install','Makefile');
    &fa_install_module('Moo::Role','install','Makefile');
+   &fa_install_module('Test::Fatal','install','Makefile');
    &fa_install_module('MooX::Types::MooseLike','install','Makefile');
    &fa_install_module('MooX::Types::MooseLike::Base','install','Makefile');
+   &fa_install_module('Devel::StackTrace','install','Makefile');
    &fa_install_module('Throwable','install','Makefile');
+   &fa_install_module('Email::Date::Format','install','Makefile');
    &fa_install_module('Email::Simple','install','Makefile');
    &fa_install_module('Email::Address','install','Makefile');
    &fa_install_module('Email::Abstract','install','Makefile');
