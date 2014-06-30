@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999923';
+$main::VERSION='0.9999999924';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1063,7 +1063,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.63');
+   &fa_install_module('Term::Menus','install','Makefile','','2.64');
    &fa_install_module('Mozilla::CA','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -3385,15 +3385,16 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
             my $req = HTTP::Request->new(GET => $url);
             $req->header('Accept' => 'text/html');
             my $res = $Ua->request($req);
+            my $BDB_selection='NON-ENCRYPTED';
             if ($res->is_success) {
                print " + request successful.\n"
                   if $CPAN::DEBUG;
                my $source=$res->content;
                my $site='download.oracle.com';
                $source=~
-                 s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.NC.tar.gz).*$/$1$2/s;
+                 s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
                my $file=$2;
-               my $file=substr($file,(index $file,'/')+1,-10);
+               my $file=substr($file,(index $file,'/')+1,-7);
                $ver=$file;
                $ver=~s/_.*$//;
                $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
@@ -3410,66 +3411,148 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
                if ($memtotal<1000000) {
                   foreach my $item (@contents) {
-                     if ($item=~/db-.*gz/) {
-                        $skip_flag=1;
+                     if ($item=~/db-(..)[.]tar[.]gz/) {
+                        $skip_flag=$1;
                         last;
                      }
                   }
-               } 
+               }
                unless ($skip_flag) {
+
+                  my $pre="/usr/local/BerkeleyDB.$ver";
+                  $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
+                  my $berkeley_banner=<<END;
+
+         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH BerkeleyDB
+                      INSTALLATION in 5 MINUTES ***
+
+   BerkeleyDB is a file-based (lightweight) database that FullAuto uses for
+   storing and retrieving credentials and persistence data. BerkeleyDB is
+   maintained by Oracle Corporation and hosted at Oracle.com. It has the same
+   open source license as FullAuto: GNU Affero General Public License V3.0.
+   The default version FullAuto will install and use, is the latest
+   **NON-ENCRYPTED** version. There is an option to choose Encrypted on the
+   next screen.
+
+         There is **NO WARRANTY** for BerkeleyDB. USE AT YOUR RISK!
+
+   FullAuto setup will download source code from Oracle.com and build it. It
+   will be installed into:   $pre
+END
+
+                  my $berkeleybanner=<<END;
+
+         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH BerkeleyDB
+                      INSTALLATION in 5 MINUTES ***
+
+END
+
+                  my $encrypted_banner=<<END;
+
+   From http://http://docs.oracle.com/cd/E17076_03/html/index.html:
+   
+   "Berkeley DB releases optionally include strong cryptographic support;
+   this release DOES contain cryptographic support. Export/import and/or
+   use of cryptography software, or even communicating technical details
+   about cryptography software, is illegal in some parts of the world. You
+   are strongly advised to pay close attention to any export/import and/or
+   use laws which apply to you when you import a release of Berkeley DB
+   including cryptography to your country or re-distribute source code
+   from it in any way."
+
+   FullAuto does *NOT* utilize the encrypted features of BerkeleyDB, and
+   only offers to install the encrypted version as a courtesy. You are
+   advised to install the NON-ENCRYPTED version unless you have specific
+   reasons for needing the encrypted one.
+END
+
+                  my %encryted_berkeley=(
+
+                     Name => 'encrypted_berkeley',
+                     Item_1 => {
+
+                        Text => "Install NON-ENCRYPTED BerkeleyDB".
+                                " ( Recommended! )",
+
+                     },
+
+                     Item_2 => {
+
+                        Text => "Install Encrypted BerkeleyDB",
+
+                     },
+                     Banner => $encrypted_banner,
+
+                  );
+
+                  my %berkeleymenu=(
+
+                      Name => 'berkeleymenu',
+                      Item_1 => {
+
+                         Text => "Install NON-ENCRYPTED BerkeleyDB",
+                         Default => '*',
+
+                      },
+                      Item_2 => {
+                        
+                         Text => "Install Encrypted BerkeleyDB",
+                         Result => \%encryted_berkeley,
+
+                      },
+                      Item_3 => {
+
+                         Text => "Exit FullAuto Setup",
+
+                      },
+                      Banner => $berkeleybanner, 
+
+                  );
+                  my %berkeley_menu=(
+
+                     Name   => 'berkeley_menu',
+                     Result => \%berkeleymenu,
+                     Banner => $berkeley_banner,
+
+                  );
+                  my $selection='';
                   eval {
                      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
                      alarm $timeout;
-                     print
-                        "\n$w *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH".
-                        "\n$w     BerkeleyDB INSTALLATION IN 2 MINUTES ***\n".
-                        "\n$w IMPORTANT! : BerkeleyDB - a C Library used".
-                        "\n$w            by FullAuto to create a binary".
-                        "\n$w            file-based (lightweight) database".
-                        "\n$w            for storing and retrieving".
-                        "\n$w            credentials and persistance data,".
-                        "\n$w            was not located on this ".
-                        "host/system.".
-                        "\n\n$w IMPORTANT! : This FullAuto setup process".
-                        " will".
-                        "\n$w            now attempt to download ".
-                        "BerkeleyDB".
-                        "\n$w            source code from Oracle.com and".
-                        "\n$w            and compile it for use by ".
-                        "FullAuto.\n";
-                     my $pre="/usr/local/BerkeleyDB.$ver";
-                     $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
-                     print "\n$w IMPORTANT! : BerkeleyDB will be installed".
-                           "\n$w            in $pre\n".
-                           "\n$w If you do not wish FullAuto setup to perform".
-                           "\n$w this step, type 'N' and setup will exit.".
-                           "\n$w Please install BerkeleyDB manually before".
-                           "\n$w attempting another installation of FullAuto.".
-                           "\n\n";
-                     print "Press <ENTER> if you wish to continue, ".
-                           "or 'N' to quit . . . [Y] ";$
-                     a=<STDIN>;
+                     $BDB_selection=Menu(\%berkeley_menu);
                      alarm 0;
                   };
                   if ($@) {
                      # timed out
-                     #exit;
-                  } elsif ($a=~/^[Nn]$/s) {
+                     $BDB_selection='NON-ENCRYPTED';
+                     $source=~s/tar.gz/NC.tar.gz/;
+                  } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
+                     print "\n";
                      exit;
+                  } elsif (-1<index $BDB_selection,'Encrypted') {
+                     $BDB_selection='Encrypted';
+                  } else {
+                     $source=~s/tar.gz/NC.tar.gz/;
                   }
+               } elsif ($skip_flag ne 'NC') {
+                  $BDB_selection='Encrypted';
+               } else {
+                  $source=~s/tar.gz/NC.tar.gz/;
                }
                my $fh='';my $filename='';
+               my $suffix=($BDB_selection eq 'Encrypted')?
+                     '.tar.gz':'.NC.tar.gz';
                if ($CPAN::META->has_usable("File::Temp")) {
                   $fh = File::Temp->new(
                         dir      => cwd(),
                         template => "${file}_XXXXXX",
-                        suffix => ".NC.tar.gz",
+                        suffix => $suffix,
                         unlink => 0,
                        );
                   $filename = $fh->filename;
                } else {
                   $fh = FileHandle->new;
-                  $filename = "${file}_$$.NC.tar.gz";
+                  $filename = "${file}_${$}$suffix";
                }
                chomp($filename);
                my $end_flag=0;
@@ -3503,11 +3586,11 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         );
                         if (!$end_flag && ($status_line eq '404')) {
                            $source=$last_known_good_location;
-                           $end_flag=1;my $rt=qr/b.*?\d.NC.tar.gz/;
+                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
                            $source=~
                               s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
                            $file=$2;
-                           $file=substr($file,(index $file,'/')+1,-10);
+                           $file=substr($file,(index $file,'/')+1,-7);
                            $ver=$file;
                            $ver=~s/_.*$//;
                            $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
@@ -3530,13 +3613,13 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                      $md5fh = File::Temp->new(
                            dir      => cwd(),
                            template => "${file}_XXXXXX",
-                           suffix => ".NC.tar.gz.md5",
+                           suffix => "$suffix.md5",
                            unlink => 0,
                      );
                      $md5filename = $md5fh->filename;
                   } else {
                      $md5fh = FileHandle->new;
-                     $md5filename = "${file}_$$.NC.tar.gz.md5";
+                     $md5filename = "${file}_${$}$suffix.md5";
                   }
                   $req = HTTP::Request->new(GET => $source.'.md5');
                   $req->header('Accept-Encoding' => 'gzip, compress');
@@ -3559,11 +3642,11 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                         );
                         if (!$end_flag && ($status_line eq '404')) {
                            $source=$last_known_good_location;
-                           $end_flag=1;my $rt=qr/b.*?\d.NC.tar.gz/;
+                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
                            $source=~
                               s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
                            $file=$2;
-                           $file=substr($file,(index $file,'/')+1,-10);
+                           $file=substr($file,(index $file,'/')+1,-7);
                            $ver=$file;
                            $ver=~s/_.*$//;
                            $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
@@ -3643,10 +3726,12 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                }
                $filename=~s/\.gz$//;
                if (-1<index lc($main::uname_a), 'ubuntu') {
-                  print "***** Untar2: sudo ",$CPAN::Config->{tar}," xvf $filename\n";
+                  print "***** Untar2: sudo ",
+                     $CPAN::Config->{tar}," xvf $filename\n";
                   open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
                } else {
-                  print "***** Untar2: ",$CPAN::Config->{tar}," xvf $filename\n";
+                  print "***** Untar2: ",
+                     $CPAN::Config->{tar}," xvf $filename\n";
                   open(FH, $CPAN::Config->{tar}." xvf $filename|");
                }
                while (my $line=<FH>) {
@@ -3654,17 +3739,32 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                }
                close FH;
                my $uniq='';
-               $filename=~/^.*(......).tar$/;
-               my $uniq=$1;
-               $filename=~s/........tar$//;
-               `mv -f $filename ${filename}_$uniq`;
+               if ($BDB_selection eq 'Encrypted') {
+                  $filename=~/^.*(......).tar$/;
+                  $uniq=$1;
+                  $filename=~s/........tar$//;
+                  `mv -f $filename ${filename}_$uniq`;
+               } else {
+                  $filename=~/^.*(......).NC.tar$/;
+                  $uniq=$1;
+                  $filename=~s/........NC.tar$//;
+                  `mv -f $filename.NC ${filename}.NC_$uniq`;
+               }
                my $args='';
                if ($PREFIX) {
                   $args=' --prefix="'.$PREFIX.'"';
                }
-               open(FH,
-                  "cd ${filename}_$uniq/build_unix;../dist/configure$args|")
+               if ($BDB_selection eq 'Encrypted') {
+                  open(FH,
+                     "cd ${filename}_$uniq/build_unix;".
+                     "../dist/configure$args|")
                   || warn $!;
+               } else {
+                  open(FH,
+                     "cd ${filename}.NC_$uniq/build_unix;".
+                     "../dist/configure$args|")
+                  || warn $!;
+               }
                while (my $line=<FH>) {
                   print $line;
                }
@@ -3676,9 +3776,15 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                      $CPAN::Config->{make}='/usr/local/bin/make';
                   }
                }
-               open(FH,"cd ${filename}_$uniq/build_unix;".
-                   $CPAN::Config->{make}." install|")
-                  || warn $!;
+               if ($BDB_selection eq 'Encrypted') {
+                  open(FH,"cd ${filename}_$uniq/build_unix;".
+                        $CPAN::Config->{make}." install|")
+                     || warn $!;
+               } else {
+                  open(FH,"cd ${filename}.NC_$uniq/build_unix;".
+                        $CPAN::Config->{make}." install|")
+                     || warn $!;
+               }
                my $cnt=0;
                my @savlines=();
                while (my $line=<FH>) {
@@ -3694,9 +3800,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                      'Installing documentation:') {
                   my $cat_amazon=
                         `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
-print "CAT_AMAZON=$cat_amazon\n";
                   if (-1<index $cat_amazon,'amazon') {
-print "WE ARE HERE\n";
                      exec 'sudo','perl','Makefile.PL';
                   }
                   die join "\n", @savlines;
@@ -3741,16 +3845,19 @@ print "WE ARE HERE\n";
                              'berkeleydb/downloads/index.html';
             my $PackManagers='http://en.wikipedia.org/wiki/'.
                              'List_of_software_package_management_systems';
-            my $die="\n       FATAL ERROR! : Cannot locate 'BerkeleyDB'. This C Library ".
-                    "\n                      is required to install FullAuto".
-                    "\n                      (Hint: goto\n".
-                    "\n       $BerkDownload\n".
-                    "\n                       for BerkeleyDB Source Code. Binary versions".
-                    "\n                       of the Library are widely available via".
-                    "\n                       package managers such as yum and apt-get".
-                    "\n                       See:\n".
-                    "\n       $PackManagers).".
-                    "\n\n";
+            my $w='      ';
+            my $die=
+               "\n$w FATAL ERROR! : Cannot locate 'BerkeleyDB'. This C Library".
+               " \n$w                is required to install FullAuto".
+               "\n$w                (Hint: goto\n".
+               "\n$w $BerkDownload\n".
+               "\n$w                 for BerkeleyDB Source Code. Binary".
+               " versions".
+               "\n$w                 of the Library are widely available via".
+               "\n$w                 package managers such as yum and apt-get".
+               "\n$w                 See:\n".
+               "\n$w $PackManagers).".
+               "\n\n";
             die $die;
          }
       }
@@ -4487,7 +4594,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 #requires        'Data::Dump::Streamer'      => 0;
 #requires        'Digest::SHA'               => 0;
 #requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.63;
+#requires        'Term::Menus'               => 2.64;
 #requires        'Tie::Cache'                => 0;
 #requires        'Sort::Versions'            => 0;
 #requires        'Crypt::CBC'                => 0;
