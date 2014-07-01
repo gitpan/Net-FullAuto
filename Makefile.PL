@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999929';
+$main::VERSION='0.9999999930';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3287,7 +3287,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
       my $find_cmd2=" -name \"*.h\" ".
                    "| ${xargspath}xargs ${greppath}grep ".
                    "${grepopt}DB_VERSION_STRING";
-      print "\nSearching for latest verison of BerkeleyDB.\n".
+      print "\nSearching for latest verison of Berkeley DB.\n".
             "This may take up to five minutes ...\n\n";
       foreach my $dir ('/usr/','/opt/',(getpwuid $>)[7].'/') {
          next if unpack('a1',$dir) eq '.';
@@ -3430,18 +3430,18 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                   $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
                   my $berkeley_banner=<<END;
 
-         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH BerkeleyDB
+         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
                       INSTALLATION in 5 MINUTES ***
 
-   BerkeleyDB is a file-based (lightweight) database that FullAuto uses for
-   storing and retrieving credentials and persistence data. BerkeleyDB is
+   Berkeley DB is a file-based (lightweight) database that FullAuto uses for
+   storing and retrieving credentials and persistence data. Berkeley DB is
    maintained by Oracle Corporation and hosted at Oracle.com. It has the same
    open source license as FullAuto: GNU Affero General Public License V3.0.
    The default version FullAuto will install and use, is the latest
    **NON-ENCRYPTED** version. There is an option to choose Encrypted on the
    next screen.
 
-         There is **NO WARRANTY** for BerkeleyDB. USE AT YOUR RISK!
+         There is **NO WARRANTY** for Berkeley DB. USE AT YOUR RISK!
 
    FullAuto setup will download source code from Oracle.com and build it. It
    will be installed into:   $pre
@@ -3449,7 +3449,7 @@ END
 
                   my $berkeleybanner=<<END;
 
-         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH BerkeleyDB
+         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
                       INSTALLATION in 5 MINUTES ***
 
 
@@ -3473,7 +3473,7 @@ END
    including cryptography to your country or re-distribute source code
    from it in any way."
 
-   FullAuto does *NOT* utilize the encrypted features of BerkeleyDB, and
+   FullAuto does *NOT* utilize the encrypted features of Berkeley DB, and
    only offers to install the encrypted version as a courtesy. You are
    advised to install the NON-ENCRYPTED version unless you have specific
    reasons for needing the encrypted one.
@@ -3484,14 +3484,14 @@ END
                      Name => 'encrypted_berkeley',
                      Item_1 => {
 
-                        Text => "Install NON-ENCRYPTED BerkeleyDB".
+                        Text => "Install NON-ENCRYPTED Berkeley DB".
                                 " ( Recommended! )",
 
                      },
 
                      Item_2 => {
 
-                        Text => "Install Encrypted BerkeleyDB",
+                        Text => "Install Encrypted Berkeley DB",
 
                      },
                      Banner => $encrypted_banner,
@@ -3503,13 +3503,13 @@ END
                       Name => 'berkeleymenu',
                       Item_1 => {
 
-                         Text => "Install NON-ENCRYPTED BerkeleyDB",
+                         Text => "Install NON-ENCRYPTED Berkeley DB",
                          Default => '*',
 
                       },
                       Item_2 => {
                         
-                         Text => "Install Encrypted BerkeleyDB",
+                         Text => "Install Encrypted Berkeley DB",
                          Result => \%encryted_berkeley,
 
                       },
@@ -3773,7 +3773,7 @@ print "MEM=",`cat /proc/meminfo`,"\n";
                   $filename=~/^.*(......).NC.tar$/;
                   $uniq=$1;
                   $filename=~s/........NC.tar$//;
-                  `mv -f $filename.NC ${filename}.NC_$uniq`;
+                  `mv -f $filename ${filename}.NC_$uniq`;
                }
                my $args='';
                if ($PREFIX) {
@@ -3870,12 +3870,12 @@ print "MEM=",`cat /proc/meminfo`,"\n";
             my $PackManagers='http://en.wikipedia.org/wiki/'.
                              'List_of_software_package_management_systems';
             my $w='      ';
-            my $die=
-               "\n$w FATAL ERROR! : Cannot locate 'BerkeleyDB'. This C Library".
+            my $die="\n$w ".
+               "FATAL ERROR! : Cannot locate 'Berkeley DB'. This C Library".
                " \n$w                is required to install FullAuto".
                "\n$w                (Hint: goto\n".
                "\n$w $BerkDownload\n".
-               "\n$w                 for BerkeleyDB Source Code. Binary".
+               "\n$w                 for Berkeley DB Source Code. Binary".
                " versions".
                "\n$w                 of the Library are widely available via".
                "\n$w                 package managers such as yum and apt-get".
