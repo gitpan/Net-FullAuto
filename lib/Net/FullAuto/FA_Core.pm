@@ -2133,8 +2133,46 @@ print $Net::FullAuto::FA_Core::MRLOG
            _hostlabel=>[ "__Master_${$}__",'' ] },"rm -rf $tdir");
       }
    }
-   ($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
-   ($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg);
+   $localhost->{_cmd_handle}||='';
+   if (defined fileno $localhost->{_cmd_handle}) {
+      $localhost->{_cmd_handle}->autoflush(1);
+      $localhost->{_cmd_handle}->print("\004");
+      my $next=0;
+      eval { # eval is for error trapping. Any errors are
+             # handled by the "if ($@)" block at the bottom
+             # of this routine.
+         while (my $line=$localhost->{_cmd_handle}->get) {
+
+print $Net::FullAuto::FA_Core::MRLOG
+   "localhost cleanup() LINE=$line<==\n"
+   if $Net::FullAuto::FA_Core::log &&
+   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
+print "localhost cleanup() LINE=$line<==\n"
+   if $Net::FullAuto::FA_Core::debug;
+
+            my ($stdout,$stderr)=('','');
+            ($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg)
+               if &testpid($localhost->{_sh_pid});
+            if (&testpid($localhost->{_cmd_pid})) {
+               ($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
+               $next=1;return;
+            } else {
+               #$localhost->{_cmd_handle}->print("\003");
+               last
+            }
+            $localhost->{_cmd_handle}->print("\003");
+         }
+      }; next if $next;
+   }
+   if ($@) {
+
+      print "localhost_end_error=$@\n"
+         if $Net::FullAuto::FA_Core::debug;
+
+   }
+   #($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
+   #($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg);
    if (defined $master_hostlabel &&
          (-1<index $localhost,'=')) {
       $username=&Net::FullAuto::FA_Core::username();
