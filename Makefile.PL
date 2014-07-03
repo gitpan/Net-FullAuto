@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999935';
+$main::VERSION='0.9999999936';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -211,6 +211,22 @@ END
       print $fa_banner;
       sleep 2;
    }
+
+      my $license_banner=<<END;
+
+   *THANK YOU* For Trying FullAuto!   Net::FullAuto INSTALLATION PROGRAM
+
+   Copyright (C) 2000-2014   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
+
+   This program comes with ABSOLUTELY NO WARRANTY; for details select  2.
+   This is free software, and you are welcome to redistribute it under certain
+   conditions; select  3  for details. FullAuto uses  Crypt::DES  which is
+   software developed by Systemics Ltd (http://www.systemics.com/). FullAuto
+   uses the  Net::SSLeay  module which is software developed by the OpenSSL
+   Project for use in the OpenSSL Toolkit. (http://www.openssl.org/) and
+   includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
+   and Tim Hudson (tjh\@cryptsoft.com)
+END
 
    if ($^O eq 'linux') {
       $main::amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
@@ -475,21 +491,6 @@ END
             }
 
       );
-      my $license_banner=<<END;
-
-   *THANK YOU* For Trying FullAuto!   Net::FullAuto INSTALLATION PROGRAM
-
-   Copyright (C) 2000-2014   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
-
-   This program comes with ABSOLUTELY NO WARRANTY; for details select  2.
-   This is free software, and you are welcome to redistribute it under certain
-   conditions; select  3  for details. FullAuto uses  Crypt::DES  which is
-   software developed by Systemics Ltd (http://www.systemics.com/). FullAuto
-   uses the  Net::SSLeay  module which is software developed by the OpenSSL
-   Project for use in the OpenSSL Toolkit. (http://www.openssl.org/) and
-   includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
-   and Tim Hudson (tjh\@cryptsoft.com)
-END
 
       my %license_agree=(
          Label => 'license_agree',
@@ -4974,14 +4975,15 @@ sub fa_license {
          Text => "I DO NOT AGREE to the license provisions\n".
                  "                   ( FullAuto Install will EXIT )",
       },
-      Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
-         "      Net::FullAuto INSTALLATION PROGRAM\n\n".
-         "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
-         "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
-         "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
-         "   select  2.  This is free software, and you are welcome to\n".
-         "   redistribute it under certain conditions; select  3  for\n".
-         "   details.\n",
+      Banner => $license_banner,
+      #Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
+      #   "      Net::FullAuto INSTALLATION PROGRAM\n\n".
+      #   "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
+      #   "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
+      #   "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
+      #   "   select  2.  This is free software, and you are welcome to\n".
+      #   "   redistribute it under certain conditions; select  3  for\n".
+      #   "   details.\n",
 
    );
    my $lic_sel=Menu(\%license_agree);

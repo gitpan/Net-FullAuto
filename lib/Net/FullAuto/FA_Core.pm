@@ -10149,11 +10149,11 @@ my $cacomm_sub=sub {
                            use File::Path;print "LINE=".__LINE__."\n";
                            no strict 'subs';print "LINE=".__LINE__."\n";
                            my $username=&Net::FullAuto::FA_Core::username();print "LINE=".__LINE__."\n";
-                           #my $loc=substr($INC{'Net/FullAuto.pm'},
-                           #               0,-3);print "LINE=".__LINE__."\n";
+                           my $loc=substr($INC{'Net/FullAuto.pm'},
+                                          0,-3);print "LINE=".__LINE__."\n";
                            my $progname=substr($0,(rindex $0,'/')
                                                +1,-3);print "LINE=".__LINE__."\n";
-                           #require "$loc/fa_global.pm";print "LINE=".__LINE__."\n";
+                           require "$loc/fa_global.pm";print "LINE=".__LINE__."\n";
                            my $mkdflag=0;print "LINE=".__LINE__."\n";
                            unless (-d $fa_global::FA_Secure.'Defaults') {
                               $mkdflag=1;print "LINE=".__LINE__."\n";
