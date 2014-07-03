@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999933';
+$main::VERSION='0.9999999934';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1523,7 +1523,7 @@ version         $main::VERSION;
 name            'Net-FullAuto';
 sign;
 author          'Brian M. Kelly <Brian.Kelly@fullautosoftware.net>';
-license         'AGPL-3.0';
+license         'gpl-3.0';
 perl_version    '5.006';
 
 #unshift @INC, $main::PARdir if $main::unshift_incdir;
@@ -3754,9 +3754,10 @@ END
                $filename=~s/\.gz$//;
                if (-1<index lc($main::uname_a), 'ubuntu') {
 print "MEM=",`cat /proc/meminfo`,"\n";
-                  if (-1<index $main::amazon,'amazon' &&
-                        $ARGV[0] ne 'Encrypted' &&
-                        $ARGV[0] ne 'NON-ENCRYPTED') {
+print "WHAT IS ARGV=",(join '|',@ARGV),"\n";
+                  if ((-1<index $main::amazon,'amazon') &&
+                        ($ARGV[0] ne 'Encrypted') &&
+                        ($ARGV[0] ne 'NON-ENCRYPTED')) {
                      exec 'sudo','perl','Makefile.PL',$BDB_selection;
                   }
                   print "***** Untar2: sudo ",

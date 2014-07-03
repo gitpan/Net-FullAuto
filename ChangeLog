@@ -22,6 +22,13 @@
 
 2014-07-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999934 released.
+
+        * Updated Makefile.PL for AWS Ubuntu installations.
+
+
+2014-07-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999933 released.
 
         * Updated Makefile.PL for AWS Ubuntu installations.
