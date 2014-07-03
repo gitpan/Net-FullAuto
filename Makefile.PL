@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999932';
+$main::VERSION='0.9999999933';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3425,7 +3425,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
                if ($memtotal<1000000) {
                   foreach my $item (@contents) {
-                     if ($item=~/db-(..)[.]tar[.]gz/) {
+                     if ($item=~/db-.*(..)[.]tar[.]gz/) {
                         $skip_flag=$1;
                         last;
                      }
@@ -3537,9 +3537,9 @@ END
 
                   );
                   my $selection='';
-                  if (-1<index $main::amazon,'amazon' &&
-                        $ARGV[0] ne 'Encrypted' &&
-                        $ARGV[0] ne 'NON-ENCRYPTED') {
+                  #if (-1<index $main::amazon,'amazon' &&
+                  if (($ARGV[0] ne 'Encrypted') &&
+                        ($ARGV[0] ne 'NON-ENCRYPTED')) {
                      eval {
                         $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
                         alarm $timeout;
