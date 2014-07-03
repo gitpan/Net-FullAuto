@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999936';
+$main::VERSION='0.9999999937';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3566,6 +3566,7 @@ END
                      } elsif (-1<index $BDB_selection,'Encrypted') {
                         $BDB_selection='Encrypted';
                      } else {
+                        $BDB_selection='NON-ENCRYPTED';
                         $source=~s/tar.gz/NC.tar.gz/;
                      }
                   } else {
