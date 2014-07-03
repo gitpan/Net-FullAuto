@@ -2137,7 +2137,6 @@ print $Net::FullAuto::FA_Core::MRLOG
    if (defined fileno $localhost->{_cmd_handle}) {
       $localhost->{_cmd_handle}->autoflush(1);
       $localhost->{_cmd_handle}->print("\004");
-      my $next=0;
       eval { # eval is for error trapping. Any errors are
              # handled by the "if ($@)" block at the bottom
              # of this routine.
@@ -2155,15 +2154,14 @@ print "localhost cleanup() LINE=$line<==\n"
             ($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg)
                if &testpid($localhost->{_sh_pid});
             if (&testpid($localhost->{_cmd_pid})) {
+               $localhost->{_cmd_handle}->print("\003");
+               $localhost->{_cmd_handle}->print("\004");
                ($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
-               $next=1;return;
             } else {
-               #$localhost->{_cmd_handle}->print("\003");
                last
             }
-            $localhost->{_cmd_handle}->print("\003");
          }
-      }; next if $next;
+      };
    }
    if ($@) {
 
@@ -14032,8 +14030,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   if ($sshport) {
                      if ($idntfil) {
                         if ($Net::FullAuto::FA_Core::debug) {
-                           ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
-                           #["${sshpath}ssh","-caes128-ctr","-p$sshport",
+                           ($local_host,$cmd_pid)=
+                               &Net::FullAuto::FA_Core::pty_do_cmd(
+                              #["${sshpath}ssh","-caes128-ctr","-p$sshport",
                               ["${sshpath}ssh","-p$sshport","-i$idntfil",
                                "-vvv","$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])
@@ -14041,7 +14040,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                                    &Net::FullAuto::FA_Core::handle_error(
                                    "couldn't launch ssh subprocess"));
                         } else {
-                           ($local_host,$cmd_pid)=&Net::FullAuto::FA_Core::pty_do_cmd(
+                           ($local_host,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
                               ["${sshpath}ssh","-p$sshport","-i$idntfil",
                                "$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])

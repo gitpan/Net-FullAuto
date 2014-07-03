@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999931';
+$main::VERSION='0.9999999932';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -650,6 +650,13 @@ END
       }
       if (-1==index $dpkg,'figlet') {
          open(LD,"sudo apt-get -y install 'figlet'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      if (-1==index $dpkg,'perl-doc') {
+         open(LD,"sudo apt-get -y install 'perl-doc'|");
          while (my $line=<LD>) {
             print $line;
          }
@@ -3424,7 +3431,8 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                      }
                   }
                }
-               unless ($skip_flag) {
+               if (1) {
+               #unless ($skip_flag) {
 
                   my $pre="/usr/local/BerkeleyDB.$ver";
                   $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
@@ -5049,7 +5057,7 @@ if (-1<index $main::amazon,'amazon') {
    my $memfree=$meminfo;
    $memtotal=~s/^.*MemTotal:\s*(\d+) kB.*$/$1/s;
    $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
-   if ($memtotal<1000000) {
+   if ($memfree<1000000) {
 
 my $almost_there=<<END;
 
