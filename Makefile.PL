@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999938';
+$main::VERSION='0.9999999939';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -207,7 +207,7 @@ END
    }
    chdir $main::PARdir;
    $INC{'Module/Install.pm'}=$main::PARdir.'/Module/Install.pm';
-   unless (exists $ENV{FA_EDITOR}) {
+   unless (exists $ENV{FA_EDITOR} || grep { /Encrypted/i } @ARGV) {
       print $fa_banner;
       sleep 2;
    }
@@ -3526,6 +3526,8 @@ END
                   Banner => $berkeley_banner,
 
                );
+               my $already_downloaded=0;
+               my $filename='';
                unless (grep { /Encrypted/i } @ARGV) {
                   eval {
                      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
@@ -3548,201 +3550,209 @@ print "WHAT IS BDB=$BDB_selection\n";
                   }
                } elsif (grep  { /Encrypted/ } @ARGV) {
                   $BDB_selection='Encrypted';
+                  $already_downloaded=1;
+                  $filename=$ARGV[$#ARGV-1];
                } else {
                   $source=~s/tar.gz/NC.tar.gz/;
+                  $already_downloaded=1;
+                  $filename=$ARGV[$#ARGV-1];
                }
-               my $fh='';my $filename='';
+               my $fh='';
                my $suffix=($BDB_selection eq 'Encrypted')?
                      '.tar.gz':'.NC.tar.gz';
-               if ($CPAN::META->has_usable("File::Temp")) {
-                  $fh = File::Temp->new(
-                        dir      => cwd(),
-                        template => "${file}_XXXXXX",
-                        suffix => $suffix,
-                        unlink => 0,
-                       );
-                  $filename = $fh->filename;
-               } else {
-                  $fh = FileHandle->new;
-                  $filename = "${file}_${$}$suffix";
-               }
-               chomp($filename);
-               my $end_flag=0;
-               my %errors = ('500'=>'Bad hostname supplied',
-                             '404'=>'URL not found',
-                             '403'=>'URL forbidden',
-                             '401'=>'Authorization failed',
-                             '400'=>'Bad request found',
-                             '302'=>'Redirected URL'
-               );
-               while (1) {
-                  $req = HTTP::Request->new(GET => $source);
-                  $req->header('Accept-Encoding' => 'gzip, compress');
-                  $res = $Ua->request($req);
-                  my $success=1;
-                  if ($res->is_success) {
-                     print " + request successful.\n"
-                        if $CPAN::DEBUG;
-                     print $fh $res->content;
-                     close $fh;
-                  } else {
-                     my $status_line=$res->status_line;
-                     ($status_line) = ($status_line =~ /(\d+)/);
-                     if (defined($errors{$status_line})) {
-                        print(
-                           "LWP failed with code $status_line, ",
-                           "message $errors{$status_line}\n".
-                           "Please check your connection to the Internet!\n",
-                           $status_line,
-                           $res->message,
-                        );
-                        if (!$end_flag && ($status_line eq '404')) {
-                           $source=$last_known_good_location;
-                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
-                           $source=~
-                              s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
-                           $file=$2;
-                           $file=substr($file,(index $file,'/')+1,-7);
-                           $ver=$file;
-                           $ver=~s/_.*$//;
-                           $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-                           next;
-                        }
-                     } else {
-                        print(
-                           "LWP failed with an Unknown Error\n".
-                           "Please check your connection to the Internet!\n",
-                        );
-                     }
-                     $success = 0;
-                     close $fh;
-                     last;
-                  }
-                  print(qq{ + saved content to $filename \n})
-                  if $CPAN::DEBUG;
-                  my $md5fh='';my $md5filename='';
+               unless ($already_downloaded) {
                   if ($CPAN::META->has_usable("File::Temp")) {
-                     $md5fh = File::Temp->new(
+                     $fh = File::Temp->new(
                            dir      => cwd(),
                            template => "${file}_XXXXXX",
-                           suffix => "$suffix.md5",
+                           suffix => $suffix,
                            unlink => 0,
-                     );
-                     $md5filename = $md5fh->filename;
+                          );
+                     $filename = $fh->filename;
                   } else {
-                     $md5fh = FileHandle->new;
-                     $md5filename = "${file}_${$}$suffix.md5";
+                     $fh = FileHandle->new;
+                     $filename = "${file}_${$}$suffix";
                   }
-                  $req = HTTP::Request->new(GET => $source.'.md5');
-                  $req->header('Accept-Encoding' => 'gzip, compress');
-                  $res = $Ua->request($req);
-                  if ($res->is_success) {
-                     print " + request successful.\n"
-                        if $CPAN::DEBUG;
-                     print $md5fh $res->content;
-                     close $md5fh;
-                  } else {
-                     my $status_line=$res->status_line;
-                     ($status_line) = ($status_line =~ /(\d+)/);
-                     if (defined($errors{$status_line})) {
-                        print(
-                           "LWP failed with code $status_line, ",
-                           "message $errors{$status_line}\n".
-                           "Please check your connection to the Internet!\n",
-                           $status_line,
-                           $res->message,
-                        );
-                        if (!$end_flag && ($status_line eq '404')) {
-                           $source=$last_known_good_location;
-                           $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
-                           $source=~
-                              s/^.*?(http:\/\/$site\/)(?:otn\/)*($rt).*$/$1$2/s;
-                           $file=$2;
-                           $file=substr($file,(index $file,'/')+1,-7);
-                           $ver=$file;
-                           $ver=~s/_.*$//;
-                           $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-                           next;
-                        }
+                  chomp($filename);
+                  my $end_flag=0;
+                  my %errors = ('500'=>'Bad hostname supplied',
+                                '404'=>'URL not found',
+                                '403'=>'URL forbidden',
+                                '401'=>'Authorization failed',
+                                '400'=>'Bad request found',
+                                '302'=>'Redirected URL'
+                  );
+                  while (1) {
+                     $req = HTTP::Request->new(GET => $source);
+                     $req->header('Accept-Encoding' => 'gzip, compress');
+                     $res = $Ua->request($req);
+                     my $success=1;
+                     if ($res->is_success) {
+                        print " + request successful.\n"
+                           if $CPAN::DEBUG;
+                        print $fh $res->content;
+                        close $fh;
                      } else {
-                        print(
-                           "LWP failed with an Unknown Error\n".
-                           "Please check your connection to the Internet!\n",
-                        );
+                        my $status_line=$res->status_line;
+                        ($status_line) = ($status_line =~ /(\d+)/);
+                        if (defined($errors{$status_line})) {
+                           print(
+                              "LWP failed with code $status_line, ",
+                              "message $errors{$status_line}\n".
+                              "Please check your connection to the Internet!\n",
+                              $status_line,
+                              $res->message,
+                           );
+                           if (!$end_flag && ($status_line eq '404')) {
+                              $source=$last_known_good_location;
+                              $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
+                              my $h=qr/http:\/\/$site\//;
+                              $source=~s/^.*?($h)(?:otn\/)*($rt).*$/$1$2/s;
+                              $file=$2;
+                              $file=substr($file,(index $file,'/')+1,-7);
+                              $ver=$file;
+                              $ver=~s/_.*$//;
+                              $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+                              next;
+                           }
+                        } else {
+                           print(
+                              "LWP failed with an Unknown Error\n".
+                              "Please check your connection to the Internet!\n",
+                           );
+                        }
+                        $success = 0;
+                        close $fh;
+                        last;
                      }
-                     $success = 0;
-                     close $fh;
+                     print(qq{ + saved content to $filename \n})
+                        if $CPAN::DEBUG;
+                     my $md5fh='';my $md5filename='';
+                     if ($CPAN::META->has_usable("File::Temp")) {
+                        $md5fh = File::Temp->new(
+                              dir      => cwd(),
+                              template => "${file}_XXXXXX",
+                              suffix => "$suffix.md5",
+                              unlink => 0,
+                        );
+                        $md5filename = $md5fh->filename;
+                     } else {
+                        $md5fh = FileHandle->new;
+                        $md5filename = "${file}_${$}$suffix.md5";
+                     }
+                     $req = HTTP::Request->new(GET => $source.'.md5');
+                     $req->header('Accept-Encoding' => 'gzip, compress');
+                     $res = $Ua->request($req);
+                     if ($res->is_success) {
+                        print " + request successful.\n"
+                           if $CPAN::DEBUG;
+                        print $md5fh $res->content;
+                        close $md5fh;
+                     } else {
+                        my $status_line=$res->status_line;
+                        ($status_line) = ($status_line =~ /(\d+)/);
+                        if (defined($errors{$status_line})) {
+                           print(
+                              "LWP failed with code $status_line, ",
+                              "message $errors{$status_line}\n".
+                              "Please check your connection to the Internet!\n",
+                              $status_line,
+                              $res->message,
+                           );
+                           if (!$end_flag && ($status_line eq '404')) {
+                              $source=$last_known_good_location;
+                              $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
+                              my $h=qr/http:\/\/$site\//;
+                              $source=~s/^.*?($h)(?:otn\/)*($rt).*$/$1$2/s;
+                              $file=$2;
+                              $file=substr($file,(index $file,'/')+1,-7);
+                              $ver=$file;
+                              $ver=~s/_.*$//;
+                              $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+                              next;
+                           }
+                        } else {
+                           print(
+                              "LWP failed with an Unknown Error\n".
+                              "Please check your connection to the Internet!\n",
+                           );
+                        }
+                        $success = 0;
+                        close $fh;
+                        last;
+                     }
+                     print(qq{ + saved md5 content to $md5filename \n})
+                        if $CPAN::DEBUG;
+                     open(MH,"<$md5filename") || die $!;
+                     my $mhf=<MH>;
+                     close(MH);
+                     my $checksum=$mhf;
+                     $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
+                     open(FILE, $filename) or die "Can't open '$file': $!";
+                     binmode(FILE);
+                     require Digest::MD5;
+                     import Digest::MD5;
+                     my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
+                     if ($checksum eq $digestmd5) {
+                        print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
+                           if $CPAN::DEBUG;
+                     } else {
+                        print "CHECKSUM test for $filename *FAILED*\n";
+                        print "CALCULATED=$digestmd5 and ",
+                              "DOWNLOADED=$checksum\n";
+                        print "\nPress ANY key to terminate FullAuto ",
+                              "installation ...\n";
+                        <STDIN>;
+                        die "FATAL ERROR! : ".
+                            "CHECKSUM Test for $filename *FAILED*\n";
+                     }
+                     close(FILE);
                      last;
                   }
-                  print(qq{ + saved md5 content to $md5filename \n})
-                  if $CPAN::DEBUG;
-                  open(MH,"<$md5filename") || die $!;
-                  my $mhf=<MH>;
-                  close(MH);
-                  my $checksum=$mhf;
-                  $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
-                  open(FILE, $filename) or die "Can't open '$file': $!";
-                  binmode(FILE);
-                  require Digest::MD5;
-                  import Digest::MD5;
-                  my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
-                  if ($checksum eq $digestmd5) {
-                     print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
-                     if $CPAN::DEBUG;
-                  } else {
-                     print "CHECKSUM test for $filename *FAILED*\n";
-                     print "CALCULATED=$digestmd5 and DOWNLOADED=$checksum\n";
-                     print "\nPress ANY key to terminate FullAuto ",
-                           "installation ...\n";
-                     <STDIN>;
-                     die "FATAL ERROR! : ".
-                         "CHECKSUM Test for $filename *FAILED*\n";
+                  unless ($CPAN::Config->{gzip}) {
+                     if (-e '/usr/bin/gzip') {
+                        $CPAN::Config->{gzip}='/usr/bin/gzip';
+                     } elsif (-e '/usr/local/bin/gzip') {
+                        $CPAN::Config->{gzip}='/usr/local/bin/gzip';
+                     } else {
+                        print "\n\n   Fatal Error!: The 'gzip' utility is".
+                           " missing.\n".
+                           "\n\n   Please report any bugs and send any",
+                           "\n   questions, thoughts or feedback to:",
+                           "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                           "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                           exit 1;
+                     }
                   }
-                  close(FILE);
-                  last;
-               }
-               unless ($CPAN::Config->{gzip}) {
-                  if (-e '/usr/bin/gzip') {
-                     $CPAN::Config->{gzip}='/usr/bin/gzip';
-                  } elsif (-e '/usr/local/bin/gzip') {
-                     $CPAN::Config->{gzip}='/usr/local/bin/gzip';
-                  } else {
-                     print "\n\n   Fatal Error!: The 'gzip' utility is".
-                        " missing.\n".
-                        "\n\n   Please report any bugs and send any",
-                        "\n   questions, thoughts or feedback to:",
-                        "\n\n      Brian.Kelly\@fullautosoftware.net.",
-                        "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                        exit 1;
+                  open(FH, $CPAN::Config->{gzip}." -d $filename|");
+                  while (my $line=<FH>) {
+                     print $line;
                   }
-               }
-               open(FH, $CPAN::Config->{gzip}." -d $filename|");
-               while (my $line=<FH>) {
-                  print $line;
-               }
-               close FH;
-               unless ($CPAN::Config->{tar}) {
-                  if (-e '/usr/bin/tar') {
-                     $CPAN::Config->{tar}='/usr/bin/tar';
-                  } elsif (-e '/usr/local/bin/tar') {
-                     $CPAN::Config->{tar}='/usr/local/bin/tar';
-                  } else {
-                     print "\n\n   Fatal Error!: The 'tar' utility is".
-                        " missing.\n".
-                        "\n\n   Please report any bugs and send any",
-                        "\n   questions, thoughts or feedback to:",
-                        "\n\n      Brian.Kelly\@fullautosoftware.net.",
-                        "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                        exit 1;
+                  close FH;
+                  unless ($CPAN::Config->{tar}) {
+                     if (-e '/usr/bin/tar') {
+                        $CPAN::Config->{tar}='/usr/bin/tar';
+                     } elsif (-e '/usr/local/bin/tar') {
+                        $CPAN::Config->{tar}='/usr/local/bin/tar';
+                     } else {
+                        print "\n\n   Fatal Error!: The 'tar' utility is".
+                           " missing.\n".
+                           "\n\n   Please report any bugs and send any",
+                           "\n   questions, thoughts or feedback to:",
+                           "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                           "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+                           exit 1;
+                     }
                   }
+                  $filename=~s/\.gz$//;
                }
-               $filename=~s/\.gz$//;
                if (-1<index lc($main::uname_a), 'ubuntu') {
 print "MEM=",`cat /proc/meminfo`,"\n";
-print "WHAT IS ARGV=",(join '|',@ARGV),"\n";
+print "WHAT IS ARGV=",(join '|',@ARGV)," and BDB_selection=$BDB_selection\n";
                   if ((-1<index $main::amazon,'amazon') &&
-                        !(grep { /Encrypted/i } @ARGV)) {
-                     exec 'sudo','perl','Makefile.PL',$BDB_selection;
+                        !$already_downloaded) {
+                     exec 'sudo','perl','Makefile.PL',$BDB_selection,
+                          $filename;
                   }
                   print "***** Untar2: sudo ",
                      $CPAN::Config->{tar}," xvf $filename\n";
