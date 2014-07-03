@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999937';
+$main::VERSION='0.9999999938';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1086,6 +1086,7 @@ END
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
+   &fa_install_module('Crypt::Rijndael','install','Makefile');
    &fa_install_module('Clone','install','Makefile');
    &fa_install_module('File::Remove','install','Makefile');
    &fa_install_module('List::MoreUtils','install','Makefile');
@@ -3423,30 +3424,9 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
                $ver=~s/_.*$//;
                $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
                my $timeout=120;my $a='';my $w="      ";
-               opendir(CD,'.') or
-                  die "ERROR - Can't read Current Directory: $!\n";
-               my @contents = readdir(CD);
-               closedir(CD);
-               my $skip_flag=0;
-               my $meminfo=`cat /proc/meminfo`;
-               my $memtotal=$meminfo;
-               my $memfree=$meminfo;
-               $memtotal=~s/^.*MemTotal:\s*(\d+) kB.*$/$1/s;
-               $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
-               if ($memtotal<1000000) {
-                  foreach my $item (@contents) {
-                     if ($item=~/db-.*(..)[.]tar[.]gz/) {
-                        $skip_flag=$1;
-                        last;
-                     }
-                  }
-               }
-               if (1) {
-               #unless ($skip_flag) {
-
-                  my $pre="/usr/local/BerkeleyDB.$ver";
-                  $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
-                  my $berkeley_banner=<<END;
+               my $pre="/usr/local/BerkeleyDB.$ver";
+               $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
+               my $berkeley_banner=<<END;
 
          *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
                       INSTALLATION in 5 MINUTES ***
@@ -3465,7 +3445,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
    will be installed into:   $pre
 END
 
-                  my $berkeleybanner=<<END;
+               my $berkeleybanner=<<END;
 
          *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
                       INSTALLATION in 5 MINUTES ***
@@ -3478,7 +3458,7 @@ END
 
 END
 
-                  my $encrypted_banner=<<END;
+               my $encrypted_banner=<<END;
 
    From http://http://docs.oracle.com/cd/E17076_03/html/index.html:
    
@@ -3497,82 +3477,76 @@ END
    reasons for needing the encrypted one.
 END
 
-                  my %encryted_berkeley=(
+               my %encryted_berkeley=(
 
-                     Name => 'encrypted_berkeley',
-                     Item_1 => {
+                  Name => 'encrypted_berkeley',
+                  Item_1 => {
 
-                        Text => "Install NON-ENCRYPTED Berkeley DB".
-                                " ( Recommended! )",
+                     Text => "Install NON-ENCRYPTED Berkeley DB".
+                             " ( Recommended! )",
 
-                     },
+                  },
 
-                     Item_2 => {
+                  Item_2 => {
 
-                        Text => "Install Encrypted Berkeley DB",
+                     Text => "Install Encrypted Berkeley DB",
 
-                     },
-                     Banner => $encrypted_banner,
+                  },
+                  Banner => $encrypted_banner,
 
-                  );
+               );
 
-                  my %berkeleymenu=(
+               my %berkeleymenu=(
 
-                      Name => 'berkeleymenu',
-                      Item_1 => {
+                   Name => 'berkeleymenu',
+                   Item_1 => {
 
-                         Text => "Install NON-ENCRYPTED Berkeley DB",
-                         Default => '*',
+                      Text => "Install NON-ENCRYPTED Berkeley DB",
+                      Default => '*',
 
-                      },
-                      Item_2 => {
-                        
-                         Text => "Install Encrypted Berkeley DB",
-                         Result => \%encryted_berkeley,
+                   },
+                   Item_2 => {
+                     
+                      Text => "Install Encrypted Berkeley DB",
+                      Result => \%encryted_berkeley,
 
-                      },
-                      Item_3 => {
+                   },
+                   Item_3 => {
 
-                         Text => "Exit FullAuto Setup",
+                      Text => "Exit FullAuto Setup",
 
-                      },
-                      Banner => $berkeleybanner, 
+                   },
+                   Banner => $berkeleybanner, 
 
-                  );
-                  my %berkeley_menu=(
+               );
+               my %berkeley_menu=(
 
-                     Name   => 'berkeley_menu',
-                     Result => \%berkeleymenu,
-                     Banner => $berkeley_banner,
+                  Name   => 'berkeley_menu',
+                  Result => \%berkeleymenu,
+                  Banner => $berkeley_banner,
 
-                  );
-                  my $selection='';
-                  #if (-1<index $main::amazon,'amazon' &&
-                  if (($ARGV[0] ne 'Encrypted') &&
-                        ($ARGV[0] ne 'NON-ENCRYPTED')) {
-                     eval {
-                        $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-                        alarm $timeout;
-                        $BDB_selection=Menu(\%berkeley_menu);
-                        alarm 0;
-                     };
-                     if ($@) {
-                        # timed out
-                        $BDB_selection='NON-ENCRYPTED';
-                        $source=~s/tar.gz/NC.tar.gz/;
-                     } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
-                        print "\n";
-                        exit;
-                     } elsif (-1<index $BDB_selection,'Encrypted') {
-                        $BDB_selection='Encrypted';
-                     } else {
-                        $BDB_selection='NON-ENCRYPTED';
-                        $source=~s/tar.gz/NC.tar.gz/;
-                     }
+               );
+               unless (grep { /Encrypted/i } @ARGV) {
+                  eval {
+                     $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                     alarm $timeout;
+                     $BDB_selection=Menu(\%berkeley_menu);
+                     alarm 0;
+                  };
+                  if ($@) {
+                     # timed out
+                     $BDB_selection='NON-ENCRYPTED';
+                     $source=~s/tar.gz/NC.tar.gz/;
+                  } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
+                     print "\n";
+                     exit;
+                  } elsif (-1<index $BDB_selection,'Encrypted') {
+                     $BDB_selection='Encrypted';
                   } else {
-                     $BDB_selection=$ARGV[0];
+print "WHAT IS BDB=$BDB_selection\n";
+                     $source=~s/tar.gz/NC.tar.gz/;
                   }
-               } elsif ($skip_flag ne 'NC') {
+               } elsif (grep  { /Encrypted/ } @ARGV) {
                   $BDB_selection='Encrypted';
                } else {
                   $source=~s/tar.gz/NC.tar.gz/;
@@ -3767,8 +3741,7 @@ END
 print "MEM=",`cat /proc/meminfo`,"\n";
 print "WHAT IS ARGV=",(join '|',@ARGV),"\n";
                   if ((-1<index $main::amazon,'amazon') &&
-                        ($ARGV[0] ne 'Encrypted') &&
-                        ($ARGV[0] ne 'NON-ENCRYPTED')) {
+                        !(grep { /Encrypted/i } @ARGV)) {
                      exec 'sudo','perl','Makefile.PL',$BDB_selection;
                   }
                   print "***** Untar2: sudo ",
@@ -3845,7 +3818,7 @@ print "WHAT IS ARGV=",(join '|',@ARGV),"\n";
                      'Installing documentation:') {
                   push @savlines, $! if $!;
                   if (-1<index $main::amazon,'amazon') {
-                     exec 'sudo','perl','Makefile.PL';
+                     exec 'sudo','perl','Makefile.PL',$BDB_selection;
                   }
                   die join "\n", @savlines;
                } else {
@@ -4628,41 +4601,8 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
 }
 
 #Specific dependencies
-#requires        'Module::Build'             => 0.3601;
-#requires        'Module::Load::Conditional' => 0;
-#requires        'Task::Weaken'              => 0;
-#requires        'ExtUtils::Depends'         => 0;
-#requires        'ExtUtils::MakeMaker'       => 6.59;
-#requires        'ExtUtils::CBuilder'        => 0;
-#requires        'B::Utils'                  => 0;
-#requires        'Data::Dump::Streamer'      => 0;
-#requires        'Digest::SHA'               => 0;
-#requires        'Digest::MD5'               => 0;
-#requires        'Term::Menus'               => 2.64;
-#requires        'Tie::Cache'                => 0;
-#requires        'Sort::Versions'            => 0;
-#requires        'Crypt::CBC'                => 0;
-#requires        'Crypt::DES'                => 0;
 requires        'Cache::Cache'              => 0;
 requires        'CHI'                       => 0;
-#requires        'HTTP::Date'                => 0;
-#requires        'JSON'                      => 2.14;
-#requires        'IO::Pty'                   => 0;
-#requires        'IO::Capture::Stderr'       => 0;
-#requires        'Capture::Tiny'             => 0;
-#requires        'Net::Telnet'               => 0;
-#requires        'Pod::Man'                  => 2.28;
-#requires        'Term::RawInput'            => 1.16;
-#requires        'Term::ReadKey'             => 0;
-#requires        'Test::Deep'                => 0;
-#requires        'PPI'                       => 0;
-#requires        'URI'                       => 0;
-#requires        'Email::Sender'             => 0;
-#requires        'MIME::Entity'              => 0;
-#requires        'Data::Password::Check'     => 0;
-#requires        'String::Random'            => 0;
-#requires        'YAML'                      => 0;
-recommends      'Crypt::Rijndael'           => 0;
 
 auto_install();
 

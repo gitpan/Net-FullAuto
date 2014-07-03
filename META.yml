@@ -15,7 +15,7 @@ provides:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto:
     file: lib/Net/FullAuto.pm
-    version: 0.9999999937
+    version: 0.9999999938
   Net::FullAuto::FA_Core:
     file: lib/Net/FullAuto/FA_Core.pm
   Net::FullAuto::FA_DB:
@@ -36,42 +36,6 @@ provides:
     file: lib/Net/FullAuto/Distro/fa_maps.pm
   fa_menu:
     file: lib/Net/FullAuto/Distro/fa_menu.pm
-recommends:
-  Crypt::Rijndael: 0
-requires:
-  Module::Build: .3601
-  Module::Load::Conditional: 0
-#  Data::Dump::Streamer: 0
-#  Term::Menus: 2.64
-  Pod::Man: 2.28
-  Tie::Cache: 0
-  Sort::Versions: 0
-  Crypt::CBC: 0
-  Crypt::DES: 0
-  Digest::MD5: 0
-  Digest::SHA: 0
-  HTTP::Date: 0
-  JSON: 2.14
-  IO::Pty: 1.09
-  IO::Capture::Stderr: 0
-  IO::CaptureOutput: 0
-  Capture::Tiny: 0
-  Net::Telnet: 0
-  Test::Deep : 0
-  Term::RawInput : 1.16
-  Term::ReadKey: 0
-  URI: 0
-  Email::Sender: 0
-  MIME::Entity: 0
-  String::Random: 0
-  Data::Password::Check: 0
-  BerkeleyDB: 0
-  Cache::Cache: 0
-  CHI: 0
-  ExtUtils::MakeMaker: 6.59
-  ExtUtils::CBuilder: 0
-  PPI: 0
-  YAML: 0
 resources:
   license: http://opensource.org/licenses/AGPL-3.0
-version: 0.9999999937
+version: 0.9999999938
