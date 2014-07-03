@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999934';
+$main::VERSION='0.9999999935';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -417,7 +417,7 @@ END
                   $endcount=($lt<$tl)?$lt:$tl;
                } elsif (-1<index $linenumber,'WARRANTY') {
                   $linenumber=588;
-                  $endcount=599;
+                  $endcount=598;
                } else { $linenumber=1 }
                my $ec=$endcount-1;
                if (-1==index $choice,'WARRANTY') {
@@ -467,7 +467,7 @@ END
                   $endcount=($lt<$tl)?$lt:$tl;
                } elsif (-1<index $linenumber,'WARRANTY') {
                   $linenumber=588;
-                  $endcount=599;
+                  $endcount=598;
                } else { $linenumber=1 }
                $linenumber=0 if $linenumber==1;
                --$endcount;
@@ -475,6 +475,22 @@ END
             }
 
       );
+      my $license_banner=<<END;
+
+   *THANK YOU* For Trying FullAuto!   Net::FullAuto INSTALLATION PROGRAM
+
+   Copyright (C) 2000-2014   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
+
+   This program comes with ABSOLUTELY NO WARRANTY; for details select  2.
+   This is free software, and you are welcome to redistribute it under certain
+   conditions; select  3  for details. FullAuto uses  Crypt::DES  which is
+   software developed by Systemics Ltd (http://www.systemics.com/). FullAuto
+   uses the  Net::SSLeay  module which is software developed by the OpenSSL
+   Project for use in the OpenSSL Toolkit. (http://www.openssl.org/) and
+   includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
+   and Tim Hudson (tjh\@cryptsoft.com)
+END
+
       my %license_agree=(
          Label => 'license_agree',
          Item_1 => {
@@ -501,14 +517,7 @@ END
             Text => "I DO NOT AGREE to the license provisions\n".
                     "                   ( FullAuto Install will EXIT )",
          },
-         Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
-            "      Net::FullAuto INSTALLATION PROGRAM\n\n".
-            "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
-            "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
-            "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
-            "   select  2.  This is free software, and you are welcome to\n".
-            "   redistribute it under certain conditions; select  3  for\n".
-            "   details.\n",
+         Banner => $license_banner,
 
       );
       my $lic_sel=Menu(\%license_agree);

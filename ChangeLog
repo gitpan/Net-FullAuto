@@ -22,6 +22,16 @@
 
 2014-07-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999935 released.
+
+        * Updated Makefile.PL for AWS Ubuntu installations.
+
+        * Updated License notices to include acknowledgements
+          for Crypt::DES and Net::SSLeay moldule authors.
+
+
+2014-07-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999934 released.
 
         * Updated Makefile.PL for AWS Ubuntu installations.

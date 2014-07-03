@@ -2351,7 +2351,7 @@ my $version=<<VERSION;print "LINE=".__LINE__."\n";
 This is Net::FullAuto, v$Net::FullAuto::VERSION
 (See  fullauto -V  or  fa -V  for more detail)
 
-Copyright 2000-2014, Brian M. Kelly
+Copyright 2000-2014, Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
 
 FullAuto may be copied only under the terms of the GNU Affero General Public
 License, which may be found in the FullAuto source distribution.
@@ -2360,6 +2360,13 @@ Complete documentation for FullAuto, including FAQ lists, should be found on
 this system using "man fullauto" or "perldoc fullauto".  If you have access
 to the Internet, point your browser at http://www.fullautosoftware.net/, the
 FullAuto Home Page.
+
+FullAuto uses the Crypt::DES module which is software developed by
+Systemics Ltd (http://www.systemics.com/)
+FullAuto uses the Net::SSLeay module which is software developed by the 
+OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
+and includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
+and Tim Hudson (tjh\@cryptsoft.com)
 VERSION
 print $version;print "LINE=".__LINE__."\n";
 exit;print "LINE=".__LINE__."\n";
