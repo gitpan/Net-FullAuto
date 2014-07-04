@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999940';
+$main::VERSION='0.9999999941';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3580,7 +3580,6 @@ END
                   } elsif (-1<index $BDB_selection,'Encrypted') {
                      $BDB_selection='Encrypted';
                   } else {
-print "WHAT IS BDB=$BDB_selection\n";
                      $source=~s/tar.gz/NC.tar.gz/;
                   }
                } elsif (grep  { /Encrypted/ } @ARGV) {
@@ -3782,8 +3781,7 @@ print "WHAT IS BDB=$BDB_selection\n";
                   $filename=~s/\.gz$//;
                }
                if (-1<index lc($main::uname_a), 'ubuntu') {
-print "MEM=",`cat /proc/meminfo`,"\n";
-print "WHAT IS ARGV=",(join '|',@ARGV)," and BDB_selection=$BDB_selection and FILENAME=$filename\n";
+#print "MEM=",`cat /proc/meminfo`,"\n";
                   if ((-1<index $main::amazon,'amazon') &&
                         !$already_downloaded) {
                      exec 'sudo','perl','Makefile.PL',$BDB_selection,
