@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999939';
+$main::VERSION='0.9999999940';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -212,7 +212,36 @@ END
       sleep 2;
    }
 
-      my $license_banner=<<END;
+   my $cryptography_banner=<<END;
+   __      __             _           _
+   \\ \\    / /_ _ _ _ _ _ (_)_ _  __ _| |
+    \\ \\/\\/ / _` | '_| ' \\| | ' \\/ _` |_|
+     \\_/\\_/\\__,_|_| |_||_|_|_||_\\__, (_)
+                                |___/
+
+   Exporting, importing and/or using cryptography software, or even
+   communicating technical details about cryptography software, is illegal
+   in some parts of the world. You are strongly advised to investigate and
+   adhere to any export/import and use laws which apply to you when you
+   import a release of Net::FullAuto including cryptography modules like
+   Crypt::CBC, Crypt::DES and Crypt::Rijndael to your country or
+   re-distribute source code from them in any way.
+END
+
+   my $cryptography=sub {
+
+      my %cryptography=(
+
+         Name => 'cryptography',
+         Result => sub { return '{license_agree}<' },
+         Banner => $cryptography_banner,
+
+      );
+      return \%cryptography
+
+   };
+
+   my $license_banner=<<END;
 
    *THANK YOU* For Trying FullAuto!   Net::FullAuto INSTALLATION PROGRAM
 
@@ -409,6 +438,13 @@ END
 
          Label => 'read_license',
          Item_1 => {
+            Text => "I accept the license provisions",
+         },
+         Item_2 => {
+            Text => "I do *NOT* accept the license provisions ".
+                    "(Install will Exit)",
+         },
+         Item_3 => {
 
             Text => "]C[",
             Convey => sub {
@@ -433,7 +469,7 @@ END
                   $endcount=($lt<$tl)?$lt:$tl;
                } elsif (-1<index $linenumber,'WARRANTY') {
                   $linenumber=588;
-                  $endcount=598;
+                  $endcount=597;
                } else { $linenumber=1 }
                my $ec=$endcount-1;
                if (-1==index $choice,'WARRANTY') {
@@ -456,12 +492,9 @@ END
             Result => { 'read_license'=>'recurse' },
 
          },
-         Item_2 => {
-            Text => "I accept the license provisions",
-         },
-         Item_3 => {
-            Text => "I do *NOT* accept the license provisions ".
-                    "(Install will Exit)",
+         Item_4 => {
+            Text => "Return to previous screen",
+            Result => sub { return '{license_agree}<' },
          },
          Banner => sub {
                my $linenumber="]P[";
@@ -483,34 +516,35 @@ END
                   $endcount=($lt<$tl)?$lt:$tl;
                } elsif (-1<index $linenumber,'WARRANTY') {
                   $linenumber=588;
-                  $endcount=598;
+                  $endcount=597;
                } else { $linenumber=1 }
                $linenumber=0 if $linenumber==1;
                --$endcount;
-               return (join "", @content[$linenumber..$endcount]);
+               my $banner=join "", @content[$linenumber..$endcount];
+               $banner=~s/^/   /mg;
+               return $banner;
             }
 
       );
 
       my %license_agree=(
-         Label => 'license_agree',
+
+         Name => 'license_agree',
          Item_1 => {
 
-            Text => "I agree to the license provisions",
+            Text => "I agree to the license provisions\n\n",
 
          },
          Item_2 => {
 
-            Text => "Review the GNU Affero Public License Version 3\n".
-                    "                   WARRANTY DISCLAIMER",
+            Text => "Review GNU Affero Public License WARRANTY DISCLAIMER\n",
             Result => \%read_license,
 
          },
          Item_3 => {
 
-            Text => "Review the GNU Affero Public License Version 3\n".
-                    "                   in its entirety",
-            Result => \%read_license,
+            Text => "*IMPORTANT* STRONG CRYPTOGRAPHY WARNING!",
+            Result => $cryptography,
 
          },
          Item_4 => {
@@ -521,6 +555,7 @@ END
          Banner => $license_banner,
 
       );
+
       my $lic_sel=Menu(\%license_agree);
       chomp($lic_sel);
       exit if $lic_sel eq ']quit[';
@@ -3551,11 +3586,11 @@ print "WHAT IS BDB=$BDB_selection\n";
                } elsif (grep  { /Encrypted/ } @ARGV) {
                   $BDB_selection='Encrypted';
                   $already_downloaded=1;
-                  $filename=$ARGV[$#ARGV-1];
+                  $filename=$ARGV[$#ARGV];
                } else {
                   $source=~s/tar.gz/NC.tar.gz/;
                   $already_downloaded=1;
-                  $filename=$ARGV[$#ARGV-1];
+                  $filename=$ARGV[$#ARGV];
                }
                my $fh='';
                my $suffix=($BDB_selection eq 'Encrypted')?
@@ -3748,7 +3783,7 @@ print "WHAT IS BDB=$BDB_selection\n";
                }
                if (-1<index lc($main::uname_a), 'ubuntu') {
 print "MEM=",`cat /proc/meminfo`,"\n";
-print "WHAT IS ARGV=",(join '|',@ARGV)," and BDB_selection=$BDB_selection\n";
+print "WHAT IS ARGV=",(join '|',@ARGV)," and BDB_selection=$BDB_selection and FILENAME=$filename\n";
                   if ((-1<index $main::amazon,'amazon') &&
                         !$already_downloaded) {
                      exec 'sudo','perl','Makefile.PL',$BDB_selection,
@@ -3776,7 +3811,7 @@ print "WHAT IS ARGV=",(join '|',@ARGV)," and BDB_selection=$BDB_selection\n";
                   $filename=~/^.*(......).NC.tar$/;
                   $uniq=$1;
                   $filename=~s/........NC.tar$//;
-                  `mv -f $filename ${filename}.NC_$uniq`;
+                  `mv -f $filename.NC $filename.NC_$uniq`;
                }
                my $args='';
                if ($PREFIX) {
@@ -4860,17 +4895,23 @@ sub fa_license {
 
    my %read_license=(
 
-      Label => 'read_license',
+      Name => 'read_license',
       Item_1 => {
-         Text => "Return to previous screen",
-         Result => sub { return '{license_agree}<' },
-      },
-      Item_2 => {
          Text => "I accept the license provisions",
       },
-      Item_3 => {
+      Item_2 => {
          Text => "I do *NOT* accept the license provisions ".
                  "(Install will Exit)",
+      },
+      Item_3 => {
+         Text => "Review GNU Affero Public License Version 3\n".
+                 "                   in its entirety".
+                 " (type 'q' to return)",
+         Result => sub { system('less LICENSE');return '<' },
+      },
+      Item_4 => {
+         Text => "Return to previous screen",
+         Result => sub { return '{license_agree}<' },
       },
       Banner => sub {
             my $linenumber="]P[";
@@ -4890,35 +4931,79 @@ sub fa_license {
                $endcount=($lt<$tl)?$lt:$tl;
             } elsif (-1<index $linenumber,'WARRANTY') {
                $linenumber=588;
-               $endcount=599;
+               $endcount=597;
             } else { $linenumber=1 }
             $linenumber=0 if $linenumber==1;
             --$endcount;
-            return (join "", @content[$linenumber..$endcount]);
+            my $banner=join "", @content[$linenumber..$endcount];
+            $banner=~s/^/   /mg;
+            return $banner;
          }
 
    );
 
+   my $cryptography_banner=<<END;
+   __      __             _           _ 
+   \\ \\    / /_ _ _ _ _ _ (_)_ _  __ _| |
+    \\ \\/\\/ / _` | '_| ' \\| | ' \\/ _` |_|
+     \\_/\\_/\\__,_|_| |_||_|_|_||_\\__, (_)
+                                |___/  
+
+   Exporting, importing and/or using cryptography software, or even
+   communicating technical details about cryptography software, is illegal
+   in some parts of the world. You are strongly advised to investigate and
+   adhere to any export/import and use laws which apply to you when you
+   import a release of Net::FullAuto including cryptography modules like
+   Crypt::CBC, Crypt::DES and Crypt::Rijndael to your country or
+   re-distribute source code from them in any way.
+END
+
+   my $cryptography=sub {
+
+      my %cryptography=(
+
+         Name => 'cryptography',
+         Result => sub { return '{license_agree}<' },
+         Banner => $cryptography_banner,      
+
+      );
+      return \%cryptography
+
+   };
+
+   my $license_banner=<<END;
+
+   *THANK YOU* For Trying FullAuto!   Net::FullAuto INSTALLATION PROGRAM
+
+   Copyright (C) 2000-2014   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
+
+   This program comes with ABSOLUTELY NO WARRANTY; for details select 2.
+   This is free software, and you are welcome to redistribute it under certain
+   conditions. Select 2 for full license. FullAuto uses  Crypt::DES  which is
+   software developed by Systemics Ltd (http://www.systemics.com/). FullAuto
+   uses the  Net::SSLeay  module which is software developed by the OpenSSL
+   Project for use in the OpenSSL Toolkit. (http://www.openssl.org/) and
+   includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
+   and Tim Hudson (tjh\@cryptsoft.com)
+END
+
    my %license_agree=(
-      Label => 'license_agree',
+
+      Name => 'license_agree',
       Item_1 => {
 
-         Text => "I agree to the license provisions",
+         Text => "I agree to the license provisions\n\n",
 
       },
       Item_2 => {
 
-         Text => "Review the GNU Affero Public License Version 3\n".
-                 "                   WARRANTY DISCLAIMER",
+         Text => "Review GNU Affero Public License WARRANTY DISCLAIMER\n",
          Result => \%read_license,
-
       },
       Item_3 => {
 
-         Text => "Review the GNU Affero Public License Version 3\n".
-                 "                   in its entirety".
-                 " (type 'q' to return)",
-         Result => sub { system('less LICENSE');return '<' },
+         Text => "*IMPORTANT* STRONG CRYPTOGRAPHY WARNING!",
+         Result => $cryptography,
 
       },
       Item_4 => {
@@ -4927,14 +5012,6 @@ sub fa_license {
                  "                   ( FullAuto Install will EXIT )",
       },
       Banner => $license_banner,
-      #Banner =>"      *THANK YOU* For Trying FullAuto!\n\n".
-      #   "      Net::FullAuto INSTALLATION PROGRAM\n\n".
-      #   "      Copyright (C) 2000-2014  Brian M. Kelly\n\n".
-      #   "      Contact: Brian.Kelly\@fullautosoftware.net\n\n".
-      #   "   This program comes with ABSOLUTELY NO WARRANTY; for details\n".
-      #   "   select  2.  This is free software, and you are welcome to\n".
-      #   "   redistribute it under certain conditions; select  3  for\n".
-      #   "   details.\n",
 
    );
    my $lic_sel=Menu(\%license_agree);
