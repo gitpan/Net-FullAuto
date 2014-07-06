@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-07-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999942 released.
+
+        * FullAuto now tests for password vs publickey.
+
+        * New version of Term::Menus paired with this release.
+
+
 2014-07-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999941 released.
