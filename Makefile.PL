@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999943';
+$main::VERSION='0.9999999944';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1117,7 +1117,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.66');
+   &fa_install_module('Term::Menus','install','Makefile','','2.67');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -4823,12 +4823,13 @@ my $nano_banner=<<END;
 
    .e.f8 ee.     88**8.  e888 88**8. .d88b.   GNU
    i '8f'  Q,    88  88 88 88 88  88 88  88
-      8.   8:    88  88 "Y888 88  88 "t88P"   Text Editor
+      8.   8:    88  88 "t888 88  88 "t88P"   Text Editor
       8.   8:
       W.   8:    In Terminal Environments, Documentation
            8:    for Nano can be seen anytime by typing:
            8:    
            tD    man nano    at the command line.
+
 
    You can also see online documentation at:
 

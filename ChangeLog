@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-07-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999944 released.
+
+        * Figlet font viewer added.
+
+        * New version of Term::Menus paired with this release.
+
+
 2014-07-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999943 released.
