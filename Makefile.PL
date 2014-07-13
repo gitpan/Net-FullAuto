@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999948';
+$main::VERSION='0.9999999949';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1132,7 +1132,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.69');
+   &fa_install_module('Term::Menus','install','Makefile','','2.70');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -3853,48 +3853,25 @@ END
                   }
                }
                if ($BDB_selection eq 'Encrypted') {
-                  open(FH,"cd ${filename}_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install|")
+                  system("cd ${filename}_$uniq/build_unix;".
+                        $CPAN::Config->{make}." install")
                      || warn $!;
                } else {
-                  open(FH,"cd ${filename}.NC_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install|")
+                  system("cd ${filename}.NC_$uniq/build_unix;".
+                        $CPAN::Config->{make}." install")
                      || warn $!;
                }
-               my $cnt=0;
-               my @savlines=();
-               while (my $line=<FH>) {
-                  print $line;
-                  unless ($cnt<=50) { 
-                     $cnt++;
-                  } else {
-                     shift @savlines;
-                  } push @savlines,$line;
-               }
-               close FH;
-               if (-1==index $savlines[$#savlines],
-                     'Installing documentation:') {
-                  push @savlines, $! if $!;
-                  if (-1<index $main::amazon,'amazon') {
-                     exec 'sudo','perl','Makefile.PL',$BDB_selection;
-                  }
-                  die join "\n", @savlines;
-               } else {
-                  $ver=$filename;
-                  $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-                  my $prefx=$savlines[$#savlines];
-                  $prefx=~s/^Installing documentation: //;
-                  $prefx=~s/docs \.\.\.\s*$//;
-                  $berkeleydb=$prefx.'lib';
-                  $header_to_use=$prefx."include";
-                  $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
-                  $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
-                  $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
-                  $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
-                  $ENV{'DB_FILE_LIB'}=$berkeleydb;
-                  $ENV{'DB_FILE_NAME'}="-ldb-$ver";
-                  $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
-               }
+               $ver=$filename;
+               $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+               $berkeleydb=$pre.'lib';
+               $header_to_use=$pre."include";
+               $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
+               $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
+               $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
+               $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
+               $ENV{'DB_FILE_LIB'}=$berkeleydb;
+               $ENV{'DB_FILE_NAME'}="-ldb-$ver";
+               $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
             } else {
                if ($res->is_error(500)) {
                   print(sprintf(

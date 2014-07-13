@@ -22,9 +22,16 @@
 
 2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
-        * Version 0.9999999947 released.
+        * Version 0.9999999949 released.
 
-        * Removed and exec.
+        * Changed pipe to system() for Berkeley make.
+
+
+2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999948 released.
+
+        * Remove and exec.
 
 
 2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
