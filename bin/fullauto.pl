@@ -15,26 +15,25 @@ eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
 eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
-### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
+### OPEN SOURCE LICENSE - GNU PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
 #    Copyright (C) 2000-2014  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or any later version.
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    any later version.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but **WITHOUT ANY WARRANTY**; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
+#    GNU General Public License for more details.
 #
-#    You should have received a copy of the GNU Affero General Public
-#    License along with this program.  If not, see:
-#    <http://www.gnu.org/licenses/agpl.html>.
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#######################################################################
+################################################################
 
 use strict;
 use warnings;
@@ -44,7 +43,7 @@ BEGIN {
    my $edit=0;my $earg='';my $cnt=-1;
    my $VERSION=0;my $version=0;my $tutorial=0;
    our $planarg=0;our $cronarg=0;my $admin=0;
-   my $users=0;my $cat=0;my $carg='';
+   my $users=0;my $cat=0;my $carg='';my $figlet=0;
    foreach my $arg (@ARGV) {
       $cnt++;
       if ($arg=~/^--ed*i*t*$/) {
@@ -81,6 +80,8 @@ BEGIN {
          $users=1;
       } elsif ($arg=~/^--admin$/) {
          $admin=1; 
+      } elsif ($arg=~/^--figlet$/) {
+         $figlet=1;
       }
    }
    if ($edit) {
@@ -110,6 +111,10 @@ BEGIN {
    } elsif ($admin) {
       require Net::FullAuto::FA_Core;
       $Net::FullAuto::FA_Core::admin_menu->();
+      exit;
+   } elsif ($figlet) {
+      require Net::FullAuto::FA_Core;
+      &Net::FullAuto::FA_Core::figlet();
       exit;
    }
 
