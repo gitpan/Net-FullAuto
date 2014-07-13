@@ -553,6 +553,13 @@ BEGIN {
                "/sbin/";
             sftport("/sbin/") if $cmd eq 'sftp';
             return "/sbin/";
+         } elsif ($Net::FullAuto::FA_Core::gbp->('which')) {
+            my $which=$Net::FullAuto::FA_Core::gbp->('which');
+            my $found=`$which $cmd`;
+            if (-e $found) {
+               $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
+                  $found;
+            }
          }
       } else {
          return $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd};
@@ -694,7 +701,7 @@ BEGIN {
 our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,$cat,
      $default,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
      $users,$usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL,
-     $identityfile,$tutorial);
+     $identityfile,$tutorial,$figlet);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -2439,6 +2446,71 @@ sub users
    exit;
    #&Net::FullAuto::FA_Core::cleanup();
 
+}
+
+sub figlet
+{
+   can_load(modules => { "Term::Menus" => 0 });
+   can_load(modules => { "Net::FullAuto" => 0 });
+   my $figlet='';my @figletfonts=();
+   if ($figlet=$Net::FullAuto::FA_Core::gbp->('figlet')) {
+      my $path=`$figlet/figlet -I2`;
+      chomp $path;
+      opendir(my $dh, $path) || die "can't opendir $path: $!";
+      while (my $file=readdir($dh)) {
+         chomp($file);
+         next unless $file=~s/.flf$//;
+         push @figletfonts,$file; 
+      }
+      my $figban=`$figlet/figlet -f small "FIGlet   Fonts"`;
+      $figban=~s/^/   /mg;
+      $figban="\n\n$figban   ".
+         "Choose a FIGlet Font to preview \"EXAMPLE + example\"".
+         "\n";
+      my $figexban=sub {
+
+         my $font=`$figlet/figlet -f ]P[{figmenu} "EXAMPLE + example"`;
+         $font=~s/^/   /mg; 
+         chomp $font;
+         return $font;
+
+      };
+
+      my $figresult=sub {
+
+         my %figresult=(
+
+            Name   => 'figresult',
+            Result => sub { return '{figmenu}<' },
+            Banner => $figexban,
+
+         );
+         return \%figresult;
+
+      };
+
+      my %figmenu=(
+
+         Name => 'figmenu',
+         Item_1 => {
+
+            Text    => ']C[',
+            Convey  => \@figletfonts,
+            Result  => $figresult,
+
+         },
+         Scroll => 1,
+         Display => 7,
+         Banner => $figban,
+
+      );
+      my $selection=Menu(\%figmenu);
+
+   } else {
+      print STDERR "\n   FATAL ERROR: FullAuto cannot locate",
+                   " the program 'figlet' on this host.\n\n";
+   }
+   exit;
 }
 
 sub tutorial
@@ -13016,6 +13088,7 @@ sub fa_login
                 'newuser'               => \$newuser,
                 'new-user'              => \$newuser,
                 'tutorial'              => \$tutorial,
+                'figlet'                => \$figlet,
                 'about'                 => \$version,
                 'authorize_connect'     => \$authorize_connect,
                 'cache_root=s'          => \$cache_root,

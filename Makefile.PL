@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999944';
+$main::VERSION='0.9999999945';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -679,7 +679,14 @@ END
          && ($perl_version>=5.18.2)) {
 
       my $dpkg=`/bin/dpckg -l`;
+      my $update_flag=0;
       if (-1==index $dpkg,'build-essential') {
+         open(AG,"sudo apt-get -y update'|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close AG;
+         $update_flag==1;
          open(AG,"sudo apt-get -y install 'build-essential'|");
          while (my $line=<AG>) {
             print $line;
@@ -687,6 +694,12 @@ END
          close AG;
       }
       if (-1==index $dpkg,'libssl-dev') {
+         unless ($update_flag) {
+            open(AG,"sudo apt-get -y update'|");
+            while (my $line=<AG>) {
+               print $line;
+            }
+         }
          open(LD,"sudo apt-get -y install 'libssl-dev'|");
          while (my $line=<LD>) {
             print $line;
@@ -1117,7 +1130,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.67');
+   &fa_install_module('Term::Menus','install','Makefile','','2.68');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
