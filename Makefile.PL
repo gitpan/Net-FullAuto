@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999946';
+$main::VERSION='0.9999999947';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1132,7 +1132,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.68');
+   &fa_install_module('Term::Menus','install','Makefile','','2.69');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
