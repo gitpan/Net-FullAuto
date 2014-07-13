@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999947';
+$main::VERSION='0.9999999948';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -262,8 +262,8 @@ END
       my $can_tm='';
       eval { require Data::Password::Check };
       if ((-1<index $main::amazon,'amazon') && ($@!~/^\s*$/)) {
-         exec 'sudo','perl','Makefile.PL','SKIP' unless
-            grep  { /SKIP/ } @ARGV;
+         #exec 'sudo','perl','Makefile.PL','SKIP' unless
+         #   grep  { /SKIP/ } @ARGV;
          my $meminfo=`cat /proc/meminfo`;
          my $memtotal=$meminfo;
          my $memfree=$meminfo;
