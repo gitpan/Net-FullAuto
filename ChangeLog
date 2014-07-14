@@ -22,6 +22,13 @@
 
 2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999951 released.
+
+        * New version of Term::Menus paired with this release.
+ 
+
+2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999950 released.
 
         * Moved Module::Runtime up in dependency list.

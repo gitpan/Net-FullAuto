@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999950';
+$main::VERSION='0.9999999951';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1132,7 +1132,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.70');
+   &fa_install_module('Term::Menus','install','Makefile','','2.71');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -3853,11 +3853,11 @@ END
                }
                if ($BDB_selection eq 'Encrypted') {
                   system("cd ${filename}_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install")
+                        $CPAN::Config->{make}." install 2>&1")
                      || warn $!;
                } else {
                   system("cd ${filename}.NC_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install")
+                        $CPAN::Config->{make}." install 2>&1")
                      || warn $!;
                }
                $ver=$filename;
@@ -5120,11 +5120,11 @@ END
          Banner => $almost_there,
 
       );
-      my $selection=Menu(\%finish_setup);
-      if (-1<index $selection, 'Complete') {
+      #my $selection=Menu(\%finish_setup);
+      #if (-1<index $selection, 'Complete') {
          system('sudo make install');
          exec fa;
-      }
+      #}
    }
 
 }
