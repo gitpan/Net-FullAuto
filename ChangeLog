@@ -22,6 +22,13 @@
 
 2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999950 released.
+
+        * Moved Module::Runtime up in dependency list.
+
+
+2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999949 released.
 
         * Changed pipe to system() for Berkeley make.
