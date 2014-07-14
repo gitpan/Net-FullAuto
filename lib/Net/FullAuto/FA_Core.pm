@@ -9488,7 +9488,6 @@ $main::get_default_modules=sub {
          &handle_error($die);
       }
    }
-print "GET_DEFAULT_MODULES\n";
    my $username=&Net::FullAuto::FA_Core::username();
    unless (-f $Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm') {
       my $fd=$Hosts{"__Master_${$}__"}{'FA_Core'}.'fa_global.pm';
