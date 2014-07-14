@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999951';
+$main::VERSION='0.9999999952';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -919,6 +919,9 @@ END
                   "FullAuto Install will EXIT.";
             exit 1;
          }
+         if ($version && $p eq 'Term::Menus') {
+            $p='REEDFISH/Term-Menus-$version.tar.gz';
+         }
          print "==> $p required."
          and print "*** Installing $p via CPAN\n"
          and
@@ -929,6 +932,9 @@ END
          if ($@) {
             $cpan_error="$@ $!";
             die "CPAN Error: $cpan_error\n";
+         }
+         if ($version && (-1<index $p,'Term-Menus')) {
+            $p='Term::Menus';
          }
          if (lc($task) eq 'install') {
             my $sudo='';
@@ -1165,9 +1171,9 @@ END
    &fa_install_module('strictures','install','Makefile');
    &fa_install_module('Role::Tiny','install','Makefile');
    &fa_install_module('Devel::GlobalDestruction','install','Makefile');
+   &fa_install_module('Module::Runtime','install','Makefile');
    &fa_install_module('Import::Into','install','Makefile');
    &fa_install_module('Try::Tiny','install','Makefile');
-   &fa_install_module('Module::Runtime','install','Makefile');
    &fa_install_module('Sub::Exporter','install','Makefile');
    &fa_install_module('Sub::Exporter::Util','install','Makefile');
    &fa_install_module('Moo','install','Makefile');
@@ -3862,8 +3868,8 @@ END
                }
                $ver=$filename;
                $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-               $berkeleydb=$pre.'lib';
-               $header_to_use=$pre."include";
+               $berkeleydb=$pre.'/lib';
+               $header_to_use=$pre.'/include';
                $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
                $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
                $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
