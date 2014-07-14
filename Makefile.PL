@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999952';
+$main::VERSION='0.9999999953';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -920,7 +920,7 @@ END
             exit 1;
          }
          if ($version && $p eq 'Term::Menus') {
-            $p='REEDFISH/Term-Menus-$version.tar.gz';
+            $p="REEDFISH/Term-Menus-$version.tar.gz";
          }
          print "==> $p required."
          and print "*** Installing $p via CPAN\n"

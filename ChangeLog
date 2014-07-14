@@ -22,11 +22,16 @@
 
 2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999953 released.
+
+        * Fixed Makefile.PL error.
+
+
+2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999952 released.
 
         * Fixed Berkeley DB install.
-
-        * New version of Term::Menus paired with this release.
 
 
 2014-07-13  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
