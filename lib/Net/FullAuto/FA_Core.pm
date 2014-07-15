@@ -2333,7 +2333,7 @@ sub grep_for_string_existence_only
       open(FH,"<$file") || return 0;
       my $keygen_flag=0;
       while (my $line=<FH>) {
-         if ($line=~/^\[1\]|ssh-rsa/) {
+         if ($line=~/^\|?\[?(?:1|localhost)\]?\|?|ssh-rsa|ecdsa-sha2/s) {
             $keygen_flag=1;
             last;
          }
@@ -2345,8 +2345,8 @@ sub grep_for_string_existence_only
       if ($keygen_flag) {
          my ($stdout,$stderr)=('','');
          my $output=`ssh-keygen -F localhost 2>&1`;
-         $return_value=1 if $output=~/localhost|^\[1\]|ssh-rsa/s;
-      } 
+         $return_value=1 if $output=~/localhost/s;
+      }
    };
    return $return_value;
 }
@@ -13964,6 +13964,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                $userflag=0;@passwd=();
                chomp($login_Mast_error);
                $login_Mast_error=~s/^(.*try again.).*$/$1\n/s;
+               $login_Mast_error=~s/^debug1.*interactive\s*//s;
             } else {
                chomp($login_Mast_error);
             }
@@ -15311,7 +15312,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
       if ($passerror) {
          $passerror=0;next;
       } elsif ($@) {
-print "WHAT IS THE ERRORRRRR=$@\n";<STDIN>;
+#print "WHAT IS THE ERRORRRRR=$@\n";<STDIN>;
          if (7<length $@) {
             if (unpack('a8',$@) eq 'Insecure') {
                print $@;cleanup();
@@ -21244,7 +21245,28 @@ sub wait_for_passwd_prompt
    my $eval_stdout='';my $eval_stderr='';$@='';
    my $connect_err=0;my $count=0;
    $filehandle->{_cmd_handle}->autoflush(1);
-   my $starttime=time;my $firstflag=0;
+   my $starttime=time;
+   unless ($notnew) {
+      my $ssh_notice=<<END;
+
+
+  ################### NOTICE ####################
+  It appears that this is the first time FullAuto
+  is starting on this host. It may take a few
+  seconds - or even *MINUTES* (in rare cases) for
+  the intial configurtion of Secure Shell to
+  complete. All future FullAuto startups will go
+  *MUCH* faster. Please be patient.
+
+END
+
+      my $dotsshpath=($^O eq 'cygwin')?$ENV{HOME}:'/root';
+      unless (-e $dotsshpath.'/.ssh' &&
+            &Net::FullAuto::FA_Core::grep_for_string_existence_only(
+            $dotsshpath.'/.ssh/known_hosts',qr/^localhost/)) {
+          print $ssh_notice;
+      }
+   }
    my ($returned)=eval {
       while (1) {
          PW: while (my $line=$filehandle->{_cmd_handle}->get(
@@ -21261,23 +21283,8 @@ sub wait_for_passwd_prompt
                if !$Net::FullAuto::FA_Core::cron &&
                $Net::FullAuto::FA_Core::debug;
             $lin.=$line;
-            if (!$notnew && !$firstflag && 5<=time()-$starttime) {
-               $firstflag=1;
-               unless (-e $Net::FullAuto::FA_Core::home_dir.'/.ssh' &&
-                     &Net::FullAuto::FA_Core::grep_for_string_existence_only(
-                     $Net::FullAuto::FA_Core::home_dir.'/.ssh/known_hosts',
-                     qr/^localhost/)) {
-                  print "\n\n   ############### NOTICE ###############".
-                        "\n   It appears that this is the first time".
-                        "\n   FullAuto is starting on this host. If".
-                        "\n   so, it may take a few *MINUTES* for the".
-                        "\n   intial configurtion of Secure Shell".
-                        "\n   to complete. All future FullAuto".
-                        "\n   startups will go MUCH faster. Please".
-                        "\n   be patient.";
-               }
-            }
-            if (-1<index $line, 'Next authentication method: keyboard-interactive') {
+            if (-1<index $line,
+                  'Next authentication method: keyboard-interactive') {
                $determine_password->($cache,$save_main_pass,
                      $password_from,$login_Mast_error,
                      $loop_count,$kind,$href,$mkdflag);
@@ -21458,10 +21465,109 @@ sub wait_for_passwd_prompt
          chomp($error=~tr/\0-\11\13-\37\177-\377//d);
          if ($error=~/Permission denied/) {
             if ($error=~/publickey/) {
+               my $publickey_failed=<<END;
+    ___      _    _ _    _  __
+   | _ \\_  _| |__| (_)__| |/ /___ _  _
+   |  _/ || | '_ \\ | / _| ' </ -_) || |
+   |_|  \\_,_|_.__/_|_\\__|_|\\_\\___|\\_, |
+                                  |__/
+      _       _   _            _   _         _   _
+     /_\\ _  _| |_| |_  ___ _ _| |_(_)__ __ _| |_(_)___ _ _
+    / _ \\ || |  _| ' \\/ -_) ' \\  _| / _/ _` |  _| / _ \\ ' \\
+   /_/ \\_\\_,_|\\__|_||_\\___|_||_\\__|_\\__\\__,_|\\__|_\\___/_||_|
+
+    (                              ____
+    )\\ )           (        (     |   /
+   (()/(    )  (   )\\   (   )]\\ ) |  /
+    /(_))( /(  )\\ ((_) ))\\ (()/(  | /
+   (_))_|)(_))((_) _  /((_) ((_)) |/
+   | |_ ((_)_  (_)| |(_))   _| | (
+   | __|/ _` | | || |/ -_)/ _` | )\\
+   |_|  \\__,_| |_||_|\\___|\\__,_|((_)
+
+
+END
                if (grep { /__Master_${$}__/ } @{$filehandle->{_hostlabel}}) {
                   my $amazon=
                         `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
                   if ((-1<index $amazon,'amazon') && ($@!~/^\s*$/)) {
+                     print $Net::FullAuto::FA_Core::blanklines;
+                     print $publickey_failed;
+                     sleep 3;
+                     my $user=$Net::FullAuto::FA_Core::username;
+                     require LWP::UserAgent;
+                     require HTTP::Request;
+                     #my $URL='http://www.whatismyip.com'; 
+                     my $URL='http://169.254.169.254/'.
+                             'latest/meta-data/public-ipv4/';
+                     my $MAX_TRIES=5;
+                     my $SLEEP_BETWEEN_TRIES=20;
+                     my $agent = LWP::UserAgent->new(
+                           env_proxy  => 1,
+                           keep_alive => 1,
+                           timeout    => 30 );
+                     $agent->agent('Internet Explorer/6.0');
+                     my $header=HTTP::Request->new(GET => $URL);
+                     my $request=HTTP::Request->new('GET',
+                           $URL, $header);
+                     my $response;
+                     my $tries = 1;
+                     do {
+                        $response=$agent->request($request);
+                        if ($response->is_error) {
+                           print "URL: $URL   tries: $tries\n";
+                           print "Got Error: " . $response->code .
+                              ':' . $response->message. "\n";
+                           $tries++;
+                           if ($tries <= $MAX_TRIES) {
+                              sleep $SLEEP_BETWEEN_TRIES;
+                           }
+                        }
+                     } until  (($response->is_success) ||
+                        ($tries > $MAX_TRIES));
+                     my $external_IP=$response->content; 
+
+   ## FOR 'http://www.whatismyip.com'
+   ## uncomment URL above and code here
+
+   # $content=~s/^.*Your IP:<\/div>.*?([&][#].*?)<\/div>.*$/$1/s;
+   #my $new_content='';
+   #foreach my $char ($content=~m/(?:[&][#](\d\d);)/g) {
+   #   $char=sprintf "%c", $char;
+   #   $external_IP.=$char;
+   #}
+
+                     my $pbf_banner=<<END;
+
+              =====================================
+              || PublicKey Authentication FAILED ||
+              =====================================  
+
+   FullAuto works with Amazon EC2 Servers the same way you do. You
+   connected to this server with a private key file similar to this:
+
+       ssh -i your_key.pem $user\@$external_IP
+
+   In order for FullAuto to connect, the same key must be used:
+
+       fa -i your_key.pem
+
+   Upload this *same* key from your local computer to this host with
+   this single command (run this from your local computer - NOT here):
+
+       scp -i your_key.pem your_key.pem $user\@$external_IP::/home/$user
+END
+                     my %publickey_failed=(
+
+                        Name => 'publickey_failed',
+                        #Item_1 => {
+
+                        #},
+                        Banner => $pbf_banner,
+
+                     );
+                     &Term::Menus::Menu(\%publickey_failed);
+
 print "DO AMAZON HANDLING\n";
                      &Net::FullAuto::FA_Core::cleanup();
                   }

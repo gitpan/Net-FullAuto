@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999955';
+$main::VERSION='0.9999999956';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1138,7 +1138,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.72');
+   &fa_install_module('Term::Menus','install','Makefile','','2.74');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -5435,6 +5435,7 @@ sub MY::install {
       "\t\$(MV) ./tmp_fa_core.pm \$(DESTINSTALLSITELIB)".
       "/Net/FullAuto/FA_Core.pm\n\n"
       if $^O eq 'cygwin';
+   $inherited .= "\t\$(CP) FIGlet_fonts/* /usr/share/figlet 2>&1\n";
    $inherited;
 
 }
