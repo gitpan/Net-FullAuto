@@ -62,8 +62,8 @@ FIGlet_fonts/5lineoblique.flf
 FIGlet_fonts/6x9.flf
 #FIGlet_fonts/a_zooloo.flf
 #FIGlet_fonts/acrobatic.flf
-#FIGlet_fonts/advenger.flf
-FIGlet_fonts/alligator.flf
+FIGlet_fonts/advenger.flf
+#FIGlet_fonts/alligator.flf
 #FIGlet_fonts/alligator2.flf
 #FIGlet_fonts/alligator3.flf
 #FIGlet_fonts/alpha.flf
@@ -92,7 +92,7 @@ FIGlet_fonts/avatar.flf
 #FIGlet_fonts/b_m__200.flf
 #FIGlet_fonts/B1FF.flf
 #FIGlet_fonts/banner3.flf
-#FIGlet_fonts/banner3-D.flf
+FIGlet_fonts/banner3-D.flf
 #FIGlet_fonts/banner4.flf
 #FIGlet_fonts/barbwire.flf
 #FIGlet_fonts/basic.flf
@@ -120,7 +120,7 @@ FIGlet_fonts/briteb.flf
 FIGlet_fonts/broadway_kb.flf
 #FIGlet_fonts/bubble__.flf
 #FIGlet_fonts/bubble_b.flf
-FIGlet_fonts/bulbhead.flf
+#FIGlet_fonts/bulbhead.flf
 #FIGlet_fonts/c_ascii_.flf
 FIGlet_fonts/c_consen.flf
 #FIGlet_fonts/c1______.flf

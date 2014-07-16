@@ -14,22 +14,22 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 6d73bbb0e0d991d02c30fe96bb8cd04549e221dc ChangeLog
+SHA1 e022bfd992799f4c64ce090f8e21c9e0ec51dc93 ChangeLog
 SHA1 d7f05f3c29deb4f29dd9291d5076899b3f92cd20 FIGlet_fonts/3-d.flf
 SHA1 8238eb029ef0be3083cd5982100b4000bd8aacb8 FIGlet_fonts/4x4_offr.flf
 SHA1 f3223bb52e36d14098e1ed1f7790593a09230d68 FIGlet_fonts/5lineoblique.flf
 SHA1 a33e8431871a3cc1a14313629bed73bbe7f918aa FIGlet_fonts/6x9.flf
 SHA1 0bad38566e91924d1ce8aebf0346d3cb3b14ef78 FIGlet_fonts/LICENSE
-SHA1 a494410cfb9be18da793c53a905b3a39e8753f1a FIGlet_fonts/alligator.flf
+SHA1 68a7ef257f8eda36864bce2156fa352497564a7a FIGlet_fonts/advenger.flf
 SHA1 b5858ae72496bd87b20f6d646321cf99e69dcfd1 FIGlet_fonts/alphabet.flf
 SHA1 aa0f18b15bbf02f7784867a34bf57e1a29b7c3b9 FIGlet_fonts/amc3line.flf
 SHA1 04816cb85176e23a953e8ca576d1dce872753fda FIGlet_fonts/aquaplan.flf
 SHA1 b25c91c13cb90dd4fb4650cdc7907962579dfbd8 FIGlet_fonts/ascii___.flf
 SHA1 f004e3bbf0ec14dc8d3ab64074d0e7adfc92fa62 FIGlet_fonts/avatar.flf
+SHA1 300b3b07fa0592b2cac5640df5e65fe08fe2342b FIGlet_fonts/banner3-D.flf
 SHA1 f73c8281be239bbb47cc2e7b6de0974eb33a50d5 FIGlet_fonts/bear.flf
 SHA1 44ff316cc39226f77752bc45bd7eed8a65fce1ce FIGlet_fonts/briteb.flf
 SHA1 bc7fe3b87c0dfdf383576938d741e0917664732d FIGlet_fonts/broadway_kb.flf
-SHA1 ce4da2a757a369b1c9dc5644f6813165137a83cf FIGlet_fonts/bulbhead.flf
 SHA1 ec1a00c0a9f6f20a4fcb2acea4b918e81522c69d FIGlet_fonts/c_consen.flf
 SHA1 98ee8f15b141e8b1f3d3b03defcb9c4b40a3bc6f FIGlet_fonts/cards.flf
 SHA1 81be6d36eb8c409ba4f26077f7a854908bd993e0 FIGlet_fonts/chunky.flf
@@ -91,9 +91,9 @@ SHA1 f7c0f7ca2c3af0d909694fd839e612b0e20361a7 FIGlet_fonts/usaflag.flf
 SHA1 5939c33dff38893a1dcf0ba68b97845f7c63e1fa FIGlet_fonts/wavy.flf
 SHA1 f81af8fd43e0f19c168343709749ef4da3972e6d FIGlet_fonts/weird.flf
 SHA1 62647027745e394450492878f8d8730548d83fa2 LICENSE
-SHA1 fb598e080eb8acebffa53678adff21a61117d10b MANIFEST
-SHA1 ad4a728be9435b882300e095dd4478d121c02499 META.yml
-SHA1 4aeb6dfbfd1aee3d151168517457a5b0a16482fc Makefile.PL
+SHA1 3969a1b82753ea591ce1b77ed0ccf1403b480052 MANIFEST
+SHA1 9a30c2a18761f4c5c7fb3073fe52909af4df2140 META.yml
+SHA1 99935ecc85d84cde498c35e0fa929b0563081524 Makefile.PL
 SHA1 05aead0f26b0f71a00bad5badbf390f2c92dcd1d README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 ade875b98aca4971a381d2e037ed009b52c2f8da bin/fullauto.pl
@@ -122,7 +122,7 @@ SHA1 6fed559b971e9d2f091e0776ddbb131be5225a36 inc/Module/Install/Win32.pm
 SHA1 ea528c813c3473a2674fcbed06531c2f795116ce inc/Module/Install/WriteAll.pm
 SHA1 00bb8470354d11bd7c2c74633083ebe627eb2b7e inc/Module/Install/with.pm
 SHA1 e1d3650b6801a3cb2e6de38574e9327914c96d40 install_mozrepl_plugin.ahk
-SHA1 b4c9bed50aa98b37199fcb4be9ea32cfa83da2bb lib/Net/FullAuto.pm
+SHA1 2ddc6a41becfac4cec29685d4cbb7984d060d666 lib/Net/FullAuto.pm
 SHA1 cc3f8588c96516de2802c68be465447d17f781aa lib/Net/FullAuto/Custom/BackUp/README
 SHA1 5032ba28f88dbf163b0d4dd158948af9124568c9 lib/Net/FullAuto/Custom/README
 SHA1 5b1702f20efb104e3375934cf55a7438c19e109a lib/Net/FullAuto/Distro/fa_code.pm
@@ -133,17 +133,17 @@ SHA1 fe312c3ed58aac44bd3bebb39bef97df2c70ecad lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 1e9cdb0a94c0e832ac6240d6ae26fcab0cfebbc0 lib/Net/FullAuto/Distro/fa_menu.pm
 SHA1 c6096414c9970ce64beb619cc9f0d78fe4d69993 lib/Net/FullAuto/Distro/fa_menu_demo.pm
 SHA1 c61c03f9beda14559fdf07e569e813a2bd553a53 lib/Net/FullAuto/Distro/fullautologo.jpg
-SHA1 10b3d440f33d53b3d99c40e90d619ff59d7be88c lib/Net/FullAuto/FA_Core.pm
+SHA1 5cd47764f40d9dbe4c03530677130433ceeb0fe4 lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJTxdNrAAoJEBa/9Pad787E+HMH/3fzmdyrh4uJnMpyeahdKdDE
-mZlOzsPQax8nKikIxoAJTYuaBTW/ZO8oPW1GqFrJZfLRUoKWARy7ZtgIkklEuHnf
-CzMq/gnuMrgWXmUAnCYccLI409hl35kECFwIToMJ4aMQVJzjJeRGGfgU8g4aHeA4
-TK8NMut9x2UUzYcGNZ4O0EvGF2tLU0ybBoddfwJPc/LEDUp9r/JViG9g01CSenGc
-Gs16HqiKZbh5q9ldMWxHPHCCmHbFiGHP8zxho7yJ7sEF1kifrkl52/c2cZuafTZ5
-pXXXoyZE93ugCAXe1vX9dEcP7wecT2WlutYlcc483nKbDfvR1kt82/Bacog9X6Y=
-=hxTU
+iQEcBAEBAgAGBQJTxnZKAAoJEBa/9Pad787ETVoH/RCVtwev2F7Ihfsje9AiuBGG
+NtsVj4O0TW7p+RdnMbc7aB4h4pY0hbc5NdosmcV/gg5awa2qrUTCq8Fadyu0nmas
+dikd7t4JISel06gmnmiLVzbWEyF82SUWZeD8sj0hCtmZ767A06CmIudGBzuxcPXx
+oKyBCzptFJ442Y9hj4SY/4/QPL7T1WTYwLfxA7sDTELTmqgn+mV61ebjB/OIVEJb
+Qb5NUj5VhC0C8/H/gWNTv8/aOF7M0pfu/+qD9o22MCubNZZIlh7neMBzF4tiN5Fi
+uVR2/6U8gOVrPU7YemPc6MgY8jdSvy8ItpgsDOb4D/4nEKP3VBFIy9ZSFHkNXBM=
+=WxXi
 -----END PGP SIGNATURE-----

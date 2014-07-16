@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999957';
+$main::VERSION='0.9999999958';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -937,6 +937,8 @@ END
          }
          if ($version && (-1<index $p,'Term-Menus')) {
             $p='Term::Menus';
+         } elsif ($version && (-1<index $p,'Term-RawInput')) {
+            $p='Term::RawInput';
          }
          if (lc($task) eq 'install') {
             my $sudo='';
@@ -1118,7 +1120,7 @@ END
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
-   &fa_install_module('Term::RawInput','install','Makefile','','1.17');
+   &fa_install_module('Term::RawInput','install','Makefile','','1.19');
    if ($^O eq 'cygwin') {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
@@ -1140,7 +1142,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.74');
+   &fa_install_module('Term::Menus','install','Makefile','','2.75');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');

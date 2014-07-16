@@ -2465,8 +2465,10 @@ sub figlet
       my $figban=`$figlet/figlet -f small "FIGlet   Fonts"`;
       $figban=~s/^/   /mg;
       $figban="\n\n$figban   ".
-         "Choose a FIGlet Font to preview \"EXAMPLE + example\"".
-         "\n";
+         "Choose a FIGlet Font to preview with text \"EXAMPLE + example\"".
+         "\n   or continuously scroll and view by repeatedly pressing ENTER".
+         "\n\n   HINT: Type  !figlet -f<fontname> YOUR TEXT\n\n".
+         "         To view your own text with the font of your choice.";
       my $figexban=sub {
 
          my $font=`$figlet/figlet -f ]P[{figmenu} "EXAMPLE + example"`;
@@ -2499,8 +2501,8 @@ sub figlet
             Result  => $figresult,
 
          },
+         Display => 9,
          Scroll => 1,
-         Display => 7,
          Banner => $figban,
 
       );
