@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999958';
+$main::VERSION='0.9999999959';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -226,6 +226,11 @@ END
    import a release of Net::FullAuto including cryptography modules like
    Crypt::CBC, Crypt::DES and Crypt::Rijndael to your country or
    re-distribute source code from them in any way.
+
+   This website may be a helpful resource:   http://www.cryptolaw.org
+
+   It surveys cryptography laws from around the world. However, consult
+   local legal experts before engaging in any potentially risky activity. 
 END
 
    my $cryptography=sub {
@@ -1142,7 +1147,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.75');
+   &fa_install_module('Term::Menus','install','Makefile','','2.76');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');

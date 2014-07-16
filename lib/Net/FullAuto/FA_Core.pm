@@ -10193,6 +10193,7 @@ my $setup_new_user11=sub{
       Item_2 => {
          Text => "Exit FullAuto  (Setup is COMPLETE! Use 'fa' to run FullAuto)",
       },
+      Scroll => 2,
       Banner => $fa_congrats,
    );
    return \%setup_new_user11;
@@ -10321,6 +10322,7 @@ my $cacomm_sub=sub {
                         }
       },
       Item_2 => $item_2,
+      Scroll => 2,
       Banner => sub {
 my $custnd=<<FIN;
     _  _              ___       __           _ _      
@@ -10358,6 +10360,7 @@ my $camenu_sub=sub {
          Convey => $get_modules->('Menu'),
          Result => $cacomm_sub->(),
       },
+      Scroll => 1,
       Banner => sub {
          my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
@@ -10386,6 +10389,7 @@ my $camaps_sub=sub {
          Convey => $get_modules->('Maps'),
          Result => $camenu_sub->(),
       },
+      Scroll => 1,
       Banner => sub {
          my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
@@ -10413,6 +10417,7 @@ my $cahost_sub=sub {
          Convey => $get_modules->('Host'),
          Result => $camaps_sub->(),
       },
+      Scroll => 1,
       Banner => sub {
          my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
@@ -10437,6 +10442,7 @@ my $caconf_sub=sub {
          Convey => $get_modules->('Conf'),
          Result => $cahost_sub->(),
       },
+      Scroll => 1,
       Banner => sub {
          my $username=&Net::FullAuto::FA_Core::username();
          return "   Code  =>  Net/FullAuto/Custom/$username/".
@@ -10459,6 +10465,7 @@ my $cacode_sub=sub {
          Convey => $get_modules->('Code'),
          Result => $caconf_sub->(),
       },
+      Scroll => 1,
       Banner => "$custcm   Please select a fa_code[.*].pm ".
                 "module:",
    );
@@ -10475,6 +10482,7 @@ my $define_module_from_viewdef_sub=sub {
          Convey => $get_modules,
          Result => $fasetdef,
       },
+      Scroll => 1,
       Banner => $fabann,
    );
    return \%define_module_from_viewdef;
@@ -10525,6 +10533,7 @@ my $viewdefaults_sub=sub {
                     'fa_maps','fa_menu'],
          Result => $define_module_from_viewdef_sub->($_[0]),
       },
+      Scroll => 1,
       Banner => $vdbanner->($_[0]),
   );
   return \%viewdefaults;
@@ -10684,6 +10693,7 @@ my $define_modules_commit_sub=sub {
       Item_2 => {
          Text => "No  ( FullAuto [fa --set] will EXIT )",
       },
+      Scroll => 2,
       Banner => sub {
          my $custns=<<FIN;
     _  _              ___      _   
@@ -10801,6 +10811,7 @@ my $define_modules_menu_fa_conf_sub=sub {
          Convey => $get_modules->('Conf'),
          Result => $define_modules_menu_fa_host_sub->(),
       },
+      Scroll => 1,
       Banner => sub {
          return "   New Set:  \'$main::setname\'  --> Code => ".
                 "]P[{define_modules_menu_fa_code}\n\n".
@@ -10902,6 +10913,7 @@ my $define_modules_menu_fa_code_sub=sub {
          },
          Result => $define_modules_menu_fa_conf_sub->(),
       },
+      Scroll => 1,
       Banner => sub {
 #         my $custcm=<<FIN;
 #    ___         _       __  __         _      _     
@@ -11803,10 +11815,23 @@ my $fa_tutorial=<<END;
 
 END
 
+my $fa_fullauto_welcome=<<END;
+
+                         ___     _ _   _       _       
+                        | __|  _| | | /_\\ _  _| |_ ___ 
+   (   /_ /_   _  _     | _| || | | |/ _ \\ || |  _/ _ \\
+   |/|/(-(( ()//)(-  To |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  $username
+
+   Items with the arrow character  >  are the current selection, Just
+   press ENTER or Scroll with UP and DOWN arrow keys. You can also type
+   the number of your selection, and then press ENTER to activate your
+   selection.
+END
+
 my $fa_fullauto=<<END;
 
-    ___     _ _   _       _       
-   | __|  _| | | /_\\ _  _| |_ ___ 
+    ___     _ _   _       _
+   | __|  _| | | /_\\ _  _| |_ ___
    | _| || | | |/ _ \\ || |  _/ _ \\
    |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/
 END
@@ -11908,18 +11933,20 @@ my $fa_basics=<<END;
    \\__ \\/ _ \\ '  \\/ -_) | _ \\/ _` (_-< / _(_-<
    |___/\\___/_|_|_\\___| |___/\\__,_/__/_\\__/__/
 
-   This wizard is interactive. You can go backwards and
-   forwards. Just press the LEFTARROW < key to navigate
-   backwards, the RIGHTARROW > key to go forward. Try it!
+   This wizard is interactive. You can go backwards and forwards.
+   Just press the LEFTARROW  <  key to navigate backwards, the
+   RIGHTARROW  >  key to go forward. Try it!
 
-   Notice at the bottom are commands you can type:
+   Notice at the bottom are some hot key hints:
 
-   'help'  to get the help or man (for "manual") screen
-   'admin' to get the admin menu
+   [F1]  (F1 key on your keyboard) to get the help pages.
+   [ESC] to quit FullAuto.
 
-   When you quit either help or admin, you automatically
-   return to this screen. To quit admin, type 'quit',
-   and to quit the help page, type 'q'. Try it!
+   You can also type out the words 'quit' or 'bye' or 'exit' to quit.
+   There are also hotkey shortcuts - 'admin' takes you to the admin menu.
+
+   When you quit either help or admin, you automatically return to this
+   screen. To quit admin, press [ESC], and help pages. type 'q'. Try it!
 END
 
 my $fa_no_web=<<END;
@@ -11930,10 +11957,12 @@ my $fa_no_web=<<END;
    |_|\\_\\___/   \\_/\\_/\\___|_.__/ |_| \\__,_\\__, \\___(_)(_)
                                           |___/
 
-   YES! FullAuto is Automation Software. Ever see a furnace room
-   with marble tile? Or a fully enclosed car trunk with rich soft
-   leather? We decorate what we SEE and spend lots of time around.
-   Things we rarely access, we keep simple and utilitarian.
+   YES! FullAuto is Automation & High Productivity software. Ever see a
+   furnace room with marble tile? Or a gold plated broom handle? We
+   decorate what we SEE and spend lots of *leisure* time around. Things
+   we rarely access, and places where we need sharp focus and a lack of
+   distraction, we keep simple and utilitarian. Ever seen an operating
+   room with a rich color palette? (No? - neither have I!)
                  __ _____        __ __  __  __  _____ 
                 (_ |_  |   _|_  |_ /  \\|__)/ _ |_  |  
    FullAuto is  __)|__ |    |   |  \\__/| \\ \\__)|__ |  software.
@@ -11950,14 +11979,16 @@ my $fa_intro=<<END;
     | || ' \\  _| '_/ _ \\/ _` | || / _|  _| / _ \\ ' \\ 
    |___|_||_\\__|_| \\___/\\__,_|\\_,_\\__|\\__|_\\___/_||_|
 
-   FullAuto is an Automation Framework. With this program,
-   nearly *ANY* computer process can be automated! But first
-   a person has to tell it what to do. This wizard will help
-   do that. This command environment wizard is an important
-   innovation of FullAuto. Everything you are experiencing
-   now, can be used used to make *YOUR* automation projects
-   easier to create and maintain. Your project can and SHOULD
-   tell a story just like this one.
+   FullAuto is an Automation & High Productivity Framework. With this
+   program, nearly *ANY* computer process can be fully automated or
+   optimized for extremely rapid and precise user interaction - or
+   combination. But first a person has to tell it what to do. This wizard
+   will help do that. This wizard is an important innovation of FullAuto.
+   Everything you are experiencing now is the High Productivity Framework
+   in ACTION. This framework can be used to make *YOUR* computer processes
+   (such as complex business and data manipulation processes and projects)
+   easier to create, manipulate and maintain. Your project can and SHOULD
+   tell a story just like this one. FullAuto makes BIG DATA a LOT *smaller*!
 
    You can revisit this story anytime - at the command line:
 
@@ -12338,6 +12369,7 @@ my $setup_new_user5=sub{
           Result => $setup_new_user6,
 
       },
+      Scroll => 6,
       Banner => $fa_organization,
   );
   return \%setup_new_user5;
@@ -12417,7 +12449,7 @@ sub new_user_experience {
               "            Do Not Show this Screen Again",
               "Continue with Login (No setup for $username)" ],
 
-      $banner="$fa_fullauto\n      $fa_mini_welcome $username!\n"
+      $banner=$fa_fullauto_welcome       
              ."\n      It appears "
              ."that $username is new to FullAuto,"
              ."\n      for there is no FullAuto "
@@ -12429,7 +12461,7 @@ sub new_user_experience {
             Text   => "Getting Started (QUICKLY) with FullAuto!\n".
                       "                   ".
                       "HIGHLY Recommended for Beginners!\n\n",
-            Default => "*",
+            #Default => "*",
             Result  => $setup_new_user,
          },
          Item_2 => {
@@ -12438,6 +12470,7 @@ sub new_user_experience {
             Convey => $text,
 
          },
+         Scroll => 1,
          Banner => $banner,
 
       );
@@ -21558,6 +21591,10 @@ END
    this single command (run this from your local computer - NOT here):
 
        scp -i fullauto.pem fullauto.pem $user\@${external_IP}:/home/$user
+
+   With PuTTY scp:
+
+       pscp -i fullauto.ppk fullauto.pen $user\@${external_IP}:/home/$user
 END
                      my %publickey_failed=(
 
