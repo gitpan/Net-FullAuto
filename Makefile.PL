@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999956';
+$main::VERSION='0.9999999957';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -921,6 +921,8 @@ END
          }
          if ($version && $p eq 'Term::Menus') {
             $p="REEDFISH/Term-Menus-$version.tar.gz";
+         } elsif ($version && $p eq 'Term::RawInput') {
+            $p="REEDFISH/Term-RawInput-$version.tar.gz";
          }
          print "==> $p required."
          and print "*** Installing $p via CPAN\n"
@@ -1116,7 +1118,7 @@ END
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
-   &fa_install_module('Term::RawInput','install','Makefile','','1.16');
+   &fa_install_module('Term::RawInput','install','Makefile','','1.17');
    if ($^O eq 'cygwin') {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
@@ -5364,6 +5366,10 @@ sub MY::install {
       }
    }
 
+   if (-e '/usr/share/figlet') {
+      $inherited =~ s/(install ::.*)$/$1 figlet_fonts $mz/m;
+   }
+
    my $link='';
    unless (-e $Config{installsitebin}."/fa") {
       my $lnpath='';
@@ -5435,7 +5441,8 @@ sub MY::install {
       "\t\$(MV) ./tmp_fa_core.pm \$(DESTINSTALLSITELIB)".
       "/Net/FullAuto/FA_Core.pm\n\n"
       if $^O eq 'cygwin';
-   $inherited .= "\t\$(CP) FIGlet_fonts/* /usr/share/figlet 2>&1\n";
+   $inherited .= "\nfiglet_fonts ::\n".
+      "\t\$(NOECHO) \$(CP) FIGlet_fonts/* /usr/share/figlet\n".
    $inherited;
 
 }

@@ -21546,16 +21546,16 @@ END
    FullAuto works with Amazon EC2 Servers the same way you do. You
    connected to this server with a private key file similar to this:
 
-       ssh -i your_key.pem $user\@$external_IP
+       ssh -i fullauto.pem $user\@$external_IP
 
    In order for FullAuto to connect, the same key must be used:
 
-       fa -i your_key.pem
+       fa -i fullauto.pem
 
    Upload this *same* key from your local computer to this host with
    this single command (run this from your local computer - NOT here):
 
-       scp -i your_key.pem your_key.pem $user\@$external_IP::/home/$user
+       scp -i fullauto.pem fullauto.pem $user\@${external_IP}:/home/$user
 END
                      my %publickey_failed=(
 
