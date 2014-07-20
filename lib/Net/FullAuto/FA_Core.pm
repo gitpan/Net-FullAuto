@@ -563,11 +563,11 @@ BEGIN {
             return "/sbin/";
          } elsif ($Net::FullAuto::FA_Core::gbp->('which')) {
             my $which=$Net::FullAuto::FA_Core::gbp->('which');
-            my $found=`$which $cmd`;
-            if (-e $found) {
+            my $found=`$which/which $cmd`;
+            if (-e $found and $found!~/Command not found/i) {
                $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                   $found;
-            }
+            } else { return '' }
          }
       } else {
          return $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd};

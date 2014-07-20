@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999960';
+$main::VERSION='0.9999999961';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1138,9 +1138,12 @@ END
       &fa_install_module('WWW::RobotRules','install','Makefile');
       &fa_install_module('Date::Format','install','Makefile');
       &fa_install_module('Date::Parse','install','Makefile');
+      &fa_install_module('Mail::Header','install','Makefile');
       &fa_install_module('Mail::Internet','install','Makefile');
+      &fa_install_module('Mail::Field','install','Makefile');
       &fa_install_module('Test::NoWarnings','install','Makefile');
       &fa_install_module('Test::Deep','install','Makefile');
+      &fa_install_module('MIME::Base64','install','Makefile');
       &fa_install_module('MIME::Entity','install','Makefile');
    }
    &fa_install_module('LWP::MediaTypes','install','Makefile');
