@@ -28,11 +28,19 @@ package Net::FullAuto::FA_Core;
 #  --password --code hello_world --log; let num+=1;
 #  echo "FINISHED NUM=$num"; done
 #
+## For CPAN availability
+#
+#  The Perl NOC (Network Operations Center)  http://log.perl.org
+#
 ## For re-configuring CPAN:
 #
 #  at CPAN prompt (cpan[1]) type: o conf init
 #
 #  at CPAN prompt: o conf urllist unshift http://www.perl.com/CPAN
+#
+## For root access on Ubuntu and Amazon EC2 servers
+#
+#  sudo su  -or-  sudo bash -l
 #
 ## For creating gpg secret key for use with cpansign -s
 #
@@ -2110,7 +2118,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             if ($clean_master==2 || $clean_master==3) {
                $localhost->cmd(
                   "cmd /c rmdir /s /q transfer$tran[3]");
-               if (&test_dir($localhost->{_cmd_handle},
+               if (&test_dir($localhost,
                       "transfer$tran[3]")) {
                   $localhost->cmd(
                      "chmod -Rv 777 transfer$tran[3]");
@@ -2465,10 +2473,38 @@ sub figlet
       my $figban=`$figlet/figlet -f small "FIGlet   Fonts"`;
       $figban=~s/^/   /mg;
       $figban="\n\n$figban   ".
-         "Choose a FIGlet Font to preview with text \"EXAMPLE + example\"".
-         "\n   or continuously scroll and view by repeatedly pressing ENTER".
-         "\n\n   HINT: Type  !figlet -f<fontname> YOUR TEXT\n\n".
-         "         To view your own text with the font of your choice.";
+         "Choose a FIGlet Font (by number) to preview with text \"Example\"".
+         "\n   -OR- continuously scroll and view by repeatedly pressing ENTER".
+         "\n\n   HINT: Typing  !figlet -f<fontname> YOUR TEXT\n\n".
+         "         is another way to preview the font of your choice.";
+
+      $main::figletoutput=sub {
+
+         return `figlet -f ]P[{figmenu} $_[0]`;
+
+      };
+
+      my $figlet_banner=<<END;
+
+   ]O[{1,'figletoutput'}
+
+
+                        ]P[{figmenu}  font
+   ]I[{1,'Example',40} 
+
+   The box above is an input box. The [DEL] key will clear the contents.
+   Type anything you like, and it will appear in the ]P[{figmenu} FIGlet font!
+END
+
+      my %figletoutput=(
+
+         Name   => 'figletoutput',
+         Result => sub { return '{figmenu}<' }, 
+         Input  => 1,
+         Banner => $figlet_banner,
+
+      );
+
       my $figexban=sub {
 
          my $font=`$figlet/figlet -f ]P[{figmenu} "EXAMPLE + example"`;
@@ -2498,7 +2534,8 @@ sub figlet
 
             Text    => ']C[',
             Convey  => \@figletfonts,
-            Result  => $figresult,
+            #Result  => $figresult,
+            Result  => \%figletoutput,
 
          },
          Display => 9,
@@ -3030,6 +3067,8 @@ sub edit {
          "$fa_conf;cd \"$savdir\"");
    } elsif ($_[0]=~/f/) {
       system("cd $path;\"$editor\" FA_Core.pm;cd \"$savdir\"");
+   } elsif ($_[0]=~/r/) {
+      system("cd ${tpath}Term;\"$editor\" RawInput.pm;cd \"$savdir\"");
    } elsif ($_[0]=~/t/) {
       system("cd ${tpath}Term;\"$editor\" Menus.pm;cd \"$savdir\""); 
    } else {
@@ -7512,52 +7551,17 @@ sub test_dir
 {
 
    my ($cmd_handle,$tdir)=@_;my $test_result=0;
-   my $shell_cmd="if\n[[ -d $tdir ]]\nthen\nif\n[[ -w $tdir ]]"
+   my $shell_cmd='';
+   if (-1<index $ENV{'SHELL'},'bash') {
+      $shell_cmd="if\n[[ -d $tdir ]]\nthen\nif\n[[ -w $tdir ]]"
                 ."\nthen\necho WRITE\nelse\necho READ\nfi\n"
-                ."else\necho NODIR\nfi;".
-                $Net::FullAuto::FA_Core::gbp->('printf')."printf \\\\055";
-   my $cnt=5;
-   while ($cnt--) {
-      $cmd_handle->print($shell_cmd);
-      my $leave=0;my $l='';
-      TD: while (1) {
-         while (my $line=$cmd_handle->get) {
-            $l.=$line;
-            if ($l=~/printf/s) {
-               if ($line=~/^WRITE|^(?:[>]\s)*WRITE/m) {
-                  $test_result='WRITE';
-                  $leave=1;
-                  $l='';
-               } elsif ($line=~/^READ|^(?:[>]\s)*READ/m) {
-                  $test_result='READ';
-                  $leave=1;
-                  $l='';
-               } elsif ($line=~/^NODIR|^(?:[>]\s)*NODIR/m) {
-                  $test_result=0;
-                  $leave=1;
-                  $l='';
-               }
-               select(undef,undef,undef,0.02);
-               # sleep for 1/50th second;
-               $cmd_handle->print();
-               next;
-            }
-            if ($l=~/_funkyPrompt_$/s) {
-               last TD;
-            } else {
-               select(undef,undef,undef,0.02);
-               # sleep for 1/50th second;
-               $cmd_handle->print;
-            }
-         } last if $leave;
-         select(undef,undef,undef,0.02);
-         # sleep for 1/50th second;
-         $cmd_handle->print;
-      } last if $leave;
-      my $cfh_ignore='';my $cfh_error='';
-      ($cfh_ignore,$cfh_error)=&clean_filehandle($cmd_handle);
-      &handle_error($cfh_error,'-1') if $cfh_error;
-   } return $test_result;
+                ."else\necho NODIR\nfi";
+   } else {
+      $shell_cmd="if [ -d $tdir ]; then\nif [ -w $tdir ];"
+                ." then\necho WRITE\nelse\necho READ\nfi\n"
+                ."else\necho NODIR\nfi";
+   }
+   return $cmd_handle->cmd($shell_cmd);
 
 }
 
@@ -7910,8 +7914,7 @@ sub master_transfer_dir
          if (($work_dirs->{_tmp},$work_dirs->{_tmp_mswin})
                =&File_Transfer::get_drive(
                $tdir,'Target','',"__Master_${$}__")) {
-               $testd=&test_dir($localhost->{_cmd_handle},
-                      $work_dirs->{_tmp});
+               $testd=&test_dir($localhost,$work_dirs->{_tmp});
             if ($testd eq 'WRITE') {
                if (lc($work_dirs->{_tmp_mswin}) ne lc($curdir)) {
                   ($output,$stderr)=$localhost->cmd(
@@ -7932,8 +7935,7 @@ sub master_transfer_dir
             $path=~tr/\\/\//;
             ${$work_dirs}{_cwd}=$localhost->{_cygdrive}
                                .'/'.lc($drive).$path.'/';
-            $testd=&test_dir($localhost->{_cmd_handle},
-                      ${$work_dirs}{_cwd});
+            $testd=&test_dir($localhost,${$work_dirs}{_cwd});
             if ($testd eq 'WRITE') {
                if ($tdir ne $curdir) {
                   ($output,$stderr)=$localhost->cmd(
@@ -7957,7 +7959,7 @@ sub master_transfer_dir
                  "System is $^O - NOT cygwin!";
          warn "$warn       $!";
       } $tdir=~tr/\\/\//;
-      $testd=&test_dir($localhost->{_cmd_handle},$tdir);
+      $testd=&test_dir($localhost,$tdir);
       if ($testd eq 'WRITE') {
          my $drive='';my $path='';
          if ($^O eq 'cygwin') {
@@ -8025,7 +8027,7 @@ sub master_transfer_dir
                $cdr=~s/\\/\\\\/g;
                $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
             }
-            $testd=&test_dir($localhost->{_cmd_handle},$curdir);
+            $testd=&test_dir($localhost,$curdir);
             print $Net::FullAuto::FA_Core::MRLOG
                "\nDDDDDDD &test_dir() of $curdir DDDDDDD OUTPUT ==>$testd<==",
                "\n       at Line ",__LINE__,"\n\n"
@@ -8055,8 +8057,7 @@ sub master_transfer_dir
       if ((${$work_dirs}{_tmp},${$work_dirs}{_tmp_mswin})
             =&File_Transfer::get_drive(
             '/tmp','Target','',"__Master_${$}__")) {
-         $testd=&test_dir($localhost->{_cmd_handle},
-                   $work_dirs->{_tmp});
+         $testd=&test_dir($localhost,$work_dirs->{_tmp});
          if ($testd eq 'WRITE') {
             if (lc($work_dirs->{_tmp_mswin}) ne lc($curdir)) {
                ($output,$stderr)=$localhost->cmd(
@@ -8072,8 +8073,7 @@ sub master_transfer_dir
       if (($work_dirs->{_tmp},$work_dirs->{_tmp_mswin})
             =&File_Transfer::get_drive(
             '/temp','Target','',"__Master_${$}__")) {
-         $testd=&test_dir($localhost->{_cmd_handle},
-                   $work_dirs->{_tmp});
+         $testd=&test_dir($localhost,$work_dirs->{_tmp});
          if ($testd eq 'WRITE') {
             if (lc($work_dirs->{_tmp_mswin}) ne lc($curdir)) {
                ($output,$stderr)=$localhost->cmd(
@@ -8109,7 +8109,7 @@ sub master_transfer_dir
             $cdr=~s/\//\\\\/g;
             $Net::FullAuto::FA_Core::cygpathw{$curdir}=$cdr;
          }
-         $testd=&test_dir($localhost->{_cmd_handle},$curdir);
+         $testd=&test_dir($localhost,$curdir);
          if ($testd eq 'WRITE') {
             $work_dirs->{_cwd_mswin}=$work_dirs->{_tmp_mswin}=$cdr.'\\';
             $work_dirs->{_cwd}=$work_dirs->{_tmp}=$curdir;
@@ -8119,7 +8119,7 @@ sub master_transfer_dir
             &handle_error($stderr,'-2','__cleanup__') if $stderr;
          }
       }
-      $testd=&test_dir($localhost->{_cmd_handle},$curdir);
+      $testd=&test_dir($localhost,$curdir);
       if ($testd eq 'WRITE') {
          $work_dirs->{_cwd_mswin}=$work_dirs->{_pre_mswin};
          $work_dirs->{_tmp_mswin}=$work_dirs->{_pre_mswin};
@@ -8130,7 +8130,7 @@ sub master_transfer_dir
                 ."Local Host $Net::FullAuto::FA_Core::Local_HostName!";
          &handle_error($die,'__cleanup__');
       }
-   } $testd=&test_dir($localhost->{_cmd_handle},'/tmp');
+   } $testd=&test_dir($localhost,'/tmp');
    if ($testd eq 'WRITE') {
       ($output,$stderr)=$localhost->cmd('cd /tmp')
          if '/tmp' ne $curdir;
@@ -8138,7 +8138,7 @@ sub master_transfer_dir
       $master_transfer_dir=$work_dirs->{_cwd}
          =$work_dirs->{_tmp}='/tmp/';
       return $work_dirs;
-   } $testd=&test_dir($localhost->{_cmd_handle},$home_dir);
+   } $testd=&test_dir($localhost,$home_dir);
    if ($testd eq 'WRITE') {
       ($output,$stderr)=$localhost->cmd("cd $home_dir")
          if $home_dir ne $curdir;
@@ -8147,7 +8147,7 @@ sub master_transfer_dir
          =$work_dirs->{_tmp}=$home_dir.'/';
       return $work_dirs;
    }
-   $testd=&test_dir($localhost->{_cmd_handle},$curdir);
+   $testd=&test_dir($localhost,$curdir);
    print $Net::FullAuto::FA_Core::MRLOG
       "\nDDDDDDD &test_dir() of $curdir DDDDDDD OUTPUT ==>$testd<==",
       "\n       at Line ",__LINE__,"\n\n"
@@ -14678,15 +14678,16 @@ if (0) {
                   $idntfil=$Hosts{"__Master_${$}__"}{'identity_file'};
                }
                $idntfil=$identity_file if $identity_file;
-               my $try_count=0;
+               my $try_count=0;my $v='vvv';
                while (1) {
                   if ($sshport) {
                      if ($idntfil) {
                         if ($Net::FullAuto::FA_Core::debug) {
+                           $v='v' if $^O eq 'freebsd';
                            ($local_host,$cmd_pid)=
                                &Net::FullAuto::FA_Core::pty_do_cmd(
                               ["${sshpath}ssh","-p$sshport","-i$idntfil",
-                               "-vvv","$login_id\@localhost",'',
+                               "-$v","$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])
                                or (&release_fa_lock(6543) &&
                                    &Net::FullAuto::FA_Core::handle_error(
@@ -14703,10 +14704,11 @@ if (0) {
                         }
                      } else {
                         if ($Net::FullAuto::FA_Core::debug) {
+                           $v='v' if $^O eq 'freebsd'; 
                            ($local_host,$cmd_pid)=
                               &Net::FullAuto::FA_Core::pty_do_cmd(
                               ["${sshpath}ssh","-p$sshport",
-                               "-vvv","$login_id\@localhost",'',
+                               "-$v","$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])
                                or (&release_fa_lock(6543) && 
                                    &Net::FullAuto::FA_Core::handle_error(
@@ -14724,9 +14726,10 @@ if (0) {
                      }
                   } elsif ($idntfil) {
                      if ($Net::FullAuto::FA_Core::debug) {
+                        $v='v' if $^O eq 'freebsd';
                         ($local_host,$cmd_pid)=
                            &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${sshpath}ssh","-v","-i$idntfil",
+                           ["${sshpath}ssh","-$v","-i$idntfil",
                             "$login_id\@localhost",
                             '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
@@ -14735,7 +14738,7 @@ if (0) {
                      } else {
                         ($local_host,$cmd_pid)=
                            &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${sshpath}ssh","-vvv","-i$idntfil",
+                           ["${sshpath}ssh","-v","-i$idntfil",
                             "$login_id\@localhost",
                             '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
@@ -14744,9 +14747,10 @@ if (0) {
                      }
                   } else {
                      if ($Net::FullAuto::FA_Core::debug) {
+                        $v='v' if $^O eq 'freebsd';
                         ($local_host,$cmd_pid)=
                            &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${sshpath}ssh","-vvv","$login_id\@localhost",
+                           ["${sshpath}ssh","-$v","$login_id\@localhost",
                             '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
                                 &Net::FullAuto::FA_Core::handle_error(
@@ -17027,7 +17031,7 @@ sub work_dirs
       ${$work_dirs}{_pre_lcd}='';
       return $work_dirs;
    }
-   if (&Net::FullAuto::FA_Core::test_dir($cmd_handle->{_cmd_handle},'/tmp')
+   if (&Net::FullAuto::FA_Core::test_dir($cmd_handle,'/tmp')
          eq 'WRITE') {
       my $cfh_ignore='';my $cfh_error='';
       ($cfh_ignore,$cfh_error)=&clean_filehandle($cmd_handle);
@@ -22096,7 +22100,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT IS REFNOW=",ref $self->{_cmd_handle}-
             my $t_dir=$tdir;
             $t_dir=~s/\\/\\\\/g;
             if (&Net::FullAuto::FA_Core::test_dir(
-                  $self->{_cmd_handle},$t_dir)) {
+                  $self,$t_dir)) {
                if (exists $self->{_work_dirs}->{_pre_mswin}) {
                   $self->{_work_dirs}->{_pre_mswin}
                      =$self->{_work_dirs}->{_cwd_mswin};
@@ -23476,7 +23480,7 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                   if ($filearg) {
                      if ($filecount==1) {
                         my $testd=&Net::FullAuto::FA_Core::test_dir(
-                           $destFH->{_cmd_handle},$tdir);
+                           $destFH,$tdir);
                         if ($testd) {
                            if ($testd eq 'READ') {
                               ($output,$stderr)=$destFH->cmd(
@@ -24396,8 +24400,7 @@ print $Net::FullAuto::FA_Core::MRLOG "TARRRPWDDDDD=$output\n" if $Net::FullAuto:
                   &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                      if $stderr;
                   if (&Net::FullAuto::FA_Core::test_dir(
-                        #$baseFH->{_cmd_handle}->{_cmd_handle},
-                        $baseFH->{_cmd_handle},
+                        $baseFH,
                         "transfer$Net::FullAuto::FA_Core::tran[3]")) {
                      ($output,$stderr)=$baseFH->cmd(
                         "chmod -Rv 777 transfer".
@@ -24782,7 +24785,7 @@ sub get_drive
       last unless $drv;
       if ($cmd_handle) {
          my $result=&Net::FullAuto::FA_Core::test_dir(
-            $cmd_handle->{_cmd_handle},
+            $cmd_handle,
             $cmd_handle->{_cygdrive}."/$drv/$dir/");
          if ($result ne 'NODIR') {
             if ($ms_dir && $ms_dir ne '\\\\') {
@@ -26355,9 +26358,9 @@ sub move_files
                $destdir="$destFH->{_work_dirs}->{_cwd}$key";
             } $destdir.='/' if $file;
          } elsif (unpack('a1',$dest_fdr) eq '/') {
-            my $testd=&test_dir($destFH->{_cmd_handle},$dest_fdr);
+            my $testd=&test_dir($destFH,$dest_fdr);
             if ($destFH->{_uname} eq 'cygwin') {
-               my $testd=&test_dir($destFH->{_cmd_handle},$dest_fdr);
+               my $testd=&test_dir($destFH,$dest_fdr);
                if ($testd ne 'WRITE') {
                   if ($testd eq 'NODIR') {
                      my $destdir_mswin='';

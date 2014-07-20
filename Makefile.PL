@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999959';
+$main::VERSION='0.9999999960';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -682,6 +682,53 @@ END
             exit 1;
          }
       }
+   } elsif (!can_cc() && (-e "/etc/system-release-cpe") &&
+         (-1<index `cat /etc/system-release-cpe`,'amazon:linux')) {
+
+      $main::system='amazon:linux';
+      my $grpi=`sudo /bin/yum grouplist`;
+      if (-1<index $grpi,'no installed groups file') {
+         my $out=`sudo yum groups mark convert`;
+         $grpi=`/bin/yum grouplist`;
+      }
+      my %groups=();my $group_type='';
+      foreach my $ln (split "\n",$grpi) {
+         if ($ln=~/^(.*) [Gg]roups:$/) {
+            $group_type=$1;
+            $groups{$group_type}={};
+         } else {
+            $ln=~/^\s*(.*)$/;
+            $groups{$group_type}->{$1}='';
+         }
+      }
+      my $yins=`sudo /bin/yum list installed`;
+      unless (exists $groups{'Installed'}->{'Development tools'}) {
+         open(AG,"sudo yum -y update|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close AG;
+         open(AG,"sudo yum -y groupinstall 'Development tools'|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close AG;
+      }
+      unless (-1<index $yins,'openssl-devel') {
+         open(LD,"sudo yum -y install 'figlet'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      unless (-1<index $yins,'figlet') {
+         open(LD,"sudo yum -y install 'figlet'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+ 
    } elsif (!can_cc() && (-1<index lc($main::uname_a), 'ubuntu')
          && ($perl_version>=5.18.2)) {
 
@@ -1125,7 +1172,7 @@ END
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
-   &fa_install_module('Term::RawInput','install','Makefile','','1.19');
+   &fa_install_module('Term::RawInput','install','Makefile','','1.20');
    if ($^O eq 'cygwin') {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
@@ -1147,7 +1194,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.76');
+   &fa_install_module('Term::Menus','install','Makefile','','2.77');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -3426,6 +3473,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
             $ENV{'DB_FILE_LIB'}=$berkeleydb;
             $ENV{'DB_FILE_NAME'}="-ldb-$ver";
             $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
+            $ENV{'LD_RUN_PATH'}=$ENV{'LD_LIBRARY_PATH'};
          } else {
             my $uname=`/bin/uname`;
             my $uname_all=`/bin/uname -a`;
@@ -3450,6 +3498,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
          $ENV{'DB_FILE_LIB'}=$berkeleydb;
          $ENV{'DB_FILE_NAME'}="-ldb-$ver";
          $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
+         $ENV{'LD_RUN_PATH'}=$ENV{'LD_LIBRARY_PATH'};
       } else {
          my $url=
             'http://www.oracle.com/technetwork/'.
@@ -3886,6 +3935,7 @@ END
                $ENV{'DB_FILE_LIB'}=$berkeleydb;
                $ENV{'DB_FILE_NAME'}="-ldb-$ver";
                $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
+               $ENV{'LD_RUN_PATH'}=$ENV{'LD_LIBRARY_PATH'};
             } else {
                if ($res->is_error(500)) {
                   print(sprintf(
@@ -3957,9 +4007,10 @@ if ($get_BerkeleyDB) {
          and print "*** Installing $p\n"
          and
          do {
-            if (-f '/etc/redhat-release' || -f '/etc/fedora-release') {
-               $ENV{LD_RUN_PATH}=$ENV{LD_LIBRARY_PATH};
-            }
+            #if (-f '/etc/redhat-release' || -f '/etc/fedora-release' ||
+            #      $main::system eq 'amazon:linux') {
+            #   $ENV{LD_RUN_PATH}=$ENV{LD_LIBRARY_PATH};
+            #}
             eval{
                require CPAN;
                CPAN::Shell->force('install',$p);
