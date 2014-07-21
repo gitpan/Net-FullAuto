@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999967';
+$main::VERSION='0.9999999968';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -207,7 +207,7 @@ END
    }
    chdir $main::PARdir;
    $INC{'Module/Install.pm'}=$main::PARdir.'/Module/Install.pm';
-   unless (exists $ENV{FA_EDITOR} || grep { /Encrypted/i } @ARGV) {
+   unless (exists $ENV{FA_EDITOR} || grep { /Encrypted|SKIP/i } @ARGV) {
       print $fa_banner;
       sleep 2;
    }
@@ -1032,6 +1032,14 @@ END
             if ($@ && -1==index $@,'Attempt to reload') {
                warn $@;
             } else { print "*** $_p Loaded Successfully\n" }
+         } elsif (lc($task) eq 'install') {
+            my $sudo='';
+            if (-1<index lc($main::uname_a), 'ubuntu' ||
+                  ((-e "/etc/system-release-cpe") &&
+                  (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
+               $sudo='sudo ';
+            }
+            exec 'sudo','perl','Makefile.PL','SKIP';
          }
       } else { print "*** $p Loaded Successfully\n" }
       return '';
