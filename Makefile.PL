@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999969';
+$main::VERSION='0.9999999970';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1003,6 +1003,7 @@ print "WHAT IS FORCE=$force\n";
             $p='Term::RawInput';
          }
          if (lc($task) eq 'install') {
+print "TASK=install\n";
             my $sudo='';
             if (-1<index lc($main::uname_a), 'ubuntu') {
                $sudo='sudo ';
@@ -1028,6 +1029,7 @@ print "WHAT IS FORCE=$force\n";
          $_p=~s/::/\//g;
          $_p.='.pm';
          unless (exists $INC{$_p}) {
+print "WHY ARE WE HERE\n";
             eval {
                require $_p;
             };
@@ -1035,13 +1037,19 @@ print "WHAT IS FORCE=$force\n";
                warn $@;
             } else { print "*** $_p Loaded Successfully\n" }
          } elsif (lc($task) eq 'install') {
-            my $sudo='';
+print "EXCELLENT\n";
+            my $sudo=0;
             if (-1<index lc($main::uname_a), 'ubuntu' ||
                   ((-e "/etc/system-release-cpe") &&
                   (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
-               $sudo='sudo ';
+               $sudo=1;
             }
-            exec 'sudo','perl','Makefile.PL','SKIP';
+            if ($sudo) {
+               exec 'sudo','perl','Makefile.PL','SKIP';
+            } else {
+print "WE ARE EXECING OUT OF HERE!!\n";
+               exec 'perl','Makefile.PL','SKIP';
+            }
          }
       } else { print "*** $p Loaded Successfully\n" }
       return '';

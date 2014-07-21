@@ -19,7 +19,14 @@
 #
 #######################################################################
 
-i
+
+2014-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999970 released.
+
+        * Fixed Makefile.PL for FreeBSD.
+
+
 2014-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999969 released.
