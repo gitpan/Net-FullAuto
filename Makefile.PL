@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999968';
+$main::VERSION='0.9999999969';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -968,7 +968,9 @@ END
             my $ttmp='$ver=$'.$p.'::VERSION';
             eval $ttmp;
             $ver=eval $ver;
+print "WHAT IS VER=$ver and VERSION=$version\n";
             $force=1 if $ver<$version;
+print "WHAT IS FORCE=$force\n";
          } 
       }
       if ($@ || $force) {
