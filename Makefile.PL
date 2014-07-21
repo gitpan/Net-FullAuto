@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999965';
+$main::VERSION='0.9999999966';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -961,13 +961,6 @@ END
       my $echo=$_[5]||'';
       my $dir='';
       my $cpan_error='';
-      my $e='ExtUtils::MakeMaker';
-      eval "require $e;1";
-      if ($@) {
-         die "Cannot Load $e\n";
-      } else {
-         print "*** $e Loaded Successfully\n"
-      }
       eval "require $p;1";
       my $ver='';
       unless ($@) {
@@ -1097,7 +1090,7 @@ END
    }
 
    my $stdout='';my $stderr='';
-   &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.59');
+   &fa_install_mod('ExtUtils::MakeMaker','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
@@ -3934,13 +3927,17 @@ END
                   }
                }
                if ($BDB_selection eq 'Encrypted') {
+                  print "*** Starting Encrypted BerkeleyDB build\n";
                   system("cd ${filename}_$uniq/build_unix;".
                         $CPAN::Config->{make}." install 2>&1")
                      || warn $!;
+                  print "*** Completed Encrypted BerkeleyDB build\n";
                } else {
+                  print "*** Starting Non-Encrypted BerkeleyDB build\n";
                   system("cd ${filename}.NC_$uniq/build_unix;".
                         $CPAN::Config->{make}." install 2>&1")
                      || warn $!;
+                  print "*** Completed Non-Encrypted BerkeleyDB build\n";
                }
                $ver=$filename;
                $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
@@ -4034,7 +4031,7 @@ if ($get_BerkeleyDB) {
                CPAN::Shell->force('install',$p);
             };
             eval "use $p;1" ||
-               die "*** Please manually install $p from cpan.org first...\n"
+               die "$@ *** Please manually install $p from cpan.org first...\n"
          }
       }
    }
