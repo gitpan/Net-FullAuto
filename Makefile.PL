@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999962';
+$main::VERSION='0.9999999963';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -841,7 +841,7 @@ END
          $look='TermReadKey';
       } elsif ($look eq 'IO-Pty') {
          $look='IO-Tty';
-      } elsif ($look eq 'Mail-Tools') {
+      } elsif ($look eq 'Mail-Internet') {
          $look='MailTools' ;
       } elsif ($look eq 'Date-Format') {
          $look='TimeDate';
@@ -854,7 +854,11 @@ END
       if (!(defined $d) || !(-d $d)) {
          $d=(getpwuid $>)[7].'/.cpan/build';
          unless (-d $d) {
-            die "ERROR - Can't locate .cpan/build directory";
+            unless (-d "/root/.cpan/build") {
+               die "ERROR - Can't locate .cpan/build directory";
+            } else {
+               $d='/root/.cpan/build';
+            }
          }
       }
       my $new='';my $file='';
@@ -1139,7 +1143,7 @@ END
       &fa_install_module('WWW::RobotRules','install','Makefile');
       &fa_install_module('Date::Format','install','Makefile');
       &fa_install_module('Date::Parse','install','Makefile');
-      &fa_install_module('Mail::Tools','install','Makefile');
+      &fa_install_module('Mail::Internet','install','Makefile');
       &fa_install_module('Test::NoWarnings','install','Makefile');
       &fa_install_module('Test::Deep','install','Makefile');
       &fa_install_module('MIME::Base64','install','Makefile');
