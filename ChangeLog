@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-07-21  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999962 released.
+
+        * Fixes for FreeBSD.
+
+        * New version of Term::Menus paired with this release.
+
+
 2014-07-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999961 released.

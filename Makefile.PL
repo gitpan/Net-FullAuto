@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999961';
+$main::VERSION='0.9999999962';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -841,7 +841,7 @@ END
          $look='TermReadKey';
       } elsif ($look eq 'IO-Pty') {
          $look='IO-Tty';
-      } elsif ($look eq 'Mail-Internet') {
+      } elsif ($look eq 'Mail-Tools') {
          $look='MailTools' ;
       } elsif ($look eq 'Date-Format') {
          $look='TimeDate';
@@ -1083,6 +1083,7 @@ END
 
    my $stdout='';my $stderr='';
    &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.59');
+   &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
    &fa_install_mod('Test::Tester','install','Makefile');
@@ -1138,9 +1139,7 @@ END
       &fa_install_module('WWW::RobotRules','install','Makefile');
       &fa_install_module('Date::Format','install','Makefile');
       &fa_install_module('Date::Parse','install','Makefile');
-      &fa_install_module('Mail::Header','install','Makefile');
-      &fa_install_module('Mail::Internet','install','Makefile');
-      &fa_install_module('Mail::Field','install','Makefile');
+      &fa_install_module('Mail::Tools','install','Makefile');
       &fa_install_module('Test::NoWarnings','install','Makefile');
       &fa_install_module('Test::Deep','install','Makefile');
       &fa_install_module('MIME::Base64','install','Makefile');
@@ -1174,7 +1173,6 @@ END
    &fa_install_module('Class::Method::Modifiers','install','Makefile');
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
-   &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_module('Term::RawInput','install','Makefile','','1.20');
    if ($^O eq 'cygwin') {
       &fa_install_module('Win32::API','install','Makefile');
@@ -1197,7 +1195,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.77');
+   &fa_install_module('Term::Menus','install','Makefile','','2.78');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
