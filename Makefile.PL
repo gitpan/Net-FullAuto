@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999964';
+$main::VERSION='0.9999999965';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -961,6 +961,13 @@ END
       my $echo=$_[5]||'';
       my $dir='';
       my $cpan_error='';
+      my $e='ExtUtils::MakeMaker';
+      eval "require $e;1";
+      if ($@) {
+         die "Cannot Load $e\n";
+      } else {
+         print "*** $e Loaded Successfully\n"
+      }
       eval "require $p;1";
       my $ver='';
       unless ($@) {
@@ -1031,7 +1038,7 @@ END
             };
             if ($@ && -1==index $@,'Attempt to reload') {
                warn $@;
-            }
+            } else { print "*** $_p Loaded Successfully\n" }
          }
       } else { print "*** $p Loaded Successfully\n" }
       return '';
