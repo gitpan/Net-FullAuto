@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999963';
+$main::VERSION='0.9999999964';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -843,6 +843,10 @@ END
          $look='IO-Tty';
       } elsif ($look eq 'Mail-Internet') {
          $look='MailTools' ;
+      } elsif ($look eq 'Mail-Header') {
+         $look='MailTools' ;
+      } elsif ($look eq 'Mail-Field') {
+         $look='MailTools' ;
       } elsif ($look eq 'Date-Format') {
          $look='TimeDate';
       } elsif ($look eq 'Pod-Man') {
@@ -1144,6 +1148,8 @@ END
       &fa_install_module('Date::Format','install','Makefile');
       &fa_install_module('Date::Parse','install','Makefile');
       &fa_install_module('Mail::Internet','install','Makefile');
+      &fa_install_module('Mail::Header','install','Makefile');
+      &fa_install_module('Mail::Field','install','Makefile');
       &fa_install_module('Test::NoWarnings','install','Makefile');
       &fa_install_module('Test::Deep','install','Makefile');
       &fa_install_module('MIME::Base64','install','Makefile');
