@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999966';
+$main::VERSION='0.9999999967';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1090,7 +1090,7 @@ END
    }
 
    my $stdout='';my $stderr='';
-   &fa_install_mod('ExtUtils::MakeMaker','install','Makefile');
+   &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.98');
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
