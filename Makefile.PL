@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999970';
+$main::VERSION='0.9999999971';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -968,9 +968,7 @@ END
             my $ttmp='$ver=$'.$p.'::VERSION';
             eval $ttmp;
             $ver=eval $ver;
-print "WHAT IS VER=$ver and VERSION=$version\n";
             $force=1 if $ver<$version;
-print "WHAT IS FORCE=$force\n";
          } 
       }
       if ($@ || $force) {
@@ -1003,7 +1001,6 @@ print "WHAT IS FORCE=$force\n";
             $p='Term::RawInput';
          }
          if (lc($task) eq 'install') {
-print "TASK=install\n";
             my $sudo='';
             if (-1<index lc($main::uname_a), 'ubuntu') {
                $sudo='sudo ';
@@ -1029,7 +1026,6 @@ print "TASK=install\n";
          $_p=~s/::/\//g;
          $_p.='.pm';
          unless (exists $INC{$_p}) {
-print "WHY ARE WE HERE\n";
             eval {
                require $_p;
             };
@@ -1037,7 +1033,6 @@ print "WHY ARE WE HERE\n";
                warn $@;
             } else { print "*** $_p Loaded Successfully\n" }
          } elsif (lc($task) eq 'install') {
-print "EXCELLENT\n";
             my $sudo=0;
             if (-1<index lc($main::uname_a), 'ubuntu' ||
                   ((-e "/etc/system-release-cpe") &&
@@ -1047,7 +1042,6 @@ print "EXCELLENT\n";
             if ($sudo) {
                exec 'sudo','perl','Makefile.PL','SKIP';
             } else {
-print "WE ARE EXECING OUT OF HERE!!\n";
                exec 'perl','Makefile.PL','SKIP';
             }
          }
@@ -1223,7 +1217,7 @@ print "WE ARE EXECING OUT OF HERE!!\n";
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.78');
+   &fa_install_module('Term::Menus','install','Makefile','','2.79');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -3947,13 +3941,13 @@ END
                if ($BDB_selection eq 'Encrypted') {
                   print "*** Starting Encrypted BerkeleyDB build\n";
                   system("cd ${filename}_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install 2>&1")
+                        $CPAN::Config->{make}." install")
                      || warn $!;
                   print "*** Completed Encrypted BerkeleyDB build\n";
                } else {
                   print "*** Starting Non-Encrypted BerkeleyDB build\n";
                   system("cd ${filename}.NC_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install 2>&1")
+                        $CPAN::Config->{make}." install;echo 'hello'")
                      || warn $!;
                   print "*** Completed Non-Encrypted BerkeleyDB build\n";
                }

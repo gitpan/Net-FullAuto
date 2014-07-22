@@ -38,6 +38,8 @@ package Net::FullAuto::FA_Core;
 #
 #  at CPAN prompt: o conf urllist unshift http://www.perl.com/CPAN
 #
+#  cpan -D Module::Name  -  to check module versions
+#
 ## For root access on Ubuntu and Amazon EC2 servers
 #
 #  sudo su  -or-  sudo bash -l
