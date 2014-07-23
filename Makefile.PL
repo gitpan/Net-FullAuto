@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999972';
+$main::VERSION='0.9999999973';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3913,13 +3913,13 @@ END
                if ($BDB_selection eq 'Encrypted') {
                   print "*** Starting Encrypted BerkeleyDB build\n";
                   system("(cd ${filename}_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install) 2>&1")
+                        $CPAN::Config->{make}." install;kill \$\$) 2>&1")
                      || warn $!;
                   print "*** Completed Encrypted BerkeleyDB build\n";
                } else {
                   print "*** Starting Non-Encrypted BerkeleyDB build\n";
                   system("(cd ${filename}.NC_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install) 2>&1")
+                        $CPAN::Config->{make}." install;;kill \$\$) 2>&1")
                      || warn $!;
                   print "*** Completed Non-Encrypted BerkeleyDB build\n";
                }
