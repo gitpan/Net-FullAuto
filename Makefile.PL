@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999971';
+$main::VERSION='0.9999999972';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -262,49 +262,6 @@ END
    and Tim Hudson (tjh\@cryptsoft.com)
 END
 
-   if ($^O eq 'linux') {
-      $main::amazon=`sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
-      my $can_tm='';
-      eval { require Data::Password::Check };
-      if ((-1<index $main::amazon,'amazon') && ($@!~/^\s*$/)) {
-         #exec 'sudo','perl','Makefile.PL','SKIP' unless
-         #   grep  { /SKIP/ } @ARGV;
-         my $meminfo=`cat /proc/meminfo`;
-         my $memtotal=$meminfo;
-         my $memfree=$meminfo;
-         $memtotal=~s/^.*MemTotal:\s*(\d+) kB.*$/$1/s;
-         $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
-         if ($memtotal<1000000) {
-            my $timeout=120;my $a='';
-            eval {
-               $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-               alarm $timeout;my $w='      ';
-               print "\n       *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH".
-                  "\n$w     FullAuto INSTALLATION IN 2 MINUTES ***\n".
-                  "\n$w IMPORTANT! : You are installing FullAuto on an Amazon".
-                  "\n$w            Web Services EC2 MICRO Ubuntu Linux Server.".
-                  "\n$w            Being a MICRO Server, there is very limited".
-                  "\n$w            memory - just ${memfree} kB available.".
-                  "\n$w            As a result it is likely the FullAuto".
-                  "\n$w            installation will run out of memory before".
-                  "\n$w            completion.".
-                  "\n\n$w            If the installation stops - RESTART IT.".
-                  "\n$w            In fact, you may need to restart it more".
-                  "\n$w            than once. It *WILL* run to completion.".
-                  "\n\n$w      NOTE! : The advantage of the MICRO server is".
-                  "\n$w            that it is FREE for one year. However, if".
-                  "\n$w            you wish to ever use FullAuto for anything".
-                  "\n$w            but the simplest projects, it is recommended"
-                 ."\n$w            you use a more robust server installation.".
-                  "\n$w            \n\n";
-               print "Press <ENTER> if you wish to continue, ".
-                     "or 'N' to quit . . . [Y] ";$
-               a=<STDIN>;
-               alarm 0;
-            };
-         }
-      }
-   }
    use CPAN;
    use File::Path;
 
@@ -685,6 +642,7 @@ END
    } elsif (!can_cc() && (-e "/etc/system-release-cpe") &&
          (-1<index `cat /etc/system-release-cpe`,'amazon:linux')) {
 
+      $main::amazon=1;
       $main::system='amazon:linux';
       my $grpi=`sudo /bin/yum grouplist`;
       if (-1<index $grpi,'no installed groups file') {
@@ -807,6 +765,15 @@ END
               "\n\n";
       die $die;
 
+   } elsif ($^O eq 'freebsd' && (-e "/usr/local/bin/aws")) {
+      $main::amazon=1;
+      unless (-e '/usr/local/bin/figlet') {
+         open(AG,"pkg_add -r figlet|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close AG;
+      }
    }
    if ($incflag && ($main::PARdir ne $main::curdir)) {
       open(PD,">$main::PARdir/inc_exists.txt")
@@ -932,7 +899,9 @@ END
             }
          }
          chdir $d;
-         if (-1<index lc($main::uname_a), 'ubuntu') {
+         if (-1<index lc($main::uname_a), 'ubuntu' ||
+               ((-e "/etc/system-release-cpe") &&
+               (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
             print "***** Untar: sudo ",$CPAN::Config->{tar}," xvf $tar\n";
             open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
          } else {
@@ -1002,7 +971,9 @@ END
          }
          if (lc($task) eq 'install') {
             my $sudo='';
-            if (-1<index lc($main::uname_a), 'ubuntu') {
+            if (-1<index lc($main::uname_a), 'ubuntu' ||
+                  ((-e "/etc/system-release-cpe") &&
+                  (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
                $sudo='sudo ';
             }
             $dir||=&fa_find_latest($p);
@@ -3881,8 +3852,9 @@ END
                   }
                   $filename=~s/\.gz$//;
                }
-               if (-1<index lc($main::uname_a), 'ubuntu') {
-#print "MEM=",`cat /proc/meminfo`,"\n";
+               if (-1<index lc($main::uname_a), 'ubuntu' ||
+                     ((-e "/etc/system-release-cpe") &&
+                     (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
                   if ((-1<index $main::amazon,'amazon') &&
                         !$already_downloaded) {
                      exec 'sudo','perl','Makefile.PL',$BDB_selection,
@@ -3940,14 +3912,14 @@ END
                }
                if ($BDB_selection eq 'Encrypted') {
                   print "*** Starting Encrypted BerkeleyDB build\n";
-                  system("cd ${filename}_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install")
+                  system("(cd ${filename}_$uniq/build_unix;".
+                        $CPAN::Config->{make}." install) 2>&1")
                      || warn $!;
                   print "*** Completed Encrypted BerkeleyDB build\n";
                } else {
                   print "*** Starting Non-Encrypted BerkeleyDB build\n";
-                  system("cd ${filename}.NC_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install;echo 'hello'")
+                  system("(cd ${filename}.NC_$uniq/build_unix;".
+                        $CPAN::Config->{make}." install) 2>&1")
                      || warn $!;
                   print "*** Completed Non-Encrypted BerkeleyDB build\n";
                }
@@ -4034,10 +4006,6 @@ if ($get_BerkeleyDB) {
          and print "*** Installing $p\n"
          and
          do {
-            #if (-f '/etc/redhat-release' || -f '/etc/fedora-release' ||
-            #      $main::system eq 'amazon:linux') {
-            #   $ENV{LD_RUN_PATH}=$ENV{LD_LIBRARY_PATH};
-            #}
             eval{
                require CPAN;
                CPAN::Shell->force('install',$p);
