@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999978';
+$main::VERSION='0.9999999979';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -974,7 +974,7 @@ END
             my $ttmp='$ver=$'.$p.'::VERSION';
             eval $ttmp;
             $ver=eval $ver;
-            $force=1 if $ver<$version;
+            $force=($ver<$version)?1:0;
          } else { $force=0 } 
       }
       if ($@ || $force) {
@@ -1056,7 +1056,6 @@ END
          }
       } else {
          print "*** $p Loaded Successfully\n";
-         $exec_cnt=0;
       }
       return '';
    }
@@ -1118,8 +1117,8 @@ END
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
-   &fa_install_mod('Test::Builder','install','Makefile');
    &fa_install_mod('Test::Tester','install','Makefile');
+   &fa_install_mod('Test::Builder','install','Makefile');
    &fa_install_mod('Test::Simple','install','Makefile');
    &fa_install_mod('Params::Check','install','Makefile');
    &fa_install_mod('Module::CoreList','install','Makefile');
