@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999973';
+$main::VERSION='0.9999999974';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -54,6 +54,28 @@ my $fa_banner=<<END;
 
 
 END
+
+   %main::amazon=();
+   %main::system_type=();
+   if ($^O eq 'linux' || $^O eq 'freebsd') {
+      if ((-e "/etc/system-release-cpe") &&
+            (-1<index `cat /etc/system-release-cpe`,'amazon:linux')) {
+         $main::amazon{'ami'}='';
+         $main::system_type{'ami'}='';
+      } elsif ((-e "/etc/os-release") &&
+            (-1<index `cat /etc/os-release`,'ubuntu')) {
+         if (-e "/usr/bin/ec2metadata") {
+            $main::amazon{'ubuntu'}='';
+         }
+         $main::system_type{'ubuntu'}='';
+      } elsif ($^O eq 'freebsd') {
+         if ((-e "/usr/local/bin/aws") &&
+               (-1<index `cat /usr/local/bin/aws`,'aws.amazon')) {
+            $main::amazon{'freebsd'}='';
+         }
+         $main::system_type{'freebsd'}='';
+      }
+   } else { $main::system_type{$^O}='' }
 
    sub get_cygwin_location {
       my $cygwin_query=
@@ -271,7 +293,7 @@ END
    $main::uname_a='';
    my $perl_version=$^V;
    $perl_version=~s/^v//;
-   $main::uname_a=`/bin/uname -a` if $^O eq 'linux';
+   $main::uname_a=`/bin/uname -a` if $^O eq 'linux' || $^O eq 'freebsd';
    if ($^O eq 'cygwin') {
       my $cygcheck=`/bin/cygcheck -c` || die $!;
       my $uname=`/bin/uname` || die $!;
@@ -639,11 +661,8 @@ END
             exit 1;
          }
       }
-   } elsif (!can_cc() && (-e "/etc/system-release-cpe") &&
-         (-1<index `cat /etc/system-release-cpe`,'amazon:linux')) {
+   } elsif (!can_cc() && (exists $main::amazon{'ami'})) {
 
-      $main::amazon=1;
-      $main::system='amazon:linux';
       my $grpi=`sudo /bin/yum grouplist`;
       if (-1<index $grpi,'no installed groups file') {
          my $out=`sudo yum groups mark convert`;
@@ -687,8 +706,7 @@ END
          close LD;
       }
  
-   } elsif (!can_cc() && (-1<index lc($main::uname_a), 'ubuntu')
-         && ($perl_version>=5.18.2)) {
+   } elsif (!can_cc() && (exists $main::amazon{'ubuntu'})) {
 
       my $dpkg=`/bin/dpckg -l`;
       my $update_flag=0;
@@ -765,8 +783,7 @@ END
               "\n\n";
       die $die;
 
-   } elsif ($^O eq 'freebsd' && (-e "/usr/local/bin/aws")) {
-      $main::amazon=1;
+   } elsif (exists $main::amazon{'freebsd'}) {
       unless (-e '/usr/local/bin/figlet') {
          open(AG,"pkg_add -r figlet|");
          while (my $line=<AG>) {
@@ -899,9 +916,8 @@ END
             }
          }
          chdir $d;
-         if (-1<index lc($main::uname_a), 'ubuntu' ||
-               ((-e "/etc/system-release-cpe") &&
-               (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
+         if (exists $main::system_type{'ami'} ||
+               exists $main::system_type{'ubuntu'}) {
             print "***** Untar: sudo ",$CPAN::Config->{tar}," xvf $tar\n";
             open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
          } else {
@@ -971,9 +987,8 @@ END
          }
          if (lc($task) eq 'install') {
             my $sudo='';
-            if (-1<index lc($main::uname_a), 'ubuntu' ||
-                  ((-e "/etc/system-release-cpe") &&
-                  (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
+            if ((exists $main::system_type{'ami'}) ||
+                  (exists $main::system_type{'ubuntu'})) {
                $sudo='sudo ';
             }
             $dir||=&fa_find_latest($p);
@@ -1005,9 +1020,8 @@ END
             } else { print "*** $_p Loaded Successfully\n" }
          } elsif (lc($task) eq 'install') {
             my $sudo=0;
-            if (-1<index lc($main::uname_a), 'ubuntu' ||
-                  ((-e "/etc/system-release-cpe") &&
-                  (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
+            if ((exists $main::system_type{'ami'}) ||
+                  (exists $main::system_type{'ubuntu'})) {
                $sudo=1;
             }
             if ($sudo) {
@@ -1240,8 +1254,6 @@ END
    &fa_install_module('Data::Password::Check','install','Makefile');
 
 };
-
-$main::amazon||='';
 
 sub ws_info {
    my $selection='';
@@ -3336,7 +3348,7 @@ if ($^O eq 'cygwin' && !can_cc()) {
 if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
    my $timeout=120;my $a='';
    eval {
-      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+      local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;
       my $uname=`/bin/uname`;
       my $stup='setup-x86.exe';
@@ -3359,7 +3371,7 @@ if ($^O eq 'cygwin' && !(can_run('/bin/ssh') || can_run('/bin/telnet'))) {
       exit 1;
    } elsif ($a=~/^[Nn]$/s) {
       exit;
-   }
+   } alarm 0;
 }
 if (!can_run('make') && !(($^O eq 'cygwin') && (-e "/usr/bin/make"))) {
    my $die="\n       FATAL ERROR! : Cannot locate 'make'. This program ".
@@ -3637,7 +3649,7 @@ END
                my $filename='';
                unless (grep { /Encrypted/i } @ARGV) {
                   eval {
-                     $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                     local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
                      alarm $timeout;
                      $BDB_selection=Menu(\%berkeley_menu);
                      alarm 0;
@@ -3653,7 +3665,7 @@ END
                      $BDB_selection='Encrypted';
                   } else {
                      $source=~s/tar.gz/NC.tar.gz/;
-                  }
+                  } alarm 0;
                } elsif (grep  { /Encrypted/ } @ARGV) {
                   $BDB_selection='Encrypted';
                   $already_downloaded=1;
@@ -3852,17 +3864,24 @@ END
                   }
                   $filename=~s/\.gz$//;
                }
-               if (-1<index lc($main::uname_a), 'ubuntu' ||
-                     ((-e "/etc/system-release-cpe") &&
-                     (-1<index `cat /etc/system-release-cpe`,'amazon:linux'))) {
-                  if ((-1<index $main::amazon,'amazon') &&
-                        !$already_downloaded) {
-                     exec 'sudo','perl','Makefile.PL',$BDB_selection,
-                          $filename;
+               if (keys %main::amazon) {
+                  unless (exists $main::amazon{'freebsd'}) {
+                     unless ($already_downloaded) {
+                        exec 'sudo','perl','Makefile.PL',$BDB_selection,
+                             $filename;
+                     }
+                     print "***** Untar1: sudo ",
+                        $CPAN::Config->{tar}," xvf $filename\n";
+                     open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
+                  } else {
+                     unless ($already_downloaded) {
+                        exec 'perl','Makefile.PL',$BDB_selection,
+                             $filename;
+                     }
+                     print "***** Untar2: ",
+                        $CPAN::Config->{tar}," xvf $filename\n";
+                     open(FH, $CPAN::Config->{tar}." xvf $filename|");
                   }
-                  print "***** Untar2: sudo ",
-                     $CPAN::Config->{tar}," xvf $filename\n";
-                  open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
                } else {
                   print "***** Untar3: ",
                      $CPAN::Config->{tar}," xvf $filename\n";
@@ -3913,13 +3932,13 @@ END
                if ($BDB_selection eq 'Encrypted') {
                   print "*** Starting Encrypted BerkeleyDB build\n";
                   system("(cd ${filename}_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install;kill \$\$) 2>&1")
+                        $CPAN::Config->{make}." install) 2>&1")
                      || warn $!;
                   print "*** Completed Encrypted BerkeleyDB build\n";
                } else {
                   print "*** Starting Non-Encrypted BerkeleyDB build\n";
                   system("(cd ${filename}.NC_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install;;kill \$\$) 2>&1")
+                        $CPAN::Config->{make}." install) 2>&1")
                      || warn $!;
                   print "*** Completed Non-Encrypted BerkeleyDB build\n";
                }
@@ -4647,7 +4666,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
    if ($notthere) {
       eval {
          my $timeout=120;
-         $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+         local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
          alarm $timeout;
          print "\n       *** THIS SCREEN WILL TIMEOUT IN 2 MINUTES ***\n".
                "\n       IMPORTANT! : FullAuto is VERY Memory Intensive.".
@@ -4690,7 +4709,7 @@ if ($^O eq 'cygwin' && &windows_ver=~/XP|2000|NT/) {
                '/ve /t REG_SZ /d 1" 2>&1';
          $outp=`$regc`;
          print $outp."\n";
-      }
+      } alarm 0;
 
    }
 }
@@ -4737,7 +4756,7 @@ if ($banner) {
 
    my $timeout=120;my $selection='';
    eval {
-      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+      local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;
       my $menu1 = [
                   $banner,
@@ -4755,7 +4774,7 @@ if ($banner) {
    }
    if ($selection=~/No/) {
       exit;
-   }
+   } alarm 0;
 }
 
 print "$main::curdir\n";
@@ -4785,7 +4804,7 @@ close FH;
 my $timeout=120;my $selection='';
 unless (exists $ENV{FA_BERKELEY}) {
    eval {
-      $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+      local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;
       my @list=();
       my $banner_type='';
@@ -4811,7 +4830,7 @@ unless (exists $ENV{FA_BERKELEY}) {
       # timed out
       print "\n";
       $selection = 'Setuid';
-   }
+   } alarm 0;
 } elsif (-1<index $ENV{FA_BERKELEY},'Owner Group') {
    $selection='Install with Owner Group Permissions';
 } elsif (-1<index $ENV{FA_BERKELEY},'Full Access') {
@@ -4942,7 +4961,7 @@ my $goodchoice=sub {
 
 sub fa_license {
 
-   use if ($^O eq 'linux'), "Term::Menus";
+   use if ($^O eq 'linux' || $^O eq 'freebsd'), "Term::Menus";
 
    my %read_license=(
 
@@ -5079,7 +5098,7 @@ END
 
 }
 
-if (-1<index $main::amazon,'amazon') {
+if (keys %main::amazon) {
    fa_license();
    my @editors=('vim     ( ViIMproved - enhanced vi editor )',
                 "emacs   ( The extensible, customizable, ".
@@ -5142,7 +5161,7 @@ END
 
 WriteAll();
 
-if (-1<index $main::amazon,'amazon') {
+if (keys %main::amazon) {
    my $meminfo=`cat /proc/meminfo`;
    my $memtotal=$meminfo;
    my $memfree=$meminfo;

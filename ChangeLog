@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-07-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999974 released.
+
+        * Fixed alarm for FreeBSD.
+
+        * Updated OS detection in Makefile.PL
+
+
 2014-07-23  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999973 released.
