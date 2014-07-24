@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999975';
+$main::VERSION='0.9999999976';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -237,14 +237,15 @@ END
       $main::exec_cnt=$ARGV[$#ARGV];
       $main::exec_cnt++;
       sleep 2;
-      if ($main::exec_cnt==2) {
+      if (2<$main::exec_cnt) {
          my $module_fail=$ARGV[$#ARGV-1];
-         print "\n\n   Fatal Error!: The following Perl CPAN ".
-               "module could not be installed on your system:".
-               "\n\n$module_fail".
-               "\n\n   The FullAuto installation will not".
-               "\n   succeed without this module installed".
-               "\n   and running.".
+         print "\n\n   Fatal Error!: The following Perl CPAN ",
+               "module\n\n                 ",
+               "could not be installed on your system:",
+               "\n\n      $module_fail",
+               "\n\n   The FullAuto installation will not",
+               "\n   succeed without this module installed",
+               "\n   and running.",
                "\n\n   Please report any bugs and send any",
                "\n   questions, thoughts or feedback to:",
                "\n\n      Brian.Kelly\@fullautosoftware.net.",
@@ -1046,9 +1047,9 @@ END
                $sudo=1;
             }
             if ($sudo) {
-               exec 'sudo','perl','Makefile.PL','SKIP',$_p,$main::exec_cnt;
+               exec 'sudo','perl','Makefile.PL','SKIP',$p,$main::exec_cnt;
             } else {
-               exec 'perl','Makefile.PL','SKIP',$_p,$main::exec_cnt;
+               exec 'perl','Makefile.PL','SKIP',$p,$main::exec_cnt;
             }
          }
       } else { print "*** $p Loaded Successfully\n" }
@@ -1112,6 +1113,7 @@ END
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
+   &fa_install_mod('Test::Builder','install','Makefile');
    &fa_install_mod('Test::Tester','install','Makefile');
    &fa_install_mod('Test::Simple','install','Makefile');
    &fa_install_mod('Params::Check','install','Makefile');
@@ -1196,7 +1198,7 @@ END
    &fa_install_module('ExtUtils::Config','install','Makefile');
    &fa_install_module('ExtUtils::InstallPaths','install','Makefile');
    &fa_install_module('ExtUtils::Helpers','install','Makefile');
-   &fa_install_module('Test::Harness','install','Makefile','','3.30');
+   &fa_install_module('Test::Harness','install','Makefile','','3.32');
    &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
    &fa_install_module('CPAN::Meta','install','Makefile');
    &fa_install_module('Module::Build::Tiny','install','Build');
