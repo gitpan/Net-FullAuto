@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999977';
+$main::VERSION='0.9999999978';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1038,7 +1038,10 @@ END
             };
             if ($@ && -1==index $@,'Attempt to reload') {
                warn $@;
-            } else { print "*** $_p Loaded Successfully\n" }
+            } else {
+               print "*** $p Loaded Successfully\n";
+               $exec_cnt=0;
+            }
          } elsif (lc($task) eq 'install') {
             my $sudo=0;
             if ((exists $main::system_type{'ami'}) ||
@@ -1051,7 +1054,10 @@ END
                exec 'perl','Makefile.PL','SKIP',$p,$exec_cnt;
             }
          }
-      } else { print "*** $p Loaded Successfully\n" }
+      } else {
+         print "*** $p Loaded Successfully\n";
+         $exec_cnt=0;
+      }
       return '';
    }
    
