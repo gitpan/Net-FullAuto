@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999976';
+$main::VERSION='0.9999999977';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -219,7 +219,7 @@ END
    $main::curdir=&cwd;
    $main::PARdir=$main::curdir;
    $main::domain_gr_flag=0;
-   $main::exec_cnt=0;
+   my $exec_cnt=0;
    foreach my $dir (@INC) {
       my $incdir=$dir;
       $mycpantest=1 if -e $incdir."/CPAN/MyConfig.pm";
@@ -234,14 +234,15 @@ END
       print $fa_banner;
       sleep 2;
    } elsif (grep { /SKIP/i } @ARGV) {
-      $main::exec_cnt=$ARGV[$#ARGV];
-      $main::exec_cnt++;
+      $exec_cnt=$ARGV[$#ARGV];
+      $exec_cnt++;
+print "MAINEXEC=$exec_cnt and ARGS=@ARGV\n";
       sleep 2;
-      if (2<$main::exec_cnt) {
+      if (2<$exec_cnt) {
          my $module_fail=$ARGV[$#ARGV-1];
          print "\n\n   Fatal Error!: The following Perl CPAN ",
-               "module\n\n                 ",
-               "could not be installed on your system:",
+               "module could\n                 ",
+               "not be installed on your system:",
                "\n\n      $module_fail",
                "\n\n   The FullAuto installation will not",
                "\n   succeed without this module installed",
@@ -252,8 +253,6 @@ END
                "\n\n   Press ANY key to exit.\n\n";<STDIN>;
                exit 1;
       }
-   } else {
-      $main::exec_cnt=0;
    }
 
    my $cryptography_banner=<<END;
@@ -1047,9 +1046,9 @@ END
                $sudo=1;
             }
             if ($sudo) {
-               exec 'sudo','perl','Makefile.PL','SKIP',$p,$main::exec_cnt;
+               exec 'sudo','perl','Makefile.PL','SKIP',$p,$exec_cnt;
             } else {
-               exec 'perl','Makefile.PL','SKIP',$p,$main::exec_cnt;
+               exec 'perl','Makefile.PL','SKIP',$p,$exec_cnt;
             }
          }
       } else { print "*** $p Loaded Successfully\n" }
