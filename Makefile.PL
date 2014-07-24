@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999974';
+$main::VERSION='0.9999999975';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -219,6 +219,7 @@ END
    $main::curdir=&cwd;
    $main::PARdir=$main::curdir;
    $main::domain_gr_flag=0;
+   $main::exec_cnt=0;
    foreach my $dir (@INC) {
       my $incdir=$dir;
       $mycpantest=1 if -e $incdir."/CPAN/MyConfig.pm";
@@ -232,6 +233,26 @@ END
    unless (exists $ENV{FA_EDITOR} || grep { /Encrypted|SKIP/i } @ARGV) {
       print $fa_banner;
       sleep 2;
+   } elsif (grep { /SKIP/i } @ARGV) {
+      $main::exec_cnt=$ARGV[$#ARGV];
+      $main::exec_cnt++;
+      sleep 2;
+      if ($main::exec_cnt==2) {
+         my $module_fail=$ARGV[$#ARGV-1];
+         print "\n\n   Fatal Error!: The following Perl CPAN ".
+               "module could not be installed on your system:".
+               "\n\n$module_fail".
+               "\n\n   The FullAuto installation will not".
+               "\n   succeed without this module installed".
+               "\n   and running.".
+               "\n\n   Please report any bugs and send any",
+               "\n   questions, thoughts or feedback to:",
+               "\n\n      Brian.Kelly\@fullautosoftware.net.",
+               "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+               exit 1;
+      }
+   } else {
+      $main::exec_cnt=0;
    }
 
    my $cryptography_banner=<<END;
@@ -692,7 +713,7 @@ END
          close AG;
       }
       unless (-1<index $yins,'openssl-devel') {
-         open(LD,"sudo yum -y install 'figlet'|");
+         open(LD,"sudo yum -y install 'openssl-devel'|");
          while (my $line=<LD>) {
             print $line;
          }
@@ -954,7 +975,7 @@ END
             eval $ttmp;
             $ver=eval $ver;
             $force=1 if $ver<$version;
-         } 
+         } else { $force=0 } 
       }
       if ($@ || $force) {
          if ($ENV{'AUTOMATED_TESTING'}) {
@@ -1025,9 +1046,9 @@ END
                $sudo=1;
             }
             if ($sudo) {
-               exec 'sudo','perl','Makefile.PL','SKIP';
+               exec 'sudo','perl','Makefile.PL','SKIP',$_p,$main::exec_cnt;
             } else {
-               exec 'perl','Makefile.PL','SKIP';
+               exec 'perl','Makefile.PL','SKIP',$_p,$main::exec_cnt;
             }
          }
       } else { print "*** $p Loaded Successfully\n" }
@@ -1161,8 +1182,10 @@ END
    if ($@) {
       &fa_install_module('Net::SSLeay','get');
       my $dir=&fa_find_latest('Net-SSLeay');
-      system("cd \"$dir\";echo n | $^X Makefile.PL;");
-      system("cd \"$dir\";make install;");
+      system("cd \"$dir\";echo n | $^X Makefile.PL;")
+         || warn $!;
+      system("cd \"$dir\";make install;")
+         || warn $!;
    }
    &fa_install_module('IO::Socket::SSL','install','Makefile','','','n');
    &fa_install_module('Mozilla::CA','install','Makefile');
