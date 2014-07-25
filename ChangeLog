@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-07-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999980 released.
+
+        * Fixed Makefile.PL for Amazon AMI (Pod::Man handling).
+
+
 2014-07-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999979 released.

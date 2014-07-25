@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999979';
+$main::VERSION='0.9999999980';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -236,22 +236,51 @@ END
    } elsif (grep { /SKIP/i } @ARGV) {
       $exec_cnt=$ARGV[$#ARGV];
       $exec_cnt++;
-print "MAINEXEC=$exec_cnt and ARGS=@ARGV\n";
-      sleep 2;
-      if (2<$exec_cnt) {
-         my $module_fail=$ARGV[$#ARGV-1];
-         print "\n\n   Fatal Error!: The following Perl CPAN ",
-               "module could\n                 ",
-               "not be installed on your system:",
-               "\n\n      $module_fail",
-               "\n\n   The FullAuto installation will not",
-               "\n   succeed without this module installed",
-               "\n   and running.",
-               "\n\n   Please report any bugs and send any",
-               "\n   questions, thoughts or feedback to:",
-               "\n\n      Brian.Kelly\@fullautosoftware.net.",
-               "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-               exit 1;
+      my $module_fail=$ARGV[$#ARGV-1];
+      my $mod_info='';
+      eval {
+         require CPAN;
+         {
+            local *STDOUT;
+            open(STDOUT, ">", \$mod_info);
+            CPAN::Shell->m($module_fail);
+         }
+      };
+      my $instfile='';
+      ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
+      my $instver='';
+      ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
+      if ($exec_cnt==1 && $instfile=~/vendor_perl/ &&
+            exists $main::amazon{'ami'} &&  $module_fail eq 'Pod::Man') {
+         # Amazon's AMI has Pod::Man installed in the vendor_perl
+         # directory which has precedence over the system directory
+         # this module actually belongs in. The only solution is to
+         # delete it from the vendor_perl area before we attempt to
+         # install Pod::Man. We are doing this ONLY on Amazaon AMI
+         # systems currently.
+         system("sudo echo y | /bin/rm -rf \"$instfile\"");
+      } elsif (2<$exec_cnt) {
+         my $timeout=300;my $a='';
+         eval {
+            local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+            alarm $timeout;
+            $mod_info=~s/^.*?(CPAN.*)$/$1/s;
+            $mod_info=~s/^\s*/      /mg;
+            print "\n\n   Fatal Error!: The following Perl CPAN ",
+                  "module could\n                 ",
+                  "not be installed on your system:",
+                  "\n\n      $module_fail\n\n$mod_info\n",
+                  "   The FullAuto installation will not",
+                  "\n   succeed without this module installed",
+                  "\n   and loaded.",
+                  "\n\n   Please report any bugs and send any",
+                  "\n   questions, thoughts or feedback to:",
+                  "\n\n      Brian.Kelly\@fullautosoftware.net.",
+                  "\n\n   Press ANY key to exit.";<STDIN>;
+                  return;
+         };
+         alarm 0;
+         exit 1;
       }
    }
 
