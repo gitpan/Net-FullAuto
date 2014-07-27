@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999982';
+$main::VERSION='0.9999999983';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -593,6 +593,7 @@ END
             Text => "I DO NOT AGREE to the license provisions\n".
                     "                   ( FullAuto Install will EXIT )",
          },
+         Scroll => 1,
          Banner => $license_banner,
 
       );
@@ -1198,9 +1199,13 @@ END
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
-   &fa_install_mod('Test::Tester','install','Makefile');
-   &fa_install_mod('Test::Builder','install','Makefile');
-   &fa_install_mod('Test::Simple','install','Makefile');
+   eval { require Test::Tester };
+   if ($@) {
+      &fa_install_mod('Test::Simple','install','Makefile');
+   } else {
+      &fa_install_mod('Test::Simple','install','Makefile');
+      &fa_install_mod('Test::Tester','install','Makefile');
+   }
    &fa_install_mod('Params::Check','install','Makefile');
    &fa_install_mod('Module::CoreList','install','Makefile');
    &fa_install_mod('Module::Load','install','Makefile');
@@ -1314,7 +1319,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.79');
+   &fa_install_module('Term::Menus','install','Makefile','','2.80');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -1365,8 +1370,6 @@ END
    &fa_install_module('Email::Abstract','install','Makefile');
    &fa_install_module('Email::Sender','install','Makefile');
    &fa_install_module('Data::Password::Check','install','Makefile');
-   &fa_install_module('Test::Differences','install','Build');
-   
 
 };
 
@@ -1969,6 +1972,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                      Convey  => \@editors,
 
                   },
+                  Scroll => 1,
                   Banner => $banner,
 
             );
@@ -1982,6 +1986,7 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                      Convey  => \@editors,
 
                   },
+                  Scroll => 1,
                   Banner => $banner,
 
             );
@@ -2054,9 +2059,9 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
             Label  => 'Menu_select_permissions',
             Item_1 => {
                          Text => $p_one,
-                         Default => "*"
                       },
             Item_2 => { Text => $p_two },
+            Scroll => 1,
             Banner => $p_banner,
 
          );
@@ -3736,7 +3741,6 @@ END
                    Item_1 => {
 
                       Text => "Install NON-ENCRYPTED Berkeley DB",
-                      Default => '*',
 
                    },
                    Item_2 => {
@@ -3750,6 +3754,7 @@ END
                       Text => "Exit FullAuto Setup",
 
                    },
+                   Scroll => 1,
                    Banner => $berkeleybanner, 
 
                );
@@ -4922,22 +4927,49 @@ unless (exists $ENV{FA_BERKELEY}) {
       local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;
       my @list=();
-      my $banner_type='';
+      my %perms_menu=();
       unless ($^O eq 'cygwin') {
          @list=('Install with Setuid Permissions (Recommended Default)',
                 'Install with Setgid Permissions',
                 'Install with Owner Group Permissions',
                 'Install with Full Access Permissions');
-         $banner_type='Setuid';
+         my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
+               "\'Setuid\' IN 2 MINUTES ***\n".
+               "\n   Choose a Permission Setting :\n\n";
+         %perms_menu=(
+
+            Name => 'perms_menu',
+            Item_1 => {
+
+               Text => ']C[',
+               Convey => \@list,
+
+            },
+            Scroll => 1,
+            Banner => $banner,
+
+         ); 
       } else {
          @list=('Install with Full Access Permissions (Default)',
                 'Install with Owner Group Permissions');
-         $banner_type='Full-Access';
+         my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
+               "\'Full-Access\' IN 2 MINUTES ***\n".
+               "\n   Choose a Permission Setting :\n\n";
+         %perms_menu=(
+
+            Name => 'perms_menu',
+            Item_1 => {
+
+               Text => ']C[',
+               Convey => \@list,
+
+            },
+            Scroll => 1,
+            Banner => $banner,
+
+         );
       }
-      my $banner="\n   *** THIS SCREEN WILL TIMEOUT AND CHOOSE ".
-                 "\'$banner_type\' IN 2 MINUTES ***\n".
-                 "\n   Choose a Permission Setting :\n\n";
-      $selection=&Term::Menus::pick(\@list,$banner);
+      $selection=Term::Menus::Menu(\%perms_menu);
       alarm 0;
    };
    exit if $selection eq ']quit[';
@@ -5304,7 +5336,6 @@ END
 
             Text => "Complete *ALL* FullAuto setup\n             ".
                     "            ( HIGHLY recommended for Beginners! )\n\n",
-            Default => '*',
 
          },
          Item_2 => {
@@ -5312,13 +5343,25 @@ END
             Text => "Exit Makefile.PL ('make' must be run separately)",
 
          },
+         Scroll => 1,
          Banner => $almost_there,
 
       );
       #my $selection=Menu(\%finish_setup);
       #if (-1<index $selection, 'Complete') {
          system('sudo make install');
-         exec fa;
+         if (-1==$ENV{PATH},'/usr/local/bin') {
+
+my $banner=<<END;
+                         _     
+   | | _  _| _ _|_ _    |_) _ _|_|_
+   |_||_)(_|(_| |_(/_   |  (_| |_| |
+      |
+
+END
+
+         }
+         exec "/usr/local/bin/fa";
       #}
    }
 

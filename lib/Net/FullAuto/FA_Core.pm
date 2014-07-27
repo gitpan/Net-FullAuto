@@ -14997,7 +14997,9 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING LAST TWO<==\n"
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                   last;
                }
-            } elsif ($line=~/[:\$%>#-] ?/m) {
+            } elsif ($line=~/[:\$%>#-] ?/m &&
+               (-1==index $line,'Authenticated to') &&
+               ($line!~/^debug\d+:/)) {
 print $Net::FullAuto::FA_Core::MRLOG "<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
@@ -21591,14 +21593,15 @@ END
 
    In order for FullAuto to connect, the same key must be used:
 
-       fa -i fullauto.pem
+       fa -i fullauto.pem   <== Always use THIS on Amazon EC2
+       ------------------
 
    Upload this *same* key from your local computer to this host with
    this single command (run this from your local computer - NOT here):
 
        scp -i fullauto.pem fullauto.pem $user\@${external_IP}:/home/$user
 
-   With PuTTY scp:
+   -OR- with PuTTY scp (but only if you are using PuTTY):
 
        pscp -i fullauto.ppk fullauto.pen $user\@${external_IP}:/home/$user
 END
