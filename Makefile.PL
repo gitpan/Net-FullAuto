@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999981';
+$main::VERSION='0.9999999982';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1212,7 +1212,6 @@ END
    &fa_install_mod('YAML','install','Makefile');
    &fa_install_mod('Algorithm::Diff','install','Makefile');
    &fa_install_mod('Text::Diff','install','Makefile');
-   &fa_install_mod('Module::Pluggable','install','Makefile');
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
@@ -1362,6 +1361,7 @@ END
    &fa_install_module('Email::Date::Format','install','Makefile');
    &fa_install_module('Email::Simple','install','Makefile');
    &fa_install_module('Email::Address','install','Makefile');
+   &fa_install_module('Module::Pluggable','install','Build');
    &fa_install_module('Email::Abstract','install','Makefile');
    &fa_install_module('Email::Sender','install','Makefile');
    &fa_install_module('Data::Password::Check','install','Makefile');
