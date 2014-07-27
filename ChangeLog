@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-07-26  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999981 released.
+
+        * Fixed Makefile.PL for Amazon openSuSE.
+
+
 2014-07-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999980 released.

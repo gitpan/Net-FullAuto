@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999980';
+$main::VERSION='0.9999999981';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -74,6 +74,11 @@ END
             $main::amazon{'freebsd'}='';
          }
          $main::system_type{'freebsd'}='';
+      } elsif (-e "/etc/SuSE-release") {
+         if (-e "/etc/profile.d/amazonEC2.sh") {
+            $main::amazon{'suse'}='';
+         }
+         $main::system_type{'suse'}='';
       }
    } else { $main::system_type{$^O}='' }
 
@@ -755,7 +760,54 @@ END
          }
          close LD;
       }
- 
+
+   } elsif (!can_cc() && (exists $main::amazon{'suse'})) {
+
+      # Manual Setup openSuSE host before CPAN:
+      #
+      # zypper ar -f -n openSUSE:13.1 http://download.opensuse.org/distribution/13.1/repo/oss/ openSUSE:13.1
+      # zypper -n --gpg-auto-import-keys install --force-resolution wget
+      # zypper -n --gpg-auto-import-keys install --force-resolution figlet
+      # zypper -n install --type pattern Basis-Devel
+      # zypper -n install openssl-devel
+      # wget http://www.cpan.org/src/5.0/perl-5.20.0.tar.gz
+      # tar zxvf perl-5.20.0.tar.gz
+      # cd perl-5.20.0
+      # ./Configure -d -Dnoextensions=ODBM_File
+      # make install
+      # cpan
+      #
+
+      my $zypper=`/bin/zypper packages -i`;
+      if (0 && -1==index $zypper,'gcc') {
+         open(ZP,"zypper -n install --type pattern Basis-Devel|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close ZP;
+         open(ZP,"zypper -n install openssl-devel|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close ZP;
+         my $repos='zypper ar -f -n openSUSE:13.1 '.
+                   'openSUSE:13.1 http://download.'.
+                   'opensuse.org/distribution/13.1'.
+                   '/repo/oss/  openSUSE:13.1';
+         open(ZP,"$repos|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close ZP;
+         my $figlet="zypper -n --gpg-auto-import-keys install".
+                    " --force-resolution figlet";
+         open(ZP,"$figlet|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close ZP;
+      }
+         
    } elsif (!can_cc() && (exists $main::amazon{'ubuntu'})) {
 
       my $dpkg=`/bin/dpckg -l`;
@@ -903,7 +955,7 @@ END
       opendir(DH,$d) or
          die "ERROR - Can't read Directory $d: $!\n";
       while ($_ = readdir(DH)) {
-         next if ($_ eq ".") || ($_ eq "..");
+         next if ($_ eq ".") || ($_ eq "..") || (/\.yml$/);
          if ($_!~/^$look[-]\d/) {
             if (-d $d.'/'.$_) {
                my $dr=$d.'/'.$_;
@@ -1159,6 +1211,8 @@ END
    &fa_install_mod('ExtUtils::CBuilder','install','Makefile');
    &fa_install_mod('YAML','install','Makefile');
    &fa_install_mod('Algorithm::Diff','install','Makefile');
+   &fa_install_mod('Text::Diff','install','Makefile');
+   &fa_install_mod('Module::Pluggable','install','Makefile');
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
@@ -1171,9 +1225,10 @@ END
       &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
       &fa_install_mod('Compress::Zlib','install','Makefile');
       &fa_install_mod('IO::Zlib','install','Makefile');
-      &fa_install_mod('Text::Diff','install','Makefile');
       &fa_install_mod('Archive::Tar','install','Makefile');
       &fa_install_mod('Regexp::Common','install','Makefile');
+      &fa_install_mod('Pod::Checker','install','Makefile');
+      &fa_install_mod('Pod::Parser','install','Makefile');
       &fa_install_mod('Pod::Readme','install','Makefile');
       &fa_install_mod('Module::Build','install','Build','force');
    }
@@ -1278,7 +1333,7 @@ END
    &fa_install_module('String::Random','install','Build');
    &fa_install_module('Net::Telnet','install','Makefile');
    &fa_install_module('Sort::Versions','install','Makefile');
-   &fa_install_module('Capture::Tiny','install','Makefile');
+   &fa_install_module('Capture::Tiny','install','Makefile','','0.24');
    &fa_install_module('IO::Capture','install','Makefile');
    &fa_install_module('Pod::Man','install','Makefile','','2.28');
    &fa_install_module('Sub::Exporter::Progressive','install','Makefile');
@@ -1310,6 +1365,8 @@ END
    &fa_install_module('Email::Abstract','install','Makefile');
    &fa_install_module('Email::Sender','install','Makefile');
    &fa_install_module('Data::Password::Check','install','Makefile');
+   &fa_install_module('Test::Differences','install','Build');
+   
 
 };
 
