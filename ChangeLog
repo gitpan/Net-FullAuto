@@ -20,6 +20,17 @@
 #######################################################################
 
 
+2014-07-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999984 released.
+
+        * Fixes for Amazon AMI.
+
+        * New version of Term::Menus paired with this release.
+
+        * New version of Term::RawInput paired with this release.
+
+
 2014-07-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999983 released.

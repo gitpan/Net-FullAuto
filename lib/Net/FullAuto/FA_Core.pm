@@ -2478,7 +2478,7 @@ sub figlet
          "Choose a FIGlet Font (by number) to preview with text \"Example\"".
          "\n   -OR- continuously scroll and view by repeatedly pressing ENTER".
          "\n\n   HINT: Typing  !figlet -f<fontname> YOUR TEXT\n\n".
-         "         is another way to preview the font of your choice.";
+         "         is another way to preview the font of your choice.\n";
 
       $main::figletoutput=sub {
 
@@ -2496,6 +2496,7 @@ sub figlet
 
    The box above is an input box. The [DEL] key will clear the contents.
    Type anything you like, and it will appear in the ]P[{figmenu} FIGlet font!
+
 END
 
       my %figletoutput=(
@@ -3879,7 +3880,7 @@ my $getplans_sub=sub {
       Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
-         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
          $key = ReadKey(0);
       };
@@ -4535,7 +4536,7 @@ my $plan_menu_options_sub=sub {
       Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
-         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
          $key = ReadKey(0);
       };
@@ -4607,8 +4608,8 @@ my %plan_menu=(
                                Term::ReadKey::ReadMode('cbreak');
                                # Turn off controls keys
                                eval {
-                                  $SIG{ALRM} = sub { die "alarm\n" };
-                                                   # \n required
+                                  local $SIG{ALRM} = sub { die "alarm\n" };
+                                                         # \n required
                                   my $key='';
                                   $key = ReadKey(0);
                                };
@@ -5552,13 +5553,12 @@ sub acquire_semaphore
                   "\n           . . .\n\n";
             }
             eval {
-               $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+               local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                alarm($timeout-1);
                my $stim=$semaphore_timeout * 1000;
                $sem->wait($stim);
                sleep 2;
-               alarm(0);
-            };
+            };alarm(0);
             if ($@) {
                &handle_error(("Win32 Semaphore Timed Out:\n\n"
                   ."    Called by " . join ' ', @topcaller),'__cleanup__');
@@ -5601,7 +5601,7 @@ sub acquire_semaphore
                   "\n         simply restart the host computer)\n";
             }
             eval {
-               $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+               local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                alarm($timeout-1);
                # Decrement the semaphore count by 1
                my $success=
@@ -5613,8 +5613,7 @@ sub acquire_semaphore
                   die $result;
                }
                sleep 2;
-               alarm(0);
-            };
+            };alarm(0);
             if ($@) {
                &handle_error(("IPC Semaphore Timed Out:\n\n"
                   ."    Called by " . join ' ', @topcaller),'__cleanup__');
@@ -8702,7 +8701,7 @@ sub getpasswd
          my $passwd_timeout=350;
          my $te_time=time;
          eval {
-            $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+            local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
             alarm($passwd_timeout);
             &acquire_fa_lock(9854);
             print $print1;
@@ -8714,8 +8713,7 @@ sub getpasswd
             ReadMode 2;
             $save_passwd=<STDIN>;
             &release_fa_lock(9854);
-            alarm(0);
-         };
+         };alarm(0);
          if ($@ eq "alarm\n") {
             print "\n\n";
             $errmsg.="\n\n       ".
@@ -10173,6 +10171,7 @@ my $fa_congrats=<<END;
     \\___\\___/_||_\\__, |_| \\__,_|\\__|\\_,_|_\\__,_|\\__|_\\___/_||_/__(_)
                  |___/
 
+
    You have QUICKLY gotten started with FullAuto! The goal of this new
    user wizard experience was to acquaint you both with managing your
    automation code files, and demonstrating how FullAuto wizards and Menus
@@ -10182,6 +10181,8 @@ my $fa_congrats=<<END;
    unlike ordinary documentation, actually DOES STUFF! It can be achieved
    with FullAuto! But only the surface has been scratched - FullAuto
    is really all about AUTOMATION - and we will get into that NEXT. THANKS!
+
+
 END
 
 my $setup_new_user11=sub{
@@ -10345,8 +10346,8 @@ FIN
                 "    Maps  =>  Net/FullAuto/Custom/$username/".
                 "]P[{camaps}\n".
                 "    Menu  =>  Net/FullAuto/Custom/$username/".
-                "]P[{camenu}\n    Set   =>  none\n\n   ".
-                "Would you like to COMMIT the New Defaults?:";
+                "]P[{camenu}\n    Set   =>  none\n\n\n\n\n   ".
+                "Would you like to COMMIT the New Defaults?:\n";
       },
    );
    return \%cacomm;
@@ -10374,7 +10375,7 @@ my $camenu_sub=sub {
          "   Maps  =>  Net/FullAuto/Custom/$username/".
          "]P[{camaps}\n\n".
          "$custmm   Please select a fa_menu[.*].pm ".
-         "module:";
+         "module:\n";
       },
 
    );
@@ -10401,7 +10402,7 @@ my $camaps_sub=sub {
                 "   Host  =>  Net/FullAuto/Custom/$username/".
                 "]P[{cahost}\n\n".
                 "$custpm   Please select a fa_maps[.*].pm ".
-                "module:";
+                "module:\n";
       },
 
    );
@@ -10427,7 +10428,7 @@ my $cahost_sub=sub {
                 "   Conf  =>  Net/FullAuto/Custom/$username/".
                 "]P[{caconf}\n\n".
                 "$custhm   Please select a fa_host[.*].pm ".
-                "module:";
+                "module:\n";
       },
 
    );
@@ -10450,7 +10451,7 @@ my $caconf_sub=sub {
          return "   Code  =>  Net/FullAuto/Custom/$username/".
                 "]P[{cacode}\n\n".
                 "$custfm   Please select a fa_conf[.*].pm ".
-                "module:";
+                "module:\n";
       },
 
    );
@@ -10469,7 +10470,7 @@ my $cacode_sub=sub {
       },
       Scroll => 1,
       Banner => "$custcm   Please select a fa_code[.*].pm ".
-                "module:",
+                "module:\n\n",
    );
    return \%cacode;
 };
@@ -10499,6 +10500,7 @@ my $vdbanner=sub {
    | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
    |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
 
+
 FIN
    my $default_modules=$_[0] || $main::get_default_modules->();
    my $banner=$dfbann;
@@ -10516,7 +10518,7 @@ FIN
           .$default_modules->{'fa_maps'}
           ."\n    Menu  =>  "
           .$default_modules->{'fa_menu'}
-          ."\n";
+          ."\n\n";
    return $banner;
 };
 
@@ -10747,7 +10749,7 @@ my $define_modules_menu_fa_menu_sub=sub {
                 "              $spc       Maps => ".
                 "]P[{define_modules_menu_fa_maps}\n\n".
                 "$custmm   Please select a fa_menu[.*].pm ".
-                "module:";
+                "module:\n";
       },
    );
    return \%define_modules_menu_fa_menu;
@@ -10773,7 +10775,7 @@ my $define_modules_menu_fa_maps_sub=sub {
                 "              $spc       Host => ".
                 "]P[{define_modules_menu_fa_host}\n\n".
                 "$custpm   Please select a fa_maps[.*].pm ".
-                "module:";
+                "module:\n";
       },
    );
    return \%define_modules_menu_fa_maps;
@@ -10797,7 +10799,7 @@ my $define_modules_menu_fa_host_sub=sub {
                 "              $spc       Conf => ".
                 "]P[{define_modules_menu_fa_conf}\n\n".
                 "$custhm   Please select a fa_host[.*].pm ".
-                "module:";
+                "module:\n";
       },
    );
    return \%define_modules_menu_fa_host;
@@ -10818,7 +10820,7 @@ my $define_modules_menu_fa_conf_sub=sub {
          return "   New Set:  \'$main::setname\'  --> Code => ".
                 "]P[{define_modules_menu_fa_code}\n\n".
                 "$custfm   Please select a fa_conf[.*].pm ".
-                "module:";
+                "module:\n";
       },
    );
    return \%define_modules_menu_fa_conf;
@@ -11432,7 +11434,7 @@ my $select_file_components_to_import_sub=sub {
       Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
-         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
          $key = ReadKey(0);
       };
@@ -11516,7 +11518,7 @@ my $select_component_file_sub=sub {
       Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
-         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
          $key = ReadKey(0);
       };
@@ -11608,7 +11610,7 @@ my $login_to_remote=sub {
       Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
-         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
          $key = ReadKey(0);
       };
@@ -11642,7 +11644,7 @@ my $login_to_remote=sub {
       Term::ReadKey::ReadMode('cbreak');
       # Turn off controls keys
       eval {
-         $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+         local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
          my $key='';
          $key = ReadKey(0);
       };
@@ -11800,6 +11802,7 @@ my $fa_welcome=<<END;
    Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
 
 
+
 END
 
 my $fa_tutorial=<<END;
@@ -11836,6 +11839,7 @@ my $fa_fullauto=<<END;
    | __|  _| | | /_\\ _  _| |_ ___
    | _| || | | |/ _ \\ || |  _/ _ \\
    |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/
+
 END
 
 my $fa_mini_welcome=" (   /_ /_   _  _ \n".
@@ -11869,6 +11873,9 @@ my $fa_process_lifecycle=<<END;
    stages of it's lifecycle - one in active development, one in testing,
    and one in use for live processing.
 
+
+
+
 END
 
 my $fa_organization=<<END;
@@ -11884,6 +11891,9 @@ my $fa_organization=<<END;
    FullAuto organizes everything for you. A FullAuto working configuration
    consists of five files which are listed below. You can read a summary
    of each, or move on to creating ${username}'s own FullAuto setup!
+
+
+
 END
 
 my $fa_privacy=<<END;
@@ -11904,6 +11914,9 @@ my $fa_privacy=<<END;
    text. Even in memory, passwords are encrypted and
    remain so until fed directly to an authenticating
    process, safe even from core dumps!
+
+
+
 
 END
 
@@ -11926,6 +11939,9 @@ my $fa_security=<<END;
    installation, on one computer, can service any number
    of users. FullAuto has built in utilities to setup and
    manage user code, files, and configuration - securely!
+
+
+
 END
 
 my $fa_basics=<<END;
@@ -11949,6 +11965,7 @@ my $fa_basics=<<END;
 
    When you quit either help or admin, you automatically return to this
    screen. To quit admin, press [ESC], and help pages. type 'q'. Try it!
+
 END
 
 my $fa_no_web=<<END;
@@ -11972,6 +11989,7 @@ my $fa_no_web=<<END;
    Hence the name Full - Auto (as in 'full' or 'complete' AUTOMATION).
    You tell it what to do, you turn it on - and you MOVE ON to more
    enjoyable or urgent activities!
+
 END
 
 my $fa_intro=<<END;
@@ -11995,6 +12013,7 @@ my $fa_intro=<<END;
    You can revisit this story anytime - at the command line:
 
    fa --new-user
+
 END
 
 my $fa_continue_setup=<<END;
@@ -12122,6 +12141,9 @@ my $fa_batter_up=<<END;
    How does FullAuto know which five to use?
 
 
+
+
+
 END
 
 my $fa_fa_defaults2=<<END;
@@ -12131,6 +12153,7 @@ my $fa_fa_defaults2=<<END;
    | .` / _ \\  _|  | |\\/| | || |  | |) / -_)  _/ _` | || | |  _(_-<_|
    |_|\\_\\___/\\__|  |_|  |_|\\_, |  |___/\\___|_| \\__,_|\\_,_|_|\\__/__(_)
                            |__/                                      
+
 
    The --defaults utility also (conveniently) displays what your current
 END
@@ -12143,6 +12166,7 @@ my $fa_set_defaults=<<END;
    |___/\\__\\__,_|_|  \\__| |___/\\___/_|_||_\\__, (_)
                                           |___/   
 
+
    It's time to do you FIRST FullAuto activity! It's time to
    select your very first "set" of the five required files. For
    your first file set, you will simply be choosing the templates
@@ -12154,6 +12178,8 @@ my $fa_set_defaults=<<END;
    When finished you can choose to commit the changes - or not.
    If not, you will get this "new user wizard" the next time you
    run FullAuto. (Which is great if you're just exploring!)
+
+
 END
 
 my $fa_fa_defaults_sub=sub {
@@ -12165,11 +12191,11 @@ my $fa_fa_defaults_sub=sub {
    if (-1<index $default_modules->{'fa_code'},'/Distro/') {
       $fa_fa_defaults2.="Since $username\n".
          "   is a new user, you see the word 'Distro' in the five ".
-         "file locations below.\n\n";
+         "file locations below.\n\n\n";
    } else {
       $fa_fa_defaults2.="You can see\n".
          "   the full paths to these files anytime by using the ".
-         "command:  fa -V\n\n";
+         "command:  fa -V\n\n\n";
    }
    my $banner=$fa_fa_defaults2;
    $banner.="    Code  =>  "
@@ -12182,7 +12208,7 @@ my $fa_fa_defaults_sub=sub {
           .$default_modules->{'fa_maps'}
           ."\n    Menu  =>  "
           .$default_modules->{'fa_menu'}
-          ."\n\n";
+          ."\n\n\n";
    return $banner;
 
 };
@@ -12194,6 +12220,7 @@ my $fa_fa_defaults=<<END;
    | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
    |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
 
+
    Most of the time you'll be working with the same five file set. It would
    get VERY tiring to have to choose these files manually every time you
    went to work with FullAuto. Not to mention trying to keep the same five
@@ -12204,6 +12231,8 @@ my $fa_fa_defaults=<<END;
    --defaults utility - which is built into FullAuto itself. The defaults
    utility is a menu-ized wizard just like this presentation you are now
    enjoying (hopefully!)
+
+
 
 
 END
@@ -12455,7 +12484,7 @@ sub new_user_experience {
              ."\n      It appears "
              ."that $username is new to FullAuto,"
              ."\n      for there is no FullAuto "
-             ."Setup for this user.";
+             ."Setup for this user.\n\n";
       %welcome_menu=(
 
          Label  => 'welcome_menu',
@@ -12670,7 +12699,7 @@ my $determine_password=sub {
                   my $pas='';
                   my $te_time=time;
                   eval {
-                     $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+                     local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                      alarm($passwd_timeout);
                      &acquire_fa_lock(9854);
                      if ($Net::FullAuto::FA_Core::debug) {
@@ -12681,8 +12710,7 @@ my $determine_password=sub {
                      ReadMode 2;
                      $pas=<STDIN>;
                      &release_fa_lock(9854);
-                     alarm(0);
-                  };
+                  };alarm(0);
                   if ($@ eq "alarm\n") {
                      undef $bdb;
                      $dbenv->close();
@@ -12766,7 +12794,7 @@ my $determine_password=sub {
                my $pas='';
                my $te_time=time;
                eval {
-                  $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+                  local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                   alarm($passwd_timeout);
                   &acquire_fa_lock(9854);
                   if ($Net::FullAuto::FA_Core::debug) {
@@ -12777,8 +12805,7 @@ my $determine_password=sub {
                   ReadMode 2;
                   $pas=<STDIN>;
                   &release_fa_lock(9854);
-                  alarm(0);
-               };
+               };alarm(0);
                my $te_time2=time;
                if ($@ eq "alarm\n") {
                   undef $bdb;
@@ -12845,7 +12872,7 @@ my $determine_password=sub {
             my $pas='';
             my $te_time=time;
             eval {
-               $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+               local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                alarm($passwd_timeout);
                &acquire_fa_lock(9854);
                if ($Net::FullAuto::FA_Core::debug) {
@@ -12856,8 +12883,7 @@ my $determine_password=sub {
                ReadMode 2;
                $pas=<STDIN>;
                &release_fa_lock(9854);
-               alarm(0);
-            };
+            };alarm(0);
             my $te_time2=time;
             if ($@ eq "alarm\n") {
                undef $bdb;
@@ -13479,15 +13505,14 @@ sub fa_login
          my $usrname_timeout=350;
          my $usrname='';
          eval {
-            $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+            local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
             alarm($usrname_timeout);
             &acquire_fa_lock(1234);
             my $ikey='';
             print "\n";
             ($usrname,$ikey)=rawInput("  $hostname Login <$uid> : ");
             &release_fa_lock(1234);
-            alarm(0);
-         };
+         };alarm(0);
          if ($@ eq "alarm\n") {
             print "\n\n";
             &handle_error(
@@ -14039,15 +14064,14 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   my $usrname_timeout=350;
                   my $usrname='';
                   eval {
-                     $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+                     local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                      alarm($usrname_timeout);
                      &acquire_fa_lock(1234);
                      my $ikey='';
                      print "\n";
                      ($usrname,$ikey)=rawInput("  $hostname Login <$uid> : ");
                      &release_fa_lock(1234);
-                     alarm(0);
-                  };
+                  };alarm(0);
                   if ($@ eq "alarm\n") {
                      print "\n\n";
                      &handle_error(
@@ -14226,7 +14250,7 @@ if (0) {
                   my $pas='';
                   my $te_time=time;
                   eval {
-                     $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+                     local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                      alarm($passwd_timeout);
                      &acquire_fa_lock(9854);
                      if ($Net::FullAuto::FA_Core::debug) {
@@ -14237,8 +14261,7 @@ if (0) {
                      ReadMode 2;
                      $pas=<STDIN>;
                      &release_fa_lock(9854);
-                     alarm(0);
-                  };
+                  };alarm(0);
                   if ($@ eq "alarm\n") {
                      undef $bdb;
                      $dbenv->close();
@@ -14322,7 +14345,7 @@ if (0) {
                my $pas='';
                my $te_time=time;
                eval {
-                  $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+                  local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                   alarm($passwd_timeout);
                   &acquire_fa_lock(9854);
                   if ($Net::FullAuto::FA_Core::debug) {
@@ -14333,8 +14356,7 @@ if (0) {
                   ReadMode 2;
                   $pas=<STDIN>;
                   &release_fa_lock(9854);
-                  alarm(0);
-               };
+               };alarm(0);
                my $te_time2=time;
                if ($@ eq "alarm\n") {
                   undef $bdb;
@@ -14401,7 +14423,7 @@ if (0) {
             my $pas='';
             my $te_time=time;
             eval {
-               $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+               local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
                alarm($passwd_timeout);
                &acquire_fa_lock(9854);
                if ($Net::FullAuto::FA_Core::debug) {
@@ -14412,8 +14434,7 @@ if (0) {
                ReadMode 2;
                $pas=<STDIN>;
                &release_fa_lock(9854);
-               alarm(0);
-            };
+            };alarm(0);
             my $te_time2=time;
             if ($@ eq "alarm\n") {
                undef $bdb;
@@ -20646,8 +20667,8 @@ print $Net::FullAuto::FA_Core::MRLOG
                            $error||='Password *NOT* accepted';
                            my $asktimeout=300;my $a='';my $choice='';
                            eval {
-                              $SIG{ALRM} = sub { die "alarm\n" }; # NB:
-                                                                  # \n required
+                              local $SIG{ALRM} = sub { die "alarm\n" }; # NB:
+                                                                # \n required
                               alarm $asktimeout;
                               my $banner="\n       *** THIS SCREEN WILL "
                                   ."TIMEOUT IN 5 MINUTES ***\n"
@@ -20668,7 +20689,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                                   "Attempt login with base id \'$login_id\'";
                               $choice=&Term::Menus::pick(\@choices,$banner);
                               chomp $choice;
-                           };
+                           };alarm(0);
                            $choice||=']quit[';
                            if ($choice ne ']quit[') {
                               if ($choice=~/$su_id/s) {
@@ -20677,7 +20698,8 @@ print $Net::FullAuto::FA_Core::MRLOG
                                  my $show='';my $save_passwd='';
                                  ($show=$lin)=~s/^.*?\n(.*)$/$1/s;
                                  eval {
-                                    $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+                                    local $SIG{ALRM} = sub { die "alarm\n" };
+                                                                # \n required
                                     alarm($passwd_timeout);
                                     &acquire_fa_lock(9854);
                                     print $Net::FullAuto::FA_Core::blanklines;
@@ -20691,8 +20713,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                                     $save_passwd=<STDIN>;
                                     Term::ReadKey::ReadMode 0;
                                     &release_fa_lock(9854);
-                                    alarm(0);
-                                };
+                                };alarm(0);
                                 if ($@ eq "alarm\n") {
                                    print "\n\n";
                                    my $errmsg.="\n\n       Time Allowed for ".
@@ -21314,7 +21335,8 @@ END
       while (1) {
          PW: while (my $line=$filehandle->{_cmd_handle}->get(
                Timeout=>$timeout)) {
-            $SIG{ALRM} = sub { die "read timed-out:do_slave\n" }; # \n required
+            local $SIG{ALRM} = sub { die "read timed-out:do_slave\n" };
+                                                          # \n required
             alarm $timeout+1;
             print $Net::FullAuto::FA_Core::MRLOG
                "\nPPPPPPP wait_for_passwd_prompt() PPPPPPP ",
@@ -21334,7 +21356,6 @@ END
             } elsif (-1<index $line,'Authentication succeeded (publickey)') {
                return 'Authentication succeeded (publickey)','';
             } elsif (-1<index $line,'Permission denied') {
-               alarm 0;
                if (-1<index $line, 'publickey') {
                   chomp $line;
                   die $line; 
@@ -21355,15 +21376,12 @@ END
                } $filehandle->{_cmd_handle}->print;
                next;
             } elsif (-1<index $lin,'Address already in use') {
-               alarm 0;
                die 'Connection closed';
             } elsif (-1< index $lin,'Write failed: Broken pipe') {
                 die "read timed-out\n";
             #} elsif (-1<index $lin,'No route to host') {
-            #   alarm 0;
             #   die $lin;
             } elsif (-1<index $lin,'Connection reset by peer') {
-               alarm 0;
                if ($lin=~s/^.*(ssh:.*)$/$1/s) {
                   $lin=~s/Could/       Could/s;
                   $lin=~s/_funkyPrompt_//s;
@@ -21375,7 +21393,6 @@ END
             } elsif (7<length $line && unpack('a8',$line) eq 'Insecure') {
                $line=~s/^Insecure/INSECURE/s;
                $eval_stdout='';$eval_stderr=$line;
-               alarm 0;
                die $line;
             } elsif (!$authyes && (-1<index $lin,'The authen') &&
                   $lin=~/\?\s*$/s) {
@@ -21385,15 +21402,15 @@ END
                while (1) {
                   print $Net::FullAuto::FA_Core::blanklines;
                   print "\n$question ";
-                  alarm 0;
+                  alarm(0);
                   my $authtimeout=120;my $a='';
                   my $answer='';
                   eval {
-                     $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                     local $SIG{ALRM} = sub { die "alarm\n" };
+                                             # NB: \n required
                      alarm $authtimeout;
                      $answer=<STDIN>;
-                     alarm 0;
-                  };
+                  };alarm(0);
                   if (!$authorize_connect && ($@ || !$answer)) {
                      print
                         "\n\n","This request for autenticity timed",
@@ -21423,13 +21440,12 @@ END
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                      $authyes=1;$lin='';
-                     $SIG{ALRM} = sub { die "read timed-out:do_slave\n" };
                      last;
                   } elsif (lc($answer) eq 'no') {
                      print $Net::FullAuto::FA_Core::MRLOG $lin
                         if $Net::FullAuto::FA_Core::log &&
                         -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                     alarm 0;
+                     alarm(0);
                      &Net::FullAuto::FA_Core::cleanup()
                   }
                }
@@ -21438,7 +21454,7 @@ END
                   "wait_for_passwd_prompt() PASSWORD PROMPT=$lin<==\n"
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               $gotpass=1;alarm 0;last PW;
+               $gotpass=1;last PW;
             } elsif ((-1<index $lin,'530 ')
                   || (-1<index $lin,'421 ')
                   || (-1<index $lin,'Connection refused')
@@ -21456,13 +21472,10 @@ END
                $lin=$3 if $3;$lin=$4 if $4;
                $lin=$5 if $5;
                if (-1<index $lin,'Connection refused') {
-                  alarm 0;
                   die 'Connection refused';
                } elsif (-1<index $lin,'name not known') {
-                  alarm 0;
                   die $lin;
                } elsif (-1<index $lin,'Connection closed') {
-                  alarm 0;
                   if ($line=~/(_fu?n?k?y?P?r?o?m?p?t?_*$)/) {
                      $fulllin=~s/_fu?n?k?y?P?r?o?m?p?t?_*//s;
                      $fulllin=~s/^(.*?)\n(.*)/$2/s;
@@ -21475,7 +21488,6 @@ END
                   }
                   die $lin;
                } elsif (-1<index $lin,'Could not create') {
-                  alarm 0;
                   if ($^O eq 'cygwin') {
                      my $die="$lin\n       ".
                              "Hint: Make sure there are no quote characters\n".
@@ -21487,7 +21499,6 @@ END
                   die $eval_stderr;
                } else {
                   $eval_stdout='';$eval_stderr=$lin;
-                  alarm 0;
                   die $eval_stderr;
                }
             }
@@ -21498,10 +21509,10 @@ END
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             }
-         } alarm 0;
+         } alarm(0);
          last if $gotpass;
       }
-   };
+   };alarm(0);
    if ($@) {
       if (wantarray) {
          my $error=$@;
@@ -21582,10 +21593,9 @@ END
 
                      my $pbf_banner=<<END;
 
-              =====================================
-              || PublicKey Authentication FAILED ||
-              =====================================  
-
+           
+              []![] PublicKey Authentication FAILED []![] 
+              
    FullAuto works with Amazon EC2 Servers the same way you do. You
    connected to this server with a private key file similar to this:
 
@@ -21605,12 +21615,35 @@ END
 
        pscp -i fullauto.ppk fullauto.pen $user\@${external_IP}:/home/$user
 END
+
+                     my $wait_banner=<<END;
+
+    ___  _  _ _                _ _   _
+   |_ _|( )| | |  __ __ ____ _(_) |_| |
+    | |  V | | |  \\ V  V / _` | |  _|_|
+   |___|   |_|_|   \\_/\\_/\\__,_|_|\\__(_)  (But NOT forever!)
+
+   If you can, go ahead and upload the private key mentioned on the
+   previous page right now! (If you need to review the instructions
+   again, just use the LEFTARROW [<] to navigate back to that page.)
+
+   The key should be uploaded to the /home/$user directory. When
+   you next hit enter, FullAuto will attempt to use the key to
+   authenticate.
+
+
+END
+
+                     my %i_will_wait=(
+
+                        Name => 'i_will_wait',
+                        Banner => $wait_banner,
+
+                     );
                      my %publickey_failed=(
 
                         Name => 'publickey_failed',
-                        #Item_1 => {
-
-                        #},
+                        Result => \%i_will_wait,
                         Banner => $pbf_banner,
 
                      );
@@ -28979,11 +29012,10 @@ print $Net::FullAuto::FA_Core::MRLOG
                                  $fcmd="\"${firefox}\" -new-instance -repl ".
                                        "http://www.fullautosoftware.net".
                                  eval {
-                                    $SIG{ALRM} = sub { die "alarm\n" };
+                                    local $SIG{ALRM} = sub { die "alarm\n" };
                                     alarm(30);
                                     ($stdout,$stderr)=$localhost->cmd($fcmd);
-                                    alarm(0);
-                                 };
+                                 };alarm(0);
                                  $stderr=$@ if $@;
                                  &Net::FullAuto::FA_Core::handle_error($stderr);
                               } else {
@@ -29715,9 +29747,10 @@ sub wait_for_prompt {
             if !$Net::FullAuto::FA_Core::cron &&
                $Net::FullAuto::FA_Core::debug;
 
+         local $SIG{ALRM} = sub { die "read timed-out\n" }; # \n required
+
          while (my $line=$cmd_handle->get(Timeout=>$tymeout)) {
 
-            $SIG{ALRM} = sub { die "read timed-out\n" }; # \n required
             alarm $timeout+1;
 
             print $Net::FullAuto::FA_Core::MRLOG
@@ -29751,7 +29784,6 @@ sub wait_for_prompt {
                }
                $output=~s/^\s*//s;
                $output=~s/\s*//s;
-               alarm 0;
                if ($output=~/^.*(Perm.*)$/s) {
                   my $one=$1;
                   if ($output=~/^.*(No more auth.*)$/s) {
@@ -29760,7 +29792,6 @@ sub wait_for_prompt {
                }
                die "$output\n";
             } elsif ($line=~/Connection (?:closed|reset)/s) {
-               alarm 0;
                die "$output\n";
             }
             if ($outpt=~
@@ -29779,7 +29810,6 @@ sub wait_for_prompt {
                   "\n       at Line ",__LINE__,"\n\n"
                   if !$Net::FullAuto::FA_Core::cron &&
                   $Net::FullAuto::FA_Core::debug;
-               alarm 0;
                last;
             } elsif ($outpt=~/^((?:bash)*[\$%#>])\s?cmd \//m) {
                $prompt=$1;
@@ -29794,12 +29824,10 @@ sub wait_for_prompt {
                   "\n       at Line ",__LINE__,"\n\n"
                   if !$Net::FullAuto::FA_Core::cron &&
                      $Net::FullAuto::FA_Core::debug;
-               alarm 0;
                last;
             }
-            alarm 0;
          }
-      };
+      };alarm(0);
       if ($@) {
          print $Net::FullAuto::FA_Core::MRLOG
             "\nRem_Command::cmd_login() (eval) ERROR \"set\" cmd:\n       ",

@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999983';
+$main::VERSION='0.9999999984';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -5597,7 +5597,7 @@ sub MY::install {
    }
 
    if (-e '/usr/share/figlet') {
-      $inherited =~ s/(install ::.*)$/$1 figlet_fonts $mz/m;
+      $inherited =~ s/(install ::.*)$/$1 figlet_fonts/m;
    }
 
    my $link='';
@@ -5672,7 +5672,7 @@ sub MY::install {
       "/Net/FullAuto/FA_Core.pm\n\n"
       if $^O eq 'cygwin';
    $inherited .= "\nfiglet_fonts ::\n".
-      "\t\$(NOECHO) \$(CP) FIGlet_fonts/* /usr/share/figlet\n".
+      "\t\$(NOECHO) \$(CP) FIGlet_fonts/* /usr/share/figlet\n\n".
    $inherited;
 
 }
