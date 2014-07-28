@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999984';
+$main::VERSION='0.9999999985';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1297,7 +1297,7 @@ END
    &fa_install_module('Class::Method::Modifiers','install','Makefile');
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
-   &fa_install_module('Term::RawInput','install','Makefile','','1.20');
+   &fa_install_module('Term::RawInput','install','Makefile','','1.21');
    if ($^O eq 'cygwin') {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
@@ -1319,10 +1319,11 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.80');
+   &fa_install_module('Term::Menus','install','Makefile','','2.81');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
+   &fa_install_module('Test::Manifest','install','Makefile');
    &fa_install_module('Crypt::Rijndael','install','Makefile');
    &fa_install_module('Clone','install','Makefile');
    &fa_install_module('File::Remove','install','Makefile');
@@ -3352,6 +3353,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                         Convey  => \@editors,
 
                      },
+                     Scroll => 1,
                      Banner => $banner,
 
                );
@@ -3368,6 +3370,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                         Convey  => \@editors,
 
                      },
+                     Scroll => 1,
                      Banner => $banner,
 
                );
@@ -3424,6 +3427,7 @@ unless (-e $Config{installsitelib}."/Net/FullAuto/Custom/fa_conf.pm") {
                   Convey  => \@editors,
 
                },
+               Scroll => 1,
                Banner => $banner,
 
             );
@@ -5076,6 +5080,7 @@ my $learn_nano=sub {
          Text => "Continue Installing FullAuto",
 
       },
+      Scroll => 3,
       Banner => $nano_banner,
 
    );
@@ -5099,6 +5104,7 @@ my $goodchoice=sub {
          Text   => "Continue Installing FullAuto",
 
       },
+      Scroll => 2,
       Banner => $good_choice,
 
    );
@@ -5130,6 +5136,7 @@ sub fa_license {
          Text => "Return to previous screen",
          Result => sub { return '{license_agree}<' },
       },
+      Scroll => 1,
       Banner => sub {
             my $linenumber="]P[";
             open (FH,"<LICENSE")
@@ -5228,6 +5235,7 @@ END
          Text => "I DO NOT AGREE to the license provisions\n".
                  "                   ( FullAuto Install will EXIT )",
       },
+      Scroll => 1,
       Banner => $license_banner,
 
    );
@@ -5271,7 +5279,6 @@ END
          Label  => 'Menu_select_editor',
          Item_1 => {
             Text    => "nano    ( Easiest - Recommended for Beginners )",
-            Default => "*",
             Result  => $goodchoice,
          },
          Item_2 => {
@@ -5280,6 +5287,7 @@ END
             Convey  => \@editors,
 
          },
+         Scroll => 1,
          Banner => $banner,
 
    );
