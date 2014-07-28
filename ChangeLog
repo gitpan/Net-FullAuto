@@ -24,6 +24,13 @@
 
         * Version 0.9999999985 released.
 
+        * Fixes for Amazon RHEL.
+
+
+2014-07-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999985 released.
+
         * New version of Term::Menus paired with this release.
 
         * New version of Term::RawInput paired with this release.

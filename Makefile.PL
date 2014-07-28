@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999985';
+$main::VERSION='0.9999999986';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -60,6 +60,11 @@ END
    if ($^O eq 'linux' || $^O eq 'freebsd') {
       if ((-e "/etc/system-release-cpe") &&
             (-1<index `cat /etc/system-release-cpe`,'amazon:linux')) {
+
+         # Manual Setup Amazon AMI host before CPAN:
+         #
+         # sudo yum install cpan
+
          $main::amazon{'ami'}='';
          $main::system_type{'ami'}='';
       } elsif ((-e "/etc/os-release") &&
@@ -69,6 +74,12 @@ END
          }
          $main::system_type{'ubuntu'}='';
       } elsif ($^O eq 'freebsd') {
+
+         # Manual Setup FreeBSD host before CPAN:
+         #
+         # su
+         # pkg_add -r perl
+
          if ((-e "/usr/local/bin/aws") &&
                (-1<index `cat /usr/local/bin/aws`,'aws.amazon')) {
             $main::amazon{'freebsd'}='';
@@ -79,6 +90,19 @@ END
             $main::amazon{'suse'}='';
          }
          $main::system_type{'suse'}='';
+      } elsif ((-e "/etc/system-release-cpe") &&
+            (-1<index `cat /etc/system-release-cpe`,
+            'redhat:enterprise_linux')) {
+
+         # Manual Setup openSuSE host before CPAN:
+         #
+         # sudo yum install perl
+         # sudo yum install cpan
+
+         if (-e "/etc/yum/pluginconf.d/amazon-id.conf") {
+            $main::amazon{'rhel'}='';
+         }
+         $main::system_type{'rhel'}='';;
       }
    } else { $main::system_type{$^O}='' }
 
@@ -256,7 +280,9 @@ END
       my $instver='';
       ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
       if ($exec_cnt==1 && $instfile=~/vendor_perl/ &&
-            exists $main::amazon{'ami'} &&  $module_fail eq 'Pod::Man') {
+            ((exists $main::amazon{'ami'}) ||
+            (exists $main::amazon{'rhel'}))
+            && $module_fail eq 'Pod::Man') {
          # Amazon's AMI has Pod::Man installed in the vendor_perl
          # directory which has precedence over the system directory
          # this module actually belongs in. The only solution is to
@@ -717,12 +743,13 @@ END
             exit 1;
          }
       }
-   } elsif (!can_cc() && (exists $main::amazon{'ami'})) {
+   } elsif (!can_cc() && ((exists $main::amazon{'ami'}) ||
+         (exists $main::amazon{'rhel'}))) {
 
-      my $grpi=`sudo /bin/yum grouplist`;
+      my $grpi=`sudo yum grouplist`;
       if (-1<index $grpi,'no installed groups file') {
          my $out=`sudo yum groups mark convert`;
-         $grpi=`/bin/yum grouplist`;
+         $grpi=`sudo yum grouplist`;
       }
       my %groups=();my $group_type='';
       foreach my $ln (split "\n",$grpi) {
@@ -749,6 +776,27 @@ END
       }
       unless (-1<index $yins,'openssl-devel') {
          open(LD,"sudo yum -y install 'openssl-devel'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      if (exists $main::amazon{'rhel'}) {
+         unless (-1<index $yins,'wget') {
+            open(LD,"sudo yum -y install 'wget'|");
+            while (my $line=<LD>) {
+               print $line;
+            }
+            close LD;
+         }
+         my $wget_url='http://dl.fedoraproject.org/pub/epel/beta/7'.
+                      '/x86_64/epel-release-7-0.2.noarch.rpm';
+         open(LD,"sudo wget $wget_url|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+         open(LD,"sudo rpm -ivh epel-release-7-0.2.noarch.rpm|");
          while (my $line=<LD>) {
             print $line;
          }
@@ -1019,8 +1067,9 @@ END
             }
          }
          chdir $d;
-         if (exists $main::system_type{'ami'} ||
-               exists $main::system_type{'ubuntu'}) {
+         if ((exists $main::system_type{'ami'}) ||
+               (exists $main::system_type{'ubuntu'}) ||
+               (exists $main::system_type{'rhel'})) {
             print "***** Untar: sudo ",$CPAN::Config->{tar}," xvf $tar\n";
             open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
          } else {
@@ -1091,7 +1140,8 @@ END
          if (lc($task) eq 'install') {
             my $sudo='';
             if ((exists $main::system_type{'ami'}) ||
-                  (exists $main::system_type{'ubuntu'})) {
+                  (exists $main::system_type{'ubuntu'}) ||
+                  (exists $main::system_type{'rhel'})) {
                $sudo='sudo ';
             }
             $dir||=&fa_find_latest($p);
@@ -1127,7 +1177,8 @@ END
          } elsif (lc($task) eq 'install') {
             my $sudo=0;
             if ((exists $main::system_type{'ami'}) ||
-                  (exists $main::system_type{'ubuntu'})) {
+                  (exists $main::system_type{'ubuntu'}) ||
+                  (exists $main::system_type{'rhel'})) {
                $sudo=1;
             }
             if ($sudo) {
