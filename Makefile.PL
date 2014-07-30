@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999991';
+$main::VERSION='0.9999999992';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4019,14 +4019,11 @@ print "WHAT IS CPAN GZIP=$CPAN::Config->{gzip}\n";
                            exit 1;
                      }
                   }
-print "FILENAME=$filename\n";
-print "SLEEPING\n";
-sleep 10;
-print "DONE SLEEPING\n";
-print "PWD=",system('cat /proc/meminfo'),"\n";
-                  my $so=system($CPAN::Config->{gzip}." -d $filename");
-                  if ($so==-1) {
-                     die "Cannot gunzip $filename: $!\n";
+                  unless (keys %main::amazon) {
+                     my $so=system($CPAN::Config->{gzip}." -d $filename");
+                     if ($so==-1) {
+                        die "Cannot gunzip $filename: $!\n";
+                     }
                   }
                   unless ($CPAN::Config->{tar}) {
                      if (-e '/usr/bin/tar') {
@@ -4051,6 +4048,10 @@ print "PWD=",system('cat /proc/meminfo'),"\n";
                         exec 'sudo','perl','Makefile.PL',$BDB_selection,
                              $filename;
                      }
+                     my $so=system($CPAN::Config->{gzip}." -d $filename");
+                     if ($so==-1) {
+                        die "Cannot gunzip $filename: $!\n";
+                     }
                      print "***** Untar1: sudo ",
                         $CPAN::Config->{tar}," xvf $filename\n";
                      open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
@@ -4058,6 +4059,10 @@ print "PWD=",system('cat /proc/meminfo'),"\n";
                      unless ($already_downloaded) {
                         exec 'perl','Makefile.PL',$BDB_selection,
                              $filename;
+                     }
+                     my $so=system($CPAN::Config->{gzip}." -d $filename");
+                     if ($so==-1) {
+                        die "Cannot gunzip $filename: $!\n";
                      }
                      print "***** Untar2: ",
                         $CPAN::Config->{tar}," xvf $filename\n";
