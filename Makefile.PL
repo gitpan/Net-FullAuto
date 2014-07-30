@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999990';
+$main::VERSION='0.9999999991';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4020,6 +4020,9 @@ print "WHAT IS CPAN GZIP=$CPAN::Config->{gzip}\n";
                      }
                   }
 print "FILENAME=$filename\n";
+print "SLEEPING\n";
+sleep 10;
+print "DONE SLEEPING\n";
 print "PWD=",system('cat /proc/meminfo'),"\n";
                   my $so=system($CPAN::Config->{gzip}." -d $filename");
                   if ($so==-1) {
