@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999994';
+$main::VERSION='0.9999999995';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -105,7 +105,7 @@ END
          $main::system_type{'rhel'}='';;
       } elsif ((-e "/etc/system-release-cpe") &&
             (-1<index `cat /etc/system-release-cpe`,
-            'centos:enterprise_linux')) {
+            'centos:linux')) {
 
          # Manual Setup openSuSE host before CPAN:
          #
@@ -1289,7 +1289,8 @@ END
    &fa_install_mod('Params::Check','install','Makefile');
    &fa_install_mod('Module::CoreList','install','Makefile');
    &fa_install_mod('Module::Load','install','Makefile');
-   &fa_install_mod('version','install','Makefile');
+   &fa_install_mod('parent','install','Makefile');
+   &fa_install_mod('version','install','Makefile','','0.9908');
    &fa_install_mod('Module::Metadata','install','Makefile');
    &fa_install_mod('Module::Load::Conditional','install','Makefile');
    &fa_install_mod('IPC::Cmd','install','Makefile');
@@ -1314,7 +1315,7 @@ END
       &fa_install_mod('Pod::Checker','install','Makefile');
       &fa_install_mod('Pod::Parser','install','Makefile');
       &fa_install_mod('Pod::Readme','install','Makefile');
-      &fa_install_mod('Module::Build','install','Build','force');
+      &fa_install_mod('Module::Build','install','Makefile','force');
    }
    &fa_install_mod('IO::CaptureOutput','install','Makefile');
    if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {
