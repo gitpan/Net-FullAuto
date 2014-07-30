@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999995';
+$main::VERSION='0.9999999996';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -63,7 +63,7 @@ END
 
          # Manual Setup Amazon AMI host before CPAN:
          #
-         # sudo yum install cpan
+         # sudo yum -y install cpan
 
          $main::amazon{'ami'}='';
          $main::system_type{'ami'}='';
@@ -96,8 +96,7 @@ END
 
          # Manual Setup openSuSE host before CPAN:
          #
-         # sudo yum install perl
-         # sudo yum install cpan
+         # sudo yum -y install perl cpan
 
          if (-e "/etc/yum/pluginconf.d/amazon-id.conf") {
             $main::amazon{'rhel'}='';
@@ -107,10 +106,9 @@ END
             (-1<index `cat /etc/system-release-cpe`,
             'centos:linux')) {
 
-         # Manual Setup openSuSE host before CPAN:
+         # Manual Setup CentOS host before CPAN:
          #
-         # sudo yum install perl
-         # sudo yum install cpan
+         # sudo yum -y install perl cpan perl-libwww-perl
 
          if ((-e "/sys/hypervisor/compilation/compiled_by") &&
                (-1<index `cat /sys/hypervisor/compilation/compiled_by`,
@@ -784,6 +782,11 @@ END
             print $line;
          }
          close AG;
+         open(AG,"sudo yum -y clean all|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close AG;
          open(AG,"sudo yum -y groupinstall 'Development tools'|");
          while (my $line=<AG>) {
             print $line;
@@ -835,6 +838,7 @@ END
          }
          close LD;
       }
+      exec 'sudo','perl','Makefile.PL';
 
    } elsif (!can_cc() && (exists $main::amazon{'suse'})) {
 
