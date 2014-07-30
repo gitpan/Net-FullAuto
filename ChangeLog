@@ -20,9 +20,16 @@
 #######################################################################
 
 
+2014-07-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999987 released.
+
+        * Test Fix for Amazon RHEL.
+
+
 2014-07-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
-        * Version 0.9999999985 released.
+        * Version 0.9999999986 released.
 
         * Fixes for Amazon RHEL.
 

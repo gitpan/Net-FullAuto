@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999986';
+$main::VERSION='0.9999999987';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3853,6 +3853,7 @@ END
                my $fh='';
                my $suffix=($BDB_selection eq 'Encrypted')?
                      '.tar.gz':'.NC.tar.gz';
+print "WHAT IS ALREADY_DOWNLOADED=$already_downloaded\n";
                unless ($already_downloaded) {
                   if ($CPAN::META->has_usable("File::Temp")) {
                      $fh = File::Temp->new(
@@ -4002,6 +4003,7 @@ END
                      close(FILE);
                      last;
                   }
+print "WHAT IS CPAN GZIP=$CPAN::Config->{gzip}\n";
                   unless ($CPAN::Config->{gzip}) {
                      if (-e '/usr/bin/gzip') {
                         $CPAN::Config->{gzip}='/usr/bin/gzip';
@@ -4019,7 +4021,7 @@ END
                   }
                   open(FH, $CPAN::Config->{gzip}." -d $filename|");
                   while (my $line=<FH>) {
-                     print $line;
+                     print "GZIP LINE=",$line;
                   }
                   close FH;
                   unless ($CPAN::Config->{tar}) {
