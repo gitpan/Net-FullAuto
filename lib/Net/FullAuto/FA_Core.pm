@@ -21318,7 +21318,7 @@ sub wait_for_passwd_prompt
   It appears that this is the first time FullAuto
   is starting on this host. It may take a few
   seconds - or even *MINUTES* (in rare cases) for
-  the intial configurtion of Secure Shell to
+  the intial configuration of Secure Shell to
   complete. All future FullAuto startups will go
   *MUCH* faster. Please be patient.
 
