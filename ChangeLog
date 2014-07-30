@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-07-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999994 released.
+
+        * Fixes for CentOS.
+
+
 2014-07-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999993 released.

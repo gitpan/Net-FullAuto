@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999993';
+$main::VERSION='0.9999999994';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -103,6 +103,21 @@ END
             $main::amazon{'rhel'}='';
          }
          $main::system_type{'rhel'}='';;
+      } elsif ((-e "/etc/system-release-cpe") &&
+            (-1<index `cat /etc/system-release-cpe`,
+            'centos:enterprise_linux')) {
+
+         # Manual Setup openSuSE host before CPAN:
+         #
+         # sudo yum install perl
+         # sudo yum install cpan
+
+         if ((-e "/sys/hypervisor/compilation/compiled_by") &&
+               (-1<index `cat /sys/hypervisor/compilation/compiled_by`,
+               'amazon')) {
+            $main::amazon{'centos'}='';
+         }
+         $main::system_type{'centos'}='';;
       }
    } else { $main::system_type{$^O}='' }
 
@@ -744,7 +759,8 @@ END
          }
       }
    } elsif (!can_cc() && ((exists $main::amazon{'ami'}) ||
-         (exists $main::amazon{'rhel'}))) {
+         (exists $main::amazon{'rhel'}) ||
+         (exists $main::amazon{'centos'}))) {
 
       my $grpi=`sudo yum grouplist`;
       if (-1<index $grpi,'no installed groups file') {
@@ -781,7 +797,8 @@ END
          }
          close LD;
       }
-      if (exists $main::amazon{'rhel'}) {
+      if ((exists $main::amazon{'rhel'}) ||
+            (exists $main::amazon{'centos'})) {
          unless (-1<index $yins,'wget') {
             open(LD,"sudo yum -y install 'wget'|");
             while (my $line=<LD>) {
@@ -789,14 +806,23 @@ END
             }
             close LD;
          }
-         my $wget_url='http://dl.fedoraproject.org/pub/epel/beta/7'.
-                      '/x86_64/epel-release-7-0.2.noarch.rpm';
+         my $wget_url='http://pkgs.repoforge.org/rpmforge-release/'.
+                      'rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm';
+         #my=$wget_url='http://dl.fedoraproject.org/pub/epel/beta/7'.
+         #             '/x86_64/epel-release-7-0.2.noarch.rpm';
          open(LD,"sudo wget $wget_url|");
          while (my $line=<LD>) {
             print $line;
          }
          close LD;
-         open(LD,"sudo rpm -ivh epel-release-7-0.2.noarch.rpm|");
+         #my $rpm='epel-release-7-0.2.noarch.rpm';
+         my $rpm='rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm';
+         open(LD,"sudo rpm -ivh $rpm|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+         open(LD,"sudo rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt|");
          while (my $line=<LD>) {
             print $line;
          }
@@ -1069,7 +1095,8 @@ END
          chdir $d;
          if ((exists $main::system_type{'ami'}) ||
                (exists $main::system_type{'ubuntu'}) ||
-               (exists $main::system_type{'rhel'})) {
+               (exists $main::system_type{'rhel'}) ||
+               (exists $main::system_type{'centos'})) {
             print "***** Untar: sudo ",$CPAN::Config->{tar}," xvf $tar\n";
             open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
          } else {
@@ -1141,7 +1168,8 @@ END
             my $sudo='';
             if ((exists $main::system_type{'ami'}) ||
                   (exists $main::system_type{'ubuntu'}) ||
-                  (exists $main::system_type{'rhel'})) {
+                  (exists $main::system_type{'rhel'}) ||
+                  (exists $main::system_type{'centos'})) {
                $sudo='sudo ';
             }
             $dir||=&fa_find_latest($p);
@@ -1178,7 +1206,8 @@ END
             my $sudo=0;
             if ((exists $main::system_type{'ami'}) ||
                   (exists $main::system_type{'ubuntu'}) ||
-                  (exists $main::system_type{'rhel'})) {
+                  (exists $main::system_type{'rhel'}) ||
+                  (exists $main::system_type{'centos'})) {
                $sudo=1;
             }
             if ($sudo) {
