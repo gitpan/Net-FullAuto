@@ -11875,7 +11875,6 @@ my $fa_process_lifecycle=<<END;
 
 
 
-
 END
 
 my $fa_organization=<<END;
@@ -11891,7 +11890,6 @@ my $fa_organization=<<END;
    FullAuto organizes everything for you. A FullAuto working configuration
    consists of five files which are listed below. You can read a summary
    of each, or move on to creating ${username}'s own FullAuto setup!
-
 
 
 END
@@ -11914,7 +11912,6 @@ my $fa_privacy=<<END;
    text. Even in memory, passwords are encrypted and
    remain so until fed directly to an authenticating
    process, safe even from core dumps!
-
 
 
 
@@ -11941,7 +11938,6 @@ my $fa_security=<<END;
    manage user code, files, and configuration - securely!
 
 
-
 END
 
 my $fa_basics=<<END;
@@ -11965,7 +11961,6 @@ my $fa_basics=<<END;
 
    When you quit either help or admin, you automatically return to this
    screen. To quit admin, press [ESC], and help pages. type 'q'. Try it!
-
 END
 
 my $fa_no_web=<<END;
@@ -11989,7 +11984,6 @@ my $fa_no_web=<<END;
    Hence the name Full - Auto (as in 'full' or 'complete' AUTOMATION).
    You tell it what to do, you turn it on - and you MOVE ON to more
    enjoyable or urgent activities!
-
 END
 
 my $fa_intro=<<END;
@@ -12013,7 +12007,6 @@ my $fa_intro=<<END;
    You can revisit this story anytime - at the command line:
 
    fa --new-user
-
 END
 
 my $fa_continue_setup=<<END;
@@ -12143,7 +12136,6 @@ my $fa_batter_up=<<END;
 
 
 
-
 END
 
 my $fa_fa_defaults2=<<END;
@@ -12179,7 +12171,6 @@ my $fa_set_defaults=<<END;
    If not, you will get this "new user wizard" the next time you
    run FullAuto. (Which is great if you're just exploring!)
 
-
 END
 
 my $fa_fa_defaults_sub=sub {
@@ -12208,7 +12199,7 @@ my $fa_fa_defaults_sub=sub {
           .$default_modules->{'fa_maps'}
           ."\n    Menu  =>  "
           .$default_modules->{'fa_menu'}
-          ."\n\n\n";
+          ."\n\n";
    return $banner;
 
 };
@@ -12231,7 +12222,6 @@ my $fa_fa_defaults=<<END;
    --defaults utility - which is built into FullAuto itself. The defaults
    utility is a menu-ized wizard just like this presentation you are now
    enjoying (hopefully!)
-
 
 
 
@@ -12484,7 +12474,7 @@ sub new_user_experience {
              ."\n      It appears "
              ."that $username is new to FullAuto,"
              ."\n      for there is no FullAuto "
-             ."Setup for this user.\n\n";
+             ."Setup for this user.\n";
       %welcome_menu=(
 
          Label  => 'welcome_menu',

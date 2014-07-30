@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999992';
+$main::VERSION='0.9999999993';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1370,7 +1370,7 @@ END
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.81');
+   &fa_install_module('Term::Menus','install','Makefile','','2.82');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -2817,7 +2817,6 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
                system('SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $cygwin_loc\\bin\\bash -lc ".
                     '"net stop cygserver 2>&1"');
-print "REBASE ONE\n";
                system('SET CYGWIN=nodosfilewarning & '.
                     "cmd /c $cygwin_loc\\bin\\dash -lc ".
                     '"/bin/rebaseall -v"');
@@ -3853,7 +3852,6 @@ END
                my $fh='';
                my $suffix=($BDB_selection eq 'Encrypted')?
                      '.tar.gz':'.NC.tar.gz';
-print "WHAT IS ALREADY_DOWNLOADED=$already_downloaded\n";
                unless ($already_downloaded) {
                   if ($CPAN::META->has_usable("File::Temp")) {
                      $fh = File::Temp->new(
@@ -4003,7 +4001,6 @@ print "WHAT IS ALREADY_DOWNLOADED=$already_downloaded\n";
                      close(FILE);
                      last;
                   }
-print "WHAT IS CPAN GZIP=$CPAN::Config->{gzip}\n";
                   unless ($CPAN::Config->{gzip}) {
                      if (-e '/usr/bin/gzip') {
                         $CPAN::Config->{gzip}='/usr/bin/gzip';
