@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999988';
+$main::VERSION='0.9999999989';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -4020,13 +4020,15 @@ print "WHAT IS CPAN GZIP=$CPAN::Config->{gzip}\n";
                      }
                   }
 print "FILENAME=$filename\n";
-print "PWD=",`pwd`,"\n";
-                  open(FH, $CPAN::Config->{gzip}." -d $filename|")
-                     || die "Cannot gunzip the file: $filename: $!\n";
-                  while (my $line=<FH>) {
-                     print "GZIP LINE=",$line;
-                  }
-                  close FH;
+print "PWD=",system('ps -ef'),"\n";
+                  system($CPAN::Config->{gzip}." -d $filename") ||
+                     die "Cannot gunzip the file: $filename: $!\n";
+                  #open(FH, $CPAN::Config->{gzip}." -d $filename|")
+                  #   || die "Cannot gunzip the file: $filename: $!\n";
+                  #while (my $line=<FH>) {
+                  #   print "GZIP LINE=",$line;
+                  #}
+                  #close FH;
                   unless ($CPAN::Config->{tar}) {
                      if (-e '/usr/bin/tar') {
                         $CPAN::Config->{tar}='/usr/bin/tar';
