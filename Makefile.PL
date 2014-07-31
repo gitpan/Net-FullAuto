@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999999_001';
+$main::VERSION='0.9999999999_002';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -776,7 +776,7 @@ END
             $groups{$group_type}->{$1}='';
          }
       }
-      my $yins=`sudo /bin/yum list installed`;
+      my $yins=`sudo yum list installed`;
       unless (exists $groups{'Installed'}->{'Development tools'}) {
          open(AG,"sudo yum -y update|");
          while (my $line=<AG>) {
@@ -843,10 +843,13 @@ END
 
    } elsif (exists $main::amazon{'centos'}) {
 
-      my $yins=`/bin/yum list installed`;
+      my $yins=`yum list installed`;
       unless (-1<index $yins,'openssl-devel') {
          open(LD,"sudo yum -y install 'openssl-devel'|");
          while (my $line=<LD>) {
+            if (-1<index $line,"allocate") {
+print "YEP MEMORY=$line\n";<STDIN>;
+            }
             print $line;
          }
          close LD;
