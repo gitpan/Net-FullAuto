@@ -22,6 +22,15 @@
 
 2014-07-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.9999999997 released.
+
+        * Fixes for CentOS.
+
+        * New version of Term::RawInput paired with this release.
+
+
+2014-07-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.9999999996 released.
 
         * Fixes for CentOS.

@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999996';
+$main::VERSION='0.9999999997';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -108,6 +108,8 @@ END
 
          # Manual Setup CentOS host before CPAN:
          #
+         # sudo yum -u update
+         # sudo yum -y groupinstall "Development tools"
          # sudo yum -y install perl cpan perl-libwww-perl
 
          if ((-e "/sys/hypervisor/compilation/compiled_by") &&
@@ -749,7 +751,7 @@ END
                   "                 Free Disk Space is needed to install\n".
                   "                 Cygwin and FullAuto on this Windows\n".
                   "                 host.".
-                  "\n\n   Please report any bugs and send any",
+                  "n\n   Please report any bugs and send any",
                   "\n   questions, thoughts or feedback to:",
                   "\n\n      Brian.Kelly\@fullautosoftware.net.",
                   "\n\n   Press ANY key to exit.\n\n";<STDIN>;
@@ -1382,7 +1384,7 @@ END
    &fa_install_module('Class::Method::Modifiers','install','Makefile');
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
-   &fa_install_module('Term::RawInput','install','Makefile','','1.21');
+   &fa_install_module('Term::RawInput','install','Makefile','','1.22');
    if ($^O eq 'cygwin') {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
@@ -5132,6 +5134,7 @@ my $good_choice=<<END;
    || Ctrl ||   ||E ||                  || Alt ||   ||C ||
    ||______|| + ||__||  M-C  is  alt c  ||_____|| + ||__||
    |/______\\|   |/__\\|                  |/_____\\|   |/__\\|
+
 END
 
 my $nano_banner=<<END;
@@ -5302,6 +5305,7 @@ END
    Project for use in the OpenSSL Toolkit. (http://www.openssl.org/) and
    includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
    and Tim Hudson (tjh\@cryptsoft.com)
+
 END
 
    my %license_agree=(
@@ -5364,6 +5368,7 @@ if (keys %main::amazon) {
 
    In order to use the integrated edit features you will need to choose
    an editor. You can later change the selection in the Admin menu.
+
 END
 
    my %Menu_select_editor=();

@@ -14,7 +14,7 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 555a1e74a86fefdfc7e09b16acd2ae479073c7e7 ChangeLog
+SHA1 10060c610579167ab0b36b172b27abce6a58cac2 ChangeLog
 SHA1 d7f05f3c29deb4f29dd9291d5076899b3f92cd20 FIGlet_fonts/3-d.flf
 SHA1 8238eb029ef0be3083cd5982100b4000bd8aacb8 FIGlet_fonts/4x4_offr.flf
 SHA1 f3223bb52e36d14098e1ed1f7790593a09230d68 FIGlet_fonts/5lineoblique.flf
@@ -92,8 +92,8 @@ SHA1 5939c33dff38893a1dcf0ba68b97845f7c63e1fa FIGlet_fonts/wavy.flf
 SHA1 f81af8fd43e0f19c168343709749ef4da3972e6d FIGlet_fonts/weird.flf
 SHA1 62647027745e394450492878f8d8730548d83fa2 LICENSE
 SHA1 3969a1b82753ea591ce1b77ed0ccf1403b480052 MANIFEST
-SHA1 4409683ef94e0d6184ef39be4fedd4a346916bfb META.yml
-SHA1 5175d3c0505320e5a7eda9f400889f0a9d1ecebd Makefile.PL
+SHA1 85a8cd52af53093100bbd270320c5bb66acfef47 META.yml
+SHA1 a1319e5fc6d42012ead560f6f36018147e49e0ca Makefile.PL
 SHA1 05aead0f26b0f71a00bad5badbf390f2c92dcd1d README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 ade875b98aca4971a381d2e037ed009b52c2f8da bin/fullauto.pl
@@ -122,7 +122,7 @@ SHA1 6fed559b971e9d2f091e0776ddbb131be5225a36 inc/Module/Install/Win32.pm
 SHA1 ea528c813c3473a2674fcbed06531c2f795116ce inc/Module/Install/WriteAll.pm
 SHA1 00bb8470354d11bd7c2c74633083ebe627eb2b7e inc/Module/Install/with.pm
 SHA1 e1d3650b6801a3cb2e6de38574e9327914c96d40 install_mozrepl_plugin.ahk
-SHA1 0938ec5ff2b5dc8e41b19b8796b609230bd00b79 lib/Net/FullAuto.pm
+SHA1 6724c36b9680bb1dde59f3d899f63a091289092f lib/Net/FullAuto.pm
 SHA1 cc3f8588c96516de2802c68be465447d17f781aa lib/Net/FullAuto/Custom/BackUp/README
 SHA1 5032ba28f88dbf163b0d4dd158948af9124568c9 lib/Net/FullAuto/Custom/README
 SHA1 5b1702f20efb104e3375934cf55a7438c19e109a lib/Net/FullAuto/Distro/fa_code.pm
@@ -133,17 +133,17 @@ SHA1 fe312c3ed58aac44bd3bebb39bef97df2c70ecad lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 1e9cdb0a94c0e832ac6240d6ae26fcab0cfebbc0 lib/Net/FullAuto/Distro/fa_menu.pm
 SHA1 c6096414c9970ce64beb619cc9f0d78fe4d69993 lib/Net/FullAuto/Distro/fa_menu_demo.pm
 SHA1 c61c03f9beda14559fdf07e569e813a2bd553a53 lib/Net/FullAuto/Distro/fullautologo.jpg
-SHA1 3ecfd4a4812e8764f0355c9ccb52f1122ea694d7 lib/Net/FullAuto/FA_Core.pm
+SHA1 a885283060d248c14c63131c6c5656d31bb82e8b lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJT2RgZAAoJEBa/9Pad787E7x4H/1BCjpNQ0eLHe+FzB/6s5upG
-f81zyyuJptKPMcGLuhXowa9E7p6glts2tPs9nhQn2eT0AUoZSFdqOzT9FwJUCXh4
-3K4eUIH4JpCMmFVHH8nrKwec7kRAhewIbg+7q1tOnIPsKwM97RipV2r9sPFcDZ4C
-63HFbeltIDjRp7rdThubjzsvpH1iyUTc1JKl0s3KL7fSMHPB2S8BIqriknnxEv9D
-AUweyz1tXO5RXkTA+t37X//OJzhNNpSouGqL0Snun+mW7dqgOb918J1G2Vxgu6MG
-+1T6I/kEIznGQ1qLItC6iCUVP96JT5ds4hV6+JQ33TO21UJNrrQ34Vfx4c/YUlY=
-=2rB8
+iQEcBAEBAgAGBQJT2alAAAoJEBa/9Pad787EZysIAIuYnf5oi//RbzzvfLCTBVLi
+grHD7cBKAh/8YwDdHQGqKgTVZMC0xWI+8wcnXNtlfSHeyBSTBBnLfC8vHup3LwNN
+lDToUWevNkdyYe6tCXg7+ZCT+s8jMfM4yYA+x5y3dNotpfIVmeYP2Xeu1goiZdtm
+t9NAu+wud+WJSPGDjhTR880KOO+tlueYU5f6n1izsW2yxOKgQoCQBSHaESNxmTKR
+CgzxMbEmSiLphbWWDWcBf7qNyJg8RnrGfPgQzGbTEqOi7BbpIAT40iutdpEauaIr
+N4tZhgLp0IUhrLIsEJb8QDvuGvb0d/1sBEAJQ3wy6d9qrIC0EQ3zUWHDtc1iyGY=
+=uumw
 -----END PGP SIGNATURE-----

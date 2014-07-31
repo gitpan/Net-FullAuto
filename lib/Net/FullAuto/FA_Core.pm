@@ -2478,7 +2478,7 @@ sub figlet
          "Choose a FIGlet Font (by number) to preview with text \"Example\"".
          "\n   -OR- continuously scroll and view by repeatedly pressing ENTER".
          "\n\n   HINT: Typing  !figlet -f<fontname> YOUR TEXT\n\n".
-         "         is another way to preview the font of your choice.\n";
+         "         is another way to preview the font of your choice.\n\n";
 
       $main::figletoutput=sub {
 
@@ -2541,7 +2541,7 @@ END
             Result  => \%figletoutput,
 
          },
-         Display => 9,
+         Display => 8,
          Scroll => 1,
          Banner => $figban,
 
@@ -10171,7 +10171,6 @@ my $fa_congrats=<<END;
     \\___\\___/_||_\\__, |_| \\__,_|\\__|\\_,_|_\\__,_|\\__|_\\___/_||_/__(_)
                  |___/
 
-
    You have QUICKLY gotten started with FullAuto! The goal of this new
    user wizard experience was to acquaint you both with managing your
    automation code files, and demonstrating how FullAuto wizards and Menus
@@ -12474,7 +12473,7 @@ sub new_user_experience {
              ."\n      It appears "
              ."that $username is new to FullAuto,"
              ."\n      for there is no FullAuto "
-             ."Setup for this user.\n";
+             ."Setup for this user.\n\n";
       %welcome_menu=(
 
          Label  => 'welcome_menu',
@@ -14829,8 +14828,9 @@ if (0) {
 print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-         $local_host->print($dcipher->decrypt($passetts->[0]))
-            unless $ignore;
+         if ($dcipher && !$ignore) { 
+            $local_host->print($dcipher->decrypt($passetts->[0]));
+         }
          if (!$Net::FullAuto::FA_Core::cron &&
                !$Net::FullAuto::FA_Core::debug &&
                !$Net::FullAuto::FA_Core::quiet) {
@@ -21581,6 +21581,8 @@ END
    #   $external_IP.=$char;
    #}
 
+                     my $user_path=($user eq 'root')?'/root':"/home/$user";
+   
                      my $pbf_banner=<<END;
 
            
@@ -21599,11 +21601,11 @@ END
    Upload this *same* key from your local computer to this host with
    this single command (run this from your local computer - NOT here):
 
-       scp -i fullauto.pem fullauto.pem $user\@${external_IP}:/home/$user
+       scp -i fullauto.pem fullauto.pem $user\@${external_IP}:$user_path
 
    -OR- with PuTTY scp (but only if you are using PuTTY):
 
-       pscp -i fullauto.ppk fullauto.pen $user\@${external_IP}:/home/$user
+       pscp -i fullauto.ppk fullauto.pen $user\@${external_IP}:$user_path
 END
 
                      my $wait_banner=<<END;
