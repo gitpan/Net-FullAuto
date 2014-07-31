@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999997';
+$main::VERSION='0.9999999998';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -5467,7 +5467,7 @@ my $banner=<<END;
 END
 
          }
-         exec "/usr/local/bin/fa";
+         exec "/usr/local/bin/fa --debug";
       #}
    }
 
