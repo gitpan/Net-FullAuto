@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999998';
+$main::VERSION='0.9999999999_001';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -96,7 +96,7 @@ END
 
          # Manual Setup openSuSE host before CPAN:
          #
-         # sudo yum -y install perl cpan
+         # sudo yum -y install cpan
 
          if (-e "/etc/yum/pluginconf.d/amazon-id.conf") {
             $main::amazon{'rhel'}='';
@@ -108,9 +108,8 @@ END
 
          # Manual Setup CentOS host before CPAN:
          #
-         # sudo yum -u update
          # sudo yum -y groupinstall "Development tools"
-         # sudo yum -y install perl cpan perl-libwww-perl
+         # sudo yum -y install cpan 
 
          if ((-e "/sys/hypervisor/compilation/compiled_by") &&
                (-1<index `cat /sys/hypervisor/compilation/compiled_by`,
@@ -842,6 +841,57 @@ END
       }
       exec 'sudo','perl','Makefile.PL';
 
+   } elsif (exists $main::amazon{'centos'}) {
+
+      my $yins=`/bin/yum list installed`;
+      unless (-1<index $yins,'openssl-devel') {
+         open(LD,"sudo yum -y install 'openssl-devel'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      my $new_wget=0;
+      unless (-1<index $yins,'wget') {
+         $new_wget=1;
+         open(LD,"sudo yum -y install 'wget'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      if ($new_wget) {
+         my $wget_url='http://pkgs.repoforge.org/rpmforge-release/'.
+                      'rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm';
+         #my=$wget_url='http://dl.fedoraproject.org/pub/epel/beta/7'.
+         #             '/x86_64/epel-release-7-0.2.noarch.rpm';
+         open(LD,"sudo wget $wget_url|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+         #my $rpm='epel-release-7-0.2.noarch.rpm';
+         my $rpm='rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm';
+         open(LD,"sudo rpm -ivh $rpm|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+         open(LD,"sudo rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      unless (-1<index $yins,'figlet') {
+         open(LD,"sudo yum -y install 'figlet'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+         exec 'sudo','perl','Makefile.PL';
+      }
+
    } elsif (!can_cc() && (exists $main::amazon{'suse'})) {
 
       # Manual Setup openSuSE host before CPAN:
@@ -1315,6 +1365,7 @@ END
       &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
       &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
       &fa_install_mod('Compress::Zlib','install','Makefile');
+      &fa_install_mod('IO::Compress::Bzip2','install','Makefile');
       &fa_install_mod('IO::Zlib','install','Makefile');
       &fa_install_mod('Archive::Tar','install','Makefile');
       &fa_install_mod('Regexp::Common','install','Makefile');
@@ -1363,10 +1414,28 @@ END
    if ($@) {
       &fa_install_module('Net::SSLeay','get');
       my $dir=&fa_find_latest('Net-SSLeay');
-      system("cd \"$dir\";echo n | $^X Makefile.PL;")
-         || warn $!;
-      system("cd \"$dir\";make install;")
-         || warn $!;
+      #system("cd \"$dir\";echo n | $^X Makefile.PL;")
+      #   || warn $!;
+      open(FH, "(cd \"$dir\";echo n | $^X Makefile.PL) 2>&1|");
+      while (my $line=<FH>) {
+         if (-1<index $line,
+               'error: openssl/err.h: No such file or directory') {
+            print "SSLeay Makefile.PL ERROR=$line\n";
+         }
+         print $line;
+      }
+      close FH;
+      open(FH, "(cd \"$dir\";make install) 2>&1|");
+      while (my $line=<FH>) {
+         if (-1<index $line,
+               'error: openssl/err.h: No such file or directory') {
+            print "SSLeay Makefile ERROR=$line\n";
+         }
+         print $line;
+      }
+      close FH;
+      #system("cd \"$dir\";make install;")
+      #   || warn $!;
    }
    &fa_install_module('IO::Socket::SSL','install','Makefile','','','n');
    &fa_install_module('Mozilla::CA','install','Makefile');
