@@ -565,7 +565,7 @@ BEGIN {
             return "/sbin/";
          } elsif ($Net::FullAuto::FA_Core::gbp->('which')) {
             my $which=$Net::FullAuto::FA_Core::gbp->('which');
-            my $found=`$which/which $cmd`;
+            my $found=`${which}which $cmd`;
             if (-e $found and $found!~/Command not found/i) {
                $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=
                   $found;
@@ -12523,6 +12523,86 @@ print "YEP, CREATE ACCOUNT\n";<STDIN>;
 
 }
 
+sub get_amazon_external_ip {
+
+   require LWP::UserAgent;
+   require HTTP::Request;
+
+   my $URL='http://169.254.169.254/'.
+           'latest/meta-data/public-ipv4/';
+
+   # $URL='http://www.whatismyip.com';
+
+   my $MAX_TRIES=5;
+   my $SLEEP_BETWEEN_TRIES=20;
+   my $agent = LWP::UserAgent->new(
+         env_proxy  => 1,
+         keep_alive => 1,
+         timeout    => 30 );
+         $agent->agent('Internet Explorer/6.0');
+   my $header=HTTP::Request->new(GET => $URL);
+   my $request=HTTP::Request->new('GET',
+               $URL, $header);
+   my $response;
+   my $tries = 1;
+   do {
+      $response=$agent->request($request);
+      if ($response->is_error) {
+         print "URL: $URL   tries: $tries\n";
+         print "Got Error: " . $response->code .
+               ':' . $response->message. "\n";
+         $tries++;
+         if ($tries <= $MAX_TRIES) {
+             sleep $SLEEP_BETWEEN_TRIES;
+         }
+      }
+   } until  (($response->is_success) ||
+      ($tries > $MAX_TRIES));
+   my $external_IP=$response->content;
+
+   if (-1<index $URL,'whatismyip') {
+      my $content=$external_IP;
+      $external_IP='';
+      $content=~s/^.*Your IP:<\/div>.*?([&][#].*?)<\/div>.*$/$1/s;
+      foreach my $char ($content=~m/(?:[&][#](\d\d);)/g) {
+         $char=sprintf "%c", $char;
+         $external_IP.=$char;
+      }
+   }
+   return $external_IP||'';
+
+}
+
+sub check_for_amazon_localhost {
+
+   if ($^O eq 'linux') {
+      if ((-e '/etc/system-release-cpe') &&
+            (-1<index `cat /etc/system-release-cpe`,'amazon:linux')) {
+         return ['ami',get_amazon_external_ip()];
+      } elsif ((-e '/etc/os-release') &&
+            (-1<index `cat /etc/os-release`,'ubuntu')) {
+         return ['ubuntu',get_amazon_external_ip()];
+      } elsif ((-e '/etc/SuSE-release') &&
+            (-e '/etc/profile.d/amazonEC2.sh')) {
+         return ['suse',get_amazon_external_ip()];
+      } elsif ((-e '/etc/system-release-cpe') &&
+            (-1<index `cat /etc/system-release-cpe`,
+            'redhat:enterprise_linux')) {
+         return ['rhel',get_amazon_external_ip()];
+      } elsif ((-e '/etc/system-release-cpe') &&
+            (-1<index `cat /etc/system-release-cpe`,
+            'centos:linux')) {
+         return ['centos',get_amazon_external_ip()];
+      } elsif (-e '/etc/gentoo-release') {
+         return ['gentoo',get_amazon_external_ip()];
+      }
+   } elsif ($^O eq 'freebsd' && (-e '/usr/local/bin/aws') &&
+               (-1<index `cat /usr/local/bin/aws`,'aws.amazon')) {
+      return ['freebsd',get_amazon_external_ip()];
+   } return 0;
+
+}
+   
 sub numerically { $a <=> $b }
 
 my $determine_password=sub {
@@ -21340,7 +21420,8 @@ END
             $lin.=$line;
             if ((-1<index $line,
                   'Next authentication method: keyboard-interactive') ||
-                  (-1<index $line,'Next authentication method: password')) {
+                  ((-1<index $line,'Next authentication method: password') &&
+                  $lin!~/password[: ]+$/si)) {
                $determine_password->($cache,$save_main_pass,
                      $password_from,$login_Mast_error,
                      $loop_count,$kind,$href,$mkdflag);
@@ -21539,55 +21620,11 @@ END
 
 END
                if (grep { /__Master_${$}__/ } @{$filehandle->{_hostlabel}}) {
-                  my $amazon=
-                        `sudo cat /sys/hypervisor/compilation/compiled_by 2>&1`;
-                  if ((-1<index $amazon,'amazon') && ($@!~/^\s*$/)) {
-                     print $Net::FullAuto::FA_Core::blanklines;
-                     print $publickey_failed;
-                     sleep 3;
-                     my $user=$Net::FullAuto::FA_Core::username;
-                     require LWP::UserAgent;
-                     require HTTP::Request;
-                     #my $URL='http://www.whatismyip.com'; 
-                     my $URL='http://169.254.169.254/'.
-                             'latest/meta-data/public-ipv4/';
-                     my $MAX_TRIES=5;
-                     my $SLEEP_BETWEEN_TRIES=20;
-                     my $agent = LWP::UserAgent->new(
-                           env_proxy  => 1,
-                           keep_alive => 1,
-                           timeout    => 30 );
-                     $agent->agent('Internet Explorer/6.0');
-                     my $header=HTTP::Request->new(GET => $URL);
-                     my $request=HTTP::Request->new('GET',
-                           $URL, $header);
-                     my $response;
-                     my $tries = 1;
-                     do {
-                        $response=$agent->request($request);
-                        if ($response->is_error) {
-                           print "URL: $URL   tries: $tries\n";
-                           print "Got Error: " . $response->code .
-                              ':' . $response->message. "\n";
-                           $tries++;
-                           if ($tries <= $MAX_TRIES) {
-                              sleep $SLEEP_BETWEEN_TRIES;
-                           }
-                        }
-                     } until  (($response->is_success) ||
-                        ($tries > $MAX_TRIES));
-                     my $external_IP=$response->content; 
 
-   ## FOR 'http://www.whatismyip.com'
-   ## uncomment URL above and code here
-
-   # $content=~s/^.*Your IP:<\/div>.*?([&][#].*?)<\/div>.*$/$1/s;
-   #my $new_content='';
-   #foreach my $char ($content=~m/(?:[&][#](\d\d);)/g) {
-   #   $char=sprintf "%c", $char;
-   #   $external_IP.=$char;
-   #}
-
+                  my $amazon='';
+                  if ($amazon=&check_for_amazon_localhost) {
+  
+                     my $user=$Net::FullAuto::FA_Core::username; 
                      my $user_path=($user eq 'root')?'/root':"/home/$user";
    
                      my $pbf_banner=<<END;
@@ -21598,7 +21635,7 @@ END
    FullAuto works with Amazon EC2 Servers the same way you do. You
    connected to this server with a private key file similar to this:
 
-       ssh -i fullauto.pem $user\@$external_IP
+       ssh -i fullauto.pem $user\@$amazon->[1]
 
    In order for FullAuto to connect, the same key must be used:
 
@@ -21608,11 +21645,11 @@ END
    Upload this *same* key from your local computer to this host with
    this single command (run this from your local computer - NOT here):
 
-       scp -i fullauto.pem fullauto.pem $user\@${external_IP}:$user_path
+       scp -i fullauto.pem fullauto.pem $user\@$amazon->[1]:$user_path
 
    -OR- with PuTTY scp (but only if you are using PuTTY):
 
-       pscp -i fullauto.ppk fullauto.pen $user\@${external_IP}:$user_path
+       pscp -i fullauto.ppk fullauto.pen $user\@$amazon->[1]:$user_path
 END
 
                      my $wait_banner=<<END;

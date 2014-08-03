@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-08-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.9999999999 released.
+
+        * Fixes for Gentoo.
+
+        * New version of Term::Menus paired with this release.
+
+
 2014-07-31  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.9999999999_002 released.

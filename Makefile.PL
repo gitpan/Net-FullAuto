@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999999_002';
+$main::VERSION='0.9999999999';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -117,6 +117,17 @@ END
             $main::amazon{'centos'}='';
          }
          $main::system_type{'centos'}='';;
+      } elsif (-e "/etc/gentoo-release") {
+
+         # Manual Setup CentOS host before CPAN:
+         #
+
+         if ((-e "/sys/hypervisor/compilation/compiled_by") &&
+               (-1<index `cat /sys/hypervisor/compilation/compiled_by`,
+               'amazon')) {
+            $main::amazon{'gentoo'}='';
+         }
+         $main::system_type{'gentoo'}='';
       }
    } else { $main::system_type{$^O}='' }
 
@@ -1027,6 +1038,16 @@ print "YEP MEMORY=$line\n";<STDIN>;
          }
          close AG;
       }
+   } elsif (exists $main::amazon{'gentoo'}) {
+      unless (-e '/usr/local/bin/figlet') {
+         my $fs='ftp://ftp.figlet.org/pub/figlet/program'.
+                '/unix/figlet-2.2.5.tar.gz';
+         open(AG,"(wget $fs;tar zxvf fig*gz;cd figlet-2.2.5;make install)|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close AG;
+      }
    }
    if ($incflag && ($main::PARdir ne $main::curdir)) {
       open(PD,">$main::PARdir/inc_exists.txt")
@@ -1357,6 +1378,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_mod('YAML','install','Makefile');
    &fa_install_mod('Algorithm::Diff','install','Makefile');
    &fa_install_mod('Text::Diff','install','Makefile');
+   &fa_install_mod('PAR::Dist','install','Makefile');
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
@@ -1478,7 +1500,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
       system("cd \"$dir\";$^X Build.PL NODDS;");
       system("cd \"$dir\";./Build install;");
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.82');
+   &fa_install_module('Term::Menus','install','Makefile','','2.83');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
