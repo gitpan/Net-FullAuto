@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.9999999999';
+$main::VERSION='0.999999999901';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -56,7 +56,7 @@ my $fa_banner=<<END;
 END
 
    %main::amazon=();
-   %main::system_type=();
+   %main::system_type='';
    if ($^O eq 'linux' || $^O eq 'freebsd') {
       if ((-e "/etc/system-release-cpe") &&
             (-1<index `cat /etc/system-release-cpe`,'amazon:linux')) {
@@ -66,13 +66,13 @@ END
          # sudo yum -y install cpan
 
          $main::amazon{'ami'}='';
-         $main::system_type{'ami'}='';
+         $main::system_type='ami';
       } elsif ((-e "/etc/os-release") &&
             (-1<index `cat /etc/os-release`,'ubuntu')) {
          if (-e "/usr/bin/ec2metadata") {
             $main::amazon{'ubuntu'}='';
          }
-         $main::system_type{'ubuntu'}='';
+         $main::system_type='ubuntu';
       } elsif ($^O eq 'freebsd') {
 
          # Manual Setup FreeBSD host before CPAN:
@@ -84,24 +84,31 @@ END
                (-1<index `cat /usr/local/bin/aws`,'aws.amazon')) {
             $main::amazon{'freebsd'}='';
          }
-         $main::system_type{'freebsd'}='';
+         $main::system_type='freebsd';
       } elsif (-e "/etc/SuSE-release") {
          if (-e "/etc/profile.d/amazonEC2.sh") {
             $main::amazon{'suse'}='';
          }
-         $main::system_type{'suse'}='';
+         $main::system_type='suse';
+      } elsif ((-e "/etc/system-release-cpe") &&
+            (-1<index `cat /etc/system-release-cpe`,
+            'fedoraproject')) {
+         if (-e "/etc/yum/pluginconf.d/amazon-id.conf") {
+            $main::amazon{'fedora'}='';
+         }
+         $main::system_type='fedora';
       } elsif ((-e "/etc/system-release-cpe") &&
             (-1<index `cat /etc/system-release-cpe`,
             'redhat:enterprise_linux')) {
 
-         # Manual Setup openSuSE host before CPAN:
+         # Manual Setup Redhat host before CPAN:
          #
          # sudo yum -y install cpan
 
          if (-e "/etc/yum/pluginconf.d/amazon-id.conf") {
             $main::amazon{'rhel'}='';
          }
-         $main::system_type{'rhel'}='';;
+         $main::system_type='rhel';
       } elsif ((-e "/etc/system-release-cpe") &&
             (-1<index `cat /etc/system-release-cpe`,
             'centos:linux')) {
@@ -116,7 +123,7 @@ END
                'amazon')) {
             $main::amazon{'centos'}='';
          }
-         $main::system_type{'centos'}='';;
+         $main::system_type='centos';
       } elsif (-e "/etc/gentoo-release") {
 
          # Manual Setup CentOS host before CPAN:
@@ -127,9 +134,9 @@ END
                'amazon')) {
             $main::amazon{'gentoo'}='';
          }
-         $main::system_type{'gentoo'}='';
+         $main::system_type='gentoo';
       }
-   } else { $main::system_type{$^O}='' }
+   } else { $main::system_type=$^O }
 
    sub get_cygwin_location {
       my $cygwin_query=
@@ -1173,10 +1180,10 @@ print "YEP MEMORY=$line\n";<STDIN>;
             }
          }
          chdir $d;
-         if ((exists $main::system_type{'ami'}) ||
-               (exists $main::system_type{'ubuntu'}) ||
-               (exists $main::system_type{'rhel'}) ||
-               (exists $main::system_type{'centos'})) {
+         if (($main::system_type eq 'ami') ||
+               ($main::system_type eq 'ubuntu') ||
+               ($main::system_type eq 'rhel') ||
+               ($main::system_type eq 'centos')) {
             print "***** Untar: sudo ",$CPAN::Config->{tar}," xvf $tar\n";
             open(FH, "sudo ".$CPAN::Config->{tar}." xvf $tar|");
          } else {
@@ -1246,10 +1253,10 @@ print "YEP MEMORY=$line\n";<STDIN>;
          }
          if (lc($task) eq 'install') {
             my $sudo='';
-            if ((exists $main::system_type{'ami'}) ||
-                  (exists $main::system_type{'ubuntu'}) ||
-                  (exists $main::system_type{'rhel'}) ||
-                  (exists $main::system_type{'centos'})) {
+            if (($main::system_type eq 'ami') ||
+                  ($main::system_type eq 'ubuntu') ||
+                  ($main::system_type eq 'rhel') ||
+                  ($main::system_type eq 'centos')) {
                $sudo='sudo ';
             }
             $dir||=&fa_find_latest($p);
@@ -1284,10 +1291,10 @@ print "YEP MEMORY=$line\n";<STDIN>;
             }
          } elsif (lc($task) eq 'install') {
             my $sudo=0;
-            if ((exists $main::system_type{'ami'}) ||
-                  (exists $main::system_type{'ubuntu'}) ||
-                  (exists $main::system_type{'rhel'}) ||
-                  (exists $main::system_type{'centos'})) {
+            if (($main::system_type eq 'ami') ||
+                  ($main::system_type eq 'ubuntu') ||
+                  ($main::system_type eq 'rhel') ||
+                  ($main::system_type eq 'centos')) {
                $sudo=1;
             }
             if ($sudo) {
@@ -1437,26 +1444,79 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_module('LWP','install','Makefile');
    eval { require Net::SSLeay };
    if ($@) {
+      my $ssleay_error_banner=<<END;
+
+         *** THIS SCREEN WILL TIMEOUT AND FULLAUTO SETUP WILL EXIT
+                    IN 5 MINUTES IF NO CHOICE IS MADE ***
+
+      FullAuto Setup ERROR: Missing dependency 'openssl-devel'
+
+   The CPAN module Net::SSLeay requires the 'openssl-devel' system package to
+   be installed. Would you like FullAuto Setup to attempt installing this
+   package?
+END
+
       &fa_install_module('Net::SSLeay','get');
       my $dir=&fa_find_latest('Net-SSLeay');
       #system("cd \"$dir\";echo n | $^X Makefile.PL;")
       #   || warn $!;
       open(FH, "(cd \"$dir\";echo n | $^X Makefile.PL) 2>&1|");
       while (my $line=<FH>) {
-         if (-1<index $line,
-               'error: openssl/err.h: No such file or directory') {
-            print "SSLeay Makefile.PL ERROR=$line\n";
-         }
          print $line;
       }
       close FH;
-      open(FH, "(cd \"$dir\";make install) 2>&1|");
-      while (my $line=<FH>) {
-         if (-1<index $line,
-               'error: openssl/err.h: No such file or directory') {
-            print "SSLeay Makefile ERROR=$line\n";
-         }
-         print $line;
+      SSL: while (1) {
+         open(FH, "(cd \"$dir\";make install) 2>&1|");
+         while (my $line=<FH>) {
+            if (-1<index $line,
+                  'error: openssl/err.h: No such file or directory') {
+               my $timeout=300;my $selection='';
+               eval {
+                  local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                  alarm $timeout;
+                  my $menu1 = [
+                              $ssleay_error_banner,
+                              [ "Yes", sub{ return 'Yes' } ],
+                              [ "No   (FullAuto Setup will exit)", sub{ return 'No' } ],
+                              ];
+                  $selection=&menu($menu1);
+                  exit if $selection eq ']quit[';
+                  alarm 0;
+               };
+               if ($@) {
+                  # timed out
+                  $selection = 'No';
+               }
+               if ($selection=~/No/) {
+                  exit;
+               } alarm 0;
+               if (($main::system_type eq 'rhel') ||
+                     ($main::system_type eq 'centos') ||
+                     ($main::system_type eq 'fedora')) {
+                  open(LD,"sudo yum -y install 'openssl-devel'|");
+                  while (my $line=<LD>) {
+                     print $line;
+                  }
+                  close LD;
+                  next SSL;
+               } elsif ($main::system_type eq 'suse') {
+                  open(ZP,"zypper -n install openssl-devel|");
+                  while (my $line=<AG>) {
+                     print $line;
+                  }
+                  close ZP;
+                  next SSL;
+               } elsif ($main::system_type eq 'ubuntu') {
+                  open(LD,"sudo apt-get -y install 'libssl-dev'|");
+                  while (my $line=<LD>) {
+                     print $line;
+                  }
+                  close LD;
+                  next SSL;
+               }
+            }
+            print $line;
+         } last;
       }
       close FH;
       #system("cd \"$dir\";make install;")
