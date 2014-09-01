@@ -20,6 +20,18 @@
 #######################################################################
 
 
+2014-09-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999902 released.
+
+        * Can now connect to amazon servers from Cygwin FullAuto
+          installations.
+
+        * Fixed Full Calendar when saving passwords.
+
+        * Added warning against the use of commandline passwords.
+
+
 2014-08-30  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999901 released.

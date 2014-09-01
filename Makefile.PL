@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999901';
+$main::VERSION='0.999999999902';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3783,7 +3783,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
          $grepopt='-H ';
       }
       my $find_cmd1="${findpath}find ";
-      my $find_cmd2=" -name \"*.h\" ".
+      my $find_cmd2=" -d 4 -name \"*.h\" ".
                    "| ${xargspath}xargs ${greppath}grep ".
                    "${grepopt}DB_VERSION_STRING";
       print "\nSearching for latest verison of Berkeley DB.\n".
