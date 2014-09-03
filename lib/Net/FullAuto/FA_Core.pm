@@ -504,6 +504,13 @@ BEGIN {
       my $object=($handle)?$handle:$Net::FullAuto::FA_Core::cmdinfo;
       unless (exists $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}) {
          my $stdout='';my $stderr='';
+         if (exists $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{$cmd}) {
+            my $cmdpath=
+                  $Net::FullAuto::FA_Core::Hosts{"__Master_${$}__"}{$cmd};
+            $cmdpath.='/' if $cmdpath!~/\/$/;
+            $Net::FullAuto::FA_Core::cmdinfo->{$object}->{$cmd}=$cmdpath;
+            return $cmdpath;
+         }
          if ($handle) {
             if (ref $handle eq 'Net::Telnet') {
                my $shell='';
@@ -14145,9 +14152,10 @@ END
             $Net::FullAuto::FA_Core::adminmenu->();
          }
          if ($localhost &&
-               -1<index $login_Mast_error,'invalid log'
+               (-1<index $login_Mast_error,'invalid log'
                && -1<index $login_Mast_error,'ogin incor'
-               && -1<index $login_Mast_error,'sion den') {
+               && -1<index $login_Mast_error,'sion den') ||
+               (-1<index $login_Mast_error,'/dev/tty: No')) {
             if ($cmd_type eq 'telnet' &&
                   defined fileno $localhost->{_cmd_handle}) {
                $localhost->{_cmd_handle}->print("\003");
@@ -14340,11 +14348,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                } last 
             } elsif (lc($connect_method) eq 'ssh') {
                $cmd_type='ssh';
-               my $sshpath='';my $idntfil='';
-               if (exists $Hosts{"__Master_${$}__"}{'ssh'}) {
-                  $sshpath=$Hosts{"__Master_${$}__"}{'ssh'};
-                  $sshpath.='/' if $sshpath!~/\/$/;
-               }
+               my $idntfil='';
                if (exists $Hosts{"__Master_${$}__"}{'sshport'}) {
                   $sshport=$Hosts{"__Master_${$}__"}{'sshport'};
                }
@@ -14360,7 +14364,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                            $v='v' if $^O eq 'freebsd';
                            ($local_host,$cmd_pid)=
                                &Net::FullAuto::FA_Core::pty_do_cmd(
-                              ["${sshpath}ssh","-p$sshport","-i$idntfil",
+                              [$Net::FullAuto::FA_Core::gbp->('ssh').
+                               'ssh',"-p$sshport","-i$idntfil",
                                "-$v","$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])
                                or (&release_fa_lock(6543) &&
@@ -14369,19 +14374,46 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         } else {
                            ($local_host,$cmd_pid)=
                               &Net::FullAuto::FA_Core::pty_do_cmd(
-                              ["${sshpath}ssh","-v","-p$sshport","-i$idntfil",
+                              [$Net::FullAuto::FA_Core::gbp->('ssh').
+                               'ssh','-v',"-p$sshport","-i$idntfil",
                                "$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])
                                or (&release_fa_lock(6543) &&
                                    &Net::FullAuto::FA_Core::handle_error(
                                    "couldn't launch ssh subprocess"));
                         }
+                     } elsif (-1<index $login_Mast_error,'/dev/tty: No') {
+                        if ($Net::FullAuto::FA_Core::debug) {
+                           $v='v' if $^O eq 'freebsd';
+                           ($local_host,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              [$Net::FullAuto::FA_Core::gbp->('bash').
+                               'bash','-ic',
+                               $Net::FullAuto::FA_Core::gbp->('ssh').
+                               "ssh -p$sshport -$v $login_id\@localhost",
+                               '',$Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                   &Net::FullAuto::FA_Core::handle_error(
+                                   "couldn't launch ssh subprocess"));
+                        } else {
+                           ($local_host,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              [$Net::FullAuto::FA_Core::gbp->('bash').
+                               'bash','-ic',
+                               $Net::FullAuto::FA_Core::gbp->('ssh').
+                               "ssh -p$sshport -v $login_id\@localhost",
+                               '',$Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                  &Net::FullAuto::FA_Core::handle_error(
+                                  "couldn't launch ssh subprocess"));
+                        }
                      } else {
                         if ($Net::FullAuto::FA_Core::debug) {
                            $v='v' if $^O eq 'freebsd'; 
                            ($local_host,$cmd_pid)=
                               &Net::FullAuto::FA_Core::pty_do_cmd(
-                              ["${sshpath}ssh","-p$sshport",
+                              [$Net::FullAuto::FA_Core::gbp->('ssh').
+                               'ssh',"-p$sshport",
                                "-$v","$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])
                                or (&release_fa_lock(6543) && 
@@ -14390,7 +14422,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         } else {
                            ($local_host,$cmd_pid)=
                               &Net::FullAuto::FA_Core::pty_do_cmd(
-                              ["${sshpath}ssh","-v","-p$sshport",
+                              [$Net::FullAuto::FA_Core::gbp->('ssh').
+                               'ssh','-v',"-p$sshport",
                                "$login_id\@localhost",'',
                                $Net::FullAuto::FA_Core::slave])
                                or (&release_fa_lock(6543) &&
@@ -14403,7 +14436,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                         $v='v' if $^O eq 'freebsd';
                         ($local_host,$cmd_pid)=
                            &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${sshpath}ssh","-$v","-i$idntfil",
+                           [$Net::FullAuto::FA_Core::gbp->('ssh').
+                            'ssh',"-$v","-i$idntfil",
                             "$login_id\@localhost",
                             '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
@@ -14412,7 +14446,8 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      } else {
                         ($local_host,$cmd_pid)=
                            &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${sshpath}ssh","-v","-i$idntfil",
+                           [$Net::FullAuto::FA_Core::gbp->('ssh').
+                            'ssh','-v',"-i$idntfil",
                             "$login_id\@localhost",
                             '',$Net::FullAuto::FA_Core::slave])
                             or (&release_fa_lock(6543) &&
@@ -14420,23 +14455,52 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                                 "couldn't launch ssh subprocess"));
                      }
                   } else {
-                     if ($Net::FullAuto::FA_Core::debug) {
-                        $v='v' if $^O eq 'freebsd';
-                        ($local_host,$cmd_pid)=
-                           &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${sshpath}ssh","-$v","$login_id\@localhost",
-                            '',$Net::FullAuto::FA_Core::slave])
-                            or (&release_fa_lock(6543) &&
-                                &Net::FullAuto::FA_Core::handle_error(
-                                "couldn't launch ssh subprocess"));
+                     if (-1<index $login_Mast_error,'/dev/tty: No') {
+                        if ($Net::FullAuto::FA_Core::debug) {
+                           $v='v' if $^O eq 'freebsd';
+                           ($local_host,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              [$Net::FullAuto::FA_Core::gbp->('bash').
+                               'bash','-ic',
+                               $Net::FullAuto::FA_Core::gbp->('ssh').
+                               "ssh -$v $login_id\@localhost",
+                               '',$Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                   &Net::FullAuto::FA_Core::handle_error(
+                                   "couldn't launch ssh subprocess"));
+                        } else {
+                           ($local_host,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              [$Net::FullAuto::FA_Core::gbp->('bash').
+                               'bash','-ic',
+                               $Net::FullAuto::FA_Core::gbp->('ssh').
+                               "ssh -v $login_id\@localhost",
+                               '',$Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                  &Net::FullAuto::FA_Core::handle_error(
+                                  "couldn't launch ssh subprocess"));
+                        }
                      } else {
-                        ($local_host,$cmd_pid)=
-                           &Net::FullAuto::FA_Core::pty_do_cmd(
-                           ["${sshpath}ssh","-v","$login_id\@localhost",
-                            '',$Net::FullAuto::FA_Core::slave])
-                            or (&release_fa_lock(6543) &&
-                                &Net::FullAuto::FA_Core::handle_error(
-                                "couldn't launch ssh subprocess"));
+                        if ($Net::FullAuto::FA_Core::debug) {
+                           $v='v' if $^O eq 'freebsd';
+                           ($local_host,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              [$Net::FullAuto::FA_Core::gbp->('ssh').
+                               'ssh',"-$v","$login_id\@localhost",
+                               '',$Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                   &Net::FullAuto::FA_Core::handle_error(
+                                   "couldn't launch ssh subprocess"));
+                        } else {
+                           ($local_host,$cmd_pid)=
+                              &Net::FullAuto::FA_Core::pty_do_cmd(
+                              [$Net::FullAuto::FA_Core::gbp->('ssh').
+                               'ssh','-v',"$login_id\@localhost",
+                               '',$Net::FullAuto::FA_Core::slave])
+                               or (&release_fa_lock(6543) &&
+                                  &Net::FullAuto::FA_Core::handle_error(
+                                  "couldn't launch ssh subprocess"));
+                        }
                      }
                   }
                   $localhost->{_cmd_pid}=$cmd_pid;
@@ -14456,6 +14520,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $localhost->{_cmd_handle}->close()
                      if exists $localhost->{_cmd_handle};
                   $localhost->{_cmd_handle}=$local_host;
+
                   ## Wait for password prompt.
                   ($ignore,$stderr)=
                      &File_Transfer::wait_for_passwd_prompt(
@@ -14470,6 +14535,9 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                      if ($lc_cnt==$#RCM_Link) {
                         &release_fa_lock(6543);
                         die $stderr;
+                     } elsif (-1<index $stderr,'/dev/tty: No') {
+                        &release_fa_lock(6543);
+                        die "can\'t open /dev/tty: No such device or address\n";
                      } elsif (-1<index $stderr,'read timed-out:do_slave') {
 # TEST HERE FOR NO LOCALHOST SSH CONNECTIVITY
                         my $kill_arg=($^O eq 'cygwin')?'f':9;
@@ -15095,6 +15163,10 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
             print $MRLOG $warn
                if $log && -1<index $MRLOG,'*';
             sleep int $fatimeout/3;$retrys++;next;
+         } elsif (-1<index $@,'/dev/tty: No') {
+            print $MRLOG $@
+               if $log && -1<index $MRLOG,'*';
+            next;
          } elsif (!$Net::FullAuto::FA_Core::cron ||
                (unpack('a3',$@) eq 'pid') ||
                (-1<index $login_Mast_error,$passline)) {
@@ -20993,9 +21065,16 @@ END
                   'Next authentication method: keyboard-interactive') ||
                   ((-1<index $line,'Next authentication method: password') &&
                   $lin!~/password[: ]+$/si)) {
+               if ($lin=~/can[']t open \/dev\/tty: No such device or/s) {
+                  die "can\'t open /dev/tty: No such device or address\n";
+               }
                $determine_password->($cache,
                      $password_from,$login_Mast_error,
                      $loop_count,$kind,$mkdflag);
+               next if $lin!~/password[: ]+$/s;
+               $gotpass=1;last PW;
+            } elsif (-1<index $line,'/dev/tty: No') {
+               die "can\'t open /dev/tty: No such device or address\n";
             } elsif (-1<index $line,'Authentication succeeded (publickey)') {
                return 'Authentication succeeded (publickey)','';
             } elsif (-1<index $line,'Permission denied') {
@@ -21163,7 +21242,7 @@ END
       }
    };alarm(0);
    if ($@) {
-print "WHAT IS EEROR=$@\n";
+#print "WHAT IS EEROR=$@\n";
       if (wantarray) {
          my $error=$@;
          chomp($error=~tr/\0-\11\13-\37\177-\377//d);
@@ -21194,7 +21273,8 @@ END
                if (grep { /__Master_${$}__/ } @{$filehandle->{_hostlabel}}) {
 
                   my $amazon='';
-                  if ($amazon=&check_for_amazon_localhost) {
+                  if ($amazon=
+                        &Net::FullAuto::FA_Core::check_for_amazon_localhost) {
  
                      print $Net::FullAuto::FA_Core::blanklines;
                      print $publickey_failed;
@@ -28705,10 +28785,6 @@ print $Net::FullAuto::FA_Core::MRLOG
                      $sshloginid=($use_su_login)?$su_id:$login_id;
                      my $sshpath=$Net::FullAuto::FA_Core::gbp->('ssh');
                      eval {
-                        if (exists $Hosts{"__Master_${$}__"}{'ssh'}) {
-                           $sshpath=$Hosts{"__Master_${$}__"}{'ssh'};
-                           $sshpath.='/' if $sshpath!~/\/$/;
-                        }
                         my $sshport='';
                         if (exists $Hosts{$hostlabel}{'sshport'}) {
                            $sshport=$Hosts{$hostlabel}{'sshport'};

@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-09-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999903 released.
+
+        * Fixed login with /dev/tty: No such device or address
+
+        
 2014-09-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999902 released.
