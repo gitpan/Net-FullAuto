@@ -6302,7 +6302,9 @@ if (keys %DeployFTM_Proxy) {
    }
 }
 
-my $ps_stdout=&cmd($Net::FullAuto::FA_Core::gbp->('ps').'ps');
+my ($ps_stdout,$ps_stderr,$ps_retcod);
+($ps_stdout,$ps_stderr,$ps_retcod)=
+   &cmd($Net::FullAuto::FA_Core::gbp->('ps').'ps');
 
 sub get_all_hosts
 {
@@ -6872,6 +6874,7 @@ sub memnow
 
 sub handle_error
 {
+print "handleerror caller=",caller,"\n";
 #my $logreset=1;
 #if ($Net::FullAuto::FA_Core::log) { $logreset=0 }
 #else { $Net::FullAuto::FA_Core::log=1 }
@@ -7603,7 +7606,9 @@ sub test_dir
                 ." then\necho WRITE\nelse\necho READ\nfi\n"
                 ."else\necho NODIR\nfi";
    }
-   return $cmd_handle->cmd($shell_cmd);
+   my ($stdout,$stderr,$retcod);
+   ($stdout,$stderr,$retcod)=$cmd_handle->cmd($shell_cmd);
+   return $stdout;
 
 }
 
@@ -7900,7 +7905,7 @@ sub master_transfer_dir
 {
 
    my $localhost=$_[0];
-   my $tdir='';my $transfer_dir='';my $curdir='';
+   my $tdir='';my $transfer_dir='';my $curdir='';my $retcod='';
    my $output='';my $stderr='';my $work_dirs={};my $endp=0;my $testd='';
    while (1) {
       if ($^O eq 'cygwin') {
@@ -8174,7 +8179,7 @@ sub master_transfer_dir
       }
    } $testd=&test_dir($localhost,'/tmp');
    if ($testd eq 'WRITE') {
-      ($output,$stderr)=$localhost->cmd('cd /tmp')
+      ($output,$stderr,$retcod)=$localhost->cmd('cd /tmp')
          if '/tmp' ne $curdir;
       &handle_error($stderr,'-2','__cleanup__') if $stderr;
       $master_transfer_dir=$work_dirs->{_cwd}
@@ -8182,7 +8187,7 @@ sub master_transfer_dir
       return $work_dirs;
    } $testd=&test_dir($localhost,$home_dir);
    if ($testd eq 'WRITE') {
-      ($output,$stderr)=$localhost->cmd("cd $home_dir")
+      ($output,$stderr,$retcod)=$localhost->cmd("cd $home_dir")
          if $home_dir ne $curdir;
       &handle_error($stderr,'-2','__cleanup__') if $stderr;
       $master_transfer_dir=$work_dirs->{_cwd}
@@ -8199,6 +8204,7 @@ sub master_transfer_dir
       "\n       at Line ",__LINE__,"\n\n"
       if !$Net::FullAuto::FA_Core::cron &&
          $Net::FullAuto::FA_Core::debug;
+print "TESTD=$testd<==\n";
    if ($testd eq 'WRITE') {
       $master_transfer_dir=$work_dirs->{_cwd}
          =$work_dirs->{_tmp}=$curdir.'/';
@@ -17059,7 +17065,7 @@ sub cmd
          $delay=1;
       }
    }
-   my $stderr='';my $stdout='';my $pid_ts='';
+   my $stderr='';my $stdout='';my $returncode='';my $pid_ts='';
    my $all='';my @outlines=();my @errlines=();
    if (!$escape) {
       if ((-1<index $self,'HASH')
@@ -17076,7 +17082,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
          sleep 1 if $delay;
 #print "READY FOR CMD=@_\n";
          eval {
-            ($stdout,$stderr)=Rem_Command::cmd(@_);
+            ($stdout,$stderr,$returncode)=Rem_Command::cmd(@_);
          };
          if ($@) {
             if ($stderr) {
@@ -17087,7 +17093,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
          }
 #print "WHAT IS STDERR FOR READY=$stderr<==\n";
          if (wantarray) {
-            return $stdout,$stderr;
+            return $stdout,$stderr,$returncode;
          } elsif ($stderr) {
             if (-1<index $self,'HASH') {
                &handle_error($stderr,'-19');
@@ -31342,7 +31348,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                   chdir $lcd;
                }
             } else {
-               $live_command='('.$command.')'." | sed -e 's/^/stdout: /' 2>&1";
+               $live_command='('.$command.';echo $?)'." | sed -e 's/^/stdout: /' 2>&1";
             }
             $live_command.=' &' if $bckgrd;
             print $Net::FullAuto::FA_Core::MRLOG
@@ -32429,8 +32435,12 @@ print $Net::FullAuto::FA_Core::MRLOG "LOGINRETRY2=$login_retry and ",
          if ($wantarray) {
 print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETURNING ERROR=$eval_error\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            my @stdout_contents=split "\n",$stdout;
+            my $returncode=pop(@stdout_contents);
+            $returncode=-1 unless defined $returncode;
+            $stdout=join "\n", @stdout_contents;
             $stdout||='';
-            return $stdout,$eval_error;
+            return $stdout,$eval_error,$returncode;
          } else { &Net::FullAuto::FA_Core::handle_error($eval_error) }
       }
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEMMMMMMMMMM\n";
@@ -32442,8 +32452,12 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WE EVER REALLY GET HERE? ".
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEENNNNNNNNNN\n";
+      my @stdout_contents=split "\n",$stdout;
+      my $returncode=pop(@stdout_contents);
+      $returncode=-1 unless defined $returncode;
+      $stdout=join "\n", @stdout_contents;
       if ($wantarray) {
-         return $stdout,$stderr;
+         return $stdout,$stderr,$returncode;
       } else { return $stdout }
    }
 
