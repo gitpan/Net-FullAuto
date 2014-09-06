@@ -22,7 +22,7 @@ package Net::FullAuto;
 #######################################################################
 
 
-our $VERSION='0.999999999904';
+our $VERSION='0.999999999905';
 
 
 use 5.005;
@@ -207,7 +207,7 @@ IT REALLY IS THAT EASY!
 
 Commands also are easy:
 
- ($stdout,$stderr,$returncode)=$computer_one->cmd('ls -l');
+ ($stdout,$stderr,$exitcode)=$computer_one->cmd('ls -l');
 
 And NO CLEANUP is necessary -S<  >C<Net::FullAuto>S<  >handles this AUTOMATICALLY.
 
@@ -215,11 +215,11 @@ This is a COMPLETE *routine* or *process*:
 
  sub ls_one {
 
-    my ($computer_one,$stdout,$stderr,$returncode); # Scope Variables
+    my ($computer_one,$stdout,$stderr,$exitcode); # Scope Variables
 
     $computer_one=connect_ssh('COMPUTER_ONE');      # Connect to Remote Host
 
-    ($stdout,$stderr,$returncode)=$computer_one->cmd('ls -l');  # Run Command
+    ($stdout,$stderr,$exitcode)=$computer_one->cmd('ls -l');  # Run Command
 
     if ($stderr) {                                  # Check Results
        print "We Have and ERROR! : $stderr\n";
@@ -276,13 +276,13 @@ S<   >In the fileS<  >C<fa_code.pm>S<  >add the *process* subroutine code:
 
        sub ps_one {
 
-          my ($computer_one,$stdout,$stderr,$returncode); # Scope Variables
+          my ($computer_one,$stdout,$stderr,$exitcode); # Scope Variables
 
           $computer_one=connect_ssh('COMPUTER_ONE'); # Connect to
                                                      # Remote Host via
                                                      # ssh only
 
-          ($stdout,$stderr,$returncode)=
+          ($stdout,$stderr,$exitcode)=
              $computer_one->cmd('ps -e'); # Run Command
 
           if ($stderr) {                             # Check Results
@@ -375,16 +375,16 @@ to your local computer and thenS<  >C<unzip>S<  >it:
 
        sub get_file_from_one {
 
-          my ($computer_one,$stdout,$stderr,$returncode); # Scope Variables
+          my ($computer_one,$stdout,$stderr,$exitcode); # Scope Variables
 
           $computer_one=connect_host('COMPUTER_ONE'); # Connect to
                                                       # Remote Host via
                                                       # ssh *and* sftp
 
-          ($stdout,$stderr,$returncode)=$computer_one->cmd(
+          ($stdout,$stderr,$exitcode)=$computer_one->cmd(
                             'echo test > test.txt');  # Run Remote Command
 
-          ($stdout,$stderr,$returncode)=$computer_one->cmd(
+          ($stdout,$stderr,$exitcode)=$computer_one->cmd(
                             'zip test test.txt');     # Run Remote Command
 
           if ($stderr) {                              # Check Results
@@ -394,7 +394,7 @@ to your local computer and thenS<  >C<unzip>S<  >it:
                    "\n\n$stdout\n\n";
           }
 
-          ($stdout,$stderr,$returncode)=$computer_one->get(
+          ($stdout,$stderr,$exitcode)=$computer_one->get(
                             'test.zip');              # Get the File
 
           if ($stderr) {                              # Check Results
@@ -404,7 +404,7 @@ to your local computer and thenS<  >C<unzip>S<  >it:
                    "\n\n$stdout\n\n";
           }
 
-          ($stdout,$stderr,$returncode)=$localhost->cmd(
+          ($stdout,$stderr,$exitcode)=$localhost->cmd(
                             'unzip test.zip');        # Run Local Command
 
        }
@@ -780,12 +780,12 @@ S<The following is typical contents of a  C<fa_code.pm>
 
         sub remote_hostname {
 
-            my ($computer_one,$stdout,$stderr,$returncode);   # Scope Variables
+            my ($computer_one,$stdout,$stderr,$exitcode);   # Scope Variables
 
             $computer_one=connect_ssh('REMOTE COMPUTER ONE'); # Connect to
                                                      # Remote Host via ssh
 
-            ($stdout,$stderr,$returncode)=$computer_one->cmd('hostname');
+            ($stdout,$stderr,$exitcode)=$computer_one->cmd('hostname');
 
             print "REMOTE ONE HOSTNAME=$stdout\n";
 

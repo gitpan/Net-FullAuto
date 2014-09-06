@@ -2597,26 +2597,21 @@ sub VERSION
       (rindex $INC{'Net/FullAuto.pm'},'Net'));
    $term_menus_path=~s/\/share\//\/lib\//
       if -1<index $term_menus_path,'share';
-   my $o='';
+   my $o='';my @tmlist=();my @falist=();
    foreach my $p (@INC) {
       $o=$p;
-      last if -1<index $o,$term_menus_path;
-      last if "$o/" eq $term_menus_path;
-   }
-   my @tmlist=();
-   if (-f $o.'/auto/Term/Menus/.packlist') {
-      open (TH,"<$o/auto/Term/Menus/.packlist");
-      while (my $f=<TH>) {
-         chomp $f;
-         push @tmlist,$f;
+      if (-f $o.'/auto/Term/Menus/.packlist') {
+         open (TH,"<$o/auto/Term/Menus/.packlist");
+         while (my $f=<TH>) {
+            chomp $f;
+            push @tmlist,$f;
+         }
+         close(TH);
+         open (PH,"<$o/auto/Net/FullAuto/.packlist");
+         @falist=<PH>;
+         close(PH);
+         last;
       }
-      close(TH);
-   }
-   my @falist=();
-   if (-f $o.'/auto/Net/FullAuto/.packlist') {
-      open (PH,"<$o/auto/Net/FullAuto/.packlist");
-      @falist=<PH>;
-      close(PH);
    }
    my @pl=();my @exe=();my @O=();my %Cust=();my @Dist=();
    my @Tpm=();my @html=();my @Core=();my @README=();my @CUF=();
@@ -17065,7 +17060,7 @@ sub cmd
          $delay=1;
       }
    }
-   my $stderr='';my $stdout='';my $returncode='';my $pid_ts='';
+   my $stderr='';my $stdout='';my $exitcode='';my $pid_ts='';
    my $all='';my @outlines=();my @errlines=();
    if (!$escape) {
       if ((-1<index $self,'HASH')
@@ -17082,7 +17077,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
          sleep 1 if $delay;
 #print "READY FOR CMD=@_\n";
          eval {
-            ($stdout,$stderr,$returncode)=Rem_Command::cmd(@_);
+            ($stdout,$stderr,$exitcode)=Rem_Command::cmd(@_);
          };
          if ($@) {
             if ($stderr) {
@@ -17093,7 +17088,7 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
          }
 #print "WHAT IS STDERR FOR READY=$stderr<==\n";
          if (wantarray) {
-            return $stdout,$stderr,$returncode;
+            return $stdout,$stderr,$exitcode;
          } elsif ($stderr) {
             if (-1<index $self,'HASH') {
                &handle_error($stderr,'-19');
@@ -32432,15 +32427,17 @@ print $Net::FullAuto::FA_Core::MRLOG "LOGINRETRY2=$login_retry and ",
    "ERROR=$eval_error<== and FTP=$ftp and NOTRAP=$notrap\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         $eval_error=~s/_funkyPrompt_//gs if $eval_error &&
+            -1<index $eval_error,'_funkyPrompt_';
          if ($wantarray) {
 print $Net::FullAuto::FA_Core::MRLOG "WE ARE RETURNING ERROR=$eval_error\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             my @stdout_contents=split "\n",$stdout;
-            my $returncode=pop(@stdout_contents);
-            $returncode=-1 unless defined $returncode;
+            my $exitcode=pop(@stdout_contents);
+            $exitcode=-1 unless defined $exitcode;
             $stdout=join "\n", @stdout_contents;
             $stdout||='';
-            return $stdout,$eval_error,$returncode;
+            return $stdout,$eval_error,$exitcode;
          } else { &Net::FullAuto::FA_Core::handle_error($eval_error) }
       }
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEMMMMMMMMMM\n";
@@ -32453,11 +32450,13 @@ print $Net::FullAuto::FA_Core::MRLOG "DO WE EVER REALLY GET HERE? ".
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEENNNNNNNNNN\n";
       my @stdout_contents=split "\n",$stdout;
-      my $returncode=pop(@stdout_contents);
-      $returncode=-1 unless defined $returncode;
+      my $exitcode=pop(@stdout_contents);
+      $exitcode=-1 unless defined $exitcode;
       $stdout=join "\n", @stdout_contents;
       if ($wantarray) {
-         return $stdout,$stderr,$returncode;
+         $stderr=~s/_funkyPrompt_//gs if $stderr &&
+            -1<index $stderr,'_funkyPrompt_';
+         return $stdout,$stderr,$exitcode;
       } else { return $stdout }
    }
 
