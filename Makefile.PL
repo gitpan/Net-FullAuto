@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999905';
+$main::VERSION='0.999999999906';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1392,7 +1392,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
       &fa_install_mod('JSON::PP','install','Makefile');
       &fa_install_mod('Parse::CPAN::Meta','install','Makefile');
       &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
-      &fa_install_mod('CPAN::Meta','install','Makefile');
+      &fa_install_mod('CPAN::Meta','install','Makefile','','2.142060');
       &fa_install_mod('ExtUtils::ParseXS','install','Makefile','force');
       &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
       &fa_install_mod('Compress::Raw::Zlib','install','Makefile');

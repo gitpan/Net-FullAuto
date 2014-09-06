@@ -22,6 +22,15 @@
 
 2014-09-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999999999906 released.
+
+        * Force Makefile.PL to install CPAN::Meta 2.142060.
+
+        * Updated verbiage of new user experience.
+
+
+2014-09-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999999999905 released.
 
         * Fixed --VERSION or -V output for some Linux.

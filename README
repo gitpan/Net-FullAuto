@@ -100,7 +100,7 @@ IT REALLY IS THAT EASY!
 
 Commands also are easy:
 
-($stdout,$stderr,$returncode)=$computer_one->cmd('ls -l');
+($stdout,$stderr,$exitcode)=$computer_one->cmd('ls -l');
 
 And NO CLEANUP is necessary - FullAuto handles this AUTOMATICALLY.
 
@@ -108,9 +108,9 @@ This is a COMPLETE *routine* or *process*:
 
 sub ls_one {
 
-   my ($computer_one,$stdout,$stderr,$returncode); # Scope Variables
+   my ($computer_one,$stdout,$stderr,$exitcode); # Scope Variables
    $computer_one=connect_ssh('COMPUTER_ONE');      # Connect to Remote Host
-   ($stdout,$stderr,$returncode)=$computer_one->cmd('ls -l');  # Run Command
+   ($stdout,$stderr,$exitcode)=$computer_one->cmd('ls -l');  # Run Command
    if ($stderr) {                                  # Check Results
       print "We Have and ERROR! : $stderr\n";
    } else {
@@ -145,11 +145,11 @@ You want the output of the ps -e command from a remote UNIX computer. Example:
 
        sub ps_one {
 
-          my ($computer_one,$stdout,$stderr,$returncode); # Scope Variables
+          my ($computer_one,$stdout,$stderr,$exitcode); # Scope Variables
           $computer_one=connect_ssh('COMPUTER_ONE'); # Connect to
                                                      # Remote Host via
                                                      # ssh only
-          ($stdout,$stderr,$returncode)=
+          ($stdout,$stderr,$exitcode)=
              $computer_one->cmd('ps -e');            # Run Command
           if ($stderr) {                             # Check Results
              print "We Have and ERROR! : $stderr\n";
@@ -230,13 +230,13 @@ local computer and then unzip it:
 
        sub get_file_from_one {          
 
-          my ($computer_one,$stdout,$stderr,$returncode); # Scope Variables
+          my ($computer_one,$stdout,$stderr,$exitcode); # Scope Variables
           $computer_one=connect_host('COMPUTER_ONE'); # Connect to
                                                       # Remote Host via
                                                       # ssh *and* sftp
-          ($stdout,$stderr,$returncode)=$computer_one->cmd(
+          ($stdout,$stderr,$exitcode)=$computer_one->cmd(
                             'echo test > test.txt');  # Run Remote Command
-          ($stdout,$stderr,$returncode)=$computer_one->cmd(
+          ($stdout,$stderr,$exitcode)=$computer_one->cmd(
                             'zip test test.txt');     # Run Remote Command
           if ($stderr) {                              # Check Results
              print "We Have and ERROR! : $stderr\n";
