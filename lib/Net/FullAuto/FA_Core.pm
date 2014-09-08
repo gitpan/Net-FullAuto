@@ -10255,7 +10255,7 @@ my $cacomm_sub=sub {
       },
    } else {
       $item_2={
-         Text => "No  ( FullAuto [fa --set] will EXIT )",
+         Text => "No  ( FullAuto [fa --defaults] will EXIT )",
       },
    }
    my %cacomm=(
@@ -10367,13 +10367,14 @@ my $cacomm_sub=sub {
                         }
       },
       Item_2 => $item_2,
-      Scroll => 2,
+      Scroll => 1,
       Banner => sub {
 my $custnd=<<FIN;
     _  _              ___       __           _ _      
    | \\| |_____ __ __ |   \\ ___ / _|__ _ _  _| | |_ ___
    | .` / -_) V  V / | |) / -_)  _/ _` | || | |  _(_-< o
    |_|\\_\\___|\\_/\\_/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/ o
+
 
 
 FIN
@@ -10388,7 +10389,7 @@ FIN
                 "    Maps  =>  Net/FullAuto/Custom/$username/".
                 "]P[{camaps}\n".
                 "    Menu  =>  Net/FullAuto/Custom/$username/".
-                "]P[{camenu}\n    Set   =>  none\n\n\n\n\n   ".
+                "]P[{camenu}\n    Set   =>  none\n\n\n   ".
                 "Would you like to COMMIT the New Defaults?:\n";
       },
    );
@@ -11906,12 +11907,12 @@ my $fa_process_lifecycle=<<END;
 
    In large organizations, development of any software or business
    process takes place in stages, and the code travels through multiple
-   tiers or environments before it reaches "production" (or the "live"
+   tiers or environments before it reaches "production" (or the live
    environment that serves customers and end-users). Therefore, it is
-   likely that components developed in YOUR configuration "set" (which
+   likely that components developed in your configuration "set" (which
    includes the all important fa_code.pm file) will migrate to other
    environments, other computers, even other users. You are likely to
-   eventually have MULTIPLE copies of a single process in different
+   eventually have multiple copies of a single process in different
    stages of it's lifecycle - one in active development, one in testing,
    and one in use for live processing.
 
@@ -11944,16 +11945,16 @@ my $fa_privacy=<<END;
    |_| |_| |_|\\_/\\__,_\\__|\\_, |
                           |__/
 
-   FullAuto users OWN their setup. Nothing is shared
+   FullAuto users *own* their setup. Nothing is shared
    without an express intent to share it. That means
    other FullAuto users cannot see or access your
    automation projects. Sensitive projects can be
-   automated with TRUE privacy!
+   automated with TRUE privacy.
 
    Additionally, no passwords are stored in clear
    text. Even in memory, passwords are encrypted and
    remain so until fed directly to an authenticating
-   process, safe even from core dumps!
+   process, safe even from core dumps.
 
 
 
@@ -11974,7 +11975,7 @@ my $fa_security=<<END;
    unavoidable requirement.
 
    FullAuto was built from the ground up to be SECURE. User
-   authentication is therefore a REQUIREMENT. One FullAuto
+   authentication is therefore a requirement. One FullAuto
    installation, on one computer, can service any number
    of users. FullAuto has built in utilities to setup and
    manage user code, files, and configuration - securely!
@@ -12002,7 +12003,7 @@ my $fa_basics=<<END;
    There are also hotkey shortcuts - 'admin' takes you to the admin menu.
 
    When you quit either help or admin, you automatically return to this
-   screen. To quit admin, press [ESC], and help pages. type 'q'. Try it!
+   screen. To quit admin, press [ESC], and help pages. type 'q'.
 END
 
 my $fa_no_web=<<END;
@@ -12035,20 +12036,21 @@ my $fa_intro=<<END;
     | || ' \\  _| '_/ _ \\/ _` | || / _|  _| / _ \\ ' \\ 
    |___|_||_\\__|_| \\___/\\__,_|\\_,_\\__|\\__|_\\___/_||_|
 
-   FullAuto is an Automation & High Productivity Framework. With this
-   program, nearly *ANY* computer process can be fully automated or
-   optimized for extremely rapid and precise user interaction - or
-   combination. But first a person has to tell it what to do. This wizard
-   will help do that. This wizard is an important innovation of FullAuto.
-   Everything you are experiencing now is the High Productivity Framework
-   in ACTION. This framework can be used to make *YOUR* computer processes
-   (such as complex business and data manipulation processes and projects)
-   easier to create, manipulate and maintain. Your project can and SHOULD
-   tell a story just like this one. FullAuto makes BIG DATA a LOT *smaller*!
+   FullAuto is an Automation & High Productivity Framework. With FullAuto
+   almost any computer process can be *fully* automated. In addition,
+   processes can be optimized for extremely rapid and precise user interaction.
+   FullAuto was designed from the ground up to tackle both the problem of
+   process automation itself, and the often BIGGER problem of process
+   automation setup and maintenance. FullAuto is both the "end" and the
+   "means to the end". This is what makes FullAuto unique and groundbreaking.
 
-   You can revisit this story anytime - at the command line:
+   This wizard is an important component of FullAuto. Everything you are
+   experiencing now is the High Productivity Framework in action. This
+   framework can be used to make your computer processes (such as complex
+   business and data manipulation processes and projects) easier to create,
+   manipulate and maintain. FullAuto makes +BIG DATA+ a lot -smaller-!
 
-   fa --new-user
+   See this introduction anytime with this command:  fa --new-user
 END
 
 my $fa_continue_setup=<<END;
@@ -12165,13 +12167,13 @@ my $fa_batter_up=<<END;
    |___/\\__,_|\\__|\\__\\___|_|    \\___/|_| (_)
 
    In baseball, there are many players on a team, but
-   only ONE player at a time can pick up a bat and step
-   up to the plate. Similarly, only one file "SET" can
-   be active in FullAuto at any one time. As mentioned
-   earlier, they are the five files listed two screens
-   ago. (You can navigate backwards and review them at
-   any time.) As mentioned in the last screen, there
-   may be multiple copies of any or all of the five files.
+   only one player at a time can pick up a bat and step
+   up to the plate. Similarly, only one FullAuto "set" can
+   be active at any one time. A FullAuto "set" consists of
+   the the five files listed two screens ago. (You can
+   navigate backwards and review them at any time.) As
+   mentioned in the last screen, there may be multiple
+   copies of any or all of the five files.
 
    How does FullAuto know which five to use?
 
@@ -12182,11 +12184,11 @@ END
 
 my $fa_fa_defaults2=<<END;
 
-    _  _     _      __  __         ___       __           _ _      _ 
-   | \\| |___| |_   |  \\/  |_  _   |   \\ ___ / _|__ _ _  _| | |_ __| |
-   | .` / _ \\  _|  | |\\/| | || |  | |) / -_)  _/ _` | || | |  _(_-<_|
-   |_|\\_\\___/\\__|  |_|  |_|\\_, |  |___/\\___|_| \\__,_|\\_,_|_|\\__/__(_)
-                           |__/                                      
+     ___                     _      ___       __           _ _
+    / __|  _ _ _ _ _ ___ _ _| |_   |   \\ ___ / _|__ _ _  _| | |_ ___
+   | (_| || | '_| '_/ -_) ' \\  _|  | |) / -_)  _/ _` | || | |  _(_-<
+    \\___\\_,_|_| |_| \\___|_||_\\__|  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
+
 
 
    The --defaults utility also (conveniently) displays what your current
@@ -12257,15 +12259,15 @@ my $fa_fa_defaults=<<END;
    Most of the time you'll be working with the same five file set. It would
    get VERY tiring to have to choose these files manually every time you
    went to work with FullAuto. Not to mention trying to keep the same five
-   files bundled together accurately! (Which is critical for proper
+   files bundled together accurately. (Which is critical for proper
    functioning of your automation code.)
 
    For that reason, one of the most important features of FullAuto is the
    --defaults utility - which is built into FullAuto itself. The defaults
    utility is a menu-ized wizard just like this presentation you are now
-   enjoying (hopefully!)
+   experiencing.
 
-
+   You can access the --defaults utility at the command line:  fa --defaults
 
 END
 
@@ -12347,7 +12349,7 @@ my $setup_new_user9=sub{
    my %setup_new_user9=(
 
       Name => 'setup_new_user9',
-      Result => $setup_new_user10,
+      Result => $viewdefaults_sub,
       Banner => $fa_fa_defaults_sub,
    );
    return \%setup_new_user9;
@@ -12428,7 +12430,7 @@ my $setup_new_user5=sub{
       },
       Item_6 => {
 
-          Text => 'Continue GETTING STARTED with FullAuto!',
+          Text => 'Continue Getting Started with FullAuto.',
           Result => $setup_new_user6,
 
       },
@@ -12521,11 +12523,11 @@ sub new_user_experience {
 
          Label  => 'welcome_menu',
          Item_1 => {
-            Text   => "Getting Started (QUICKLY) with FullAuto!\n".
+            Text   => "Getting Started (quickly) with FullAuto.\n".
                       "                   ".
-                      "HIGHLY Recommended for Beginners!\n\n",
+                      "Recommended for beginners.\n\n",
             #Default => "*",
-            Result  => $setup_new_user,
+            Result  => $setup_new_user_a,
          },
          Item_2 => {
 
@@ -15886,6 +15888,7 @@ our $adminmenu=sub {
      /_\\  __| |_ __ (_)_ _   |  \\/  |___ _ _ _  _ 
     / _ \\/ _` | '  \\| | ' \\  | |\\/| / -_) ' \\ || |
    /_/ \\_\\__,_|_|_|_|_|_||_| |_|  |_\\___|_||_\\_,_|
+
 FAM
    my %admin=(
 
@@ -21313,16 +21316,19 @@ END
     ___  _  _ _                _ _   _
    |_ _|( )| | |  __ __ ____ _(_) |_| |
     | |  V | | |  \\ V  V / _` | |  _|_|
-   |___|   |_|_|   \\_/\\_/\\__,_|_|\\__(_)  (But NOT forever!)
+   |___|   |_|_|   \\_/\\_/\\__,_|_|\\__(_)  (for 5 minutes)
 
    If you can, go ahead and upload the private key mentioned on the
-   previous page right now! (If you need to review the instructions
-   again, just use the LEFTARROW [<] to navigate back to that page.)
+   previous page right now. (If you need to review the instructions
+   again, just use the LEFTARROW [<] to navigate back to the previous
+   page.)
 
    The key should be uploaded to the /home/$user directory. When
-   you next hit enter, FullAuto will attempt to use the key to
-   authenticate.
+   FullAuto detects the key in the /home/$user directory, it will
+   authenticate and proceed to the next page automatically. Otherwise,
+   FullAuto will timeout and gracefully exit in 5 minutes.
 
+   If you would like to quit and continue later, just press the ESC key.
 
 END
 
@@ -21330,7 +21336,24 @@ END
 
                         Name => 'i_will_wait',
                         Banner => $wait_banner,
-
+                        Result => sub {
+                                          package i_will_wait;
+                                          use Net::FullAuto::FA_Core;
+                                          my $key="/home/$user/fullauto.pem";
+                                          my $gotkey=0;
+                                          foreach my $sec (1..300) {
+                                             sleep 1;
+                                             if (-e $key) {
+                                                $gotkey=1; 
+                                             }
+                                          }
+                                          if ($gotkey) {
+                                             exec
+                                               "fa -i fullauto.pem --new_user";
+                                          } else {
+                                             cleanup();
+                                          }
+                                       },
                      );
                      my %publickey_failed=(
 
