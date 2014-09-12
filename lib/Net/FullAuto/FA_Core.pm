@@ -2230,15 +2230,14 @@ print "localhost cleanup() LINE=$line<==\n"
          if $Net::FullAuto::FA_Core::debug;
 
    }
-   #($stdout,$stderr)=&kill($localhost->{_cmd_pid},$kill_arg);
-   #($stdout,$stderr)=&kill($localhost->{_sh_pid},$kill_arg);
    if (defined $master_hostlabel &&
          (-1<index $localhost,'=')) {
       $username=&Net::FullAuto::FA_Core::username();
       &scrub_passwd_file($master_hostlabel,
          $username);
    }
-   %{$localhost}=();undef $localhost;
+   %{$localhost}=();
+   undef $localhost;
    %Processes=();
    %Connections=();
    @pid_ts=();
@@ -2398,7 +2397,8 @@ sub grep_for_string_existence_only
       if ($keygen_flag) {
          my ($stdout,$stderr)=('','');
          my $output=`ssh-keygen -F localhost 2>&1`;
-         $return_value=1 if $output=~/localhost/s;
+         $return_value=1 if (-1<index $output,'localhost')
+            || (-1<index $output,'illegal option -- F');
       }
    };
    return $return_value;
@@ -5323,6 +5323,9 @@ sub acquire_fa_lock
       } else {
          my $ps=$Net::FullAuto::FA_Core::gbp->('ps').'ps -e';
          my ($psout,$pserr)=Net::FullAuto::FA_Core::cmd($ps);
+         if ($pserr=~/password[: ]+$/si) {
+            $psout=`$ps 2>&1`;
+         }
          my %pl=();
          foreach my $line (split "\n", $psout) {
             next unless -1<index $line,'perl';
@@ -7719,17 +7722,21 @@ sub clean_filehandle
       }
       select(undef,undef,undef,$wait)
          if $loop++!=1; # sleep;
-      eval {
+      my $eval_out='';my $eval_err='';
+      ($eval_out,$eval_err)=eval {
          my $all_lines='';my $loop2=0;
          while (my $line=$filehandle->get(Timeout=>30)) {
 #print "CLEAN_LINE=$line and ${$Net::FullAuto::FA_Core::uhray}[0]_-<==\n";
-   print $Net::FullAuto::FA_Core::MRLOG "\nclean_filehandle() (((((((CLEAN_LINE))))))):",
-      "\n       CLEAN_LINE=$line AND LOOKINGFOR=${$Net::FullAuto::FA_Core::uhray}[0]_-<==\n\n"
-      if $Net::FullAuto::FA_Core::log &&
-      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            print $Net::FullAuto::FA_Core::MRLOG "\nclean_filehandle() ",
+               "(((((((CLEAN_LINE))))))):\n       CLEAN_LINE=$line AND ",
+               "LOOKINGFOR=${$Net::FullAuto::FA_Core::uhray}[0]_-<==\n\n"
+               if $Net::FullAuto::FA_Core::log &&
+               -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             chomp($line=~tr/\0-\11\13-\37\177-\377//d);
             $all_lines.=$line;
-            if (-1<index $all_lines,"$Net::FullAuto::FA_Core::uhray->[0]_-") {
+            if ($line=~/password[: ]+$/si) {
+               return '',$line;
+            } elsif (-1<index $all_lines,"$Net::FullAuto::FA_Core::uhray->[0]_-") {
                if ($all_lines=~/_funkyPrompt_$/s) {
                   return '','';
                } else {
@@ -7779,6 +7786,8 @@ sub clean_filehandle
                "\n       if you don't want &clean_filehandle() to die",
                '__cleanup__');
          }
+      } elsif ($eval_err && $eval_err=~/password[: ]+$/si) {
+         return '',$eval_err;
       } elsif ($closederror) {
          if (wantarray) {
             &release_fa_lock(7755);
@@ -17110,6 +17119,8 @@ print $Net::FullAuto::FA_Core::MRLOG "main::cmd() CMD to Rem_Command=",
             && defined fileno $localhost->{_cmd_handle}) {
          my $cfh_ignore='';my $cfh_error='';
          ($cfh_ignore,$cfh_error)=&clean_filehandle($localhost);
+print "CFH_ERROR=$cfh_error and CFH_IGNORE=$cfh_ignore\n";
+         return `@_`,$cfh_error if $cfh_error=~/password[: ]+$/si;
          &handle_error($cfh_error,'-1') if $cfh_error;
          ($stdout,$stderr)=$localhost->cmd(@_);
          if (wantarray) {
@@ -21067,16 +21078,15 @@ END
             $lin.=$line;
             if ((-1<index $line,
                   'Next authentication method: keyboard-interactive') ||
-                  ((-1<index $line,'Next authentication method: password') &&
-                  $lin!~/password[: ]+$/si)) {
+                  (-1<index $line,'Next authentication method: password')) {
                if ($lin=~/can[']t open \/dev\/tty: No such device or/s) {
                   die "can\'t open /dev/tty: No such device or address\n";
-               }
-               $determine_password->($cache,
-                     $password_from,$login_Mast_error,
-                     $loop_count,$kind,$mkdflag);
-               next if $lin!~/password[: ]+$/s;
-               $gotpass=1;last PW;
+               } elsif ($lin=~/password[: ]+$/s) {
+                  $determine_password->($cache,
+                        $password_from,$login_Mast_error,
+                        $loop_count,$kind,$mkdflag);
+                  $gotpass=1;last PW;
+               } else { next }
             } elsif (-1<index $line,'/dev/tty: No') {
                die "can\'t open /dev/tty: No such device or address\n";
             } elsif (-1<index $line,'Authentication succeeded (publickey)') {
@@ -21180,13 +21190,16 @@ END
                   "wait_for_passwd_prompt() PASSWORD PROMPT=$lin<==\n"
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+               $determine_password->($cache,
+                     $password_from,$login_Mast_error,
+                     $loop_count,$kind,$mkdflag);
                $gotpass=1;last PW;
-            } elsif ($lin=~/password: ?$/is) {
-               print $Net::FullAuto::FA_Core::MRLOG
-                  "wait_for_passwd_prompt() PASSWORD PROMPT=$lin<==\n"
-                  if $Net::FullAuto::FA_Core::log &&
-                  -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               $gotpass=1;last PW;
+            #} elsif ($lin=~/password: ?$/is) {
+            #   print $Net::FullAuto::FA_Core::MRLOG
+            #      "wait_for_passwd_prompt() PASSWORD PROMPT=$lin<==\n"
+            #      if $Net::FullAuto::FA_Core::log &&
+            #      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+            #   $gotpass=1;last PW;
             } elsif ((-1<index $lin,'530 ')
                   || (-1<index $lin,'421 ')
                   || (-1<index $lin,'Connection refused')

@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999907';
+$main::VERSION='0.999999999908';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -3918,9 +3918,9 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
    storing and retrieving credentials and persistence data. Berkeley DB is
    maintained by Oracle Corporation and hosted at Oracle.com. It has the same
    open source license as FullAuto: GNU Affero General Public License V3.0.
-   The default version FullAuto will install and use, is the latest
-   **NON-ENCRYPTED** version. There is an option to choose Encrypted on the
-   next screen.
+   The default version of Berkeley DB that FullAuto will install and use is
+   the latest **NON-ENCRYPTED** version. There is an option to choose
+   Encrypted on the next screen.
 
          There is **NO WARRANTY** for Berkeley DB. USE AT YOUR RISK!
 
