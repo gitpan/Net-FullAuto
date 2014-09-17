@@ -161,7 +161,7 @@ sub menu_demo {
       },
 
       Select => 'Many',
-      Banner => "\n   Choose a /bin Utility :"
+      Banner => "\n   Choose a /bin Utility :\n\n"
    );
 
    my @selections=&Menu(\%Menu_1,$unattended);

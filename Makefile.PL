@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999908';
+$main::VERSION='0.999999999909';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -398,6 +398,13 @@ END
 END
 
    use CPAN;
+   if (-e "dependencies/CPAN/authors" &&
+         !(grep {
+         /(?:use[-_]?)?internet|online|connect_to_internet_ok/i } @ARGV)) {
+      my $loc="$main::curdir/dependencies/CPAN";
+      $CPAN::Config->{keep_source_where}=$loc;
+      $CPAN::Config->{connect_to_internet_ok}=0;
+   }
    use File::Path;
 
    $main::root_dir=$main::curdir;
@@ -857,8 +864,11 @@ END
          }
          close LD;
       }
-      exec 'sudo','perl','Makefile.PL';
-
+      if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+         exec 'sudo','perl','Makefile.PL','add_dependencies';
+      } else {
+         exec 'sudo','perl','Makefile.PL';
+      }
    } elsif (exists $main::amazon{'centos'}) {
 
       my $yins=`yum list installed`;
@@ -910,7 +920,11 @@ print "YEP MEMORY=$line\n";<STDIN>;
             print $line;
          }
          close LD;
-         exec 'sudo','perl','Makefile.PL';
+         if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+            exec 'sudo','perl','Makefile.PL','add_dependencies';
+         } else {
+            exec 'sudo','perl','Makefile.PL';
+         }
       }
 
    } elsif (!can_cc() && (exists $main::amazon{'suse'})) {
@@ -1212,6 +1226,24 @@ print "YEP MEMORY=$line\n";<STDIN>;
       my $echo=$_[5]||'';
       my $dir='';
       my $cpan_error='';
+      if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+         use CPAN::Mini;
+         my $distribution = CPAN::Shell->expand(
+               "Module",$p 
+            )->distribution()->pretty_id();
+         my $let=unpack('a1',$distribution);
+         my $lett=unpack('a2',$distribution);
+         my $minicpan=CPAN::Mini->new(
+
+            remote => "http://www.cpan.org",
+            local  => cwd()."/dependencies/CPAN",
+            log_level => 'debug',
+            exact_mirror => 1,
+            
+         );
+         $minicpan->mirror_file(
+            "authors/id/$let/$lett/$distribution");
+      }
       eval "require $p;1";
       my $ver='';
       unless ($@) {
@@ -1298,7 +1330,15 @@ print "YEP MEMORY=$line\n";<STDIN>;
                $sudo=1;
             }
             if ($sudo) {
-               exec 'sudo','perl','Makefile.PL','SKIP',$p,$exec_cnt;
+               if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+                  exec 'sudo','perl','Makefile.PL','SKIP','add_dependencies',
+                       $p,$exec_cnt;
+               } else {
+                  exec 'sudo','perl','Makefile.PL','SKIP',$p,$exec_cnt;
+               }
+            } elsif (grep { /-*add[-_]?dependencies/i } @ARGV) {
+               exec 'perl','Makefile.PL','SKIP','add_dependencies',
+                    $p,$exec_cnt;
             } else {
                exec 'perl','Makefile.PL','SKIP',$p,$exec_cnt;
             }
@@ -3833,7 +3873,7 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
       }
       my $major_minor_ver=substr($ver,0,(rindex $ver,'.'));
       $major_minor_ver=$ver if -1==index $major_minor_ver,'.';
-      if ($^O eq 'cygwin') {
+      if ($^O eq 'cygwin' && !(grep { /build_berkeleydb/i } @ARGV)) {
          if ($berkeleydb && $major_minor_ver>=4.5) {
             $berkeleydb=~s/^(.*)\/.*$/$1/;
             $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
@@ -3870,481 +3910,46 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
          $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
          $ENV{'LD_RUN_PATH'}=$ENV{'LD_LIBRARY_PATH'};
       } else {
-         my $url=
-            'http://www.oracle.com/technetwork/'.
-            'products/berkeleydb/downloads/index.html';
-         if ($CPAN::META->has_usable('LWP')) {
-            FA::LWP::UserAgent->config;
-            print "Fetching with LWP:\n  $url\n";
-            my $Ua;
-            eval { $Ua = FA::LWP::UserAgent->new(
-                   timeout=>300,show_progress=>1) };
-            if ($@) {
-               $CPAN::Frontend->mywarn(
-                  "ERROR: FA::LWP::UserAgent->new dies with $@\n");
-            } else {
-               my($var);
-               $Ua->proxy('http', $var)
-                  if $var = $CPAN::Config->{http_proxy} ||
-                  $ENV{http_proxy};
-               $Ua->no_proxy($var)
-                  if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
-            }
-            my $req = HTTP::Request->new(GET => $url);
-            $req->header('Accept' => 'text/html');
-            my $res = $Ua->request($req);
-            my $BDB_selection='NON-ENCRYPTED';
-            if ($res->is_success) {
-               print " + request successful.\n"
-                  if $CPAN::DEBUG;
-               my $source=$res->content;
-               my $site='download.oracle.com';
-               $source=~
-                 s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
-               my $file=$2;
-               my $file=substr($file,(index $file,'/')+1,-7);
-               $ver=$file;
-               $ver=~s/_.*$//;
-               $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-               my $timeout=120;my $a='';my $w="      ";
-               my $pre="/usr/local/BerkeleyDB.$ver";
-               $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
-               my $berkeley_banner=<<END;
-
-         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
-                      INSTALLATION in 5 MINUTES ***
-
-   Berkeley DB is a file-based (lightweight) database that FullAuto uses for
-   storing and retrieving credentials and persistence data. Berkeley DB is
-   maintained by Oracle Corporation and hosted at Oracle.com. It has the same
-   open source license as FullAuto: GNU Affero General Public License V3.0.
-   The default version of Berkeley DB that FullAuto will install and use is
-   the latest **NON-ENCRYPTED** version. There is an option to choose
-   Encrypted on the next screen.
-
-         There is **NO WARRANTY** for Berkeley DB. USE AT YOUR RISK!
-
-   FullAuto setup will download source code from Oracle.com and build it. It
-   will be installed into:   $pre
-END
-
-               my $berkeleybanner=<<END;
-
-         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
-                      INSTALLATION in 5 MINUTES ***
-
-
-
-
-
-
-
-END
-
-               my $encrypted_banner=<<END;
-
-   From http://http://docs.oracle.com/cd/E17076_03/html/index.html:
-   
-   "Berkeley DB releases optionally include strong cryptographic support;
-   this release DOES contain cryptographic support. Export/import and/or
-   use of cryptography software, or even communicating technical details
-   about cryptography software, is illegal in some parts of the world. You
-   are strongly advised to pay close attention to any export/import and/or
-   use laws which apply to you when you import a release of Berkeley DB
-   including cryptography to your country or re-distribute source code
-   from it in any way."
-
-   FullAuto does *NOT* utilize the encrypted features of Berkeley DB, and
-   only offers to install the encrypted version as a courtesy. You are
-   advised to install the NON-ENCRYPTED version unless you have specific
-   reasons for needing the encrypted one.
-END
-
-               my %encryted_berkeley=(
-
-                  Name => 'encrypted_berkeley',
-                  Item_1 => {
-
-                     Text => "Install NON-ENCRYPTED Berkeley DB".
-                             " ( Recommended! )",
-
-                  },
-
-                  Item_2 => {
-
-                     Text => "Install Encrypted Berkeley DB",
-
-                  },
-                  Banner => $encrypted_banner,
-
-               );
-
-               my %berkeleymenu=(
-
-                   Name => 'berkeleymenu',
-                   Item_1 => {
-
-                      Text => "Install NON-ENCRYPTED Berkeley DB",
-
-                   },
-                   Item_2 => {
-                     
-                      Text => "Install Encrypted Berkeley DB",
-                      Result => \%encryted_berkeley,
-
-                   },
-                   Item_3 => {
-
-                      Text => "Exit FullAuto Setup",
-
-                   },
-                   Scroll => 1,
-                   Banner => $berkeleybanner, 
-
-               );
-               my %berkeley_menu=(
-
-                  Name   => 'berkeley_menu',
-                  Result => \%berkeleymenu,
-                  Banner => $berkeley_banner,
-
-               );
-               my $already_downloaded=0;
-               my $filename='';
-               unless (grep { /Encrypted/i } @ARGV) {
-                  eval {
-                     local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-                     alarm $timeout;
-                     $BDB_selection=Menu(\%berkeley_menu);
-                     alarm 0;
-                  };
-                  if ($@) {
-                     # timed out
-                     $BDB_selection='NON-ENCRYPTED';
-                     $source=~s/tar.gz/NC.tar.gz/;
-                  } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
-                     print "\n";
-                     exit;
-                  } elsif (-1<index $BDB_selection,'Encrypted') {
-                     $BDB_selection='Encrypted';
-                  } else {
-                     $source=~s/tar.gz/NC.tar.gz/;
-                  } alarm 0;
-               } elsif (grep  { /Encrypted/ } @ARGV) {
-                  $BDB_selection='Encrypted';
-                  $already_downloaded=1;
-                  $filename=$ARGV[$#ARGV];
-               } else {
-                  $source=~s/tar.gz/NC.tar.gz/;
-                  $already_downloaded=1;
-                  $filename=$ARGV[$#ARGV];
-               }
-               my $fh='';
-               my $suffix=($BDB_selection eq 'Encrypted')?
-                     '.tar.gz':'.NC.tar.gz';
-               unless ($already_downloaded) {
-                  if ($CPAN::META->has_usable("File::Temp")) {
-                     $fh = File::Temp->new(
-                           dir      => cwd(),
-                           template => "${file}_XXXXXX",
-                           suffix => $suffix,
-                           unlink => 0,
-                          );
-                     $filename = $fh->filename;
-                  } else {
-                     $fh = FileHandle->new;
-                     $filename = "${file}_${$}$suffix";
-                  }
-                  chomp($filename);
-                  my $end_flag=0;
-                  my %errors = ('500'=>'Bad hostname supplied',
-                                '404'=>'URL not found',
-                                '403'=>'URL forbidden',
-                                '401'=>'Authorization failed',
-                                '400'=>'Bad request found',
-                                '302'=>'Redirected URL'
-                  );
-                  while (1) {
-                     $req = HTTP::Request->new(GET => $source);
-                     $req->header('Accept-Encoding' => 'gzip, compress');
-                     $res = $Ua->request($req);
-                     my $success=1;
-                     if ($res->is_success) {
-                        print " + request successful.\n"
-                           if $CPAN::DEBUG;
-                        print $fh $res->content;
-                        close $fh;
-                     } else {
-                        my $status_line=$res->status_line;
-                        ($status_line) = ($status_line =~ /(\d+)/);
-                        if (defined($errors{$status_line})) {
-                           print(
-                              "LWP failed with code $status_line, ",
-                              "message $errors{$status_line}\n".
-                              "Please check your connection to the Internet!\n",
-                              $status_line,
-                              $res->message,
-                           );
-                           if (!$end_flag && ($status_line eq '404')) {
-                              $source=$last_known_good_location;
-                              $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
-                              my $h=qr/http:\/\/$site\//;
-                              $source=~s/^.*?($h)(?:otn\/)*($rt).*$/$1$2/s;
-                              $file=$2;
-                              $file=substr($file,(index $file,'/')+1,-7);
-                              $ver=$file;
-                              $ver=~s/_.*$//;
-                              $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-                              next;
-                           }
-                        } else {
-                           print(
-                              "LWP failed with an Unknown Error\n".
-                              "Please check your connection to the Internet!\n",
-                           );
-                        }
-                        $success = 0;
-                        close $fh;
-                        last;
-                     }
-                     print(qq{ + saved content to $filename \n})
-                        if $CPAN::DEBUG;
-                     my $md5fh='';my $md5filename='';
-                     if ($CPAN::META->has_usable("File::Temp")) {
-                        $md5fh = File::Temp->new(
-                              dir      => cwd(),
-                              template => "${file}_XXXXXX",
-                              suffix => "$suffix.md5",
-                              unlink => 0,
-                        );
-                        $md5filename = $md5fh->filename;
-                     } else {
-                        $md5fh = FileHandle->new;
-                        $md5filename = "${file}_${$}$suffix.md5";
-                     }
-                     $req = HTTP::Request->new(GET => $source.'.md5');
-                     $req->header('Accept-Encoding' => 'gzip, compress');
-                     $res = $Ua->request($req);
-                     if ($res->is_success) {
-                        print " + request successful.\n"
-                           if $CPAN::DEBUG;
-                        print $md5fh $res->content;
-                        close $md5fh;
-                     } else {
-                        my $status_line=$res->status_line;
-                        ($status_line) = ($status_line =~ /(\d+)/);
-                        if (defined($errors{$status_line})) {
-                           print(
-                              "LWP failed with code $status_line, ",
-                              "message $errors{$status_line}\n".
-                              "Please check your connection to the Internet!\n",
-                              $status_line,
-                              $res->message,
-                           );
-                           if (!$end_flag && ($status_line eq '404')) {
-                              $source=$last_known_good_location;
-                              $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
-                              my $h=qr/http:\/\/$site\//;
-                              $source=~s/^.*?($h)(?:otn\/)*($rt).*$/$1$2/s;
-                              $file=$2;
-                              $file=substr($file,(index $file,'/')+1,-7);
-                              $ver=$file;
-                              $ver=~s/_.*$//;
-                              $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-                              next;
-                           }
-                        } else {
-                           print(
-                              "LWP failed with an Unknown Error\n".
-                              "Please check your connection to the Internet!\n",
-                           );
-                        }
-                        $success = 0;
-                        close $fh;
-                        last;
-                     }
-                     print(qq{ + saved md5 content to $md5filename \n})
-                        if $CPAN::DEBUG;
-                     open(MH,"<$md5filename") || die $!;
-                     my $mhf=<MH>;
-                     close(MH);
-                     my $checksum=$mhf;
-                     $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
-                     open(FILE, $filename) or die "Can't open '$file': $!";
-                     binmode(FILE);
-                     require Digest::MD5;
-                     import Digest::MD5;
-                     my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
-                     if ($checksum eq $digestmd5) {
-                        print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
-                           if $CPAN::DEBUG;
-                     } else {
-                        print "CHECKSUM test for $filename *FAILED*\n";
-                        print "CALCULATED=$digestmd5 and ",
-                              "DOWNLOADED=$checksum\n";
-                        print "\nPress ANY key to terminate FullAuto ",
-                              "installation ...\n";
-                        <STDIN>;
-                        die "FATAL ERROR! : ".
-                            "CHECKSUM Test for $filename *FAILED*\n";
-                     }
-                     close(FILE);
-                     last;
-                  }
-                  unless ($CPAN::Config->{gzip}) {
-                     if (-e '/usr/bin/gzip') {
-                        $CPAN::Config->{gzip}='/usr/bin/gzip';
-                     } elsif (-e '/usr/local/bin/gzip') {
-                        $CPAN::Config->{gzip}='/usr/local/bin/gzip';
-                     } else {
-                        print "\n\n   Fatal Error!: The 'gzip' utility is".
-                           " missing.\n".
-                           "\n\n   Please report any bugs and send any",
-                           "\n   questions, thoughts or feedback to:",
-                           "\n\n      Brian.Kelly\@fullautosoftware.net.",
-                           "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                           exit 1;
-                     }
-                  }
-                  unless (keys %main::amazon) {
-                     my $so=system($CPAN::Config->{gzip}." -d $filename");
-                     if ($so==-1) {
-                        die "Cannot gunzip $filename: $!\n";
-                     }
-                  }
-                  unless ($CPAN::Config->{tar}) {
-                     if (-e '/usr/bin/tar') {
-                        $CPAN::Config->{tar}='/usr/bin/tar';
-                     } elsif (-e '/usr/local/bin/tar') {
-                        $CPAN::Config->{tar}='/usr/local/bin/tar';
-                     } else {
-                        print "\n\n   Fatal Error!: The 'tar' utility is".
-                           " missing.\n".
-                           "\n\n   Please report any bugs and send any",
-                           "\n   questions, thoughts or feedback to:",
-                           "\n\n      Brian.Kelly\@fullautosoftware.net.",
-                           "\n\n   Press ANY key to exit.\n\n";<STDIN>;
-                           exit 1;
-                     }
-                  }
-                  $filename=~s/\.gz$//;
-               }
-               if (keys %main::amazon) {
-                  unless (exists $main::amazon{'freebsd'}) {
-                     unless ($already_downloaded) {
-                        exec 'sudo','perl','Makefile.PL',$BDB_selection,
-                             $filename;
-                     }
-                     my $so=system($CPAN::Config->{gzip}." -d $filename");
-                     if ($so==-1) {
-                        die "Cannot gunzip $filename: $!\n";
-                     }
-                     print "***** Untar1: sudo ",
-                        $CPAN::Config->{tar}," xvf $filename\n";
-                     open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
-                  } else {
-                     unless ($already_downloaded) {
-                        exec 'perl','Makefile.PL',$BDB_selection,
-                             $filename;
-                     }
-                     my $so=system($CPAN::Config->{gzip}." -d $filename");
-                     if ($so==-1) {
-                        die "Cannot gunzip $filename: $!\n";
-                     }
-                     print "***** Untar2: ",
-                        $CPAN::Config->{tar}," xvf $filename\n";
-                     open(FH, $CPAN::Config->{tar}." xvf $filename|");
-                  }
-               } else {
-                  print "***** Untar3: ",
-                     $CPAN::Config->{tar}," xvf $filename\n";
-                  open(FH, $CPAN::Config->{tar}." xvf $filename|");
-               }
-               while (my $line=<FH>) {
-                  print $line;
-               }
-               close FH;
-               my $uniq='';
-               if ($BDB_selection eq 'Encrypted') {
-                  $filename=~/^.*(......).tar$/;
-                  $uniq=$1;
-                  $filename=~s/........tar$//;
-                  `mv -f $filename ${filename}_$uniq`;
-               } else {
-                  $filename=~/^.*(......).NC.tar$/;
-                  $uniq=$1;
-                  $filename=~s/........NC.tar$//;
-                  `mv -f $filename.NC $filename.NC_$uniq`;
-               }
-               my $args='';
-               if ($PREFIX) {
-                  $args=' --prefix="'.$PREFIX.'"';
-               }
-               if ($BDB_selection eq 'Encrypted') {
-                  open(FH,
-                     "cd ${filename}_$uniq/build_unix;".
-                     "../dist/configure$args|")
-                  || warn $!;
-               } else {
-                  open(FH,
-                     "cd ${filename}.NC_$uniq/build_unix;".
-                     "../dist/configure$args|")
-                  || warn $!;
-               }
-               while (my $line=<FH>) {
-                  print $line;
-               }
-               close FH;
-               unless ($CPAN::Config->{make}) {
-                  if (-e '/usr/bin/make') {
-                     $CPAN::Config->{make}='/usr/bin/make';
-                  } elsif (-e '/usr/local/bin/make') {
-                     $CPAN::Config->{make}='/usr/local/bin/make';
-                  }
-               }
-               if ($BDB_selection eq 'Encrypted') {
-                  print "*** Starting Encrypted BerkeleyDB build\n";
-                  system("(cd ${filename}_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install) 2>&1")
-                     || warn $!;
-                  print "*** Completed Encrypted BerkeleyDB build\n";
-               } else {
-                  print "*** Starting Non-Encrypted BerkeleyDB build\n";
-                  system("(cd ${filename}.NC_$uniq/build_unix;".
-                        $CPAN::Config->{make}." install) 2>&1")
-                     || warn $!;
-                  print "*** Completed Non-Encrypted BerkeleyDB build\n";
-               }
-               $ver=$filename;
-               $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
-               $berkeleydb=$pre.'/lib';
-               $header_to_use=$pre.'/include';
-               $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
-               $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
-               $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
-               $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
-               $ENV{'DB_FILE_LIB'}=$berkeleydb;
-               $ENV{'DB_FILE_NAME'}="-ldb-$ver";
-               $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
-               $ENV{'LD_RUN_PATH'}=$ENV{'LD_LIBRARY_PATH'};
-            } else {
-               if ($res->is_error(500)) {
-                  print(sprintf(
-                     "LWP failed with code[%s], message[%s]\n".
-                     "Please check your connection to the Internet!\n",
-                     $res->code,
-                     $res->message,
-                  ));
-               } else {
-                  print(sprintf(
-                     "LWP failed with code[%s], message[%s]\n",
-                     $res->code,
-                     $res->message,
-                  ));
+         if (-e "dependencies/BerkeleyDB" && !(grep {
+               /(?:use[-_]?)?internet|online|connect_to_internet_ok/i
+               } @ARGV)) {
+            cpan_gunzip_and_untar();
+            my $dir=&cwd.'/dependencies/BerkeleyDB';
+            opendir(DIR,$dir);
+            @files = readdir(DIR);
+            closedir(DIR);
+            my $file='';my $filename='';
+            foreach my $f (@files) {
+               next if $f eq '.';
+               next if $f eq '..';
+               if (-1==index $f,'.md5') {
+                  $file=$f;
+                  last;
                }
             }
+            my $filenm=$file;
+            $file=~s/.tar.gz$//;
+            $filename="${file}_${$}.tar.gz";
+            File::Copy::copy("$dir/$filenm",&cwd."/$filename");
+            my $so=system($CPAN::Config->{gzip}." -d $filename");
+            if ($so==-1) {
+               die "Cannot gunzip $filename: $!\n";
+            }
+            $filename=~s/\.gz$//;
+            print "***** Untar4: ",
+               $CPAN::Config->{tar}," xvf $filename\n";
+            open(FH, $CPAN::Config->{tar}." xvf $filename|");
+            while (my $line=<FH>) {
+               print $line;
+            }
+            close FH;
+            $filename=~/^(.*)_(\d+).tar$/;
+            $filename=$1;
+            my $uniq=$2;
+            File::Copy::move("$filename.NC","$filename.NC_$uniq");
+            build_berkeleydb($filename,$uniq,'');
          } else {
-            $CPAN::Frontend->mywarn("  LWP not available\n");
+            download_berkeleydb();
          }
          unless (exists $ENV{'BERKELEYDB_INCLUDE'} &&
                $ENV{'BERKELEYDB_INCLUDE'}) {
@@ -4384,6 +3989,49 @@ END
    }
    $ENV{'DB_FILE_INCLUDE'}='/usr/include';
    $ENV{'DB_FILE_LIB'}='/usr/lib';
+}
+
+if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+   my @download=download_berkeleydb();
+   `mkdir -p 'dependencies/BerkeleyDB'` unless
+      -e 'dependencies/BerkeleyDB';
+   `rm -rf dependencies/BerkeleyDB/*`;
+   File::Copy::move($download[0],
+      "dependencies/BerkeleyDB/$download[2].tar.gz");
+   File::Copy::move($download[1],
+      "dependencies/BerkeleyDB/$download[2].tar.gz.md5");
+   require File::Copy;
+   open(MO,"<MANIFEST");
+   open(MN,">MANIFEST_NEW");
+   while (my $file=<MO>) {
+      next if $file=~/dependencies\/CPAN/s;
+      next if $file=~/dependencies\/BerkeleyDB/s;
+      print MN $file;
+   }
+   close MO;close MN;
+   File::Copy::move('MANIFEST_NEW','MANIFEST');
+   open(MF,">>MANIFEST") || die "Cannot open MANIFEST: $!\n";
+   if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+      my $found=`find dependencies/CPAN -type f`;
+      $found.=`find dependencies/BerkeleyDB -type f`;
+      my @found=split "\n",$found;
+      open(MF,">>MANIFEST") || die "Cannot open MANIFEST: $!\n";
+      foreach my $fnd (@found) {
+         print MF "$fnd\n";
+      }
+      close NF;
+   }
+} else {
+   require File::Copy;
+   open(MO,"<MANIFEST");
+   open(MN,">MANIFEST_NEW");
+   while (my $file=<MO>) {
+      next if $file=~/dependencies\/CPAN/s;
+      next if $file=~/dependencies\/BerkeleyDB/s;
+      print MN $file;
+   }
+   close MO;close MN;
+   File::Copy::move('MANIFEST_NEW','MANIFEST');
 }
 
 chdir $main::curdir;
@@ -4461,6 +4109,516 @@ END
       die $die;
    }
    last
+}
+
+sub download_berkeleydb {
+
+   my $url=
+      'http://www.oracle.com/technetwork/'.
+      'products/berkeleydb/downloads/index.html';
+   if ($CPAN::META->has_usable('LWP')) {
+      FA::LWP::UserAgent->config;
+      print "Fetching with LWP:\n  $url\n";
+      my $Ua;
+      eval { $Ua = FA::LWP::UserAgent->new(
+             timeout=>300,show_progress=>1) };
+      if ($@) {
+         $CPAN::Frontend->mywarn(
+            "ERROR: FA::LWP::UserAgent->new dies with $@\n");
+      } else {
+         my($var);
+         $Ua->proxy('http', $var)
+            if $var = $CPAN::Config->{http_proxy} ||
+            $ENV{http_proxy};
+         $Ua->no_proxy($var)
+            if $var = $CPAN::Config->{no_proxy} || $ENV{no_proxy};
+      }
+      my $req = HTTP::Request->new(GET => $url);
+      $req->header('Accept' => 'text/html');
+      my $res = $Ua->request($req);
+      my $BDB_selection='NON-ENCRYPTED';
+      if ($res->is_success) {
+         print " + request successful.\n"
+            if $CPAN::DEBUG;
+         my $source=$res->content;
+         my $site='download.oracle.com';
+         $source=~
+           s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+         my $file=$2;
+         my $file=substr($file,(index $file,'/')+1,-7);
+         $ver=$file;
+         $ver=~s/_.*$//;
+         $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+         my $timeout=120;my $a='';my $w="      ";
+         my $pre="/usr/local/BerkeleyDB.$ver";
+         $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
+         my $berkeley_banner=<<END;
+
+         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
+                      INSTALLATION in 5 MINUTES ***
+
+   Berkeley DB is a file-based (lightweight) database that FullAuto uses for
+   storing and retrieving credentials and persistence data. Berkeley DB is
+   maintained by Oracle Corporation and hosted at Oracle.com. It has the same
+   open source license as FullAuto: GNU Affero General Public License V3.0.
+   The default version of Berkeley DB that FullAuto will install and use is
+   the latest **NON-ENCRYPTED** version. There is an option to choose
+   Encrypted on the next screen.
+
+         There is **NO WARRANTY** for Berkeley DB. USE AT YOUR RISK!
+
+   FullAuto setup will download source code from Oracle.com and build it. It
+   will be installed into:   $pre
+END
+
+               my $berkeleybanner=<<END;
+
+         *** THIS SCREEN WILL TIMEOUT AND PROCEED WITH Berkeley DB
+                      INSTALLATION in 5 MINUTES ***
+
+
+
+
+
+
+
+END
+
+               my $encrypted_banner=<<END;
+
+   From http://http://docs.oracle.com/cd/E17076_03/html/index.html:
+
+   "Berkeley DB releases optionally include strong cryptographic support;
+   this release DOES contain cryptographic support. Export/import and/or
+   use of cryptography software, or even communicating technical details
+   about cryptography software, is illegal in some parts of the world. You
+   are strongly advised to pay close attention to any export/import and/or
+   use laws which apply to you when you import a release of Berkeley DB
+   including cryptography to your country or re-distribute source code
+   from it in any way."
+
+   FullAuto does *NOT* utilize the encrypted features of Berkeley DB, and
+   only offers to install the encrypted version as a courtesy. You are
+   advised to install the NON-ENCRYPTED version unless you have specific
+   reasons for needing the encrypted one.
+END
+
+         my %encryted_berkeley=(
+
+            Name => 'encrypted_berkeley',
+            Item_1 => {
+
+               Text => "Install NON-ENCRYPTED Berkeley DB".
+                       " ( Recommended! )",
+
+            },
+
+            Item_2 => {
+
+               Text => "Install Encrypted Berkeley DB",
+
+            },
+            Banner => $encrypted_banner,
+
+         );
+
+         my %berkeleymenu=(
+
+             Name => 'berkeleymenu',
+             Item_1 => {
+
+                Text => "Install NON-ENCRYPTED Berkeley DB",
+
+             },
+             Item_2 => {
+
+                Text => "Install Encrypted Berkeley DB",
+                Result => \%encryted_berkeley,
+
+             },
+             Item_3 => {
+
+                Text => "Exit FullAuto Setup",
+
+             },
+             Scroll => 1,
+             Banner => $berkeleybanner,
+
+         );
+         my %berkeley_menu=(
+
+            Name   => 'berkeley_menu',
+            Result => \%berkeleymenu,
+            Banner => $berkeley_banner,
+
+         );
+         my $already_downloaded=0;
+         my $filename='';
+         unless (grep { /Encrypted/i } @ARGV) {
+            eval {
+               local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+               alarm $timeout;
+               $BDB_selection=Menu(\%berkeley_menu);
+               alarm 0;
+            };
+            if ($@) {
+               # timed out
+               $BDB_selection='NON-ENCRYPTED';
+               $source=~s/tar.gz/NC.tar.gz/;
+            } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
+               print "\n";
+               exit;
+            } elsif (-1<index $BDB_selection,'Encrypted') {
+               $BDB_selection='Encrypted';
+            } else {
+               $source=~s/tar.gz/NC.tar.gz/;
+            } alarm 0;
+         } elsif (grep  { /Encrypted/ } @ARGV) {
+            $BDB_selection='Encrypted';
+            $already_downloaded=1;
+            $filename=$ARGV[$#ARGV];
+         } else {
+            $source=~s/tar.gz/NC.tar.gz/;
+            $already_downloaded=1;
+            $filename=$ARGV[$#ARGV];
+         }
+         my $fh='';
+         my $suffix=($BDB_selection eq 'Encrypted')?
+               '.tar.gz':'.NC.tar.gz';
+         unless ($already_downloaded) {
+            ($fh,$filename)=get_temp_file($file,$suffix);
+            my $end_flag=0;my $md5filename='';
+            my %errors = ('500'=>'Bad hostname supplied',
+                          '404'=>'URL not found',
+                          '403'=>'URL forbidden',
+                          '401'=>'Authorization failed',
+                          '400'=>'Bad request found',
+                          '302'=>'Redirected URL'
+            );
+            while (1) {
+               $req = HTTP::Request->new(GET => $source);
+               $req->header('Accept-Encoding' => 'gzip, compress');
+               $res = $Ua->request($req);
+               my $success=1;
+               if ($res->is_success) {
+                  print " + request successful.\n"
+                     if $CPAN::DEBUG;
+                  print $fh $res->content;
+                  close $fh;
+               } else {
+                  my $status_line=$res->status_line;
+                  ($status_line) = ($status_line =~ /(\d+)/);
+                  if (defined($errors{$status_line})) {
+                     print(
+                        "LWP failed with code $status_line, ",
+                        "message $errors{$status_line}\n".
+                        "Please check your connection to the Internet!\n",
+                        $status_line,
+                        $res->message,
+                     );
+                     if (!$end_flag && ($status_line eq '404')) {
+                        $source=$last_known_good_location;
+                        $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
+                        my $h=qr/http:\/\/$site\//;
+                        $source=~s/^.*?($h)(?:otn\/)*($rt).*$/$1$2/s;
+                        $file=$2;
+                        $file=substr($file,(index $file,'/')+1,-7);
+                        $ver=$file;
+                        $ver=~s/_.*$//;
+                        $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+                        next;
+                     }
+                  } else {
+                     print(
+                        "LWP failed with an Unknown Error\n".
+                        "Please check your connection to the Internet!\n",
+                     );
+                  }
+                  $success = 0;
+                  close $fh;
+                  last;
+               }
+               print(qq{ + saved content to $filename \n})
+                  if $CPAN::DEBUG;
+               my $md5fh='';
+               ($md5fh,$md5filename)=get_temp_file($file,$suffix.'.md5');
+               $req = HTTP::Request->new(GET => $source.'.md5');
+               $req->header('Accept-Encoding' => 'gzip, compress');
+               $res = $Ua->request($req);
+               if ($res->is_success) {
+                  print " + request successful.\n"
+                     if $CPAN::DEBUG;
+                  print $md5fh $res->content;
+                  close $md5fh;
+               } else {
+                  my $status_line=$res->status_line;
+                  ($status_line) = ($status_line =~ /(\d+)/);
+                  if (defined($errors{$status_line})) {
+                     print(
+                        "LWP failed with code $status_line, ",
+                        "message $errors{$status_line}\n".
+                        "Please check your connection to the Internet!\n",
+                        $status_line,
+                        $res->message,
+                     );
+                     if (!$end_flag && ($status_line eq '404')) {
+                        $source=$last_known_good_location;
+                        $end_flag=1;my $rt=qr/b.*?\d.tar.gz/;
+                        my $h=qr/http:\/\/$site\//;
+                        $source=~s/^.*?($h)(?:otn\/)*($rt).*$/$1$2/s;
+                        $file=$2;
+                        $file=substr($file,(index $file,'/')+1,-7);
+                        $ver=$file;
+                        $ver=~s/_.*$//;
+                        $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+                        next;
+                     }
+                  } else {
+                     print(
+                        "LWP failed with an Unknown Error\n".
+                        "Please check your connection to the Internet!\n",
+                     );
+                  }
+                  $success = 0;
+                  close $fh;
+                  last;
+               }
+               print(qq{ + saved md5 content to $md5filename \n})
+                  if $CPAN::DEBUG;
+               open(MH,"<$md5filename") || die $!;
+               my $mhf=<MH>;
+               close(MH);
+               my $checksum=$mhf;
+               $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
+               open(FILE, $filename) or die "Can't open '$file': $!";
+               binmode(FILE);
+               require Digest::MD5;
+               import Digest::MD5;
+               my $digestmd5=Digest::MD5->new->addfile(*FILE)->hexdigest;
+               if ($checksum eq $digestmd5) {
+                  print(qq{ + CHECKSUM Test for $filename *PASSED* \n})
+                     if $CPAN::DEBUG;
+               } else {
+                  print "CHECKSUM test for $filename *FAILED*\n";
+                  print "CALCULATED=$digestmd5 and ",
+                        "DOWNLOADED=$checksum\n";
+                  print "\nPress ANY key to terminate FullAuto ",
+                        "installation ...\n";
+                  <STDIN>;
+                  die "FATAL ERROR! : ".
+                      "CHECKSUM Test for $filename *FAILED*\n";
+               }
+               close(FILE);
+               last;
+            }
+            if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+               Term::ReadKey::ReadMode(0);
+               return $filename,$md5filename,$file;
+            } else {
+               cpan_gunzip_and_untar();
+               unless (keys %main::amazon) {
+                  my $so=system($CPAN::Config->{gzip}." -d $filename");
+                  if ($so==-1) {
+                     die "Cannot gunzip $filename: $!\n";
+                  }
+               }
+               $filename=~s/\.gz$//;
+            }
+         }
+         if (keys %main::amazon) {
+            unless (exists $main::amazon{'freebsd'}) {
+               unless ($already_downloaded) {
+                  if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+                     exec 'sudo','perl','Makefile.PL','add_dependencies',
+                          $BDB_selection,$filename;
+                  } else {
+                     exec 'sudo','perl','Makefile.PL',$BDB_selection,
+                          $filename;
+                  }
+               }
+               my $so=system($CPAN::Config->{gzip}." -d $filename");
+               if ($so==-1) {
+                  die "Cannot gunzip $filename: $!\n";
+               }
+               print "***** Untar1: sudo ",
+                  $CPAN::Config->{tar}," xvf $filename\n";
+               open(FH, "sudo ".$CPAN::Config->{tar}." xvf $filename|");
+            } else {
+               unless ($already_downloaded) {
+                  if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+                     exec 'sudo','perl','Makefile.PL','add_dependencies',
+                          $BDB_selection,$filename;
+                  } else {
+                     exec 'sudo','perl','Makefile.PL',$BDB_selection,
+                          $filename;
+                  }
+               }
+               my $so=system($CPAN::Config->{gzip}." -d $filename");
+               if ($so==-1) {
+                  die "Cannot gunzip $filename: $!\n";
+               }
+               print "***** Untar2: ",
+                  $CPAN::Config->{tar}," xvf $filename\n";
+               open(FH, $CPAN::Config->{tar}." xvf $filename|");
+            }
+         } else {
+            print "***** Untar3: ",
+               $CPAN::Config->{tar}," xvf $filename\n";
+            open(FH, $CPAN::Config->{tar}." xvf $filename|");
+         }
+         while (my $line=<FH>) {
+            print $line;
+         }
+         close FH;
+         my $uniq='';
+         if ($BDB_selection eq 'Encrypted') {
+            $filename=~/^.*(......).tar$/;
+            $uniq=$1;
+            $filename=~s/........tar$//;
+            `mv -f $filename ${filename}_$uniq`;
+         } else {
+            $filename=~/^.*(......).NC.tar$/;
+            $uniq=$1;
+            $filename=~s/........NC.tar$//;
+            `mv -f $filename.NC $filename.NC_$uniq`;
+         }
+         build_berkeleydb($filename,$uniq,$BDB_selection);
+      } else {
+         if ($res->is_error(500)) {
+            print(sprintf(
+               "LWP failed with code[%s], message[%s]\n".
+               "Please check your connection to the Internet!\n",
+               $res->code,
+               $res->message,
+            ));
+         } else {
+            print(sprintf(
+               "LWP failed with code[%s], message[%s]\n",
+               $res->code,
+               $res->message,
+            ));
+         }
+      }
+   } else {
+      $CPAN::Frontend->mywarn("  LWP not available\n");
+   }
+
+}
+
+sub build_berkeleydb {
+
+   my $filename=$_[0];
+   my $uniq=$_[1];
+   my $BDB_selection=$_[2]||'';
+   my $args='';
+   if ($PREFIX) {
+      $args=' --prefix="'.$PREFIX.'"';
+   }
+   if ($BDB_selection eq 'Encrypted') {
+      open(FH,
+         "cd ${filename}_$uniq/build_unix;".
+         "../dist/configure$args|")
+      || warn $!;
+   } else {
+      open(FH,
+         "cd ${filename}.NC_$uniq/build_unix;".
+         "../dist/configure$args|")
+      || warn $!;
+   }
+   while (my $line=<FH>) {
+      print $line;
+   }
+   close FH;
+   unless ($CPAN::Config->{make}) {
+      if (-e '/usr/bin/make') {
+         $CPAN::Config->{make}='/usr/bin/make';
+      } elsif (-e '/usr/local/bin/make') {
+         $CPAN::Config->{make}='/usr/local/bin/make';
+      }
+   }
+   if ($BDB_selection eq 'Encrypted') {
+      print "*** Starting Encrypted BerkeleyDB build\n";
+      system("(cd ${filename}_$uniq/build_unix;".
+            $CPAN::Config->{make}." install) 2>&1")
+         || warn $!;
+      print "*** Completed Encrypted BerkeleyDB build\n";
+   } else {
+      print "*** Starting Non-Encrypted BerkeleyDB build\n";
+      system("(cd ${filename}.NC_$uniq/build_unix;".  $CPAN::Config->{make}.") 2>&1")
+            #$CPAN::Config->{make}." install) 2>&1")
+         || warn $!;
+      print "*** Completed Non-Encrypted BerkeleyDB build\n";
+   }
+   my $ver=$filename;
+   $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+   $berkeleydb=$pre.'/lib';
+   $header_to_use=$pre.'/include';
+   $ENV{'BERKELEYDB_INCLUDE'}=$header_to_use;
+   $ENV{'BERKELEYDB_LIB'}=$berkeleydb;
+   $ENV{'BERKELEYDB_NAME'}="-ldb-$ver";
+   $ENV{'DB_FILE_INCLUDE'}=$header_to_use;
+   $ENV{'DB_FILE_LIB'}=$berkeleydb;
+   $ENV{'DB_FILE_NAME'}="-ldb-$ver";
+   $ENV{'LD_LIBRARY_PATH'}=$berkeleydb;
+   $ENV{'LD_RUN_PATH'}=$ENV{'LD_LIBRARY_PATH'};
+
+}
+
+sub get_temp_file {
+
+   my $file=$_[0];
+   my $suffix=$_[1];
+   my $fh='';
+   if ($CPAN::META->has_usable("File::Temp")) {
+      $fh = File::Temp->new(
+            dir      => cwd(),
+            template => "${file}_XXXXXX",
+            suffix => $suffix,
+            unlink => 0,
+           );
+      $filename = $fh->filename;
+   } else {
+      $fh = FileHandle->new;
+      $filename = "${file}_${$}$suffix";
+   }
+   chomp($filename);
+   return $fh,$filename;
+
+}
+
+sub cpan_gunzip_and_untar {
+
+   unless ($CPAN::Config->{gzip}) {
+      if (-e '/usr/bin/gzip') {
+         $CPAN::Config->{gzip}='/usr/bin/gzip';
+      } elsif (-e '/usr/local/bin/gzip') {
+         $CPAN::Config->{gzip}='/usr/local/bin/gzip';
+      } else {
+         print "\n\n   Fatal Error!: The 'gzip' utility is".
+            " missing.\n".
+            "\n\n   Please report any bugs and send any",
+            "\n   questions, thoughts or feedback to:",
+            "\n\n      Brian.Kelly\@fullautosoftware.net.",
+            "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+            exit 1;
+      }
+   }
+   unless ($CPAN::Config->{tar}) {
+      if (-e '/usr/bin/tar') {
+         $CPAN::Config->{tar}='/usr/bin/tar';
+      } elsif (-e '/usr/local/bin/tar') {
+         $CPAN::Config->{tar}='/usr/local/bin/tar';
+      } else {
+         print "\n\n   Fatal Error!: The 'tar' utility is".
+            " missing.\n".
+            "\n\n   Please report any bugs and send any",
+            "\n   questions, thoughts or feedback to:",
+            "\n\n      Brian.Kelly\@fullautosoftware.net.",
+            "\n\n   Press ANY key to exit.\n\n";<STDIN>;
+            exit 1;
+      }
+   }
+
 }
 
 sub find_windows_app {
@@ -5727,6 +5885,23 @@ sub MY::makefile {
 }
 
 package MY; # so that "SUPER" works right
+sub MY::dist {
+
+   use Config;
+
+   my $inherited = shift->SUPER::dist(@_);
+
+   if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+
+      $inherited =~ s/^(DISTVNAME.*Net-FullAuto)(.*)$/$1-Complete$2/m;
+
+   }
+
+   $inherited; 
+
+}
+
+package MY; # so that "SUPER" works right
 sub MY::tools_other {
 
    use Config;
@@ -5932,7 +6107,7 @@ sub MY::install {
       "/Net/FullAuto/FA_Core.pm\n\n"
       if $^O eq 'cygwin';
    $inherited .= "\nfiglet_fonts ::\n".
-      "\t\$(NOECHO) \$(CP) FIGlet_fonts/* /usr/share/figlet\n\n".
+      "\t\$(NOECHO) \$(CP) dependencies/FIGlet_fonts/* /usr/share/figlet\n\n".
    $inherited;
 
 }

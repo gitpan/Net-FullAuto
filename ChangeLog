@@ -20,6 +20,14 @@
 #######################################################################
 
 
+2014-09-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999909 released.
+
+        * New ability to install FullAuto with bundled
+          dependencies rather than from internet CPAN.
+
+
 2014-09-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999908 released.
