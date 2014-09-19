@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999909';
+$main::VERSION='0.999999999910';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -865,9 +865,9 @@ END
          close LD;
       }
       if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-         exec 'sudo','perl','Makefile.PL','add_dependencies';
+         exec 'sudo',$^X,'Makefile.PL','add_dependencies';
       } else {
-         exec 'sudo','perl','Makefile.PL';
+         exec 'sudo',$^X,'Makefile.PL';
       }
    } elsif (exists $main::amazon{'centos'}) {
 
@@ -921,9 +921,9 @@ print "YEP MEMORY=$line\n";<STDIN>;
          }
          close LD;
          if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-            exec 'sudo','perl','Makefile.PL','add_dependencies';
+            exec 'sudo',$^X,'Makefile.PL','add_dependencies';
          } else {
-            exec 'sudo','perl','Makefile.PL';
+            exec 'sudo',$^X,'Makefile.PL';
          }
       }
 
@@ -1179,7 +1179,9 @@ print "YEP MEMORY=$line\n";<STDIN>;
       close(LI);
       if ($tar) {
          unless ($CPAN::Config->{tar}) {
-            if (-e '/usr/bin/tar') {
+            if (-e '/usr/sfw/bin/gtar') {
+               $CPAN::Config->{tar}='/usr/sfw/bin/gtar';
+            } elsif (-e '/usr/bin/tar') {
                $CPAN::Config->{tar}='/usr/bin/tar';
             } elsif (-e '/usr/local/bin/tar') {
                $CPAN::Config->{tar}='/usr/local/bin/tar';
@@ -1226,8 +1228,11 @@ print "YEP MEMORY=$line\n";<STDIN>;
       my $echo=$_[5]||'';
       my $dir='';
       my $cpan_error='';
-      if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-         use CPAN::Mini;
+      eval {
+         require CPAN::Mini;
+         import CPAN::Mini;
+      };
+      if (!$@ && grep { /-*add[-_]?dependencies/i } @ARGV) {
          my $distribution = CPAN::Shell->expand(
                "Module",$p 
             )->distribution()->pretty_id();
@@ -1331,16 +1336,16 @@ print "YEP MEMORY=$line\n";<STDIN>;
             }
             if ($sudo) {
                if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-                  exec 'sudo','perl','Makefile.PL','SKIP','add_dependencies',
+                  exec 'sudo',$^X,'Makefile.PL','SKIP','add_dependencies',
                        $p,$exec_cnt;
                } else {
-                  exec 'sudo','perl','Makefile.PL','SKIP',$p,$exec_cnt;
+                  exec 'sudo',$^X,'Makefile.PL','SKIP',$p,$exec_cnt;
                }
             } elsif (grep { /-*add[-_]?dependencies/i } @ARGV) {
-               exec 'perl','Makefile.PL','SKIP','add_dependencies',
+               exec $^X,'Makefile.PL','SKIP','add_dependencies',
                     $p,$exec_cnt;
             } else {
-               exec 'perl','Makefile.PL','SKIP',$p,$exec_cnt;
+               exec $^X,'Makefile.PL','SKIP',$p,$exec_cnt;
             }
          }
       } else {
@@ -1403,6 +1408,8 @@ print "YEP MEMORY=$line\n";<STDIN>;
 
    my $stdout='';my $stderr='';
    &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.98');
+   &fa_install_mod('File::Which','install','Makefile');
+   &fa_install_mod('CPAN::Mini','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
@@ -4429,10 +4436,10 @@ END
             unless (exists $main::amazon{'freebsd'}) {
                unless ($already_downloaded) {
                   if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-                     exec 'sudo','perl','Makefile.PL','add_dependencies',
+                     exec 'sudo',$^X,'Makefile.PL','add_dependencies',
                           $BDB_selection,$filename;
                   } else {
-                     exec 'sudo','perl','Makefile.PL',$BDB_selection,
+                     exec 'sudo',$^X,'Makefile.PL',$BDB_selection,
                           $filename;
                   }
                }
@@ -4446,10 +4453,10 @@ END
             } else {
                unless ($already_downloaded) {
                   if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-                     exec 'sudo','perl','Makefile.PL','add_dependencies',
+                     exec 'sudo',$^X,'Makefile.PL','add_dependencies',
                           $BDB_selection,$filename;
                   } else {
-                     exec 'sudo','perl','Makefile.PL',$BDB_selection,
+                     exec 'sudo',$^X,'Makefile.PL',$BDB_selection,
                           $filename;
                   }
                }
@@ -4604,7 +4611,9 @@ sub cpan_gunzip_and_untar {
       }
    }
    unless ($CPAN::Config->{tar}) {
-      if (-e '/usr/bin/tar') {
+      if (-e '/usr/sfw/bin/gtar') {
+         $CPAN::Config->{tar}='/usr/sfw/bin/gtar';
+      } elsif (-e '/usr/bin/tar') {
          $CPAN::Config->{tar}='/usr/bin/tar';
       } elsif (-e '/usr/local/bin/tar') {
          $CPAN::Config->{tar}='/usr/local/bin/tar';
@@ -5388,6 +5397,7 @@ unless (exists $ENV{FA_BERKELEY}) {
       # timed out
       print "\n";
       $selection = 'Setuid';
+      Term::ReadKey::ReadMode(0);
    } alarm 0;
 } elsif (-1<index $ENV{FA_BERKELEY},'Owner Group') {
    $selection='Install with Owner Group Permissions';

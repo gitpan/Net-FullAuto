@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999910 released.
+
+        * Fixed slow logout from improper localhost cleanup.
+
+        * Fixed password parsing for ftp.
+
+
 2014-09-16  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999909 released.
