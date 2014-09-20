@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-09-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999911 released.
+
+        * Added dependencies for CPAN::Mini.
+
+
 2014-09-19  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999910 released.

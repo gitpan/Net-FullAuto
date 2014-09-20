@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999910';
+$main::VERSION='0.999999999911';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1409,7 +1409,6 @@ print "YEP MEMORY=$line\n";<STDIN>;
    my $stdout='';my $stderr='';
    &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.98');
    &fa_install_mod('File::Which','install','Makefile');
-   &fa_install_mod('CPAN::Mini','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
    &fa_install_mod('Locale::Maketext::Simple','install','Makefile');
@@ -1433,6 +1432,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_mod('Algorithm::Diff','install','Makefile');
    &fa_install_mod('Text::Diff','install','Makefile');
    &fa_install_mod('PAR::Dist','install','Makefile');
+   &fa_install_mod('Compress::Zlib','install','Makefile');
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
@@ -1443,7 +1443,6 @@ print "YEP MEMORY=$line\n";<STDIN>;
       &fa_install_mod('ExtUtils::ParseXS','install','Makefile','force');
       &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
       &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
-      &fa_install_mod('Compress::Zlib','install','Makefile');
       &fa_install_mod('IO::Compress::Bzip2','install','Makefile');
       &fa_install_mod('IO::Zlib','install','Makefile');
       &fa_install_mod('Archive::Tar','install','Makefile');
@@ -1488,7 +1487,9 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_module('HTTP::Negotiate','install','Makefile');
    &fa_install_module('Net::HTTP','install','Makefile');
    &fa_install_module('Data::Dump','install','Makefile');
+   &fa_install_module('File::HomeDir','install','Makefile');
    &fa_install_module('LWP','install','Makefile');
+   &fa_install_module('CPAN::Mini','install','Makefile');
    eval { require Net::SSLeay };
    if ($@) {
       my $ssleay_error_banner=<<END;
