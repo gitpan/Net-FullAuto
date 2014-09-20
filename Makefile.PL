@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999911';
+$main::VERSION='0.999999999912';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1433,12 +1433,12 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_mod('Text::Diff','install','Makefile');
    &fa_install_mod('PAR::Dist','install','Makefile');
    &fa_install_mod('Compress::Zlib','install','Makefile');
+   &fa_install_mod('Parse::CPAN::Meta','install','Makefile','','1.4414');
+   &fa_install_mod('CPAN::Meta::Requirements','install','Makefile','','2.121');
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
       &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
       &fa_install_mod('JSON::PP','install','Makefile');
-      &fa_install_mod('Parse::CPAN::Meta','install','Makefile');
-      &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
       &fa_install_mod('CPAN::Meta','install','Makefile','','2.142060');
       &fa_install_mod('ExtUtils::ParseXS','install','Makefile','force');
       &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
@@ -1580,7 +1580,6 @@ END
    &fa_install_module('ExtUtils::InstallPaths','install','Makefile');
    &fa_install_module('ExtUtils::Helpers','install','Makefile');
    &fa_install_module('Test::Harness','install','Makefile','','3.32');
-   &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
    &fa_install_module('CPAN::Meta','install','Makefile');
    &fa_install_module('Module::Build::Tiny','install','Build');
    &fa_install_module('Class::Method::Modifiers','install','Makefile');
