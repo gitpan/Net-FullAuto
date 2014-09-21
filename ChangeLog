@@ -22,6 +22,14 @@
 
 2014-09-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999999999913 released.
+
+        * Fixed multiple install issues in Makefile.PL,
+          found when testing on Amazon.
+
+
+2014-09-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999999999912 released.
 
         * Re-arranged some dependencies in Makefile.PL.

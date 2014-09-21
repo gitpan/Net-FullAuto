@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999912';
+$main::VERSION='0.999999999913';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1350,6 +1350,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
          }
       } else {
          print "*** $p Loaded Successfully\n";
+         $exec_cnt=0;
       }
       return '';
    }
@@ -1432,18 +1433,19 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_mod('Algorithm::Diff','install','Makefile');
    &fa_install_mod('Text::Diff','install','Makefile');
    &fa_install_mod('PAR::Dist','install','Makefile');
+   &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
    &fa_install_mod('Compress::Zlib','install','Makefile');
+   &fa_install_mod('CPAN::Meta::YAML','install','Makefile','','0.011');
    &fa_install_mod('Parse::CPAN::Meta','install','Makefile','','1.4414');
    &fa_install_mod('CPAN::Meta::Requirements','install','Makefile','','2.121');
    eval { require Module::Build };
-   if ((!($@) && $Module::Build::VERSION<=.3601) || $@) {
-      &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
+   if ((!($@) && $Module::Build::VERSION<=.3601) || $@
+         || grep { /-*add[-_]?dependencies/i } @ARGV) {
       &fa_install_mod('JSON::PP','install','Makefile');
       &fa_install_mod('CPAN::Meta','install','Makefile','','2.142060');
       &fa_install_mod('ExtUtils::ParseXS','install','Makefile','force');
       &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
       &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
-      &fa_install_mod('IO::Compress::Bzip2','install','Makefile');
       &fa_install_mod('IO::Zlib','install','Makefile');
       &fa_install_mod('Archive::Tar','install','Makefile');
       &fa_install_mod('Regexp::Common','install','Makefile');
@@ -1453,10 +1455,13 @@ print "YEP MEMORY=$line\n";<STDIN>;
       &fa_install_mod('Module::Build','install','Makefile','force');
    }
    &fa_install_mod('IO::CaptureOutput','install','Makefile');
-   if ($^O ne 'MSWin32' && $^O ne 'MSWin64') {
+   if ($^O ne 'MSWin32' && $^O ne 'MSWin64' ||
+         grep { /-*add[-_]?dependencies/i } @ARGV) {
       &fa_install_module('IO::Pty','install','Makefile');
-      my $argv0=$ARGV[0]||'';
-      exit if $argv0 eq 'install_IO_Pty_from_CPAN';
+      unless (grep { /-*add[-_]?dependencies/i } @ARGV) {
+         my $argv0=$ARGV[0]||'';
+         exit if $argv0 eq 'install_IO_Pty_from_CPAN';
+      }
    }
    &fa_install_module('HTML::Tagset','install','Makefile');
    &fa_install_module('HTML::Parser','install','Makefile');
@@ -1469,7 +1474,8 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_module('HTTP::Message','install','Makefile');
    &fa_install_module('File::Listing','install','Makefile');
    &fa_install_module('HTTP::Cookies','install','Makefile');
-   if ($^O ne 'MSWin32' && $^O ne 'MSWin64' && $^O ne 'cygwin') {
+   if ($^O ne 'MSWin32' && $^O ne 'MSWin64' && $^O ne 'cygwin'
+         || grep { /-*add[-_]?dependencies/i } @ARGV) {
       &fa_install_module('HTTP::Daemon','install','Makefile');
       &fa_install_module('Encode::Locale','install','Makefile');
       &fa_install_module('WWW::RobotRules','install','Makefile');
@@ -1522,10 +1528,11 @@ END
                eval {
                   local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
                   alarm $timeout;
+                  my $fae="No   (FullAuto Setup will exit)";
                   my $menu1 = [
                               $ssleay_error_banner,
                               [ "Yes", sub{ return 'Yes' } ],
-                              [ "No   (FullAuto Setup will exit)", sub{ return 'No' } ],
+                              [ $fae, sub{ return 'No' } ],
                               ];
                   $selection=&menu($menu1);
                   exit if $selection eq ']quit[';
@@ -1567,8 +1574,8 @@ END
          } last;
       }
       close FH;
-      #system("cd \"$dir\";make install;")
-      #   || warn $!;
+   } elsif (grep { /-*add[-_]?dependencies/i } @ARGV) {
+      &fa_install_module('Net::SSLeay','get');
    }
    &fa_install_module('IO::Socket::SSL','install','Makefile','','','n');
    &fa_install_module('Mozilla::CA','install','Makefile');
@@ -1586,7 +1593,7 @@ END
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
    &fa_install_module('Term::RawInput','install','Makefile','','1.22');
-   if ($^O eq 'cygwin') {
+   if ($^O eq 'cygwin' || grep { /-*add[-_]?dependencies/i } @ARGV) {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
    }
@@ -1601,11 +1608,13 @@ END
    &fa_install_module('Devel::Symdump','install','Makefile');
    &fa_install_module('PadWalker','install','Makefile');
    eval { require Data::Dump::Streamer };
-   if ($@) {
+   if ($@ || grep { /-*add[-_]?dependencies/i } @ARGV) {
       &fa_install_module('Data::Dump::Streamer','get');
-      my $dir=&fa_find_latest('Data-Dump-Streamer');
-      system("cd \"$dir\";$^X Build.PL NODDS;");
-      system("cd \"$dir\";./Build install;");
+      unless (grep { /-*add[-_]?dependencies/i } @ARGV) {
+         my $dir=&fa_find_latest('Data-Dump-Streamer');
+         system("cd \"$dir\";$^X Build.PL NODDS;");
+         system("cd \"$dir\";./Build install;");
+      }
    }
    &fa_install_module('Term::Menus','install','Makefile','','2.83');
    &fa_install_module('IO::String','install','Makefile');
@@ -3954,7 +3963,12 @@ if ($get_BerkeleyDB && $^O ne 'cygwin') {
             $filename=$1;
             my $uniq=$2;
             File::Copy::move("$filename.NC","$filename.NC_$uniq");
-            build_berkeleydb($filename,$uniq,'');
+            my $ver=$filenm;
+            $ver=~s/_.*$//;
+            $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+            my $pre="/usr/local/BerkeleyDB.$ver";
+            $pre=$PREFIX."BerkeleyDB$ver" if $PREFIX;
+            build_berkeleydb($filename,$uniq,$pre,$PREFIX,'');
          } else {
             download_berkeleydb();
          }
@@ -4489,7 +4503,7 @@ END
             $filename=~s/........NC.tar$//;
             `mv -f $filename.NC $filename.NC_$uniq`;
          }
-         build_berkeleydb($filename,$uniq,$BDB_selection);
+         build_berkeleydb($filename,$uniq,$pre,$PREFIX,$BDB_selection);
       } else {
          if ($res->is_error(500)) {
             print(sprintf(
@@ -4516,7 +4530,9 @@ sub build_berkeleydb {
 
    my $filename=$_[0];
    my $uniq=$_[1];
-   my $BDB_selection=$_[2]||'';
+   my $pre=$_[2]||'';
+   my $PREFIX=$_[3]||'';
+   my $BDB_selection=$_[4]||'';
    my $args='';
    if ($PREFIX) {
       $args=' --prefix="'.$PREFIX.'"';
@@ -4551,8 +4567,8 @@ sub build_berkeleydb {
       print "*** Completed Encrypted BerkeleyDB build\n";
    } else {
       print "*** Starting Non-Encrypted BerkeleyDB build\n";
-      system("(cd ${filename}.NC_$uniq/build_unix;".  $CPAN::Config->{make}.") 2>&1")
-            #$CPAN::Config->{make}." install) 2>&1")
+      system("(cd ${filename}.NC_$uniq/build_unix;".
+         $CPAN::Config->{make}." install) 2>&1")
          || warn $!;
       print "*** Completed Non-Encrypted BerkeleyDB build\n";
    }
