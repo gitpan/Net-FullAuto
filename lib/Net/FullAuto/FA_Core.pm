@@ -790,7 +790,7 @@ our @dhostlabels=();our %monthconv=();our $cache_root='';
 our $cache_key='';our $admin='';our $menu='';our $welcome='';
 our %hourconv=();our @weekdays=();our %weekdaysconv=();
 our %mimetypes=();our $identity_file='';our $skip_host_hash='';
-our $crypt_cipher='DES';our $save_main_pass=0;
+our $crypt_cipher='DES';our $save_main_pass=0;our $newuseramazon='';
 our $password_from='user_input';
 our $funkyprompt='\\\\137\\\\146\\\\165\\\\156\\\\153\\\\171\\\\120'.
                  '\\\\162\\\\157\\\\155\\\\160\\\\164\\\\137';
@@ -5982,7 +5982,7 @@ sub check_Hosts
          $chk_ip=$ipn;
       } elsif ($lh_key) {
       } else { next }
-      if ($chk_hostname || $chk_ip || $lh_key==1) {
+      if (0 && $chk_hostname || $chk_ip || $lh_key==1) {
          my $hash="\'Label\'=>\'__Master_${$}__\'\,";
          $same_host_as_Master{$host->{'Label'}}='-';
          foreach my $key (keys %{$host}) {
@@ -6007,7 +6007,7 @@ sub check_Hosts
                         if (defined $Local_HostName) {
                            $hash.="\'HostName'=>\'".$Local_HostName."\'\,";
                         } elsif (defined $Local_FullHostName) {
-                           $hash.="\'HostName'=>\'".$Local_FullHostName."\'\,";
+                           $hash.="\'HostName'=>\'".$Local_FullHostName."\'\,"                                                                     ;
                         } next;
                      } elsif (lc($kee) eq 'ip' && !$chk_hostname && keys
                               %{$Local_IP_Address}) {
@@ -8733,6 +8733,7 @@ sub getpasswd
                          ."\n  (WNeeded for ${prox}Local Host \'$host\')\n";
                }
             } elsif ($host) {
+print "PASSLABEL=$passlabel\n";
                if ($Net::FullAuto::FA_Core::debug) {
                   $print1="\n  Please Enter (8) $login_id\'s password "
                          ."for $host."
@@ -12507,6 +12508,62 @@ my $setup_new_user=sub {
    return \%setup_new_user;
 };
 
+my $get_ec2_api=sub {
+
+   print "\n";
+   my $out=`which aws 2>&1`;
+   if (!(-e "/usr/bin/aws") && (-1<index $out,'no aws in')) {
+      system("wget https://s3.amazonaws.com/aws-cli/awscli-bundle.zip");
+      system("sudo unzip awscli-bundle.zip");
+      {
+         $SIG{CHLD}="DEFAULT";
+         my $cmd="sudo ./awscli-bundle/install -i ".
+            "/usr/local/aws -b /usr/local/bin/aws";
+         system($cmd);
+      };
+      system("sudo rm -rf ./awscli-bundle");
+      system("wget http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip");
+      system("sudo mkdir /usr/local/ec2");
+      system("sudo unzip ./ec2-api-tools.zip -d /usr/local/ec2");
+      system("sudo rm -rf ./ec2-api-tools.zip");
+   }
+   print "WE ARE DONE\n";
+   cleanup();
+
+};
+
+sub new_user_amazon {
+
+   print $fa_welcome;
+   sleep 3;
+   my $banner=<<END;
+
+    ___     _ _   _       _                  
+   | __|  _| | | /_\\ _  _| |_ ___    ___ _ _             __|  __|_  ) 
+   | _| || | | |/ _ \\ || |  _/ _ \\  / _ \\ ' \\            _|  (     /
+   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  \\___/_||_|  Amazon  ___|\\___|___|
+
+   You are fully authenticated with FullAuto on Amazon AWS EC2:
+   "Amazon Web Services  -  Elastic Compute Cloud".
+
+   The goal now is to demonstrate how FullAuto can fully automate the
+   setup, processing and maintenance of cloud computing on AWS EC2.
+
+   FullAuto will now check the current system to determine if the ec2 API
+   is installed and available for use.
+END
+
+   my %welcome_fa_amazon=(
+
+      Name   => 'welcome_fa_amazon',
+      Banner => $banner,
+      Result => $get_ec2_api,
+
+   );
+   Menu(\%welcome_fa_amazon);
+
+}
+
 sub new_user_experience {
 
    print $fa_welcome;
@@ -12536,7 +12593,6 @@ sub new_user_experience {
             Text   => "Getting Started (quickly) with FullAuto.\n".
                       "                   ".
                       "Recommended for beginners.\n\n",
-            #Default => "*",
             Result  => $setup_new_user_a,
          },
          Item_2 => {
@@ -12816,11 +12872,11 @@ our $determine_password=sub {
             $Net::FullAuto::FA_Core::save_main_pass=1;
             undef $passwd[0];
          } else {
-            print "\n   NOTICE!: Saved Password --EXPIRED-- on ".
+            print "\n  NOTICE!: Saved Password --EXPIRED-- on ".
                   scalar localtime($ignore_expiration)."\n";
             $Net::FullAuto::FA_Core::cache->set(
                   $Net::FullAuto::FA_Core::cache->{'key'},
-                  [0,"\n   NOTICE!: Saved Password --EXPIRED-- on ".
+                  [0,"\n  NOTICE!: Saved Password --EXPIRED-- on ".
                   scalar localtime($ignore_expiration)."\n"])
                if $Net::FullAuto::FA_Core::cache;
             my $passwd_timeout=350;
@@ -13174,7 +13230,7 @@ END
       my $put_href=Data::Dump::Streamer::Dump($href)->Out();
       $status=$bdb->db_put('localhost',$put_href);
       print "\n\n";
-   } else {
+   } elsif ($passwd[0]) {
       my $rstr=new String::Random;
       if (exists $Hosts{"__Master_${$}__"}{'Cipher'}
          && $Hosts{"__Master_${$}__"}{'Cipher'}
@@ -13300,6 +13356,7 @@ sub fa_login
                 'new_user'              => \$newuser,
                 'newuser'               => \$newuser,
                 'new-user'              => \$newuser,
+                'new-user-amazon'       => \$newuseramazon,
                 'tutorial'              => \$tutorial,
                 'figlet'                => \$figlet,
                 'about'                 => \$version,
@@ -13497,6 +13554,8 @@ END
       $Net::FullAuto::FA_Core::skip_host_hash=1;
       &new_user_experience($Term::Menus::new_user_flag,
          $welcome,$newuser);
+   } elsif ($newuseramazon) {
+      &new_user_amazon();
    }
    my $cache='';
    foreach my $hl ('cache','localhost') {
@@ -17439,6 +17498,7 @@ sub new {
       $self->{_hostlabel}=[ $hostlabel,'' ];
    }
    if ($ftr_cmd) {
+print "FTR_CMD=$ftr_cmd\n";<STDIN>;
       $self->{_cmd_handle}=$ftr_cmd->{_cmd_handle};
       $self->{_sh_pid}=$ftr_cmd->{_sh_pid};
       $self->{_cmd_pid}=$ftr_cmd->{_cmd_pid};
@@ -18067,9 +18127,6 @@ sub cmd
          ($output,$stderr)=&Net::FullAuto::FA_Core::cmd($command);
       } 
    };
-   #if ($@) {
-   #   print "$self->{_cmd_type} CMD ERROR! - $@\n";exit;
-   #}
    if (wantarray) {
       return $output,$stderr;
    } elsif ($stderr) {
@@ -18085,7 +18142,8 @@ sub ls
       (join ' ',@topcaller),"\n" if $Net::FullAuto::FA_Core::debug;
    print $Net::FullAuto::FA_Core::MRLOG "File_Transfer::ls() CALLER=",
       (join ' ',@topcaller),
-      "\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      "\n" if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my ($self, $options, $path, $cache) = @_;
    $path='' unless defined $path;
    $options='' unless defined $options;
@@ -18903,7 +18961,8 @@ sub ftm_login
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
        $owner,$group,$fttimeout,$transfer_dir,$rcm_chain,
        $rcm_map,$uname,$ping)
-       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label($hostlabel,$_connect);
+       =&Net::FullAuto::FA_Core::lookup_hostinfo_from_label(
+       $hostlabel,$_connect);
    my @connect_method=@{$ftr_cnct};
    my $host=($use eq 'ip') ? $ip : $hostname;
    if ($Net::FullAuto::FA_Core::cltimeout ne 'X') {
@@ -18960,7 +19019,8 @@ sub ftm_login
                $hostname||='';$ms_share||='';
                $host=($use eq 'ip') ? $ip : $hostname;
 print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST1111=$host\n"
-      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                $login_id=&Net::FullAuto::FA_Core::username() if !$login_id;
                if ($su_id) {
                   $ftm_passwd=&Net::FullAuto::FA_Core::getpasswd(
@@ -18979,8 +19039,8 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST1111=$host\n"
                $hostlabel=$Net::FullAuto::FA_Core::DeploySMB_Proxy[0];
                @connect_method=@{$ftr_cnct};
             } else {
-               ($work_dirs,$smb_type,$stderr)=
-                     &connect_share($Net::FullAuto::FA_Core::localhost->{_cmd_handle},
+               ($work_dirs,$smb_type,$stderr)=&connect_share(
+                     $Net::FullAuto::FA_Core::localhost->{_cmd_handle},
                      $hostlabel);
                $cmd_type='';
                $ftm_type='';
@@ -19032,7 +19092,8 @@ print "HOW ABOUT AN SMB UNAME???===$uname<===\n";<STDIN>;
                $hostname||='';$ms_share||='';
                $host=($use eq 'ip') ? $ip : $hostname;
 print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST2222=$host\n"
-      if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+      if $Net::FullAuto::FA_Core::log &&
+      -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                &Net::FullAuto::FA_Core::acquire_fa_lock(1234);
                if ($su_id) {
                   $fpx_passwd=&Net::FullAuto::FA_Core::getpasswd(
@@ -19091,7 +19152,8 @@ print $Net::FullAuto::FA_Core::MRLOG "HOSTTEST2222=$host\n"
                      $fpx_handle->output_record_separator("\r");
                      while (my $line=$fpx_handle->get) {
 print "FTPLOGINLINE=$line and MS_SHARE=$ms_share\n";
-print $Net::FullAuto::FA_Core::MRLOG "FTPLOGINLINE=$line and MS_SHARE=$ms_share\n";
+print $Net::FullAuto::FA_Core::MRLOG
+      "FTPLOGINLINE=$line and MS_SHARE=$ms_share\n";
                         if ((20<length $line && unpack('a21',$line)
                                eq 'A remote host refused')
                                || (31<length $line && unpack('a32',$line) eq
@@ -20354,7 +20416,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                ($key_authentication,$stderr)=&wait_for_passwd_prompt(
                   { _cmd_handle=>$ftp_handle,
                     _hostlabel=>[ $hostlabel,'' ],
-                    _cmd_type=>$cmd_type,
+                    _cmd_type=>'sftp',
                   },$timeout);
                if ($stderr) {
                   if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
@@ -20376,7 +20438,11 @@ print $Net::FullAuto::FA_Core::MRLOG
          }
 
          ## Send password.
-         $ftp_handle->print($ftm_passwd) unless $key_authentication;
+         unless ($key_authentication) {
+            $ftp_handle->print($ftm_passwd);
+         } else {
+            $ftp_handle->print(); 
+         }
 
          my $lin='';my $asked=0;my $authyes=0;my @choices=();
          while (1) {
@@ -21199,7 +21265,8 @@ END
                   "wait_for_passwd_prompt() PASSWORD PROMPT=$lin<==\n"
                   if $Net::FullAuto::FA_Core::log &&
                   -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-               $determine_password->($login_Mast_error,$loop_count);
+               $determine_password->($login_Mast_error,$loop_count)
+                  if $filehandle->{_hostlabel}->[0]=~/__Master_${$}__/;
                $gotpass=1;last PW;
             #} elsif ($lin=~/password: ?$/is) {
             #   print $Net::FullAuto::FA_Core::MRLOG
@@ -21352,33 +21419,58 @@ END
 
 END
 
-                     my %i_will_wait=(
+                     my $i_will_wait_sub=sub {
 
-                        Name => 'i_will_wait',
-                        Banner => $wait_banner,
-                        Result => sub {
-                                          package i_will_wait;
-                                          use Net::FullAuto::FA_Core;
-                                          my $key="/home/$user/fullauto.pem";
-                                          my $gotkey=0;
-                                          foreach my $sec (1..300) {
-                                             sleep 1;
-                                             if (-e $key) {
-                                                $gotkey=1; 
-                                             }
-                                          }
-                                          if ($gotkey) {
-                                             exec
-                                               "fa -i fullauto.pem --new_user";
-                                          } else {
-                                             cleanup();
-                                          }
-                                       },
-                     );
+                        package i_will_wait_sub;
+                        use Net::FullAuto::FA_Core;
+                        my $key="/home/$user/fullauto.pem"; 
+                        if (-e $key) {
+                           my $cmd="/usr/local/bin/fa ".
+                                   "-i $key ".
+                                   "--new-user-amazon";
+                           print "\n";
+                           {
+                              no warnings;
+                              exec $cmd;
+                           };
+                        }
+                        my %i_will_wait=(
+
+                           Name => 'i_will_wait',
+                           Banner => $wait_banner,
+                           Result => sub {
+                              package i_will_wait;
+                              use Net::FullAuto::FA_Core;
+                              my $key="/home/$user/fullauto.pem";
+                              my $gotkey=0;
+                              foreach my $sec (1..300) {
+                                 sleep 1;
+                                 if (-e $key) {
+                                    $gotkey=1;
+                                    last;
+                                 }
+                              }
+                              my $cmd="/usr/local/bin/fa ".
+                                      "-i $key ".
+                                      "--new-user-amazon";
+                              if ($gotkey) {
+                                 print "\n";
+                                 {
+                                    no warnings;
+                                    exec $cmd;
+                                 };
+                              } else {
+                                 cleanup();
+                              }
+                           },
+                        );
+                        return \%i_will_wait;
+                     };
+
                      my %publickey_failed=(
 
                         Name => 'publickey_failed',
-                        Result => \%i_will_wait,
+                        Result => $i_will_wait_sub,
                         Banner => $pbf_banner,
 
                      );
@@ -21527,6 +21619,7 @@ sub connect_share
 
 sub cwd
 {
+
    my @topcaller=caller;
    print "\nINFO: File_Transfer::cwd() (((((((CALLER))))))):\n       ",
       (join ' ',@topcaller),"\n\n"
@@ -21556,7 +21649,6 @@ sub cwd
          $target_dir=unpack('x2,a*',$target_dir);
       } 
    }
-#print "TARGET_DIR=$target_dir\n";
    my $hostlabel=$self->{_hostlabel}->[0]||$self->{_hostlabel}->[1];
    my ($ip,$hostname,$use,$ms_share,$ms_domain,
        $cmd_cnct,$ftr_cnct,$login_id,$su_id,$chmod,
@@ -28426,7 +28518,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
          exists $Hosts{$hostlabel}->{'Label'} &&
          (lc($Hosts{$hostlabel}->{'Label'}) eq 'mozrepl' ||
          $Hosts{$hostlabel}->{'Label'} eq 'Firefox MozRepl')) {
-   } else {
+   } elsif ($hostlabel!~/__Master_${$}__/) {
       $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
          $hostlabel,$login_id,'','');
    }

@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999913';
+$main::VERSION='0.999999999914';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -274,7 +274,50 @@ END
    use inc::Module::Install;
    use Config;
    use File::stat;
-   CPAN::HandleConfig->load;
+   eval {
+      CPAN::HandleConfig->load;
+   };
+   if ($@) {
+      if ((-x "/usr/local/bin/perl") && ($^X ne "/usr/local/bin/perl")) {
+         my $timeout=300;my $a='';
+         my $toperror=$@;
+         eval {
+            local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+            alarm $timeout;
+            my $message=<<END;
+
+   ERROR!:  $toperror
+
+            It appears that the perl installation used to run
+            Makefile.PL is an old system installation, and not
+            the intended one.
+
+            Another perl installation using /usr/local/bin/perl
+            as the primary executable has been discovered.
+
+            Would you like Makefile.PL to be run against that
+            installation?
+
+END
+
+            my $fae="No   (FullAuto Setup will exit)";
+            my $menu1 = [
+                        $message,
+                        [ "Yes", sub{ return 'Yes' } ],
+                        [ $fae, sub{ return 'No' } ],
+                        ];
+            my $selection=&menu($menu1);
+            exit 0 if $selection eq ']quit[';
+            exit 0 if -1<index $selection, 'No   (';
+            my $argvs=join " ", @ARGV;
+            exec "/usr/local/bin/perl Makefile.PL $argvs";
+            alarm 0;
+         };
+         die "$@: $!\n" if $@;
+      } else {
+         die "$@: $!\n" if $@;
+      }
+   }
    use POSIX qw/strftime/;
    my $mycpantest=0; 
    $main::curdir=&cwd;
@@ -401,6 +444,65 @@ END
    if (-e "dependencies/CPAN/authors" &&
          !(grep {
          /(?:use[-_]?)?internet|online|connect_to_internet_ok/i } @ARGV)) {
+      opendir(DH,"dependencies/CPAN/authors/id/F/FR/FREW") ||
+         die "Cannot open dir dependencies/CPAN/authors/id/F/FR/FREW: $1\n";
+      my $filenames_not_trunced=0;my $got_sub=0;
+      while (my $line=readdir(DH)) {
+         chomp($line=~tr/\0-\11\13-\37\177-\377//d);
+         if ($line=~/Sub-Exporter-Progressive-.*gz$/) {
+            $filenames_not_trunced=1;
+            last;
+         }
+         if (-1<index $line,'Sub-') {
+            $got_sub=1;
+         }
+      }
+      close DH;
+      unless ($filenames_not_trunced) {
+         if ($got_sub) {
+            if ($^O eq 'solaris' && (-e '/usr/sfw/bin/gtar')) {
+               my $message=<<END;
+
+   FullAuto Setup ERROR!:  It appears that the solaris system tar
+                           command was used to expand
+                           Net-FullAuto-Complete-$main::VERSION.tar.gz,
+                           which is a problem. The solaris tar utility
+                           has a limit on the length of directory depth
+                           and filename that is exceeded by some of the
+                           dependencies bundled with FullAuto Setup.
+
+                           Use the tar utility /usr/sfw/bin/gtar to
+                           expand Net-FullAuto-Complete-$main::VERSION.tar.gz.
+
+END
+               print $message;exit 1;
+            } else {
+               my $message=<<END;
+
+   FullAuto Setup ERROR!:  It appears that the tar command used to expand
+                           Net-FullAuto-Complete-$main::VERSION.tar.gz,
+                           has a problem. Some tar utilities have a limit
+                           on the length of directory depth and filename
+                           that is exceeded by some of the dependencies
+                           bundled with FullAuto Setup.
+
+                           Hint: Install and use GNU tar to untar (expand)
+                                 Net-FullAuto-Complete-$main::VERSION.tar.gz.
+
+END
+               print $message;exit 1;
+            }
+         } else {
+              my $message=<<END;
+
+   FullAuto Setup ERROR!:  It appears that there are missing dependencies
+                           in the dependencies/CPAN/authors folder of this
+                           Net-FullAuto-Complete distribution.
+
+END
+               print $message;exit 1;
+         }
+      }
       my $loc="$main::curdir/dependencies/CPAN";
       $CPAN::Config->{keep_source_where}=$loc;
       $CPAN::Config->{connect_to_internet_ok}=0;
@@ -864,6 +966,13 @@ END
          }
          close LD;
       }
+      unless (-1<index $yins,'nano') {
+         open(LD,"sudo yum -y install 'nano'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
       if (grep { /-*add[-_]?dependencies/i } @ARGV) {
          exec 'sudo',$^X,'Makefile.PL','add_dependencies';
       } else {
@@ -920,11 +1029,18 @@ print "YEP MEMORY=$line\n";<STDIN>;
             print $line;
          }
          close LD;
-         if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-            exec 'sudo',$^X,'Makefile.PL','add_dependencies';
-         } else {
-            exec 'sudo',$^X,'Makefile.PL';
+      }
+      unless (-1<index $yins,'nano') {
+         open(LD,"sudo yum -y install 'nano'|");
+         while (my $line=<LD>) {
+            print $line;
          }
+         close LD;
+      }
+      if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+         exec 'sudo',$^X,'Makefile.PL','add_dependencies';
+      } else {
+         exec 'sudo',$^X,'Makefile.PL';
       }
 
    } elsif (!can_cc() && (exists $main::amazon{'suse'})) {
@@ -934,6 +1050,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
       # zypper ar -f -n openSUSE:13.1 http://download.opensuse.org/distribution/13.1/repo/oss/ openSUSE:13.1
       # zypper -n --gpg-auto-import-keys install --force-resolution wget
       # zypper -n --gpg-auto-import-keys install --force-resolution figlet
+      # zypper -n --gpg-auto-import-keys install --force-resolution nano
       # zypper -n install --type pattern Basis-Devel
       # zypper -n install openssl-devel
       # wget http://www.cpan.org/src/5.0/perl-5.20.0.tar.gz
@@ -972,6 +1089,13 @@ print "YEP MEMORY=$line\n";<STDIN>;
             print $line;
          }
          close ZP;
+         my $nano="zypper -n --gpg-auto-import-keys install".
+                    " --force-resolution nano";
+         open(ZP,"$nano|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close ZP;
       }
          
    } elsif (!can_cc() && (exists $main::amazon{'ubuntu'})) {
@@ -1006,6 +1130,13 @@ print "YEP MEMORY=$line\n";<STDIN>;
       }
       if (-1==index $dpkg,'figlet') {
          open(LD,"sudo apt-get -y install 'figlet'|");
+         while (my $line=<LD>) {
+            print $line;
+         }
+         close LD;
+      }
+      if (-1==index $dpkg,'nano') {
+         open(LD,"sudo apt-get -y install 'nano'|");
          while (my $line=<LD>) {
             print $line;
          }
@@ -1054,6 +1185,13 @@ print "YEP MEMORY=$line\n";<STDIN>;
    } elsif (exists $main::amazon{'freebsd'}) {
       unless (-e '/usr/local/bin/figlet') {
          open(AG,"pkg_add -r figlet|");
+         while (my $line=<AG>) {
+            print $line;
+         }
+         close AG;
+      }
+      unless (-e '/usr/local/bin/nano') {
+         open(AG,"pkg_add -r nano|");
          while (my $line=<AG>) {
             print $line;
          }
@@ -1240,7 +1378,8 @@ print "YEP MEMORY=$line\n";<STDIN>;
          my $lett=unpack('a2',$distribution);
          my $minicpan=CPAN::Mini->new(
 
-            remote => "http://www.cpan.org",
+            #remote => "http://www.cpan.org",
+            remote => "http://www.perl.com/CPAN",
             local  => cwd()."/dependencies/CPAN",
             log_level => 'debug',
             exact_mirror => 1,

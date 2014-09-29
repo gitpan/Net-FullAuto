@@ -20,6 +20,14 @@
 #######################################################################
 
 
+2014-09-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999914 released.
+
+        * Consoladation release. Multiple issues fixed so that
+          FullAuto backward compatibility is restored.
+
+
 2014-09-20  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999913 released.
