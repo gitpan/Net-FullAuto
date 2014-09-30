@@ -121,6 +121,7 @@ our $cygwin_berkeley_db_mode = 777;
 our $progname=substr($0,(rindex $0,'/')+1,-3);
 our @tran=('','',0,$$."_".$^T,'',0);
 $ENV{OS}='' if !$ENV{OS};
+$ENV{HISTCONTROL}='ignorespace';
 my $md_='';our $thismonth='';our $thisyear='';
 ($md_,$thismonth,$thisyear)=(localtime)[3,4,5];
 my $mo_=$thismonth;my $yr_=$thisyear;
@@ -12832,7 +12833,9 @@ our $determine_password=sub {
             unless ($skipflag) {
                undef $tpess;
                if (!$Net::FullAuto::FA_Core::cron &&
-                     !$Net::FullAuto::FA_Core::quiet) {
+                     !$Net::FullAuto::FA_Core::quiet &&
+                     !defined $main::showed_saved_pass) {
+                  $main::showed_saved_pass=1;
                   print "\n   Saved Password will Expire: ",
                      scalar localtime($ignore_expiration)."\n";
                   $Net::FullAuto::FA_Core::cache->set(
@@ -13211,7 +13214,9 @@ END
          delete $href->{"gatekeep_$username"};
       } else {
          if (!$Net::FullAuto::FA_Core::cron &&
-               !$Net::FullAuto::FA_Core::quiet) {
+               !$Net::FullAuto::FA_Core::quiet &&
+               !defined $main::showed_saved_pass) {
+            $main::showed_saved_pass=1;
             print "\n   Saved Password will Expire: ".
                scalar localtime($ignore_expiration)."\n";
             $Net::FullAuto::FA_Core::cache->set(
@@ -15099,7 +15104,9 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
          if ($Net::FullAuto::FA_Core::save_main_pass) {
             $passetts->[1]=$Net::FullAuto::FA_Core::choose_pass_expiration->();
             if (!$Net::FullAuto::FA_Core::cron &&
-                  !$Net::FullAuto::FA_Core::quiet) {
+                  !$Net::FullAuto::FA_Core::quiet &&
+                  !defined $main::showed_saved_pass) {
+               $main::showed_saved_pass=1;
                print "\n   Saved Password will Expire: ",
                      scalar localtime($passetts->[1])."\n";
                $cache->set($cache->{'key'},
@@ -31705,7 +31712,7 @@ print $Net::FullAuto::FA_Core::MRLOG "OOOOOOOOOOOO=$o\n" if $Net::FullAuto::FA_C
                                  $output=unpack("x$llc a*",$output);
                               }
                               $first=0;$growoutput=$output;
-                              $growoutput=~s/^(.*)($cmd_prompt)*$/$1/s;
+                              $growoutput=~s/^(.*)(?:$cmd_prompt)+$/$1/s;
 print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIP=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
                               if ($output=~/$cmd_prompt$/s &&
@@ -31788,7 +31795,6 @@ print $Net::FullAuto::FA_Core::MRLOG "WE DID NOTHING TO STDOUT - $output\n"
 #print "LV_CMD=$lv_cmd<== and ",`od -a brianout.txt`,"\n";
 #unlink "brianout.txt";
 #print "EXAMINERR=>OPUT=$output<= and LV_CMD=$lv_cmd<=\n";
-
                      } else { $appendout=$output;next }
                   }
 print $Net::FullAuto::FA_Core::MRLOG "PAST THE ALARM3\n"
@@ -31808,8 +31814,13 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT STRIPPED_COMMAND_FLAG AND GROWOUTPUT=$
                      unless ($growoutput) {
 print $Net::FullAuto::FA_Core::MRLOG "NO GROWOUTPUTTTTTTTTTTTTT\n" if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
                         if ($output && unpack('a1',$output) eq '[') {
+                           my $tout=$output;
                            if ($output=~/^\[A(\[C)+\[K1\s*/s) {
                               next FETCH;
+                           } elsif ($tout=~s/(?:\[A|\[K)//g) {
+                              $tout=~s/\s//g;
+                              $tout=~s/$cmd_prompt//g;
+                              next FETCH if $tout eq $test_stripped_output;
                            }
                         }
                         if ($output=~/^\s?$cmd_prompt/) {
@@ -32088,7 +32099,7 @@ print $Net::FullAuto::FA_Core::MRLOG "OOOOOOOOTTTT=$o\n" if $Net::FullAuto::FA_C
                                  $output=unpack("x$llc a*",$output);
                               }
                               $first=0;$growoutput=$output;
-                              $growoutput=~s/^(.*)($cmd_prompt)*$/$1/s;
+                              $growoutput=~s/^(.*)(?:$cmd_prompt)+$/$1/s;
 print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIPTTTTTTTTTT=$growoutput\n"
    if $Net::FullAuto::FA_Core::log && (-1<index $Net::FullAuto::FA_Core::MRLOG,'*');
                               $command_stripped_from_output=1;

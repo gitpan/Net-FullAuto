@@ -20,6 +20,14 @@
 #######################################################################
 
 
+2014-09-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999915 released.
+
+        * Parser enhancement after discovering a couple of 
+          command stripping flaws on a Solaris system.
+
+
 2014-09-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999914 released.
