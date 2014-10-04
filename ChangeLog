@@ -20,6 +20,14 @@
 #######################################################################
 
 
+2014-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999916 released.
+
+        * Makefile.PL now dynamically looks for latest version
+          of dependent module on CPAN to install.
+
+
 2014-09-29  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999915 released.

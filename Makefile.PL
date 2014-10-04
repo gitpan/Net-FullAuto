@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999915';
+$main::VERSION='0.999999999916';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -973,11 +973,12 @@ END
          }
          close LD;
       }
-      if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-         exec 'sudo',$^X,'Makefile.PL','add_dependencies';
-      } else {
-         exec 'sudo',$^X,'Makefile.PL';
-      }
+      my $argvs=join " ", @ARGV;
+      #if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+      #   exec 'sudo',$^X,'Makefile.PL','add_dependencies';
+      #} else {
+      exec "sudo $^X Makefile.PL $argvs";
+      #}
    } elsif (exists $main::amazon{'centos'}) {
 
       my $yins=`yum list installed`;
@@ -1037,11 +1038,12 @@ print "YEP MEMORY=$line\n";<STDIN>;
          }
          close LD;
       }
-      if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-         exec 'sudo',$^X,'Makefile.PL','add_dependencies';
-      } else {
-         exec 'sudo',$^X,'Makefile.PL';
-      }
+      my $argvs=join " ", @ARGV;
+      #if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+      #   exec 'sudo',$^X,'Makefile.PL','add_dependencies';
+      #} else {
+      exec "sudo $^X Makefile.PL $argvs";
+      #}
 
    } elsif (!can_cc() && (exists $main::amazon{'suse'})) {
 
@@ -1274,7 +1276,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
             if (-d $d.'/'.$_) {
                my $dr=$d.'/'.$_;
                $new=&look_inside_dir($dr,$look);
-               last if $new;
+               #last if $new;
             } next
          }
          $file=sprintf("%s/%s",$CPAN::Config->{build_dir},$_);
@@ -1388,6 +1390,30 @@ print "YEP MEMORY=$line\n";<STDIN>;
          $minicpan->mirror_file(
             "authors/id/$let/$lett/$distribution");
       }
+      my $mod_info='';
+      unless (-e "dependencies/CPAN/authors" &&
+            !(grep {
+            /(?:use[-_]?)?internet|online|connect_to_internet_ok/i } @ARGV)) {
+         eval {
+            require CPAN;
+            {
+               local *STDOUT;
+               open(STDOUT, ">", \$mod_info);
+               CPAN::Shell->m($p);
+            }
+         };
+         my $instfile='';my $instver='';my $cpanver='';
+         if ($mod_info) {
+            ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
+            ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
+            ($cpanver=$mod_info)=~s/^.*CPAN_VERSION\s+([^\s]+).*$/$1/s;
+            print "\n$mod_info"; 
+         }
+         if (!$version && ($instver<$cpanver)) {
+            unlink $instfile;
+            $version=$cpanver;
+         }
+      } 
       eval "require $p;1";
       my $ver='';
       unless ($@) {
@@ -1473,18 +1499,17 @@ print "YEP MEMORY=$line\n";<STDIN>;
                   ($main::system_type eq 'centos')) {
                $sudo=1;
             }
+            my $argvs=join " ", @ARGV;
             if ($sudo) {
-               if (grep { /-*add[-_]?dependencies/i } @ARGV) {
-                  exec 'sudo',$^X,'Makefile.PL','SKIP','add_dependencies',
-                       $p,$exec_cnt;
-               } else {
-                  exec 'sudo',$^X,'Makefile.PL','SKIP',$p,$exec_cnt;
-               }
-            } elsif (grep { /-*add[-_]?dependencies/i } @ARGV) {
-               exec $^X,'Makefile.PL','SKIP','add_dependencies',
-                    $p,$exec_cnt;
+               #if (grep { /-*add[-_]?dependencies/i } @ARGV) {
+               exec "sudo $^X Makefile.PL $argvs SKIP $p $exec_cnt";
+               #} else {
+               #   exec 'sudo',$^X,'Makefile.PL','SKIP',$p,$exec_cnt;
+               #}
+            #} elsif (grep { /-*add[-_]?dependencies/i } @ARGV) {
+            #   exec "$^X Makefile.PL SKIP $argvs $p $exec_cnt";
             } else {
-               exec $^X,'Makefile.PL','SKIP',$p,$exec_cnt;
+               exec "$^X Makefile.PL SKIP $argvs $p $exec_cnt";
             }
          }
       } else {
@@ -1547,7 +1572,8 @@ print "YEP MEMORY=$line\n";<STDIN>;
    }
 
    my $stdout='';my $stderr='';
-   &fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.98');
+   #&fa_install_mod('ExtUtils::MakeMaker','install','Makefile','','6.98');
+   &fa_install_mod('ExtUtils::MakeMaker','install','Makefile');
    &fa_install_mod('File::Which','install','Makefile');
    &fa_install_module('Term::ReadKey','install','Makefile');
    &fa_install_mod('Perl::OSType','install','Makefile');
@@ -1563,7 +1589,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_mod('Module::CoreList','install','Makefile');
    &fa_install_mod('Module::Load','install','Makefile');
    &fa_install_mod('parent','install','Makefile');
-   &fa_install_mod('version','install','Makefile','','0.9908');
+   &fa_install_mod('version','install','Makefile');
    &fa_install_mod('Module::Metadata','install','Makefile');
    &fa_install_mod('Module::Load::Conditional','install','Makefile');
    &fa_install_mod('IPC::Cmd','install','Makefile');
@@ -1574,14 +1600,38 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_mod('PAR::Dist','install','Makefile');
    &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
    &fa_install_mod('Compress::Zlib','install','Makefile');
-   &fa_install_mod('CPAN::Meta::YAML','install','Makefile','','0.011');
-   &fa_install_mod('Parse::CPAN::Meta','install','Makefile','','1.4414');
-   &fa_install_mod('CPAN::Meta::Requirements','install','Makefile','','2.121');
+   &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
+   &fa_install_mod('Parse::CPAN::Meta','install','Makefile');
+   &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
+   my $mod_info='';my $mod_build_version=0.3601;
+   unless (-e "dependencies/CPAN/authors" &&
+         !(grep {
+         /(?:use[-_]?)?internet|online|connect_to_internet_ok/i } @ARGV)) {
+      eval {
+         require CPAN;
+         {
+            local *STDOUT;
+            open(STDOUT, ">", \$mod_info);
+            CPAN::Shell->m('Module::Build');
+         }
+      };
+      unless ($@) {
+         my $instfile='';my $instver='';my $cpanver='';
+         if ($mod_info) {
+            ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
+            ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
+            ($cpanver=$mod_info)=~s/^.*CPAN_VERSION\s+([^\s]+).*$/$1/s;
+         }
+         if ($instver<$cpanver) {
+            $mod_build_version=$cpanver;
+         }
+      }
+   }
    eval { require Module::Build };
-   if ((!($@) && $Module::Build::VERSION<=.3601) || $@
+   if ((!($@) && $Module::Build::VERSION<=$mod_build_version) || $@
          || grep { /-*add[-_]?dependencies/i } @ARGV) {
       &fa_install_mod('JSON::PP','install','Makefile');
-      &fa_install_mod('CPAN::Meta','install','Makefile','','2.142060');
+      &fa_install_mod('CPAN::Meta','install','Makefile');
       &fa_install_mod('ExtUtils::ParseXS','install','Makefile','force');
       &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
       &fa_install_mod('Compress::Raw::Zlib','install','Makefile');
@@ -1725,13 +1775,13 @@ END
    &fa_install_module('ExtUtils::Config','install','Makefile');
    &fa_install_module('ExtUtils::InstallPaths','install','Makefile');
    &fa_install_module('ExtUtils::Helpers','install','Makefile');
-   &fa_install_module('Test::Harness','install','Makefile','','3.32');
+   &fa_install_module('Test::Harness','install','Makefile');
    &fa_install_module('CPAN::Meta','install','Makefile');
    &fa_install_module('Module::Build::Tiny','install','Build');
    &fa_install_module('Class::Method::Modifiers','install','Makefile');
    &fa_install_module('common::sense','install','Makefile');
    &fa_install_module('Types::Serialiser','install','Makefile');
-   &fa_install_module('Term::RawInput','install','Makefile','','1.22');
+   &fa_install_module('Term::RawInput','install','Makefile');
    if ($^O eq 'cygwin' || grep { /-*add[-_]?dependencies/i } @ARGV) {
       &fa_install_module('Win32::API','install','Makefile');
       &fa_install_module('Win32::DriveInfo','install','Makefile');
@@ -1755,7 +1805,7 @@ END
          system("cd \"$dir\";./Build install;");
       }
    }
-   &fa_install_module('Term::Menus','install','Makefile','','2.83');
+   &fa_install_module('Term::Menus','install','Makefile');
    &fa_install_module('IO::String','install','Makefile');
    &fa_install_module('Crypt::CBC','install','Makefile');
    &fa_install_module('Crypt::DES','install','Makefile');
@@ -1774,12 +1824,12 @@ END
    &fa_install_module('String::Random','install','Build');
    &fa_install_module('Net::Telnet','install','Makefile');
    &fa_install_module('Sort::Versions','install','Makefile');
-   &fa_install_module('Capture::Tiny','install','Makefile','','0.24');
+   &fa_install_module('Capture::Tiny','install','Makefile');
    &fa_install_module('IO::Capture','install','Makefile');
-   &fa_install_module('Pod::Man','install','Makefile','','2.28');
+   &fa_install_module('Pod::Man','install','Makefile');
    &fa_install_module('Sub::Exporter::Progressive','install','Makefile');
    &fa_install_module('MRO::Compat','install','Makefile');
-   &fa_install_module('Sub::Install','install','Makefile','','0.921');
+   &fa_install_module('Sub::Install','install','Makefile');
    &fa_install_module('Data::OptList','install','Makefile');
    &fa_install_module('B::Hooks::OP::Check','install','Makefile');
    &fa_install_module('Lexical::SealRequireHints','install','Makefile');
