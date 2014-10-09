@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999916';
+$main::VERSION='0.999999999917';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1391,9 +1391,9 @@ print "YEP MEMORY=$line\n";<STDIN>;
             "authors/id/$let/$lett/$distribution");
       }
       my $mod_info='';
-      unless (-e "dependencies/CPAN/authors" &&
-            !(grep {
-            /(?:use[-_]?)?internet|online|connect_to_internet_ok/i } @ARGV)) {
+      if (!$version && !(-e "dependencies/CPAN/authors") || (grep {
+            /(?:use[-_]?)?internet|online|connect_to_internet_ok/i
+            } @ARGV)) {
          eval {
             require CPAN;
             {
@@ -1407,13 +1407,13 @@ print "YEP MEMORY=$line\n";<STDIN>;
             ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
             ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
             ($cpanver=$mod_info)=~s/^.*CPAN_VERSION\s+([^\s]+).*$/$1/s;
-            print "\n$mod_info"; 
+            print "\n$mod_info";
          }
          if (!$version && ($instver<$cpanver)) {
             unlink $instfile;
             $version=$cpanver;
          }
-      } 
+      }
       eval "require $p;1";
       my $ver='';
       unless ($@) {
@@ -1775,7 +1775,7 @@ END
    &fa_install_module('ExtUtils::Config','install','Makefile');
    &fa_install_module('ExtUtils::InstallPaths','install','Makefile');
    &fa_install_module('ExtUtils::Helpers','install','Makefile');
-   &fa_install_module('Test::Harness','install','Makefile');
+   &fa_install_module('Test::Harness','install','Makefile','','3.33');
    &fa_install_module('CPAN::Meta','install','Makefile');
    &fa_install_module('Module::Build::Tiny','install','Build');
    &fa_install_module('Class::Method::Modifiers','install','Makefile');
@@ -4000,6 +4000,29 @@ if (-e "/bin/grep") {
 my $get_BerkeleyDB=0;
 eval { require BerkeleyDB };
 $get_BerkeleyDB=1 if $@;
+my $cpan_error='';
+eval {
+   require CPAN::Mini;
+   import CPAN::Mini;
+};
+if (!$@ && grep { /-*add[-_]?dependencies/i } @ARGV) {
+   my $distribution = CPAN::Shell->expand(
+         "Module",'BerkeleyDB'
+      )->distribution()->pretty_id();
+   my $let=unpack('a1',$distribution);
+   my $lett=unpack('a2',$distribution);
+   my $minicpan=CPAN::Mini->new(
+
+      #remote => "http://www.cpan.org",
+      remote => "http://www.perl.com/CPAN",
+      local  => cwd()."/dependencies/CPAN",
+      log_level => 'debug',
+      exact_mirror => 1,
+
+   );
+   $minicpan->mirror_file(
+      "authors/id/$let/$lett/$distribution");
+}
 if ($get_BerkeleyDB && $^O ne 'cygwin') {
    # Let's find if Berkeley DB is already on the system
    my $findpath='';

@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-10-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999917 released.
+
+        * Fixed ssh & sftp for RedHat to other hosts.
+
+        * Added BerkeleyDB to bundled dependencies.
+
+
 2014-10-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999916 released.
