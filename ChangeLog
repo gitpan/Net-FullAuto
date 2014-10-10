@@ -22,6 +22,13 @@
 
 2014-10-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999999999921 released.
+
+        * Remove old version of module only if $exec_cnt.
+
+
+2014-10-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999999999920 released.
 
         * Build JSON::PP earlier.

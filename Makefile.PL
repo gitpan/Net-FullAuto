@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999920';
+$main::VERSION='0.999999999921';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -928,13 +928,6 @@ END
          }
          close LD;
       }
-      unless (-1<index $yins,'perl-CPAN-Meta-YAML.noarch') {
-         open(LD,"sudo yum -y install 'perl-CPAN-Meta-YAML.noarch'|");
-         while (my $line=<LD>) {
-            print $line;
-         }
-         close LD;
-      }
       if ((exists $main::amazon{'rhel'}) ||
             (exists $main::amazon{'centos'})) {
          unless (-1<index $yins,'wget') {
@@ -1417,7 +1410,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
             print "\n$mod_info";
          }
          if (!$version && ($instver<$cpanver)) {
-            unlink $instfile;
+            unlink $instfile if $exec_cnt;
             $version=$cpanver;
          }
       }
