@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999919';
+$main::VERSION='0.999999999920';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1610,6 +1610,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
    &fa_install_mod('CPAN::Meta::YAML','install','Makefile');
    &fa_install_mod('Parse::CPAN::Meta','install','Makefile');
    &fa_install_mod('CPAN::Meta::Requirements','install','Makefile');
+   &fa_install_mod('JSON::PP','install','Makefile');
    my $mod_info='';my $mod_build_version=0.3601;
    unless (-e "dependencies/CPAN/authors" &&
          !(grep {
@@ -1637,7 +1638,6 @@ print "YEP MEMORY=$line\n";<STDIN>;
    eval { require Module::Build };
    if ((!($@) && $Module::Build::VERSION<=$mod_build_version) || $@
          || grep { /-*add[-_]?dependencies/i } @ARGV) {
-      &fa_install_mod('JSON::PP','install','Makefile');
       &fa_install_mod('CPAN::Meta','install','Makefile');
       &fa_install_mod('ExtUtils::ParseXS','install','Makefile','force');
       &fa_install_mod('Compress::Raw::Bzip2','install','Makefile');
