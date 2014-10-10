@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-10-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999919 released.
+
+        * Using yum to install CPAN::Meta::YAML on aws.
+
+
 2014-10-09  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999918 released.
