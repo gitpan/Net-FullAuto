@@ -121,6 +121,7 @@ our $cygwin_berkeley_db_mode = 777;
 our $progname=substr($0,(rindex $0,'/')+1,-3);
 our @tran=('','',0,$$."_".$^T,'',0);
 $ENV{OS}='' if !$ENV{OS};
+$ENV{HISTCONTROL}='ignorespace';
 my $md_='';our $thismonth='';our $thisyear='';
 ($md_,$thismonth,$thisyear)=(localtime)[3,4,5];
 my $mo_=$thismonth;my $yr_=$thisyear;
@@ -1886,7 +1887,8 @@ print "WHAT IS THE LINE_2 EVALERROR=$@<====\n"
                           # handled by the "if ($@)" block at the bottom
                           # of this routine.
                      CC: while (defined fileno $cmd_fh) {
-                        $cmd_fh->print($Net::FullAuto::FA_Core::gbp->('printf').
+                        $cmd_fh->print(' '.
+                                       $Net::FullAuto::FA_Core::gbp->('printf').
                                        "printf $funkyprompt");
                         while (my $line=$cmd_fh->get(timeout=>2)) {
 
@@ -1961,7 +1963,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                                     }
                                  } $did_tran{$hostlabel}='-';
                                  $exit_flag=1;
-                                 $cmd_fh->print('exit');
+                                 $cmd_fh->print(' exit');
                               }
                            } elsif (($line=~/Killed|_funkyPrompt_/s) ||
                                  ($line=~/[:\$%>#-] ?$/s) ||
@@ -2036,7 +2038,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                            ($stdout,$stderr)=&kill($cmd_pid,$kill_arg);
                            last;
                         }
-                        $cmd_fh->print("rm -f transfer$tran[3]*tar");
+                        $cmd_fh->print(" rm -f transfer$tran[3]*tar");
                         my $lin='';my $cownt=0;
                         eval {  # eval is for error trapping. Any errors are
                                 # handled by the "if ($@)" block at the bottom
@@ -2084,7 +2086,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                   if (!$was_a_local && !$gone) {
                      $cmd_fh->autoflush(1);
                      eval {
-                        $cmd_fh->print('exit');
+                        $cmd_fh->print(' exit');
                         while (my $line=$cmd_fh->get) {
                            $line=~s/\s//g;
                            if ($line=~/onnection.*close/
@@ -7695,7 +7697,7 @@ sub clean_filehandle
    } my $loop=0;my $sec=0;my $ten=0;my $hun=5;my $closederror='';
    while (1) {
       $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
-      $filehandle->print('cmd /Q /C "set /A '.
+      $filehandle->print(' cmd /Q /C "set /A '.
                          ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
                          '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                          'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
@@ -7871,7 +7873,7 @@ sub attempt_cmd_xtimes
          $cfh_error||='Not a GLOB reference' if $cou==1;
          &handle_error($cfh_error,'-1') if $cfh_error;
          select(undef,undef,undef,0.02);
-         $cmd_handle->print(
+         $cmd_handle->print(' '.
             $Net::FullAuto::FA_Core::gbp->('printf').
                'printf \\\\041\\\\041;$cmd;'.
             $Net::FullAuto::FA_Core::gbp->('printf').
@@ -7889,7 +7891,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PUSH_CMD_LINE_QQQQQQQQQQQ=$allins<== AND L
                last;
             } else {
                $cmd_handle->
-                  print($Net::FullAuto::FA_Core::gbp->('printf').
+                  print(' '.$Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\055');
             }
             if ($ct++==10) {
@@ -12508,6 +12510,173 @@ my $setup_new_user=sub {
    return \%setup_new_user;
 };
 
+my $configure_aws3=sub {
+
+   package configure_aws3;
+   use File::HomeDir;
+   my $username=&Net::FullAuto::FA_Core::username(); 
+   my $access_id="]I[{'configure_aws2',1}";
+   my $secret_ky="]I[{'configure_aws2',2}";
+   my $region='wget -qO- http://instance-data/latest/meta-data'.
+              '/placement/availability-zone';
+   $region=`$region`;
+   chop $region;
+   my $homedir=File::HomeDir->my_home;
+   #unless (-e $homedir.'.aws') {
+   #   system("mkdir $homedir/.aws");
+   #   system("chown $username $homedir/.aws");
+   #} 
+   #open(CF,">$homedir/.aws/credentials");
+   #print CF "[$username]\n";
+   #print CF "aws_access_key_id=$access_id\n";
+   #print CF "aws_secret_access_key=$secret_ky\n";
+   #close CF;
+   #system("chown $username $homedir/.aws/credentials");
+   #open(CF,">$homedir/.aws/config");
+   #print CF "[profile $username]\n";
+   #print CF "region=$region\n";
+   #print CF "output=text\n";
+   #system("chown $username $homedir/.aws/config");
+   #close CF;
+   {
+      $SIG{CHLD}="DEFAULT";
+      my $cmd="aws configure";
+      use IO::Pty;
+      my $pty = IO::Pty->new; 
+      my $slave = $pty->slave;
+      $pty->slave->set_raw();
+      $pty->set_raw();
+      my $pid = fork(); die "bad fork: $!\n" unless defined $pid; 
+      if (!$pid) {
+         $pty->close();
+         $pty->make_slave_controlling_terminal();
+         open( STDIN,  ">&", $slave ) or die "Couldn't dup stdin:  $!";
+         open( STDOUT, ">&", $slave ) or die "Couldn't dup stdout: $!";
+         open( STDERR, ">&", $slave ) or die "Couldn't dup stderr: $!";
+         exec $cmd;
+      } else {
+         $pty->close_slave();
+         my $line='';
+         while ( !$pty->eof ) {
+            while (defined($_ = $pty->getc)) {
+               $line.=$_;
+               if ($line=~/Access Key ID \[None\]:\s*$/) {
+                  for (1..length $line) {
+                     $pty->ungetc(\000);
+                  }
+                  $line='';
+                  $pty->print("$access_id\n");
+               } elsif ($line=~/Secret Access Key \[None\]:\s*$/) {
+                  for (1..length $line) {
+                     $pty->ungetc(\000);
+                  }
+                  $line='';
+                  $pty->print("$secret_ky\n");
+               } elsif ($line=~/Default region name \[None\]:\s*$/) {
+                  for (1..length $line) {
+                     $pty->ungetc(\000);
+                  }
+                  $line='';
+                  $pty->print("$region\n");
+               } elsif ($line=~/Default output format \[None\]:\s*$/) {
+                  for (1..length $line) {
+                     $pty->ungetc(\000);
+                  }
+                  $pty->print("\n");
+               }
+            }
+         }
+         wait();
+         #exit $? >> 8;
+      }
+
+      #cleanup pty for next run
+      $pty->close();
+      system("chown -R $username $homedir/.aws");
+      system("chmod 775 $homedir/.aws");
+
+   };
+print "\nACCESS ID=$access_id\n";
+print "SECRET KEY=$secret_ky\n";
+   my $output=`aws iam list-groups`;
+print "AWESOME OUTPUT=$output\n";
+
+};
+
+my $configure_aws2=sub {
+
+   my $banner=<<END;
+
+     ___              _            _                      _  __
+    / __|_ _ ___ __ _| |_ ___     /_\\  __ __ ___ ______  | |/ /___ _  _ ___
+   | (__| '_/ -_) _` |  _/ -_)   / _ \\/ _/ _/ -_|_-<_-<  | ' </ -_) || (_-<
+    \\___|_| \\___\\__,_|\\__\\ ___| /_/ \\_\\__\\__\\___/__/__/  |_|\\_\\___|\\_, /__/
+                                                                   |__/
+   
+   Click 'Create Access Key' button in the lower part of the popup page.
+
+   Click 'Show User Security Credentials' and the Access key ID and Secret
+   access key strings will be displayed. You will not have access to the
+   secret access key again after the dialog box closes.
+
+   Copy and Paste or type the Access key ID and Secret access key here:
+ 
+   Access key ID                    Use [TAB] key to switch
+                      ]I[{1,'',30}  focus of input boxes
+
+   Secret access key
+                      ]I[{2,'',55}
+
+END
+
+   my %configure_aws2=(
+
+      Name => 'configure_aws2',
+      Input  => 1,
+      Banner => $banner,
+      Result => $configure_aws3,
+
+   );
+   return \%configure_aws2;
+
+};
+
+my $configure_aws1=sub {
+
+   my $banner=<<END;
+
+     ___           __ _                        ___      _____
+    / __|___ _ _  / _(_)__ _ _  _ _ _ ___     /_\\ \\    / / __|
+   | (__/ _ \\ ' \\|  _| / _` | || | '_/ -_)   / _ \\ \\/\\/ /\\__ \\ 
+    \\___\\___/_||_|_| |_\\__, |\\_,_|_| \\___|  /_/ \\_\\_/\\_/ |___/
+                        |___/
+
+   To create, modify, or delete a user's access keys:
+
+   1. Sign in to the AWS Management Console and open the IAM console at:
+
+      https://console.aws.amazon.com/iam/
+
+   2. In the navigation pane, click Users.
+
+   3. Click the name of the user who you want to create an access key for,
+      and then open the Security Credentials section.
+
+   4. Click Manage Access Keys.
+
+END
+
+   my %configure_aws1=(
+
+      Name => 'configure_aws1',
+      Result => $configure_aws2,
+      Banner => $banner,
+
+   );
+   Menu(\%configure_aws1);
+
+};
+
 my $get_ec2_api=sub {
 
    print "\n";
@@ -12527,7 +12696,23 @@ my $get_ec2_api=sub {
       system("sudo unzip ./ec2-api-tools.zip -d /usr/local/ec2");
       system("sudo rm -rf ./ec2-api-tools.zip");
    }
-   print "WE ARE DONE\n";
+   my $need_to_configure_aws=0;
+   {
+      $SIG{CHLD}="DEFAULT";
+      open(AWS,"aws iam list-access-keys --user-name ec2-user 2>&1|");
+      while (my $line=<AWS>) {
+         print "LINE=$line\n";
+         if (-1<index $line,'configure credentials') {
+            $need_to_configure_aws=1;
+            last;
+         }
+      }
+      close AWS;
+   }
+   if ($need_to_configure_aws) {
+      $configure_aws1->();
+   }
+   print "\nWE ARE DONE\n";
    cleanup();
 
 };
@@ -14249,7 +14434,7 @@ END
             if ($cmd_type eq 'telnet' &&
                   defined fileno $localhost->{_cmd_handle}) {
                $localhost->{_cmd_handle}->print("\003");
-               $localhost->{_cmd_handle}->print('exit');
+               $localhost->{_cmd_handle}->print(' exit');
                while (defined fileno $localhost->{_cmd_handle}) {
                   while (my $line=$localhost->{_cmd_handle}->get) {
 print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
@@ -14845,7 +15030,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
 
          ## Make sure prompt won't match anything in send data.
          $local_host->prompt("/_funkyPrompt_\$/");
-         $local_host->print("export PS1=_funkyPrompt_;unset PROMPT_COMMAND");
+         $local_host->print(" export PS1=_funkyPrompt_;unset PROMPT_COMMAND");
          $localhost->{_ftm_type}='';
          $localhost->{_cwd}='';
          $localhost->{_hostlabel}=[ "__Master_${$}__",'' ];
@@ -14877,7 +15062,7 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
          while (1) {
             my $_sh_pid='';
             ($_sh_pid,$stderr)=Rem_Command::cmd(
-               $localhost,'echo $$');
+               $localhost,' echo $$');
 # --CONTINUE-- print "LOCAL_sh_pid=$_sh_pid<==\n";
 print $Net::FullAuto::FA_Core::MRLOG "LOCAL_sh_pid=$_sh_pid<==\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -14892,7 +15077,7 @@ print $Net::FullAuto::FA_Core::MRLOG "ERROR LOCALLLLLLLLLLLLLLLLLLLL_sh_pid=$loc
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             if (!$localhost->{_sh_pid}) {
                $localhost->print;
-               $localhost->print(
+               $localhost->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\041\\\\041;echo $$;'.
                   $Net::FullAuto::FA_Core::gbp->('printf').
@@ -15096,7 +15281,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
          } elsif (!$ignore) {
             $tosspass{$key}=$dcipher->decrypt($passetts->[0]);
          }
-         if ($Net::FullAuto::FA_Core::save_main_pass) {
+         if (!$identityfile && $Net::FullAuto::FA_Core::save_main_pass) {
             $passetts->[1]=$Net::FullAuto::FA_Core::choose_pass_expiration->();
             if (!$Net::FullAuto::FA_Core::cron &&
                   !$Net::FullAuto::FA_Core::quiet) {
@@ -16556,7 +16741,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FA_SUCURE10=",$Hosts{"__Master_${$}__"}{'F
    ## Make sure prompt won't match anything in send data.
    my $prompt = '_funkyPrompt_';
    $fh->prompt("/$prompt\$/");
-   $fh->print("export PS1=$prompt;unset PROMPT_COMMAND");
+   $fh->print(" export PS1=$prompt;unset PROMPT_COMMAND");
    while (my $line=$fh->get) {
       last if $line=~/$prompt$/s;
    }
@@ -16668,7 +16853,7 @@ print "PROMPT=$prompt<==\n" if $Net::FullAuto::FA_Core::debug;
    ($cfh_ignore,$cfh_error)=&clean_filehandle($localhost);
    &handle_error($cfh_error,'-1') if $cfh_error;
    eval {
-      $localhost->print('id -unr');
+      $localhost->print(' id -unr');
       select(undef,undef,undef,0.02); # sleep for 1/50th second;
       while (my $line=$localhost->get) {
 print $Net::FullAuto::FA_Core::MRLOG "ID_PROMPTLINE=$line<==\n"
@@ -18626,7 +18811,7 @@ print "FTR_RETURN3\n";
             } my $ftr_cmd_error='';my $su_scrub='';my $retrys='';
             if ($ftr_cmd) {
 #print "GOING TO TRY LOGIN=$login_id and IP=$ip and FTR_CMD=$ftr_cmd\n";
-               $ftr_cmd->{_cmd_handle}->print("telnet $host");
+               $ftr_cmd->{_cmd_handle}->print(" telnet $host");
 #print "GOING TO LOG IN TO $hostname - USERNAME=$login_id\n";<STDIN>;
                my ($alloutput,$output,$cygwin)='';
                while (my $line=$ftr_cmd->{_cmd_handle}->get) {
@@ -19778,7 +19963,7 @@ print "RETURNTWO and FTR_CMD=$ftr_cmd\n";<STDIN>;
             } else { $previous_method=$connect_method;$stderr='' }
             if (lc($connect_method) eq 'ftp') {
                my $ftp__cmd=$Net::FullAuto::FA_Core::gbp->('ftp')."ftp $host";
-               $ftp_handle->print($ftp__cmd);
+               $ftp_handle->print(' '.$ftp__cmd);
                FH: foreach my $hlabel (
                      keys %Net::FullAuto::FA_Core::Processes) {
                   foreach my $sid (
@@ -19981,7 +20166,7 @@ print "FTP_PID=$ftp_pid<== and ==>$localhost->{_cmd_pid}<==\n";
                                  "ftp $host";
                               foreach $connect_method (@connect_method) {
                                  if (lc($connect_method) eq 'ftp') {
-                                    $ftp_handle->print(
+                                    $ftp_handle->print(' '.
                                        $Net::FullAuto::FA_Core::gbp->('ftp').
                                        "ftp $host");
                                     last;
@@ -20001,7 +20186,7 @@ print "FTP_PID=$ftp_pid<== and ==>$localhost->{_cmd_pid}<==\n";
                                        $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
                                           $hostlabel}{'identity_file'}.' ';
                                     }
-                                    $ftp_handle->print(
+                                    $ftp_handle->print(' '.
                                        $Net::FullAuto::FA_Core::gbp->('sftp').
                                        "sftp ${sshport}$sftploginid\@$host");
                                     last;
@@ -20231,7 +20416,7 @@ print "RETURNFOUR and FTR_CMD=$ftr_cmd\n";<STDIN>;
                                     my $sp=$Net::FullAuto::FA_Core::sftpport;
                                     foreach $connect_method (@{$ftr_cnct}) {
                                        if (lc($connect_method) eq 'ftp') {
-                                          $ftp_handle->print(
+                                          $ftp_handle->print(' '.
                                              $Net::FullAuto::FA_Core::gbp->(
                                              'ftp')."ftp $host");
                                           $ftm_type='ftp';
@@ -20363,7 +20548,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                      $hostlabel}{'identity_file'}.' ';
                }
 #####4444444
-               $ftp_handle->print($Net::FullAuto::FA_Core::gbp->('sftp').
+               $ftp_handle->print(' '.$Net::FullAuto::FA_Core::gbp->('sftp').
                                   'sftp '."${sshport}$sftploginid\@$host");
                FH: foreach my $hlabel (
                      keys %Net::FullAuto::FA_Core::Processes) {
@@ -20599,7 +20784,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                  &Net::FullAuto::FA_Core::passwd_db_update(
                                     $hostlabel,$su_id,'DoNotSU!',
                                     $ftm_type,$sshport);
-                                 $ftp_handle->print(
+                                 $ftp_handle->print(' '.
                                     $Net::FullAuto::FA_Core::gbp->('sftp').
                                     'sftp '."${sshport}$login_id\@$host");
 
@@ -20726,7 +20911,7 @@ print "YESSSSSSS WE HAVE DONE IT FOUR TIMES11\n";<STDIN>;
                         $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
                            $hostlabel}{'identity_file'}.' ';
                      }
-                     $ftp_handle->print(
+                     $ftp_handle->print(' '.
                         $Net::FullAuto::FA_Core::gbp->('sftp').'sftp '.
                         "${sshport}$login_id\@$host");
                      ## Wait for password prompt.
@@ -25489,7 +25674,7 @@ sub ftm_connect
          my $error=0;
          eval {
             while ($host=pop @hosts) {
-               $ftpFH->{_cmd_handle}->print(
+               $ftpFH->{_cmd_handle}->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('ping')."ping $host");
                while (my $line=
                      $ftpFH->{_cmd_handle}->get(
@@ -25611,7 +25796,7 @@ sub ftm_connect
                if $Net::FullAuto::FA_Core::log
                && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
             my $ftp__cmd="${Net::FullAuto::FA_Core::ftppath}ftp $host";
-            $ftpFH->{_cmd_handle}->print(
+            $ftpFH->{_cmd_handle}->print(' '.
                "${Net::FullAuto::FA_Core::ftppath}ftp $host");
             FP: foreach my $hlabel (keys %Net::FullAuto::FA_Core::Processes) {
                foreach my $sid (
@@ -25748,11 +25933,11 @@ sub ftm_connect
                   $hostlabel}{'identity_file'}.' ';
             }
             if ($su_id) {
-               $ftpFH->{_cmd_handle}->print( 
+               $ftpFH->{_cmd_handle}->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('sftp').
                   "sftp ${sshport}$su_id\@$host");
             } else {
-               $ftpFH->{_cmd_handle}->print(
+               $ftpFH->{_cmd_handle}->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('sftp').
                   "sftp ${sshport}$login_id\@$host");
             }
@@ -25893,7 +26078,7 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
                                  $sshport.='-i'.$Net::FullAuto::FA_Core::Hosts{
                                     $hostlabel}{'identity_file'}.' ';
                               }
-                              $ftpFH->{_cmd_handle}->print(
+                              $ftpFH->{_cmd_handle}->print(' '.
                                  $Net::FullAuto::FA_Core::gbp->('sftp').
                                  'sftp '."${sshport}$login_id\@$host");
 
@@ -26059,14 +26244,15 @@ print $Net::FullAuto::FA_Core::MRLOG "LLINE44=$line\n"
          }
          my $ftp__cmd="${Net::FullAuto::FA_Core::ftppath}ftp $host";
          if ($ftm_type eq 'ftp') {
-            $ftpFH->{_cmd_handle}->print("${Net::FullAuto::FA_Core::ftppath}ftp $host");
+            $ftpFH->{_cmd_handle}->print(
+               " ${Net::FullAuto::FA_Core::ftppath}ftp $host");
          } elsif ($ftm_type eq 'sftp') {
             if ($su_id) {
-               $ftpFH->{_cmd_handle}->print(
+               $ftpFH->{_cmd_handle}->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('sftp').
                   "sftp ${sshport}$su_id\@$host");
             } else {
-               $ftpFH->{_cmd_handle}->print(
+               $ftpFH->{_cmd_handle}->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('sftp').
                   "sftp ${sshport}$login_id\@$host");
             }
@@ -28315,7 +28501,7 @@ sub close
               # handled by the "if ($@)" block at the bottom
               # of this routine.
          CM: while (defined fileno $self->{_cmd_handle}) {
-            $self->{_cmd_handle}->print(
+            $self->{_cmd_handle}->print(' '.
                            $Net::FullAuto::FA_Core::gbp->('printf').
                            "printf $funkyprompt");
             while (my $line=$self->{_cmd_handle}->get) {
@@ -28328,7 +28514,7 @@ print $Net::FullAuto::FA_Core::MRLOG "cleanup() LINE_3=$line\n"
                   ($cfh_ignore,$cfh_error)=
                      &Net::FullAuto::FA_Core::clean_filehandle(
                         $self->{_cmd_handle});
-                  $self->{_cmd_handle}->print("exit");
+                  $self->{_cmd_handle}->print(' exit');
                } elsif (($line=~/Killed|_funkyPrompt_/s) ||
                      ($line=~/[:\$%>#-] ?$/s) ||
                      ($line=~/sion denied.*[)][.]\s*$/s)) {
@@ -29237,7 +29423,7 @@ print $Net::FullAuto::FA_Core::MRLOG
             $shell_pid=$1;
             if (!$shell_pid) {
                $cmd_handle->print;my $ct=0;
-               $cmd_handle->print(
+               $cmd_handle->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\041\\\\041;echo $$;'.
                   $Net::FullAuto::FA_Core::gbp->('printf').
@@ -29327,7 +29513,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                  _hostlabel=>[ $hostlabel,'' ] },'uname');
             $cmd_handle->print;
             if (!$uname) {
-               $cmd_handle->print(
+               $cmd_handle->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\041\\\\041;uname;'.
                   $Net::FullAuto::FA_Core::gbp->('printf').
@@ -29618,7 +29804,7 @@ sub wait_for_prompt {
    my $from_su=$_[4]||'';
    $Net::FullAuto::FA_Core::uhray=&Net::FullAuto::FA_Core::get_prompt();
    unless ($from_su) {
-      $cmd_handle->print('cmd /Q /C "set /A '.
+      $cmd_handle->print(' cmd /Q /C "set /A '.
              ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
              '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
              'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
@@ -29751,7 +29937,7 @@ sub wait_for_prompt {
          if ($ev_err=~/read timed-out/s && $ct++<3) {
             $Net::FullAuto::FA_Core::uhray=
                &Net::FullAuto::FA_Core::get_prompt();
-            $cmd_handle->print('cmd /Q /C "set /A '.
+            $cmd_handle->print(' cmd /Q /C "set /A '.
                 ${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
                 '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                 'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2].
@@ -29767,7 +29953,7 @@ sub wait_for_prompt {
                     '__force__'));
                $Net::FullAuto::FA_Core::uhray=
                   &Net::FullAuto::FA_Core::get_prompt();
-               $cmd_handle->print('cmd /Q /C "set /A '
+               $cmd_handle->print(' cmd /Q /C "set /A '
                   .${$Net::FullAuto::FA_Core::uhray}[1].'&echo _-"'.
                   '|| '.$Net::FullAuto::FA_Core::gbp->('printf').
                   'printf \\\\'.${$Net::FullAuto::FA_Core::uhray}[2]
@@ -29779,7 +29965,7 @@ sub wait_for_prompt {
    }
    $cmd_handle->prompt('/_funkyPrompt_$/');
    $cmd_handle->print(
-      "export PS1=_funkyPrompt_;unset PROMPT_COMMAND");
+      " export PS1=_funkyPrompt_;unset PROMPT_COMMAND");
    my $cfh_ignore='';my $cfh_error='';
    ($cfh_ignore,$cfh_error)=
       &Net::FullAuto::FA_Core::clean_filehandle(
@@ -30293,7 +30479,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                eval {
                   my $ftp__cmd="${Net::FullAuto::FA_Core::ftppath}ftp $host";
                   $handle->{_ftp_handle}->print(
-                     "${Net::FullAuto::FA_Core::ftppath}ftp $host");
+                     " ${Net::FullAuto::FA_Core::ftppath}ftp $host");
                   ## Look for Name Prompt.
                   while (my $line=$handle->{_ftp_handle}->get) {
                      my $tline=$line;
@@ -30319,7 +30505,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                            &Net::FullAuto::FA_Core::handle_error($stderr,'-1')
                               if $stderr;
                            $handle->{_ftp_handle}=$ftp_handle->{_cmd_handle};
-                           $handle->{_ftp_handle}->print(
+                           $handle->{_ftp_handle}->print(' '.
                               "${Net::FullAuto::FA_Core::ftppath}ftp $host");
                            FH1: foreach my $hlabel (
                                  keys %Net::FullAuto::FA_Core::Processes) {
@@ -30450,7 +30636,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                   $sshport.='-i'.
                      $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'identity_file'}.' ';
                }
-               $handle->{_ftp_handle}->print(
+               $handle->{_ftp_handle}->print(' '.
                   $Net::FullAuto::FA_Core::gbp->('sftp').'sftp '.
                   "${sshport}$sftploginid\@$host");
                FH: foreach my $hlabel (
@@ -30509,7 +30695,7 @@ print $Net::FullAuto::FA_Core::MRLOG "FTP-STDERR-500-DETECTED=$stderr<==\n"
                   if (!$fm_cnt || ($fm_cnt==$#{$ftr_cnct})) {
                      return '',$stderr;
                   } else {
-                     $handle->{_ftp_handle}->print("bye");
+                     $handle->{_ftp_handle}->print('bye');
                      my $cfh_ignore='';my $cfh_error='';
                      ($cfh_ignore,$cfh_error)=
                         &Net::FullAuto::FA_Core::clean_filehandle(
@@ -30781,7 +30967,7 @@ sub repl
             $Net::FullAuto::FA_Core::newrepl:$_[0];
    my $command=$_[1];$command||='';my $output='';
    while (1) {
-      $self->{_cmd_handle}->print($command);
+      $self->{_cmd_handle}->print(' '.$command);
       eval {
          while (my $line=$self->{_cmd_handle}->get(Timeout=>30)) {
             print $Net::FullAuto::FA_Core::MRLOG
@@ -31108,7 +31294,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
             my $t=$self->{_work_dirs}->{_tmp_mswin}.'\\';
             $t=~s/\\/\\\\/g;
             $t=~s/\\$//mg;
-            my $str="echo \"del ${t}end${pid_ts}.flg ${t}cmd${pid_ts}.bat"
+            my $str=" echo \"del ${t}end${pid_ts}.flg ${t}cmd${pid_ts}.bat"
                    ." ${t}out${pid_ts}.txt ${t}err${pid_ts}.txt\""
                    ." > ${t}rm${pid_ts}.bat";
             $self->{_cmd_handle}->print($str);
@@ -31129,10 +31315,10 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                   $cmmd=~s/\"/\\\"/g;
                   if (!$ccnt++) {
                      if (unpack('a4',$cmmd) eq 'set ') {
-                        $str="echo \"$cmmd\""
+                        $str=" echo \"$cmmd\""
                             ." > ${t}cmd${pid_ts}.bat";
                      } else {
-                        $str="echo \"$cmmd 2>${t}err${pid_ts}.txt "
+                        $str=" echo \"$cmmd 2>${t}err${pid_ts}.txt "
                             ."1>${t}out${pid_ts}"
                             .".txt\" > ${t}cmd${pid_ts}.bat";
                      }
@@ -31161,10 +31347,10 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                             );
                   } else {
                      if (unpack('a4',$cmmd) eq 'set ') {
-                        $str="echo \"$cmmd\""
+                        $str=" echo \"$cmmd\""
                             ." >> ${t}cmd${pid_ts}.bat";
                      } else {
-                        $str="echo \"$cmmd 2>>${t}err${pid_ts}.txt "
+                        $str=" echo \"$cmmd 2>>${t}err${pid_ts}.txt "
                             ."1>>${t}out${pid_ts}"
                             .".txt\" >> ${t}cmd${pid_ts}.bat";
                      }
@@ -31195,7 +31381,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                $cmmd=~s/\\/\\\\/g;
                $cmmd=~s/\\$//mg;
                $cmmd=~s/\"/\\\"/g;
-               $str="echo \"$cmmd 2>${t}err${pid_ts}.txt 1>${t}out${pid_ts}"
+               $str="echo \" $cmmd 2>${t}err${pid_ts}.txt 1>${t}out${pid_ts}"
                    .".txt\" > ${t}cmd${pid_ts}.bat";
                $self->{_cmd_handle}->print($str);
                my $lastDB9=0;
@@ -31217,7 +31403,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                   }
                }
             }
-            $str="echo \"echo \"DONE\" > ${t}end${pid_ts}.flg\" >>"
+            $str=" echo \"echo \"DONE\" > ${t}end${pid_ts}.flg\" >>"
                 ." ${t}cmd${pid_ts}.bat";
             $self->{_cmd_handle}->print($str);
             my $lastDB10=0;
@@ -31239,7 +31425,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                }
             }
             $self->{_cmd_handle}->
-               print("echo \"exit\" >> ${t}cmd${pid_ts}.bat");
+               print(" echo \"exit\" >> ${t}cmd${pid_ts}.bat");
             my $lastDB11=0;
             DB11: while (1) {
                $self->{_cmd_handle}->print;
@@ -31253,7 +31439,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                   }
                };
                if ($lastDB11) {
-                  $self->{_cmd_handle}->print("echo ECHO");
+                  $self->{_cmd_handle}->print(' echo ECHO');
                   eval {
                      my $echo=0;
                      while (my $line=$self->{_cmd_handle}->get(
@@ -31275,7 +31461,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                }
             }
 #print "RUNNING COMMANDBAT $cmmd\n";
-            $self->{_cmd_handle}->print("cmd /c start ${t}cmd${pid_ts}.bat");
+            $self->{_cmd_handle}->print(" cmd /c start ${t}cmd${pid_ts}.bat");
             ($cfh_ignore,$cfh_error)=
                &Net::FullAuto::FA_Core::clean_filehandle(
                $self->{cmd_handle});
@@ -31315,7 +31501,7 @@ print "BIGGOOOPUTPUT=$output<== and PRE=$self->{_work_dirs}->{_pre} and TMP=$sel
                #   last if $size;
                #   $loop_time=0;
                #}
-               my $shell_cmd="if\n[[ -f ${c}end${pid_ts}.flg ]]\nthen" .
+               my $shell_cmd=" if\n[[ -f ${c}end${pid_ts}.flg ]]\nthen" .
                   "\necho END\nelse\necho LOOKING\nfi\n";
                $self->{_cmd_handle}->print($shell_cmd);
                if ($self->{_cmd_handle}->errmsg) {
@@ -31512,7 +31698,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                   &Net::FullAuto::FA_Core::handle_error($die);
                }
             }
-            $str="echo \"del ${t}rm${pid_ts}.bat\""
+            $str=" echo \"del ${t}rm${pid_ts}.bat\""
                 ." >> ${t}rm${pid_ts}.bat";
             $self->{_cmd_handle}->print($str);
             $allines='';
@@ -31521,7 +31707,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                $allines.=$line;
                last if $allines=~/$cmd_prompt$/s;
             }
-            $self->{_cmd_handle}->print("cmd /c ${t}rm${pid_ts}.bat");
+            $self->{_cmd_handle}->print(" cmd /c ${t}rm${pid_ts}.bat");
             ($cfh_ignore,$cfh_error)=
                &Net::FullAuto::FA_Core::clean_filehandle(
                $self->{cmd_handle});
@@ -31577,7 +31763,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
             $live_command=~s/\\\\/\\/g;
             $live_command=~s/\\/\\\\/g;
             $live_command=~s/\\$//mg;
-            $self->{_cmd_handle}->print($live_command);
+            $self->{_cmd_handle}->print(' '.$live_command);
             my $growoutput='';my $ready='';my $firstout=0;
             my $fulloutput='';my $lastline='';my $errflag='';
             my $test_out='';my $first=-1;#my $starttime=0;
@@ -32220,7 +32406,7 @@ if (!$line) {
                         DB43: while (1) {
 print $Net::FullAuto::FA_Core::MRLOG "WE ARE INSIDE DB43\n";
                            $self->{_cmd_handle}->autoflush(1);
-                           $self->{_cmd_handle}->print("echo FAECHO");
+                           $self->{_cmd_handle}->print(' echo FAECHO');
                            eval {
                               while (my $line=$self->{_cmd_handle}->get) {
                                  $line=~tr/\0-\11\13-\37\177-\377//d;
