@@ -12522,22 +12522,6 @@ my $configure_aws3=sub {
    $region=`$region`;
    chop $region;
    my $homedir=File::HomeDir->my_home;
-   #unless (-e $homedir.'.aws') {
-   #   system("mkdir $homedir/.aws");
-   #   system("chown $username $homedir/.aws");
-   #} 
-   #open(CF,">$homedir/.aws/credentials");
-   #print CF "[$username]\n";
-   #print CF "aws_access_key_id=$access_id\n";
-   #print CF "aws_secret_access_key=$secret_ky\n";
-   #close CF;
-   #system("chown $username $homedir/.aws/credentials");
-   #open(CF,">$homedir/.aws/config");
-   #print CF "[profile $username]\n";
-   #print CF "region=$region\n";
-   #print CF "output=text\n";
-   #system("chown $username $homedir/.aws/config");
-   #close CF;
    {
       $SIG{CHLD}="DEFAULT";
       my $cmd="aws configure";
@@ -12587,13 +12571,12 @@ my $configure_aws3=sub {
             }
          }
          wait();
-         #exit $? >> 8;
       }
 
       #cleanup pty for next run
       $pty->close();
       system("chown -R $username $homedir/.aws");
-      system("chmod 775 $homedir/.aws");
+      system("chmod 755 $homedir/.aws");
 
    };
 print "\nACCESS ID=$access_id\n";
@@ -12677,8 +12660,186 @@ END
 
 };
 
+my $choose_ri=sub {
+
+   my $id=']S[{r_inst}';
+   $id=~s/^"//;
+   $id=~s/"$//;
+   my $s='            ';
+   my $tl=sub {
+      
+      my $s='                 ';
+      my $pt=']P[{types}';
+      my $st=']S[{r_inst}'; 
+      $st=~s/^"//;
+      $st=~s/"$//;
+      return "Use \'$pt\' Reserved Instance:\n\n$s$st\n\n";
+
+   };
+   my %choose_ri=(
+
+      Name => 'choose_ri',
+      Item_1 => {
+
+         Text   => ']C[',
+         Convey => $tl,
+
+      },
+      Item_2 => {
+
+         Text => "Return to List of Available ]P[{types} Instances",
+         Result => sub { return '{r_inst}<' }
+
+      },
+      Scroll => 2,
+      Banner => sub {
+
+         my $st=']S[{r_inst}';
+         $st=~s/^"//;
+         $st=~s/"$//;
+         my $ri=$main::ri->{$st};
+         my @keys=keys %{$main::ri->{$st}};
+         my $keys=join " ",@keys;
+print Data::Dump::Streamer::Dump($main::ri->{$st})->Out();
+         return "$keys\n";
+
+      },
+
+   );
+   return \%choose_ri;
+
+};
+
+my $choose_an_instance_type=sub {
+
+   my $demo_choice=']P[{choose_demo_setup}';
+   my $instance_type_banner=<<END;
+    ___         _                      _____
+   |_ _|_ _  __| |_ __ _ _ _  __ ___  |_   _|  _ _ __  ___ ___
+    | || ' \\(_-<  _/ _` | ' \\/ _/ -_)   | || || | '_ \\/ -_|_-<
+   |___|_||_/__/\\__\\__,_|_||_\\__\\___|   |_| \\_, | .__/\\___/__/
+                                            |__/|_|
+
+   You have selected the demo: $demo_choice
+
+END
+   if (-1<index $demo_choice,'Liferay') {
+      $instance_type_banner.=<<END 
+
+   Unfortunately, Free Tier micro servers do not have enough resources to
+   successfully run Liferay, even in a minimalist capacity. Therefore, you
+   will have to choose a 'small' instance type at the very minimum. Based
+   on the choices you make next, a fee summary will be calculated and
+   presented to you for approval before any costs are incurred.
+
+END
+
+   }
+
+   my %describe_costs=(
+
+      Name => 'describe_costs',
+      Banner => $instance_type_banner,
+      Result => '',
+
+   );
+   return \%describe_costs;
+
+};
+
+my $choose_aws_instances=sub {
+
+   package choose_aws_instances;
+   use JSON::XS;
+   my $demo_choice=']S[';
+   {
+      $SIG{CHLD}="DEFAULT";
+      my $json='';
+      open(AWS,"aws ec2 describe-instances|");
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      my $hash={};
+      $hash=decode_json($json);
+      my $instance='';
+      my $ipaddress=Socket::inet_ntoa((gethostbyname(
+                    $Net::FullAuto::FA_Core::local_hostname))[4]);
+      foreach my $inst (@{$hash->{Reservations}->[0]->{Instances}}) {
+         $instance=$inst;
+         last if $instance->{PrivateIpAddress} eq $ipaddress;
+      }
+#print "DUMP=",Data::Dump::Streamer::Dump($instance)->Out(),"\n";<STDIN>;
+      close AWS;
+      my $i=$instance->{ImageId};
+      my $r=$instance->{Placement}->{AvailabilityZone};
+      chop $r;
+      $json='';
+      open(AWS,
+         "aws ec2 describe-images --filter \"Name=image-id,Values=$i\"|");
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      $hash={};
+      $hash=decode_json($json);
+      close AWS;
+      $json='';
+      my $prc='wget -qO- http://aws.amazon.com/ec2/pricing/'.
+              'pricing-on-demand-instances.json';
+      open(AWS,"$prc|");
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      my $prc_hash={};
+      $prc_hash=decode_json($json);
+      close AWS;
+#print "PRICE=",Data::Dump::Streamer::Dump($prc_hash)->Out(),"\n";<STDIN>;
+#      print "ALL KEYS=",(join " ",%{$prc_hash->{config}}),"\n";<STDIN>;
+      my %regions=();my @regions=();my $scrollnum=1;my $cnt=0;
+      foreach my $region (@{$prc_hash->{config}->{regions}}) {
+         $cnt++;
+         $regions{$region->{region}}=$region;
+         $scrollnum=$cnt if $r eq $region->{region};
+         push @regions,$region->{region};
+      }
+      my $regions_banner=<<END;
+
+    ___      _        _       _     ___          _
+   / __| ___| |___ __| |_    /_\\   | _ \\___ __ _(_)___ _ _
+   \\__ \\/ -_) / -_) _|  _|  / _ \\  |   / -_) _` | / _ \\ ' \\
+   |___/\\___|_\\___\\__|\\__| /_/ \\_\\ |_|_\\___\\__, |_\\___/_||_|
+                                           |___/
+
+   AWS has infrastructure all over the globe. This server you are now on
+   is located in region:  $r
+
+   It is already set as the default, and unless you have a reason to use
+   another region, just hit the [ENTER] key and stay in region $r.
+
+END
+      my $regions={
+
+         Name => 'regions',
+         Item_1 => {
+
+            Text => ']C[',
+            Convey => \@regions,
+            Result => $choose_an_instance_type,
+
+         },
+         Scroll => $scrollnum,
+         Banner => $regions_banner,
+      };
+      return $regions;
+   }
+   print "\nWE ARE DONE\n";
+   Net::FullAuto::FA_Core::cleanup();
+
+};
+
 my $get_ec2_api=sub {
 
+   package get_ec2_api;
+   use JSON::XS;
    print "\n";
    my $out=`which aws 2>&1`;
    if (!(-e "/usr/bin/aws") && (-1<index $out,'no aws in')) {
@@ -12699,9 +12860,8 @@ my $get_ec2_api=sub {
    my $need_to_configure_aws=0;
    {
       $SIG{CHLD}="DEFAULT";
-      open(AWS,"aws iam list-access-keys --user-name ec2-user 2>&1|");
+      open(AWS,"aws iam list-access-keys 2>&1|");
       while (my $line=<AWS>) {
-         print "LINE=$line\n";
          if (-1<index $line,'configure credentials') {
             $need_to_configure_aws=1;
             last;
@@ -12712,8 +12872,37 @@ my $get_ec2_api=sub {
    if ($need_to_configure_aws) {
       $configure_aws1->();
    }
-   print "\nWE ARE DONE\n";
-   cleanup();
+   my $choose_demo_banner=<<END;
+
+   Amazon AWS EC2 API is Active!
+
+     ___ _                          _      ___
+    / __| |_  ___  ___ ___ ___     /_\\    |   \\ ___ _ __  ___
+   | (__| ' \\/ _ \\/ _ (_-</ -_)   / _ \\   | |) / -_) '  \\/ _ \\
+    \\___|_||_\\___/\\___/__/\\___|  /_/ \\_\\  |___/\\___|_|_|_\\___/
+
+
+   Below is a selection of demos designed to demonstrate
+   FullAuto's unique ability to automate *any* cloud
+   computing operation. Please choose one:
+
+END
+   my %choose_demo_setup=(
+
+      Name => 'choose_demo_setup',
+      Item_1 => {
+
+         Text   => ']C[',
+         Convey => [ 'Liferay Portal with Clustering' ],
+         Result => $choose_aws_instances,
+
+      },
+      Scroll => 1,
+      Banner => $choose_demo_banner,
+
+   );
+   return \%choose_demo_setup;
+
 
 };
 
@@ -15059,10 +15248,12 @@ print $Net::FullAuto::FA_Core::MRLOG "GOT OUT OF COMMANDPROMPT<==\n"
             &handle_error($su_err,'-1') if $su_err;
             &acquire_fa_lock(6543);
          }
+         ($stdout,$stderr)=Rem_Command::cmd(
+            $localhost,'export HISTCONTROL = "ignorespace"');
          while (1) {
             my $_sh_pid='';
             ($_sh_pid,$stderr)=Rem_Command::cmd(
-               $localhost,' echo $$');
+               $localhost,'echo $$');
 # --CONTINUE-- print "LOCAL_sh_pid=$_sh_pid<==\n";
 print $Net::FullAuto::FA_Core::MRLOG "LOCAL_sh_pid=$_sh_pid<==\n"
    if $Net::FullAuto::FA_Core::log &&
@@ -31381,7 +31572,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WEVE GOT WINDOWSCOMMAND=$command\n"
                $cmmd=~s/\\/\\\\/g;
                $cmmd=~s/\\$//mg;
                $cmmd=~s/\"/\\\"/g;
-               $str="echo \" $cmmd 2>${t}err${pid_ts}.txt 1>${t}out${pid_ts}"
+               $str=" echo \" $cmmd 2>${t}err${pid_ts}.txt 1>${t}out${pid_ts}"
                    .".txt\" > ${t}cmd${pid_ts}.bat";
                $self->{_cmd_handle}->print($str);
                my $lastDB9=0;
