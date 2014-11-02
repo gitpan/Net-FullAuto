@@ -12579,10 +12579,10 @@ my $configure_aws3=sub {
       system("chmod 755 $homedir/.aws");
 
    };
-print "\nACCESS ID=$access_id\n";
-print "SECRET KEY=$secret_ky\n";
    my $output=`aws iam list-groups`;
-print "AWESOME OUTPUT=$output\n";
+#print "\nACCESS ID=$access_id\n";
+#print "SECRET KEY=$secret_ky\n";
+#print "AWESOME OUTPUT=$output\n";
 
 };
 
@@ -12634,19 +12634,20 @@ my $configure_aws1=sub {
     \\___\\___/_||_|_| |_\\__, |\\_,_|_| \\___|  /_/ \\_\\_/\\_/ |___/
                         |___/
 
-   To create, modify, or delete a user's access keys:
-
    1. Sign in to the AWS Management Console and open the IAM console at:
 
-      https://console.aws.amazon.com/iam/
+      https://console.aws.amazon.com/iam/#users
 
-   2. In the navigation pane, click Users.
+   2. Click the blue checkbox of the name of the user you want to create
+      an access key for:
+       _
+      |_| username
 
-   3. Click the name of the user who you want to create an access key for,
-      and then open the Security Credentials section.
-
-   4. Click Manage Access Keys.
-
+   3. Look for the big gray box just above the section you clicked that
+      is labeled 'User Actions':
+       ________________
+      | User Actions v |  Click on it and select 'Manage Access Keys'
+       ---------------- 
 END
 
    my %configure_aws1=(
@@ -12660,53 +12661,306 @@ END
 
 };
 
-my $choose_ri=sub {
+#print Data::Dump::Streamer::Dump($value)->Out();
 
-   my $id=']S[{r_inst}';
-   $id=~s/^"//;
-   $id=~s/"$//;
-   my $s='            ';
-   my $tl=sub {
-      
-      my $s='                 ';
-      my $pt=']P[{types}';
-      my $st=']S[{r_inst}'; 
-      $st=~s/^"//;
-      $st=~s/"$//;
-      return "Use \'$pt\' Reserved Instance:\n\n$s$st\n\n";
+my $standup_liferay=sub {
 
-   };
-   my %choose_ri=(
+   use JSON::XS;
+   my $type="]T[{select_type}";
+   $type=~s/^"//;
+   $type=~s/"$//;
+   $type=substr($type,0,(index $type,' ->')-3);
+   my $i=$main::aws->{fullauto}->{ImageId}||'';
+   my $s=$main::aws->{fullauto}->
+         {NetworkInterfaces}->[0]->{SubnetId}||'';
+   my $g=$main::aws->{fullauto}->
+         {SecurityGroups}->[0]->{GroupId}||'';
+   print "IMAGE_ID=$i\n";
+   print "SUBNETID=$s\n";
+   print "GROUPID=$g\n";
+   my $json='';
+   {
+      $SIG{CHLD}="DEFAULT";
+      my $c="aws ec2 run-instances --image-id $i --count 1 ".
+            "--instance-type $type --key-name fullauto ".
+            "--security-group-ids $g --subnet-id $s";
+print "CC=$c<==\n";<STDIN>;
+      open(AWS,"$c|");
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      my $hash={};
+      $hash=decode_json($json);
+print "DATA=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
+      foreach my $inst (@{$hash->{Instances}->[0]}) {
+print "DATA=",Data::Dump::Streamer::Dump($inst)->Out(),"\n";
+      }
+      #my $c="aws ec2 describe_tags --filters "Name=resource-id,Values=";
+      #open(AWS,"
+   }
 
-      Name => 'choose_ri',
+print "DONE\n";<STDIN>;
+&Net::FullAuto::FA_Core::cleanup;
+
+};
+
+my $liferay_setup_summary=sub {
+
+   package liferay_setup_summary;
+   use JSON::XS;
+   my $region="]T[{awsregions}";
+   $region=~s/^"//;
+   $region=~s/"$//;
+   my $type="]T[{select_type}";
+   $type=~s/^"//;
+   $type=~s/"$//;
+   my $money=$type;
+   $money=~s/^.*-> \$(.*) per hour$/$1/;
+   $type=substr($type,0,(index $type,' ->')-3);
+   my $liferay="]T[{select_liferay_setup}";
+   $liferay=~s/^"//;
+   $liferay=~s/"$//;
+   my $database="]T[{select_database_for_liferay}";
+   $database=~s/^"//;
+   $database=~s/"$//;
+   my $httpd="]T[{select_httpd_for_liferay}";
+   $httpd="]T[{select_httpd_for_liferay}";
+   $httpd=~s/^"//;
+   $httpd=~s/"$//;
+   print "REGION=$region and TYPE=$type\n";  
+   print "LIFERAY=$liferay and DB=$database\n";
+   print "HTTPD=$httpd\n";
+   my $num_of_servers=0;
+   my $ln=$liferay;
+   $ln=~s/^.*(\d+)\sServer.*$/$1/;
+   my $hd=$httpd;
+   $hd=~s/^.*(\d+)\sadditional.*$/$1/;
+   $num_of_servers=$ln+$hd+1;
+   my $cost=$num_of_servers*$money;
+   my $show_cost_banner=<<END;
+
+      _                  _       ___        _  ___
+     /_\\  __ __ ___ _ __| |_    / __|___ __| ||__ \\
+    / _ \\/ _/ _/ -_) '_ \\  _|  | (__/ _ (_-<  _|/_/
+   /_/ \\_\\__\\__\\___| .__/\\__|   \\___\\___/__/\\__(_)
+                   |_|
+
+   Note: There is a \$$cost per hour cost to launch $num_of_servers
+         AWS EC2 $type servers for the FullAuto Demo:
+
+         $liferay
+         $database Database on 1 Server
+         $httpd
+
+
+END
+   my %show_cost=(
+
+      Name => 'show_cost',
       Item_1 => {
 
-         Text   => ']C[',
-         Convey => $tl,
+         Text => "I accept the \$$cost per hour cost",
+         Result => $standup_liferay,
 
       },
       Item_2 => {
 
-         Text => "Return to List of Available ]P[{types} Instances",
-         Result => sub { return '{r_inst}<' }
+         Text => "Return to Choose Demo Menu",
+         Result => sub { return '{choose_demo_setup}<' },
+
+      },
+      Item_3 => {
+
+         Text => "Exit FullAuto",
+         Result => sub { Net::FullAuto::FA_Core::cleanup() },
 
       },
       Scroll => 2,
-      Banner => sub {
-
-         my $st=']S[{r_inst}';
-         $st=~s/^"//;
-         $st=~s/"$//;
-         my $ri=$main::ri->{$st};
-         my @keys=keys %{$main::ri->{$st}};
-         my $keys=join " ",@keys;
-print Data::Dump::Streamer::Dump($main::ri->{$st})->Out();
-         return "$keys\n";
-
-      },
+      Banner => $show_cost_banner,
 
    );
-   return \%choose_ri;
+   return \%show_cost;
+
+};
+
+my $select_httpd_for_liferay=sub {
+
+   my @options=('Do NOT use a separate httpd (web) server',
+                'Use 1 Apache httpd server on 1 additional Server',
+                'Use 2 Apache httpd servers on 2 additional Servers');
+
+   my $select_database_banner=<<END;
+
+    _   _          __      __   _      ___                         ___
+   | | | |___ ___  \\ \\    / /__| |__  / __| ___ _ ___ _____ _ _ __|__ \\
+   | |_| (_-</ -_)  \\ \\/\\/ / -_) '_ \\ \\__ \\/ -_) '_\\ V / -_) '_(_-< /_/
+    \\___//__/\\___|   \\_/\\_/\\___|_.__/ |___/\\___|_|  \\_/\\___|_| /__/(_)
+
+
+   If you choose to use Apache httpd (web) servers in front of Liferay,
+   additional servers will be launched. Depending on all your choices,
+   FullAuto will launch and install supporting software on up to 5
+   separate AWS EC2 servers.
+
+END
+   my %select_httpd_for_liferay=(
+
+      Name => 'select_httpd_for_liferay',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => \@options,
+         Result => $liferay_setup_summary,
+
+      },
+      Scroll => 2,
+      Banner => $select_database_banner,
+
+   );
+   return \%select_httpd_for_liferay;
+
+};
+
+
+my $select_database_for_liferay=sub {
+
+   my @options=('MySQL','PostgresSQL');
+   #my @options=('MySQL','Microsoft SQL Server','Oracle Database',
+   #             'IBM DB2','PostgresSQL','Sybase','Apache Derby',
+   #             'Firebird','Informix','Ingres','SAP DB');
+   #http://imperialwicket.com/aws-install-postgresql-on-amazon-linux-quick-and-dirty/
+   # https://chendamok.wordpress.com/2014/01/18/yum-install-oracle-validated-for-oracle-enterprise-linux-5/
+   # cd /etc/yum.repos.d/
+   # wget http://public-yum.oracle.com/public-yum-el5.repo
+   # vi public-yum-el5.repo
+   # yum install oracle-validated 
+   # http://download.oracle.com/otn/linux/oracle11g/xe/oracle-ex-11.2.0-1.0.x86_64.rmp.zip
+
+   my $select_database_banner=<<END;
+
+    ___      _        _     ___       _        _
+   / __| ___| |___ __| |_  |   \\ __ _| |_ __ _| |__  __ _ ___ ___
+   \\__ \\/ -_) / -_) _|  _| | |) / _` |  _/ _` | '_ \\/ _` (_-</ -_)
+   |___/\\___|_\\___\\__|\\__| |___/\\__,_|\\__\\__,_|_.__/\\__,_/__/\\___|
+
+
+   An additional server will be launched, and a supporting database for
+   use by Liferay will be installed. Please choose a database:
+
+END
+   my %select_database_for_liferay=(
+
+      Name => 'select_database_for_liferay',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => \@options,
+         Result => $select_httpd_for_liferay, 
+
+      },
+      Scroll => 1,
+      Banner => $select_database_banner,
+
+   );
+   return \%select_database_for_liferay;
+
+};
+
+my $select_liferay_setup=sub {
+
+   my @options=('Liferay & Tomcat on 1 Server & 1 JVM',
+                'Liferay & Tomcat on 1 Server & 2 Clustered JVMs',
+                'Liferay & Tomcat on 2 Servers & 2 Clustered JVMs',
+                'Liferay & Tomcat on 2 Servers & 4 Clustered JVMs');
+   my $liferay_setup_banner=<<END;
+
+    _    _  __                      ___      _
+   | |  (_)/ _|___ _ _ __ _ _  _   / __| ___| |_ _  _ _ __
+   | |__| |  _/ -_) '_/ _` | || |  \\__ \\/ -_)  _| || | '_ \\
+   |____|_|_| \\___|_| \\__,_|\\_, |  |___/\\___|\\__|\\_,_| .__/
+                            |__/                     |_|
+
+   Choose the Liferay setup you wish to demo. Note that more servers
+   means more expense, and more JVMs means less permformance on a
+   small instance type. Consider a medium or large instance type (previous
+   screens) if you wish to test more than 1 JVM on a server. You can
+   navigate backwards and make new selections with the [<] LEFTARROW key.
+
+END
+   my %select_liferay_setup=(
+
+      Name => 'select_liferay_setup',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => \@options,
+         Result => $select_database_for_liferay,
+
+      },
+      Scroll => 1,
+      Banner => $liferay_setup_banner,
+   );
+   return \%select_liferay_setup,
+
+};
+
+my $select_an_instance_type=sub {
+
+   my $region="]T[{awsregions}";
+   $region=~s/^"//;
+   $region=~s/"$//; 
+   my $region_data='';
+   $region_data=$main::regions_data->{$region}
+      if (defined $main::regions_data &&
+      exists $main::regions_data->{$region});
+   my @itypes=@{$region_data->{instanceTypes}};
+   my @sizes=();my $scrollnum=1;my $cnt=0;
+   foreach my $type (@itypes) {
+      #next if -1<index $type->{type},'Previous';
+      foreach my $sizes (@{$type->{sizes}}) {
+         my $size=$sizes->{size};
+         my $price=$sizes->{valueColumns}->[0]->{prices}->{USD};
+         $cnt++;
+         $scrollnum=$cnt if -1<index $size,'small';
+         $price=~s/0$/ /;
+         my $pr="-> \$$price per hour";
+         push @sizes, pack('A12',$size).$pr;
+      }
+   }
+#print "DUMP=",Data::Dump::Streamer::Dump(\@sizes)->Out(),"\n";<STDIN>;
+   my $demo_choice=']P[{choose_demo_setup}';
+   my $ns=$#sizes+1;
+   my $select_type_banner=<<END;
+
+     ___ _                        _____
+    / __| |_  ___  ___ ___ ___   |_   _|  _ _ __  ___
+   | (__| ' \\/ _ \\/ _ (_-</ -_)    | || || | '_ \\/ -_)
+    \\___|_||_\\___/\\___/__/\\___|    |_| \\_, | .__/\\___|
+                                       |__/|_|
+
+   Choose the type of server instance to use for your
+   $demo_choice demo. Note that m1.small
+   has been pre-selected for you. If you wish use this, just press [ENTER],
+   otherwise use the [^] and [v] arrow keys to make a different selection.
+   Note: There are $ns choices.
+
+END
+   my %select_type=(
+
+      Name => 'select_type',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => \@sizes,
+         Result => $select_liferay_setup,
+
+      },
+      Scroll => $scrollnum,
+      Display => 6,
+      Banner => $select_type_banner,
+
+   );
+   return \%select_type;
 
 };
 
@@ -12740,7 +12994,7 @@ END
 
       Name => 'describe_costs',
       Banner => $instance_type_banner,
-      Result => '',
+      Result => $select_an_instance_type,
 
    );
    return \%describe_costs;
@@ -12752,6 +13006,8 @@ my $choose_aws_instances=sub {
    package choose_aws_instances;
    use JSON::XS;
    my $demo_choice=']S[';
+   my @regions=();my $r='';my $scrollnum=1;
+   $main::regions_data={};
    {
       $SIG{CHLD}="DEFAULT";
       my $json='';
@@ -12764,44 +13020,68 @@ my $choose_aws_instances=sub {
       my $instance='';
       my $ipaddress=Socket::inet_ntoa((gethostbyname(
                     $Net::FullAuto::FA_Core::local_hostname))[4]);
-      foreach my $inst (@{$hash->{Reservations}->[0]->{Instances}}) {
-         $instance=$inst;
-         last if $instance->{PrivateIpAddress} eq $ipaddress;
+      $main::aws=();
+#print "WHOLE HASH=",Data::Dump::Streamer::Dump($hash)->Out(),"<==WHOLE HASH\n";<STDIN>;
+      foreach my $res (@{$hash->{Reservations}}) {
+#print "RES=",Data::Dump::Streamer::Dump($res)->Out(),"<==RES\n";<STDIN>;
+         foreach my $inst (@{$res->{Instances}}) {
+            my $pip=$inst->{PrivateIpAddress}||'';
+#print "MYIP=$ipaddress and PR=$pip\n";
+#print "STATE=",Data::Dump::Streamer::Dump($inst->{State})->Out(),"<==STATE\n";<STDIN>;
+            next if exists $inst->{State}->{Name} &&
+               $inst->{State}->{Name} eq 'terminated';
+            if ($pip eq $ipaddress) {
+               $main::aws->{fullauto}=$inst;
+#print "FULLAUTO INSTANCE=",Data::Dump::Streamer::Dump($main::aws->{fullauto})->Out(),"<==FULLAUTO INSTANCE\n";<STDIN>;
+            } else {
+#print "NOT FA INSTANCE=",Data::Dump::Streamer::Dump($inst)->Out(),"<==NOT FA INSTANCE\n";<STDIN>;
+            }
+         }
       }
-#print "DUMP=",Data::Dump::Streamer::Dump($instance)->Out(),"\n";<STDIN>;
       close AWS;
-      my $i=$instance->{ImageId};
-      my $r=$instance->{Placement}->{AvailabilityZone};
+      $r=$main::aws->{fullauto}->{Placement}->{AvailabilityZone};
       chop $r;
+      my $i=$main::aws->{fullauto}->{ImageId};
+      my $t="aws ec2 describe-tags --filters \"Name=resource-id,Values=$i\"";
+      open(AWS,"$t|");
       $json='';
-      open(AWS,
-         "aws ec2 describe-images --filter \"Name=image-id,Values=$i\"|");
       while (my $line=<AWS>) {
          $json.=$line;
       }
-      $hash={};
-      $hash=decode_json($json);
+      my $thash=decode_json($json);
       close AWS;
+      if ($#{$thash->{Tags}}==-1) {
+         my $n="aws ec2 create-tags --resources $i --tags Key=fullauto,".
+               "Value=1";
+         open(AWS,"$n|");
+         $json='';
+         while (my $line=<AWS>) {
+            $json.=$line;
+         }
+         $thash=decode_json($json);
+      }
       $json='';
-      my $prc='wget -qO- http://aws.amazon.com/ec2/pricing/'.
-              'pricing-on-demand-instances.json';
+      my $prc='wget -qO- https://a0.awsstatic.com/pricing/'.
+              '1/ec2/linux-od.min.js';
       open(AWS,"$prc|");
       while (my $line=<AWS>) {
          $json.=$line;
       }
+      $json=~s/^.*?callback[(](.*)[)];\s*$/$1/s;
+      $json=~s/([{,])([A-Za-z]+):/$1"$2":/g;
       my $prc_hash={};
       $prc_hash=decode_json($json);
+#print "PRC_HASH=",Data::Dump::Streamer::Dump($prc_hash)->Out(),"\n";<STDIN>;
       close AWS;
-#print "PRICE=",Data::Dump::Streamer::Dump($prc_hash)->Out(),"\n";<STDIN>;
-#      print "ALL KEYS=",(join " ",%{$prc_hash->{config}}),"\n";<STDIN>;
-      my %regions=();my @regions=();my $scrollnum=1;my $cnt=0;
+      my $cnt=0;
       foreach my $region (@{$prc_hash->{config}->{regions}}) {
          $cnt++;
-         $regions{$region->{region}}=$region;
+         $main::regions_data->{$region->{region}}=$region;
          $scrollnum=$cnt if $r eq $region->{region};
          push @regions,$region->{region};
       }
-      my $regions_banner=<<END;
+   }
+   my $regions_banner=<<END;
 
     ___      _        _       _     ___          _
    / __| ___| |___ __| |_    /_\\   | _ \\___ __ _(_)___ _ _
@@ -12816,23 +13096,20 @@ my $choose_aws_instances=sub {
    another region, just hit the [ENTER] key and stay in region $r.
 
 END
-      my $regions={
+   my %awsregions=(
 
-         Name => 'regions',
-         Item_1 => {
+      Name => 'awsregions',
+      Item_1 => {
 
-            Text => ']C[',
-            Convey => \@regions,
-            Result => $choose_an_instance_type,
+         Text => ']C[',
+         Convey => \@regions,
+         Result => $choose_an_instance_type,
 
-         },
-         Scroll => $scrollnum,
-         Banner => $regions_banner,
-      };
-      return $regions;
-   }
-   print "\nWE ARE DONE\n";
-   Net::FullAuto::FA_Core::cleanup();
+      },
+      Scroll => $scrollnum,
+      Banner => $regions_banner,
+   );
+   return \%awsregions;
 
 };
 
@@ -12935,6 +13212,9 @@ END
 
    );
    Menu(\%welcome_fa_amazon);
+
+#print "DONE\n";<STDIN>;
+cleanup;
 
 }
 
