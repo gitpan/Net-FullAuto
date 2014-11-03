@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999924';
+$main::VERSION='0.999999999925';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -1390,7 +1390,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
          $minicpan->mirror_file(
             "authors/id/$let/$lett/$distribution");
       }
-      my $mod_info='';
+      my $mod_info='';my $instfile='';
       if (!$version && !(-e "dependencies/CPAN/authors") || (grep {
             /(?:use[-_]?)?internet|online|connect_to_internet_ok/i
             } @ARGV)) {
@@ -1402,7 +1402,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
                CPAN::Shell->m($p);
             }
          };
-         my $instfile='';my $instver='';my $cpanver='';
+         my $instver='';my $cpanver='';
          if ($mod_info) {
             ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
             ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
@@ -1424,7 +1424,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
             $force=($ver<$version)?1:0;
          } else { $force=0 } 
       }
-      if ($@ || $force) {
+      if ($@ || $instfile eq '(not' || $force) {
          if ($ENV{'AUTOMATED_TESTING'}) {
             print "Automated Testing Detected: FullAuto needs $p\n",
                   "   to continue, but $p was not detected on this\n",
