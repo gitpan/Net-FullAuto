@@ -20,6 +20,15 @@
 #######################################################################
 
 
+2014-11-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999926 released.
+
+        * ++MILESTONE++ - Successfully stood-up AWS server
+          vi AWS API and then connected to it via ssh with
+          NO manual intervention.
+
+
 2014-11-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999925 released.

@@ -6605,6 +6605,10 @@ sub connect_host
          $Hosts{$hostlabel}{'Label'}=$hostlabel;
          $Hosts{$hostlabel}{'telnetport'}=4242;
          $_connect='connect_telnet';
+      } elsif (ref $_[0] eq 'HASH') {
+         $authorize_connect=1;
+         $Hosts{$_[0]->{'Label'}}=$_[0];
+         $hostlabel=$_[0]->{'Label'};
       }
    } else {
       my @called=caller(2);
@@ -12663,6 +12667,50 @@ END
 
 #print Data::Dump::Streamer::Dump($value)->Out();
 
+sub add_and_tag_server {
+
+   package add_and_tag_server;
+   use JSON::XS;
+   my $server_type=$_[0];
+   my $cnt=$_[1];
+   my $inst=$_[2];
+   if ($cnt==-1) {
+      $main::aws->{$server_type}=$inst;
+   } else {
+      $main::aws->{$server_type}->[$cnt]=$inst;
+   }
+   {
+      $SIG{CHLD}="DEFAULT";
+      my $n="aws ec2 create-tags --resources $inst->{InstanceId}".
+            " --tags Key=$server_type,Value=".++$cnt." 2>&1";
+      open(AWS,"$n|");
+      close AWS;
+   }
+}
+
+sub wait_for_instance {
+
+   package wait_for_instance;
+   use JSON::XS;
+   my $instance_id=$_[0];my $hash='';
+   {
+      $SIG{CHLD}="DEFAULT";
+      my $c="aws ec2 describe-instances --instance-ids ".
+            "$instance_id 2>&1";
+      open(AWS,"$c|");
+      my $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      } 
+      $hash=decode_json($json);
+#print "WAITHASH=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
+
+   }
+#print "WAITFORINST=$hash->{Reservations}->[0]->{Instances}->[0]->{State}->{Name}<==\n";
+   return $hash->{Reservations}->[0]->{Instances}->[0]->{State}->{Name};
+
+}
+
 my $standup_liferay=sub {
 
    use JSON::XS;
@@ -12675,31 +12723,63 @@ my $standup_liferay=sub {
          {NetworkInterfaces}->[0]->{SubnetId}||'';
    my $g=$main::aws->{fullauto}->
          {SecurityGroups}->[0]->{GroupId}||'';
-   print "IMAGE_ID=$i\n";
-   print "SUBNETID=$s\n";
-   print "GROUPID=$g\n";
    my $json='';
    {
       $SIG{CHLD}="DEFAULT";
       my $c="aws ec2 run-instances --image-id $i --count 1 ".
             "--instance-type $type --key-name fullauto ".
             "--security-group-ids $g --subnet-id $s";
-print "CC=$c<==\n";<STDIN>;
       open(AWS,"$c|");
       while (my $line=<AWS>) {
          $json.=$line;
       }
       my $hash={};
       $hash=decode_json($json);
-print "DATA=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
-      foreach my $inst (@{$hash->{Instances}->[0]}) {
-print "DATA=",Data::Dump::Streamer::Dump($inst)->Out(),"\n";
+#print "DATA=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
+      INST: foreach my $inst (@{$hash->{Instances}}) {
+         my $cnt=0;
+         foreach my $serv (@{$main::aws->{liferay}}) {
+            unless ($serv) {
+               add_and_tag_server('liferay',$cnt++,$inst);
+               next INST;
+            }
+         }
+         $cnt=0;
+         foreach my $serv (@{$main::aws->{https}}) {
+            unless ($serv) {
+               add_and_tag_server('https',$cnt++,$inst);
+               next INST;
+            }
+         }
+         unless ($main::aws->{database}) {
+            add_and_tag_server('database',-1,$inst);
+            next;
+         }
       }
-      #my $c="aws ec2 describe_tags --filters "Name=resource-id,Values=";
-      #open(AWS,"
+      until (wait_for_instance($main::aws->{liferay}->[0]->{InstanceId})
+            eq 'running') {
+         print "\n   Waiting for liferay1 to come online -> pending\n";
+         sleep 3;
+      }
+      print "\n   Waiting for liferay1 to come online -> running\n";
+      my $error='';
+      my $username=&Net::FullAuto::FA_Core::username();
+      my $liferay_one_block={
+
+         Label => 'liferay1',
+         IP => $main::aws->{liferay}->[0]->{PrivateIpAddress},
+         Login => $username,
+         identity_file => "/home/$username/fullauto.pem",
+
+      };
+      ($main::aws->{liferay}->[1],$error)=connect_ssh($liferay_one_block);
+      my ($stdout,$stderr)=('','');
+      ($stdout,$stderr)=$main::aws->{liferay}->[1]->cmd('hostname');
+      print "HOSTNAME=$stdout\n";
+
    }
 
-print "DONE\n";<STDIN>;
+print "DONE\n";#<STDIN>;
 &Net::FullAuto::FA_Core::cleanup;
 
 };
@@ -12733,10 +12813,31 @@ my $liferay_setup_summary=sub {
    my $num_of_servers=0;
    my $ln=$liferay;
    $ln=~s/^.*(\d+)\sServer.*$/$1/;
+   foreach my $n (0..$ln) {
+      $main::aws->{liferay}=[] unless exists
+         $main::aws->{liferay};
+      $main::aws->{liferay}->[$n]='';
+   }
    my $hd=$httpd;
    $hd=~s/^.*(\d+)\sadditional.*$/$1/;
+   foreach my $n (0..$ln) {
+      $main::aws->{httpd}=[] unless exists
+         $main::aws->{httpd};
+      $main::aws->{httpd}->[$n]='';
+   }
+   $main::aws->{database}='';
    $num_of_servers=$ln+$hd+1;
    my $cost=$num_of_servers*$money;
+   my $cents='';
+   if ($cost=~/^0\./) {
+      $cents=$cost;
+      $cents=~s/^0\.//;
+      if (length $cents>2) {
+         $cents=~s/^(..)(.*)$/$1.$2/;
+         $cents=~s/^0//;
+         $cents=' ('.$cents.' cents)';
+      }
+   }
    my $show_cost_banner=<<END;
 
       _                  _       ___        _  ___
@@ -12745,7 +12846,7 @@ my $liferay_setup_summary=sub {
    /_/ \\_\\__\\__\\___| .__/\\__|   \\___\\___/__/\\__(_)
                    |_|
 
-   Note: There is a \$$cost per hour cost to launch $num_of_servers
+   Note: There is a \$$cost per hour cost$cents to launch $num_of_servers
          AWS EC2 $type servers for the FullAuto Demo:
 
          $liferay
@@ -12759,7 +12860,7 @@ END
       Name => 'show_cost',
       Item_1 => {
 
-         Text => "I accept the \$$cost per hour cost",
+         Text => "I accept the \$$cost$cents per hour cost",
          Result => $standup_liferay,
 
       },
@@ -13041,7 +13142,7 @@ my $choose_aws_instances=sub {
       close AWS;
       $r=$main::aws->{fullauto}->{Placement}->{AvailabilityZone};
       chop $r;
-      my $i=$main::aws->{fullauto}->{ImageId};
+      my $i=$main::aws->{fullauto}->{InstanceId};
       my $t="aws ec2 describe-tags --filters \"Name=resource-id,Values=$i\"";
       open(AWS,"$t|");
       $json='';
@@ -13052,13 +13153,9 @@ my $choose_aws_instances=sub {
       close AWS;
       if ($#{$thash->{Tags}}==-1) {
          my $n="aws ec2 create-tags --resources $i --tags Key=fullauto,".
-               "Value=1";
+               "Value=1 2>&1";
          open(AWS,"$n|");
-         $json='';
-         while (my $line=<AWS>) {
-            $json.=$line;
-         }
-         $thash=decode_json($json);
+         close AWS;
       }
       $json='';
       my $prc='wget -qO- https://a0.awsstatic.com/pricing/'.
@@ -13106,6 +13203,7 @@ END
          Result => $choose_an_instance_type,
 
       },
+      Display => 7,
       Scroll => $scrollnum,
       Banner => $regions_banner,
    );
@@ -19641,7 +19739,9 @@ sub ftm_login
    my $ms_ms_domain='';my $ms_ms_share='';my $ftm_type='';
    my $desthostlabel='';my $p_uname='',my $fpx_passwd='';
    my $ftm_passwd=$Net::FullAuto::FA_Core::dcipher->decrypt(
-         $Net::FullAuto::FA_Core::passetts->[0]);
+         $Net::FullAuto::FA_Core::passetts->[0]) if
+         $Net::FullAuto::FA_Core::dcipher;
+   $ftm_passwd||='';
    my $ftp_pid='';my $fpx_pid='';my $smb=0;
    my @errorstack=();
    my ($output,$stdout,$stderr)=('','','');
@@ -21099,7 +21199,8 @@ print $Net::FullAuto::FA_Core::MRLOG
             $ftp_handle->print(); 
          }
 
-         my $lin='';my $asked=0;my $authyes=0;my @choices=();
+         my $lin='';my $asked=0;my @choices=();
+         my $authyes=0;
          while (1) {
             while (my $line=$ftp_handle->get(Timeout=>$fttimeout)) {
                if ($line=~/command not found/) {
@@ -21862,6 +21963,7 @@ END
                die $line;
             } elsif (!$authyes && (-1<index $lin,'The authen') &&
                   $lin=~/\?\s*$/s) {
+               unless ($authorize_connect) {
                my $question=$lin;
                $question=~s/^.*(The authen.*)$/$1/s;
                $question=~s/\' can\'t/\'\ncan\'t/s;
@@ -21915,6 +22017,14 @@ END
                      &Net::FullAuto::FA_Core::cleanup()
                   }
                }
+               } else {
+                  $filehandle->{_cmd_handle}->print('yes');
+                  print $Net::FullAuto::FA_Core::MRLOG $lin
+                     if $Net::FullAuto::FA_Core::log &&
+                     -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                  $authyes=1;$lin='';
+                  last;
+               }
             } elsif ($lin=~/password[: ]+$/si) {
                print $Net::FullAuto::FA_Core::MRLOG
                   "wait_for_passwd_prompt() PASSWORD PROMPT=$lin<==\n"
@@ -21946,7 +22056,15 @@ END
                $lin=$3 if $3;$lin=$4 if $4;
                $lin=$5 if $5;
                if (-1<index $lin,'Connection refused') {
-                  die 'Connection refused';
+                  if (defined $main::aws) {
+                     die 'AWS Connection refused';
+                  } else {
+                     die 'Connection refused';
+                  }
+               } elsif (-1<index $lin,'Permanently added' &&
+                     -1<index $lin,'Roaming not allowed' &&
+                     -1<index $lin,'Connection closed') {
+                  die $lin;
                } elsif (-1<index $lin,'name not known') {
                   die $lin;
                } elsif (-1<index $lin,'Connection closed') {
@@ -22130,7 +22248,6 @@ END
 
                      );
                      &Term::Menus::Menu(\%publickey_failed);
-
 print "DO AMAZON HANDLING\n";
                      &Net::FullAuto::FA_Core::cleanup();
                   }
@@ -22165,7 +22282,9 @@ print "DO OTHER\n";
                return ('','read timed-out:do_slave')
             }
          } return '', $error;
-      } else { &Net::FullAuto::FA_Core::handle_error($@) }
+      } else {
+         &Net::FullAuto::FA_Core::handle_error($@)
+      }
    } elsif ($returned) {
       if (wantarray) {
          return $returned,'';
@@ -29582,14 +29701,17 @@ print $Net::FullAuto::FA_Core::MRLOG
                   } elsif (lc($connect_method) eq 'ssh') {
                      $sshloginid=($use_su_login)?$su_id:$login_id;
                      my $sshpath=$Net::FullAuto::FA_Core::gbp->('ssh');
+                     my $idntfil='';
                      eval {
                         my $sshport='';
                         if (exists $Hosts{$hostlabel}{'sshport'}) {
                            $sshport=$Hosts{$hostlabel}{'sshport'};
                         }
-                        my $idntfil='';
                         if (exists $Hosts{$hostlabel}{'identity_file'}) {
                            $idntfil=$Hosts{$hostlabel}{'identity_file'};
+                        } elsif ($hostlabel eq "__Master_${$}__" &&
+                              $identity_file) {
+                           $idntfil=$identity_file;
                         }
                         if ($sshport) {
                            if ($idntfil) {
@@ -29613,8 +29735,8 @@ print $Net::FullAuto::FA_Core::MRLOG
                                  #$v='vvv' if $Net::FullAuto::FA_Core::debug;
                                  ($cmd_handle,$cmd_pid)=
                                     &Net::FullAuto::FA_Core::pty_do_cmd(
-                                    ["${sshpath}ssh","-$v","-i$idntfil","-p$sshport",
-                                    "$sshloginid\@$host",
+                                    ["${sshpath}ssh","-$v","-i$idntfil",
+                                    "-p$sshport","$sshloginid\@$host",
                                     $Net::FullAuto::FA_Core::slave])
                                     or &Net::FullAuto::FA_Core::handle_error(
                                     "couldn't launch ssh subprocess");
@@ -29665,7 +29787,8 @@ print $Net::FullAuto::FA_Core::MRLOG
                            } else {
                               ($cmd_handle,$cmd_pid)=
                                  &Net::FullAuto::FA_Core::pty_do_cmd(
-                                 ["${sshpath}ssh",'-v',"-i$idntfil","$sshloginid\@$host",
+                                 ["${sshpath}ssh",'-v',"-i$idntfil",
+                                 "$sshloginid\@$host",
                                  $Net::FullAuto::FA_Core::slave])
                                  or &Net::FullAuto::FA_Core::handle_error(
                                  "couldn't launch ssh subprocess");
@@ -29723,14 +29846,17 @@ print $Net::FullAuto::FA_Core::MRLOG
                            die $die;
                         }
                      }
-                     if ($cmd_errmsg &&
-                           (-1==index $cmd_errmsg,'Cannot su to')) {
-                        $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
-                           $hostlabel,$login_id,'',$cmd_errmsg)
-                     } else {
-                        $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
-                           $hostlabel,$login_id,'','')
-                     } $cmd_type='ssh';
+                     if (!$idntfil) {
+                        if ($cmd_errmsg &&
+                              (-1==index $cmd_errmsg,'Cannot su to')) {
+                           $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
+                              $hostlabel,$login_id,'',$cmd_errmsg)
+                        } else {
+                           $login_passwd=&Net::FullAuto::FA_Core::getpasswd(
+                              $hostlabel,$login_id,'','')
+                        }
+                     }
+                     $cmd_type='ssh';
                      ## Wait for password prompt.
                      ($ignore,$stderr)=
                         &File_Transfer::wait_for_passwd_prompt(
@@ -29740,6 +29866,21 @@ print $Net::FullAuto::FA_Core::MRLOG
                              _connect=>$_connect },0,'_notnew_');
                      if ($stderr) {
                         if (-1<index $stderr,'/dev/tty: No') {
+                           next WH;
+                        } elsif (-1<index $stderr,'AWS Connection refused') {
+                           sleep 10;
+                           $stderr='/dev/tty: No';
+                           if ($retrys++==10) {
+                              die 'Connection refused';
+                           } else {
+                              print "\n   Waiting for sshd service on ",
+                                    "$hostlabel to start . . .\n"; 
+                           }
+                           next WH;
+                        } elsif (-1<index $stderr,'Permanently added' &&
+                           -1<index $stderr,'Roaming not allowed' &&
+                           -1<index $stderr,'Connection closed') {
+                           $stderr='/dev/tty: No';
                            next WH;
                         } elsif ($rm_cnt!=$#connect_method) {
                            $cmd_handle->close;
