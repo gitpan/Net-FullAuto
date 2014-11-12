@@ -12579,8 +12579,13 @@ my $configure_aws3=sub {
 
       #cleanup pty for next run
       $pty->close();
+      if ((-e '/root/.aws') && (-r '/root/.aws')) {
+         system("cp -R /root/.aws /home/$username");
+         system("chown -R $username /home/$username/.aws");
+         system("chmod -R 755 /home/$username/.aws");
+      }
       system("chown -R $username $homedir/.aws");
-      system("chmod 755 $homedir/.aws");
+      system("chmod -R 755 $homedir/.aws");
 
    };
    my $output=`aws iam list-groups`;
@@ -12674,11 +12679,7 @@ sub add_and_tag_server {
    my $server_type=$_[0];
    my $cnt=$_[1];
    my $inst=$_[2];
-   if ($cnt==-1) {
-      $main::aws->{$server_type}=$inst;
-   } else {
-      $main::aws->{$server_type}->[$cnt]=$inst;
-   }
+   $main::aws->{$server_type}->[$cnt]->[0]=$inst;
    {
       $SIG{CHLD}="DEFAULT";
       my $n="aws ec2 create-tags --resources $inst->{InstanceId}".
@@ -12711,6 +12712,52 @@ sub wait_for_instance {
 
 }
 
+sub config_server {
+
+   my $server_type=$_[0];
+   my $cnt=$_[1];
+   my $num=$cnt+1;
+   until (wait_for_instance($main::aws->{$server_type}->[$cnt]->[0]->{InstanceId})
+         eq 'running') {
+      print "\n   Waiting for $server_type$num to come online -> pending\n";
+      sleep 3;
+   }
+   print "\n   Waiting for $server_type$num to come online -> running\n";
+   my $error='';
+   my $username=&Net::FullAuto::FA_Core::username();
+   my $liferay_one_block={
+
+      Label => $server_type.$num,
+      IP => $main::aws->{$server_type}->[$cnt]->[0]->{PrivateIpAddress},
+      Login => $username,
+      identity_file => "/home/$username/fullauto.pem",
+
+   };
+   ($main::aws->{liferay}->[$cnt]->[1],$error)=connect_ssh($liferay_one_block);
+   my ($stdout,$stderr)=('','');
+   ($stdout,$stderr)=$main::aws->{liferay}->[$cnt]->[1]->cmd('hostname');
+
+}
+
+sub launch_instance {
+
+   package launch_instance;
+   use JSON::XS;
+   my $c=$_[0];
+   my $json='';my $hash={};
+   {
+      $SIG{CHLD}="DEFAULT";
+      open(AWS,"$c|");
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      $hash=decode_json($json);
+      close AWS;
+      #print "DATA=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";<STDIN>;
+   }
+   return $hash->{Instances}->[0];
+}
+
 my $standup_liferay=sub {
 
    use JSON::XS;
@@ -12723,60 +12770,46 @@ my $standup_liferay=sub {
          {NetworkInterfaces}->[0]->{SubnetId}||'';
    my $g=$main::aws->{fullauto}->
          {SecurityGroups}->[0]->{GroupId}||'';
-   my $json='';
-   {
-      $SIG{CHLD}="DEFAULT";
-      my $c="aws ec2 run-instances --image-id $i --count 1 ".
-            "--instance-type $type --key-name fullauto ".
-            "--security-group-ids $g --subnet-id $s";
-      open(AWS,"$c|");
-      while (my $line=<AWS>) {
-         $json.=$line;
-      }
-      my $hash={};
-      $hash=decode_json($json);
-#print "DATA=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
-      INST: foreach my $inst (@{$hash->{Instances}}) {
-         my $cnt=0;
-         foreach my $serv (@{$main::aws->{liferay}}) {
-            unless ($serv) {
-               add_and_tag_server('liferay',$cnt++,$inst);
-               next INST;
-            }
-         }
-         $cnt=0;
-         foreach my $serv (@{$main::aws->{https}}) {
-            unless ($serv) {
-               add_and_tag_server('https',$cnt++,$inst);
-               next INST;
-            }
-         }
-         unless ($main::aws->{database}) {
-            add_and_tag_server('database',-1,$inst);
-            next;
+   my $c="aws ec2 run-instances --image-id $i --count 1 ".
+         "--instance-type $type --key-name fullauto ".
+         "--security-group-ids $g --subnet-id $s";
+   my $cnt=0;
+   if (exists $main::aws->{liferay}) {
+      if ($#{$main::aws->{liferay}}==0) {
+         my $inst=launch_instance($c);
+         add_and_tag_server('liferay',$cnt,$inst);
+         config_server('liferay',$cnt);
+      } else {
+         my $num=$#{$main::aws->{liferay}}-1;
+         foreach my $num (0..$num) {
+            my $inst=launch_instance($c);
+            add_and_tag_server('liferay',$cnt,$inst);
+            config_server('liferay',$cnt++);
          }
       }
-      until (wait_for_instance($main::aws->{liferay}->[0]->{InstanceId})
-            eq 'running') {
-         print "\n   Waiting for liferay1 to come online -> pending\n";
-         sleep 3;
+   }
+   $cnt=0;
+   if (exists $main::aws->{httpd}) {
+      if ($#{$main::aws->{httpd}}==0) {
+         my $inst=launch_instance($c);
+         add_and_tag_server('httpd',$cnt,$inst);
+         config_server('httpd',$cnt);
+      } else {
+         my $num=$#{$main::aws->{httpd}}-1;
+         foreach my $num (0..$num) {
+            my $inst=launch_instance($c);
+            add_and_tag_server('httpd',$cnt,$inst);
+            config_server('httpd',$cnt++);
+         }
       }
-      print "\n   Waiting for liferay1 to come online -> running\n";
-      my $error='';
-      my $username=&Net::FullAuto::FA_Core::username();
-      my $liferay_one_block={
-
-         Label => 'liferay1',
-         IP => $main::aws->{liferay}->[0]->{PrivateIpAddress},
-         Login => $username,
-         identity_file => "/home/$username/fullauto.pem",
-
-      };
-      ($main::aws->{liferay}->[1],$error)=connect_ssh($liferay_one_block);
-      my ($stdout,$stderr)=('','');
-      ($stdout,$stderr)=$main::aws->{liferay}->[1]->cmd('hostname');
-      print "HOSTNAME=$stdout\n";
-
+   }
+   $cnt=0;
+   if (exists $main::aws->{database}) {
+      if ($#{$main::aws->{database}}==0) {
+         my $inst=launch_instance($c);
+         add_and_tag_server('database',$cnt,$inst);
+         config_server('database',$cnt);
+      }
    }
 
 print "DONE\n";#<STDIN>;
@@ -12813,19 +12846,28 @@ my $liferay_setup_summary=sub {
    my $num_of_servers=0;
    my $ln=$liferay;
    $ln=~s/^.*(\d+)\sServer.*$/$1/;
-   foreach my $n (0..$ln) {
-      $main::aws->{liferay}=[] unless exists
-         $main::aws->{liferay};
-      $main::aws->{liferay}->[$n]='';
+   if ($ln==1) {
+print "ARE WE HERE\n";<STDIN>;
+      $main::aws->{liferay}->[0]=[];
+   } elsif ($ln=~/^\d+$/ && $ln) {
+      foreach my $n (0..$ln) {
+         $main::aws->{liferay}=[] unless exists
+            $main::aws->{liferay};
+         $main::aws->{liferay}->[$n]=[];
+      }
    }
    my $hd=$httpd;
    $hd=~s/^.*(\d+)\sadditional.*$/$1/;
-   foreach my $n (0..$ln) {
-      $main::aws->{httpd}=[] unless exists
-         $main::aws->{httpd};
-      $main::aws->{httpd}->[$n]='';
+   if ($hd==1) {
+      $main::aws->{httpd}->[0]=[];
+   } elsif ($hd=~/^\d+$/ && $hd) {
+      foreach my $n (0..$hd) {
+         $main::aws->{httpd}=[] unless exists
+            $main::aws->{httpd};
+         $main::aws->{httpd}->[$n]=[];
+      }
    }
-   $main::aws->{database}='';
+   $main::aws->{database}->[0]=[];
    $num_of_servers=$ln+$hd+1;
    my $cost=$num_of_servers*$money;
    my $cents='';
@@ -12835,6 +12877,8 @@ my $liferay_setup_summary=sub {
       if (length $cents>2) {
          $cents=~s/^(..)(.*)$/$1.$2/;
          $cents=~s/^0//;
+         $cents=' ('.$cents.' cents)';
+      } else {
          $cents=' ('.$cents.' cents)';
       }
    }

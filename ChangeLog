@@ -20,6 +20,17 @@
 #######################################################################
 
 
+2014-11-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999927 released.
+
+        * Stood up 7 EC2 small servers on AWS and connected to all
+          of them in parallel with ssh.
+
+        * Added code to FA_Core.pm to copy .aws to home directory
+          from /root to /home/ec2-user.
+
+
 2014-11-07  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999926 released.
