@@ -12579,13 +12579,8 @@ my $configure_aws3=sub {
 
       #cleanup pty for next run
       $pty->close();
-      if ((-e '/root/.aws') && (-r '/root/.aws')) {
-         system("cp -R /root/.aws /home/$username");
-         system("chown -R $username /home/$username/.aws");
-         system("chmod -R 755 /home/$username/.aws");
-      }
       system("chown -R $username $homedir/.aws");
-      system("chmod -R 755 $homedir/.aws");
+      system("chmod 755 $homedir/.aws");
 
    };
    my $output=`aws iam list-groups`;
@@ -12717,7 +12712,8 @@ sub config_server {
    my $server_type=$_[0];
    my $cnt=$_[1];
    my $num=$cnt+1;
-   until (wait_for_instance($main::aws->{$server_type}->[$cnt]->[0]->{InstanceId})
+   until (wait_for_instance(
+         $main::aws->{$server_type}->[$cnt]->[0]->{InstanceId})
          eq 'running') {
       print "\n   Waiting for $server_type$num to come online -> pending\n";
       sleep 3;
@@ -12725,7 +12721,7 @@ sub config_server {
    print "\n   Waiting for $server_type$num to come online -> running\n";
    my $error='';
    my $username=&Net::FullAuto::FA_Core::username();
-   my $liferay_one_block={
+   my $server_host_block={
 
       Label => $server_type.$num,
       IP => $main::aws->{$server_type}->[$cnt]->[0]->{PrivateIpAddress},
@@ -12733,9 +12729,24 @@ sub config_server {
       identity_file => "/home/$username/fullauto.pem",
 
    };
-   ($main::aws->{liferay}->[$cnt]->[1],$error)=connect_ssh($liferay_one_block);
+   ($main::aws->{$server_type}->[$cnt]->[1],$error)=connect_ssh(
+      $server_host_block);
    my ($stdout,$stderr)=('','');
-   ($stdout,$stderr)=$main::aws->{liferay}->[$cnt]->[1]->cmd('hostname');
+   #($stdout,$stderr)=$main::aws->{$server_type}->[$cnt]->[1]->cmd('hostname');
+   if ($server_type eq 'liferay') {
+      my $handle=$main::aws->{$server_type}->[$cnt]->[1];
+      ($stdout,$stderr)=$handle->cmd("wget -qO- ".
+         "http://sourceforge.net/projects/lportal/files/");
+      my $url=$stdout;
+      $url=~s/^.*title=["](.*?zip).*$/$1/s;
+      $url=~s/ /%20/g;
+      $url='http://downloads.sourceforge.net/project/lportal'.$url;
+print "LIFERAY URL=$url\n";<STDIN>;
+   } elsif ($server_type eq 'httpd') {
+
+   } else {
+
+   }
 
 }
 
@@ -12828,7 +12839,7 @@ my $liferay_setup_summary=sub {
    $type=~s/^"//;
    $type=~s/"$//;
    my $money=$type;
-   $money=~s/^.*-> \$(.*) per hour$/$1/;
+   $money=~s/^.*-> \$(.*?) (?:[(].+[)] )*per hour$/$1/;
    $type=substr($type,0,(index $type,' ->')-3);
    my $liferay="]T[{select_liferay_setup}";
    $liferay=~s/^"//;
@@ -12840,14 +12851,14 @@ my $liferay_setup_summary=sub {
    $httpd="]T[{select_httpd_for_liferay}";
    $httpd=~s/^"//;
    $httpd=~s/"$//;
-   print "REGION=$region and TYPE=$type\n";  
-   print "LIFERAY=$liferay and DB=$database\n";
-   print "HTTPD=$httpd\n";
+   #print "REGION=$region and TYPE=$type\n";  
+   #print "LIFERAY=$liferay and DB=$database\n";
+   #print "HTTPD=$httpd\n";
    my $num_of_servers=0;
    my $ln=$liferay;
    $ln=~s/^.*(\d+)\sServer.*$/$1/;
    if ($ln==1) {
-print "ARE WE HERE\n";<STDIN>;
+#print "ARE WE HERE\n";<STDIN>;
       $main::aws->{liferay}->[0]=[];
    } elsif ($ln=~/^\d+$/ && $ln) {
       foreach my $n (0..$ln) {
@@ -12869,7 +12880,7 @@ print "ARE WE HERE\n";<STDIN>;
    }
    $main::aws->{database}->[0]=[];
    $num_of_servers=$ln+$hd+1;
-   my $cost=$num_of_servers*$money;
+   my $cost=int($num_of_servers)*$money;
    my $cents='';
    if ($cost=~/^0\./) {
       $cents=$cost;
@@ -13068,7 +13079,20 @@ my $select_an_instance_type=sub {
          $cnt++;
          $scrollnum=$cnt if -1<index $size,'small';
          $price=~s/0$/ /;
-         my $pr="-> \$$price per hour";
+         my $cents='';
+         if ($price=~/^0\./) {
+            $cents=$price;
+            $cents=~s/^0\.//;
+            if (length $cents>2) {
+               $cents=~s/^(..)(.*)$/$1.$2/;
+               $cents=~s/^0//;
+               $cents=' ('.$cents.' cents)';
+            } else {
+               $cents=' ('.$cents.' cents)';
+            }
+            $cents=~s/\.\s+/ /;
+         }
+         my $pr="-> ".pack('A20',"\$$price$cents")."per hour";
          push @sizes, pack('A12',$size).$pr;
       }
    }
@@ -29918,7 +29942,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                               die 'Connection refused';
                            } else {
                               print "\n   Waiting for sshd service on ",
-                                    "$hostlabel to start . . .\n"; 
+                                    "$hostlabel to start  . . .\n"; 
                            }
                            next WH;
                         } elsif (-1<index $stderr,'Permanently added' &&

@@ -22,6 +22,14 @@
 
 2014-11-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999999999928 released.
+
+        * Added code to dynamically discover Liferay URL for
+          demo.
+
+
+2014-11-12  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999999999927 released.
 
         * Stood up 7 EC2 small servers on AWS and connected to all
