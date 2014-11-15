@@ -12580,8 +12580,8 @@ my $configure_aws3=sub {
       #cleanup pty for next run
       $pty->close();
       unless (-e "/home/$username/.aws") {
-         system("cp -Rv $homedir/.aws /home/$username");
-         system("chown -Rv $username:$username /home/$username/.aws");
+         system("cp -R $homedir/.aws /home/$username");
+         system("chown -R $username:$username /home/$username/.aws");
          system("chmod 755 /home/$username/.aws");
       }
 
@@ -12747,8 +12747,8 @@ sub config_server {
       my $zip=$url;
       $zip=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd("wget ".$url,'__display__');
-      ($stdout,$stderr)=$handle->cmd("unzip -d /opt $zip",'__display__');
-      ($stdout,$stderr)=$handle->cmd("rm -rvf $zip",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo unzip -d /opt $zip",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rvf $zip",'__display__');
    } elsif ($server_type eq 'httpd') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
       ($stdout,$stderr)=$handle->cmd(
