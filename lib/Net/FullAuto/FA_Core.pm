@@ -12579,8 +12579,11 @@ my $configure_aws3=sub {
 
       #cleanup pty for next run
       $pty->close();
-      system("chown -R $username $homedir/.aws");
-      system("chmod 755 $homedir/.aws");
+      unless (-e "/home/$username/.aws") {
+         system("cp -Rv $homedir/.aws /home/$username");
+         system("chown -Rv $username:$username /home/$username/.aws");
+         system("chmod 755 /home/$username/.aws");
+      }
 
    };
    my $output=`aws iam list-groups`;
@@ -12645,7 +12648,7 @@ my $configure_aws1=sub {
    2. Click the blue checkbox of the name of the user you want to create
       an access key for:
        _
-      |_| username
+      |_| username     (If you are a new AWS user, use 'admin')
 
    3. Look for the big gray box just above the section you clicked that
       is labeled 'User Actions':
@@ -12741,11 +12744,18 @@ sub config_server {
       $url=~s/^.*title=["](.*?zip).*$/$1/s;
       $url=~s/ /%20/g;
       $url='http://downloads.sourceforge.net/project/lportal'.$url;
-print "LIFERAY URL=$url\n";<STDIN>;
+      my $zip=$url;
+      $zip=~s/^.*\/(.*)$/$1/;
+      ($stdout,$stderr)=$handle->cmd("wget ".$url,'__display__');
+      ($stdout,$stderr)=$handle->cmd("unzip -d /opt $zip",'__display__');
+      ($stdout,$stderr)=$handle->cmd("rm -rvf $zip",'__display__');
    } elsif ($server_type eq 'httpd') {
-
+      my $handle=$main::aws->{$server_type}->[$cnt]->[1];
+      ($stdout,$stderr)=$handle->cmd(
+         "sudo yum -y groupinstall 'Development tools'",'__display__');
    } else {
-
+      my $database="]T[{select_database_for_liferay}";
+print "DATABASE=$database<==\n";
    }
 
 }
