@@ -84,6 +84,12 @@ package Net::FullAuto::FA_Core;
 #
 #  pfexec pkg install ss-dev
 #
+## For password-less ssh
+#
+#  a@A: ssh-keygen -t rsa
+#  a@A: ssh b@B mkdir -p .ssh
+#  a@A: cat .ssh/id_rsa.pub | ssh b@B 'cat >> .ssh/authorized_keys'
+#
 ## For Slow SSH on Cygwin
 #
 #  verify that the fifth field in the user entry in /etc/passwd
@@ -340,7 +346,7 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $berkeleydb %admin_menus $^O
                   $cache_root $cache_key username
                   acquire_fa_lock release_fa_lock
-                  $choose_pass_expiration
+                  $choose_pass_expiration fetch
                   %monthconv %mimetypes %admin_menu
                   check_for_amazon_localhost
                   get_amazon_external_ip);
@@ -755,7 +761,7 @@ BEGIN {
 our ($plan,$plan_ignore_error,$log,$cron,$edit,$version,$set,$cat,
      $default,$facode,$faconf,$fahost,$famaps,$famenu,$passwrd,
      $users,$usrname,$import,$export,$VERSION,%GLOBAL,@GLOBAL,
-     $identityfile,$tutorial,$figlet,$passwrdnw);
+     $identityfile,$tutorial,$figlet,$passwrdnw,$go);
 
 # Globally Scoped and Intialized Variables.
 our $blanklines='';our $oldpasswd='';our $authorize_connect='';
@@ -2405,6 +2411,20 @@ sub grep_for_string_existence_only
       }
    };
    return $return_value;
+}
+
+sub fetch
+{
+   my $self=$_[0];my $output='';my $select_timeout=2;my $ready='';
+   if (select $ready=${${*{$self->{_cmd_handle}}}{'net_telnet'}}{'fdmask'},
+          '', '', $select_timeout) {
+      alarm($select_timeout+10);
+      sysread $self->{_cmd_handle},$output,
+              ${${*{$self->{_cmd_handle}}}{net_telnet}}{blksize},0;
+      alarm(0);
+      return $output;
+   }
+
 }
 
 sub version
@@ -12714,6 +12734,7 @@ sub config_server {
 
    my $server_type=$_[0];
    my $cnt=$_[1];
+   my $database=$_[2]||'';
    my $num=$cnt+1;
    until (wait_for_instance(
          $main::aws->{$server_type}->[$cnt]->[0]->{InstanceId})
@@ -12748,14 +12769,68 @@ sub config_server {
       $zip=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd("wget ".$url,'__display__');
       ($stdout,$stderr)=$handle->cmd("sudo unzip -d /opt $zip",'__display__');
-      ($stdout,$stderr)=$handle->cmd("sudo rm -rvf $zip",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rf $zip",'__display__');
    } elsif ($server_type eq 'httpd') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
+      ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert",
+         '__display__');
       ($stdout,$stderr)=$handle->cmd(
          "sudo yum -y groupinstall 'Development tools'",'__display__');
+      my $url='http://httpd.apache.org/download.cgi';
+      ($stdout,$stderr)=$handle->cmd("wget -qO- $url");
+      my $flag=0;my $version='';
+      foreach my $line (split "\n",$stdout) {
+         if ($line=~/Stable Release/) {
+            $flag=1;
+         } elsif ($flag && $line=~/^.*[#]apache.*?[>](.*gz?)[<].*$/) {
+            $version=$1;$flag=0;
+         } elsif ($line=~/Source:.*$version.*gz/) {
+            $version=$line;
+            $version=~s/^.*href="(.*?)"[>].*$/$1/;
+         }
+      }
+      ($stdout,$stderr)=$handle->cmd("wget $version",'__display__');
    } else {
-      my $database="]T[{select_database_for_liferay}";
-print "DATABASE=$database<==\n";
+      if ($database=~/mysql/i) {
+         my $handle=$main::aws->{$server_type}->[$cnt]->[1];
+         ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert",
+            '__display__');
+         ($stdout,$stderr)=$handle->cmd(
+            "sudo yum groupinstall -y 'MySQL Database'",'__display__');
+         ($stdout,$stderr)=$handle->cmd(
+            "sed -i '/mysqld/a bind-address = 127.0.0.1' /etc/my.cnf");
+         ($stdout,$stderr)=$handle->cmd("sudo service mysqld start",
+            '__display__');
+         $handle->{_cmd_handle}->print('sudo mysql_secure_installation');
+         my $prompt=substr($handle->{_cmd_handle}->prompt(),1,-1);
+         while (my $output=fetch($handle)) {
+            last if $output=~/$prompt/;
+            print $output;
+            if (-1<index $output,'root (enter for none):') {
+               $handle->{_cmd_handle}->print();
+               next;
+            } elsif (-1<index $output,'Set root password? [Y/n]') {
+               $handle->{_cmd_handle}->print('n');
+               next;
+            } elsif (-1<index $output,'Remove anonymous users? [Y/n]') {
+               $handle->{_cmd_handle}->print('n');
+               next;
+            } elsif (-1<index $output,'Disallow root login remotely? [Y/n]') {
+               $handle->{_cmd_handle}->print('n');
+               next;
+            } elsif (-1<index $output,
+                  'Remove test database and access to it? [Y/n]') {
+               $handle->{_cmd_handle}->print('n');
+               next;
+            } elsif (-1<index $output,'Reload privilege tables now? [Y/n]') {
+               $handle->{_cmd_handle}->print('Y');
+               next;
+            }
+         }
+         print "\n\n   DONE WITH DATABASE FOR NOW!\n\n";
+      } else {
+
+      }
    }
 
 }
@@ -12794,6 +12869,7 @@ my $standup_liferay=sub {
    my $c="aws ec2 run-instances --image-id $i --count 1 ".
          "--instance-type $type --key-name fullauto ".
          "--security-group-ids $g --subnet-id $s";
+   my $database="]T[{select_database_for_liferay}";
    my $cnt=0;
    if (exists $main::aws->{liferay}) {
       if ($#{$main::aws->{liferay}}==0) {
@@ -12829,7 +12905,7 @@ my $standup_liferay=sub {
       if ($#{$main::aws->{database}}==0) {
          my $inst=launch_instance($c);
          add_and_tag_server('database',$cnt,$inst);
-         config_server('database',$cnt);
+         config_server('database',$cnt,$database);
       }
    }
 
@@ -14189,6 +14265,8 @@ sub fa_login
                 'new-user-amazon'       => \$newuseramazon,
                 'tutorial'              => \$tutorial,
                 'figlet'                => \$figlet,
+                'g'                     => \$go,
+                'go'                    => \$go,
                 'about'                 => \$version,
                 'authorize_connect'     => \$authorize_connect,
                 'cache_root=s'          => \$cache_root,
@@ -14217,6 +14295,7 @@ sub fa_login
                 'login-id=s'            => \$usrname,
                 'id=s'                  => \$usrname,
                 'code=s'                => \$cust_subnam_in_fa_code_module_file,
+                'c=s'                   => \$cust_subnam_in_fa_code_module_file,
                 'subroutine'            => \$cust_subnam_in_fa_code_module_file,
                 'subname'               => \$cust_subnam_in_fa_code_module_file,
                 'sub'                   => \$cust_subnam_in_fa_code_module_file,
@@ -14307,10 +14386,16 @@ END
       } else {
          $Net::FullAuto::FA_Core::save_main_pass=1;
       } undef $passwrdnw;
+   } elsif (defined $go) {
+      $Net::FullAuto::FA_Core::save_main_pass=1;
    }
    if (defined $usrname) {
       $username=$usrname;
       $username_from='cmd_line_arg';
+      $userflag=1;
+   } elsif (defined $go) {
+      $username=&Net::FullAuto::FA_Core::username();
+      $username_from='go_arg_current';
       $userflag=1;
    } else {
       $username=&Net::FullAuto::FA_Core::username();
@@ -32425,7 +32510,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
             $bckgrd=1 if $command=~s/[\t ][&](?>\s*)$//s;
             my $live_command='';
             if ($command=~/^cd[\t ]/) {
-               $live_command="$command 2>&1";
+               $live_command=" $command 2>&1";
                if (-1<$#{$self->{_hostlabel}} &&
                      $self->{_hostlabel}->[$#{$self->{_hostlabel}}]
                      eq "__Master_${$}__") {
@@ -32433,7 +32518,8 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                   chdir $lcd;
                }
             } else {
-               $live_command='('.$command.';echo $?)'." | sed -e 's/^/stdout: /' 2>&1";
+               $live_command=
+                  ' ('.$command.';echo $?)'." | sed -e 's/^/stdout: /' 2>&1";
             }
             $live_command.=' &' if $bckgrd;
             print $Net::FullAuto::FA_Core::MRLOG
@@ -32453,7 +32539,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
             $live_command=~s/\\\\/\\/g;
             $live_command=~s/\\/\\\\/g;
             $live_command=~s/\\$//mg;
-            $self->{_cmd_handle}->print(' '.$live_command);
+            $self->{_cmd_handle}->print($live_command);
             my $growoutput='';my $ready='';my $firstout=0;
             my $fulloutput='';my $lastline='';my $errflag='';
             my $test_out='';my $first=-1;#my $starttime=0;
@@ -32626,6 +32712,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
 print "LAST_LINE=$last_line and OUTPUT=$output<=\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "LAST_LINE=$last_line and OUTPUT=$output<=\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+print "LSLC=$lslc and LTSO=$ltso and UNPACK=",unpack("a$lslc",$test_stripped_output)," and STIPPEDLIVECMD=$stripped_live_command\n" if !$Net::FullAuto::FA_Core::cron && $Net::FullAuto::FA_Core::debug;
 print $Net::FullAuto::FA_Core::MRLOG "LSLC=$lslc and LTSO=$ltso and UNPACK=",unpack("a$lslc",$test_stripped_output)," and STIPPEDLIVECMD=$stripped_live_command\n" if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                            if (($lslc<$ltso) &&
                                  (unpack("a$lslc",$test_stripped_output) eq
@@ -32932,11 +33019,14 @@ print $Net::FullAuto::FA_Core::MRLOG "GROWOUTPUT2=$growoutput\n"
                               }
                               my $lvc=$live_command;
                               last FETCH if !$growoutput && ($allow_no_output
-                                 || $lvc=~/^[(]*c[dp]\s/ || $lvc=~/^[(]*ls\s/
-                                 || $lvc=~/^[(]*mkdir\s/ || $lvc=~/^[(]*mv\s/
-                                 || $lvc=~/^[(]*rm\s/ || $lvc=~/[\/]ls\s/
+                                 || $lvc=~/^ ?[(]*c[dp]\s/
+                                 || $lvc=~/^ ?[(]*ls\s/
+                                 || $lvc=~/^ ?[(]*mkdir\s/
+                                 || $lvc=~/^ ?[(]*mv\s/
+                                 || $lvc=~/^ ?[(]*rm\s/ || $lvc=~/[\/]ls\s/
                                  || $lvc=~/[\/]rm\s/ || $lvc=~/[\/]mkdir\s/
-                                 || $lvc=~/[\/]cp\s/ || $lvc=~/^[(]*touch\s/ );
+                                 || $lvc=~/[\/]cp\s/
+                                 || $lvc=~/^ ?[(]*touch\s/ );
                               next FETCH if !$growoutput;
                               if (-1<index $growoutput,'stdout: /') {
                                  my $stub=substr($growoutput,0,

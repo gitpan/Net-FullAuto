@@ -20,6 +20,20 @@
 #######################################################################
 
 
+2014-11-17  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999931 released.
+
+        * More code added for the AWS EC2 Liferay demo.
+
+        * Added --go -g and -c (for code) to really shorten
+          invocations.
+
+        * Added fetch() to use with handles to do true 'Expect'
+          like processing of interactive command utilities in
+          custom code modules.
+
+
 2014-11-15  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999930 released.
