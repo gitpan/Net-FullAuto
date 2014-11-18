@@ -2423,7 +2423,7 @@ sub fetch
               ${${*{$self->{_cmd_handle}}}{net_telnet}}{blksize},0;
       alarm(0);
       return $output;
-   }
+   } return ' ';
 
 }
 
@@ -12504,7 +12504,8 @@ my $setup_new_user2=sub {
    my %setup_new_user2=(
 
       Name   => 'setup_new_user2',
-      Result => $setup_new_user3,
+      #Result => $setup_new_user3,
+      Result => $setup_new_user5,
       Banner => $fa_basics,
   );
   return \%setup_new_user2;
@@ -12790,6 +12791,11 @@ sub config_server {
          }
       }
       ($stdout,$stderr)=$handle->cmd("wget $version",'__display__');
+      ($stdout,$stderr)=$handle->cmd(
+         "sudo tar zxvf -C/opt $version",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rf $version",'__display__');
+      ($stdout,$stderr)=$handle->cwd("/opt");
+      ($stdout,$stderr)=$handle->cmd("ls -l",'__display__');
    } else {
       if ($database=~/mysql/i) {
          my $handle=$main::aws->{$server_type}->[$cnt]->[1];
@@ -12803,7 +12809,8 @@ sub config_server {
             '__display__');
          $handle->{_cmd_handle}->print('sudo mysql_secure_installation');
          my $prompt=substr($handle->{_cmd_handle}->prompt(),1,-1);
-         while (my $output=fetch($handle)) {
+         while (1) {
+            my $output=fetch($handle);
             last if $output=~/$prompt/;
             print $output;
             if (-1<index $output,'root (enter for none):') {
