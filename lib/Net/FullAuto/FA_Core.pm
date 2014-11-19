@@ -12533,8 +12533,8 @@ my $configure_aws3=sub {
    package configure_aws3;
    use File::HomeDir;
    my $username=&Net::FullAuto::FA_Core::username(); 
-   my $access_id="]I[{'configure_aws2',1}";
-   my $secret_ky="]I[{'configure_aws2',2}";
+   $main::aws->{access_id}="]I[{'configure_aws2',1}";
+   $main::aws->{secret_key}="]I[{'configure_aws2',2}";
    my $region='wget -qO- http://instance-data/latest/meta-data'.
               '/placement/availability-zone';
    $region=`$region`;
@@ -12567,13 +12567,13 @@ my $configure_aws3=sub {
                      $pty->ungetc(\000);
                   }
                   $line='';
-                  $pty->print("$access_id\n");
+                  $pty->print("$main::aws->{access_id}\n");
                } elsif ($line=~/Secret Access Key \[None\]:\s*$/) {
                   for (1..length $line) {
                      $pty->ungetc(\000);
                   }
                   $line='';
-                  $pty->print("$secret_ky\n");
+                  $pty->print("$main::aws->{secret_key}\n");
                } elsif ($line=~/Default region name \[None\]:\s*$/) {
                   for (1..length $line) {
                      $pty->ungetc(\000);
@@ -12601,8 +12601,8 @@ my $configure_aws3=sub {
 
    };
    my $output=`aws iam list-groups`;
-#print "\nACCESS ID=$access_id\n";
-#print "SECRET KEY=$secret_ky\n";
+#print "\nACCESS ID=$main::aws->{access_id}\n";
+#print "SECRET KEY=$main::aws->{secret_key}\n";
 #print "AWESOME OUTPUT=$output\n";
 
 };
@@ -12726,6 +12726,8 @@ sub wait_for_instance {
 
 sub config_server {
 
+   package config_server;
+   use JSON::XS;
    my $server_type=$_[0];
    my $cnt=$_[1];
    my $database=$_[2]||'';
@@ -12762,10 +12764,28 @@ sub config_server {
       my $zip=$url;
       $zip=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd("wget ".$url,'__display__');
-      ($stdout,$stderr)=$handle->cmd("sudo unzip -d /opt $zip",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo mkdir -p /var/opt/lr_jvm1");
+      ($stdout,$stderr)=$handle->cmd("sudo mkdir -p /var/opt/lr_jvm2");
+      ($stdout,$stderr)=$handle->cmd("sudo unzip -d /var/opt/lr_jvm1 $zip",
+         '__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo unzip -d /var/opt/lr_jvm2 $zip",
+         '__display__');
       ($stdout,$stderr)=$handle->cmd("sudo rm -rf $zip",'__display__');
+      {
+         $SIG{CHLD}="DEFAULT";
+         my $s="aws s3 mb liferay_repository 2>&1";
+         open(AWS,"$s|");
+         my $json='';
+         while (my $line=<AWS>) {
+            $json.=$line;
+         }
+         my $hash=decode_json($json);
+#print "WAITHASH=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
+      }
    } elsif ($server_type eq 'httpd') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
+      ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden",
+         '__display__');
       ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert",
          '__display__');
       ($stdout,$stderr)=$handle->cmd(
@@ -12833,6 +12853,8 @@ sub config_server {
    } else {
       if ($database=~/mysql/i) {
          my $handle=$main::aws->{$server_type}->[$cnt]->[1];
+         ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden",
+            '__display__');
          ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert",
             '__display__');
          ($stdout,$stderr)=$handle->cmd(
