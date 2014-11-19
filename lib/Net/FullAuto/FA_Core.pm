@@ -2429,7 +2429,9 @@ sub fetch
 
 sub version
 {
-can_load(modules => { "Net::FullAuto" => 0 });
+
+   can_load(modules => { "Net::FullAuto" => 0 });
+
 my $version=<<VERSION;
 
 This is Net::FullAuto, v$Net::FullAuto::VERSION
@@ -2452,21 +2454,14 @@ OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
 and includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
 and Tim Hudson (tjh\@cryptsoft.com)
 VERSION
-print $version;
-exit;
+
+   print $version;
+   exit;
 }
 
 sub users
 {
 
-   #package users;
-   #use if (!defined $Net::FullAuto::FA_Core::localhost), 'Net::FullAuto';
-   #our $fa_code='Net::FullAuto::FA_Core.pm';
-   #unless (-1<index $Net::FullAuto::FA_Core::localhost,'=') {
-   #   $main::plan_menu_sub=1;
-   #   &Net::FullAuto::FA_Core::fa_login();
-   #   undef $main::plan_menu_sub;
-   #}
    can_load(modules => { "Term::Menus" => 0 });
    can_load(modules => { "Net::FullAuto" => 0 });
    my $username=&Net::FullAuto::FA_Core::username();
@@ -2520,7 +2515,6 @@ sub users
    }
    print "\n" unless $^O eq 'cygwin';
    exit;
-   #&Net::FullAuto::FA_Core::cleanup();
 
 }
 
@@ -8235,7 +8229,6 @@ sub master_transfer_dir
       "\n       at Line ",__LINE__,"\n\n"
       if !$Net::FullAuto::FA_Core::cron &&
          $Net::FullAuto::FA_Core::debug;
-print "TESTD=$testd<==\n";
    if ($testd eq 'WRITE') {
       $master_transfer_dir=$work_dirs->{_cwd}
          =$work_dirs->{_tmp}=$curdir.'/';
@@ -8759,7 +8752,7 @@ sub getpasswd
                          ."\n  (WNeeded for ${prox}Local Host \'$host\')\n";
                }
             } elsif ($host) {
-print "PASSLABEL=$passlabel\n";
+#print "PASSLABEL=$passlabel\n";
                if ($Net::FullAuto::FA_Core::debug) {
                   $print1="\n  Please Enter (8) $login_id\'s password "
                          ."for $host."
@@ -12777,9 +12770,46 @@ sub config_server {
          '__display__');
       ($stdout,$stderr)=$handle->cmd(
          "sudo yum -y groupinstall 'Development tools'",'__display__');
-      my $url='http://httpd.apache.org/download.cgi';
+      ($stdout,$stderr)=$handle->cmd(
+         "sudo yum -y install pcre-devel",'__display__');
+      my $url='https://apr.apache.org/download.cgi';
       ($stdout,$stderr)=$handle->cmd("wget -qO- $url");
-      my $flag=0;my $version='';
+      my $flag=0;my $version='';my $apr='';
+      foreach my $line (split "\n",$stdout) {
+         if (-1<index $line,'Unix Source') {
+            $flag=1 unless $flag;
+         } elsif ($flag) {
+            next if 1<$flag && $line!~/apr-util/;
+            $version=$line;
+            $version=~s/^.*href=["](.*)["].*$/$1/;
+            ($stdout,$stderr)=$handle->cmd("wget $version",'__display__');
+            $version=~s/^.*\/(.*)$/$1/;
+            ($stdout,$stderr)=$handle->cmd(
+               "sudo tar zxvf $version -C /opt",'__display__');
+            ($stdout,$stderr)=$handle->cmd(
+               "sudo rm -rfv $version",'__display__');
+            $version=~s/\.tar\.gz\s*$//;
+            $apr=$version unless $line=~/apr-util/;
+            ($stdout,$stderr)=$handle->cwd("/opt/$version");
+            if ($line=~/apr-util/) {
+               ($stdout,$stderr)=$handle->cmd(
+                  "sudo ./configure --with-apr=/opt/$apr",'__display__');
+               ($stdout,$stderr)=$handle->cwd("xml/expat");
+               ($stdout,$stderr)=$handle->cmd("sudo ./configure",'__display__');
+               ($stdout,$stderr)=$handle->cmd("sudo make install",'__display__');
+               ($stdout,$stderr)=$handle->cwd("/opt/$version");
+            } else {
+               ($stdout,$stderr)=$handle->cmd("sudo ./configure");
+            }
+            ($stdout,$stderr)=$handle->cmd(
+               "sudo make install",'__display__');
+            ($stdout,$stderr)=$handle->cwd("~");
+            last if $flag++==2;
+         }
+      }
+      $url='http://httpd.apache.org/download.cgi';
+      ($stdout,$stderr)=$handle->cmd("wget -qO- $url");
+      $flag=0;$version='';
       foreach my $line (split "\n",$stdout) {
          if ($line=~/Stable Release/) {
             $flag=1;
@@ -12791,10 +12821,14 @@ sub config_server {
          }
       }
       ($stdout,$stderr)=$handle->cmd("wget $version",'__display__');
+      $version=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd(
-         "sudo tar zxvf -C/opt $version",'__display__');
-      ($stdout,$stderr)=$handle->cmd("sudo rm -rf $version",'__display__');
-      ($stdout,$stderr)=$handle->cwd("/opt");
+         "sudo tar zxvf $version -C /opt",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rfv $version",'__display__');
+      $version=~s/\.tar\.gz\s*$//;
+      ($stdout,$stderr)=$handle->cwd("/opt/$version");
+      ($stdout,$stderr)=$handle->cmd("sudo ./configure",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo make install",'__display__');
       ($stdout,$stderr)=$handle->cmd("ls -l",'__display__');
    } else {
       if ($database=~/mysql/i) {
@@ -22618,18 +22652,19 @@ sub cwd
    }
    if ((exists $self->{_work_dirs}->{_cwd} &&
          $target_dir eq $self->{_work_dirs}->{_cwd}) ||
-         ($self->{_work_dirs}->{_cwd_mswin} &&
+         (exists $self->{_work_dirs}->{_cwd_mswin} &&
+         $self->{_work_dirs}->{_cwd_mswin} &&
          $target_dir eq $self->{_work_dirs}->{_cwd_mswin})) {
       if (wantarray) {
          return 'CWD command successful.','';
       } else { return 'CWD command successful.' }
    } elsif ($target_dir eq '-' || $target_dir eq '~'
-         || $target_dir eq '..') {
+         || $target_dir=~/^\.\./) {
       if ($self->{_work_dirs}->{_pre}) {
          my $chdir='';
          if ($target_dir eq '-') {
             $chdir=$self->{_work_dirs}->{_pre};
-         } elsif ($target_dir ne '..') {
+         } elsif ($target_dir!~/^\.\./) {
             $chdir=$self->{_homedir};
          } else { $chdir=$target_dir }
          if (exists $self->{_cmd_handle} && $self->{_cmd_handle}) {
@@ -22657,7 +22692,7 @@ sub cwd
             }
          }
          my $save_pre=$self->{_work_dirs}->{_pre};
-         if ($chdir eq '..') {
+         if ($chdir=~/^\.\./) {
             $self->{_work_dirs}->{_pre}=
                $self->{_work_dirs}->{_cwd};
             if ($self->{_ftm_type}=~/s*ftp/) {
@@ -22790,10 +22825,10 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
          if (exists $self->{_work_dirs}->{_cwd}) {
             $self->{_work_dirs}->{_pre}=
                 $self->{_work_dirs}->{_cwd};
-            $target_dir=$self->{_work_dirs}->{_cwd}.'/'.$target_dir.'/';
+            $target_dir=$self->{_work_dirs}->{_cwd}.$target_dir.'/';
          } else {
             $self->{_work_dirs}->{_pre}=$self->{_homedir};
-            $target_dir=$self->{_homedir}.'/'.$target_dir.'/';
+            $target_dir=$self->{_homedir}.$target_dir.'/';
          }
          if (exists $self->{_cmd_handle} && $self->{_cmd_handle}) {
             ($output,$stderr)=$self->{_cmd_handle}->
@@ -29191,8 +29226,8 @@ sub new {
    else { $chk_id=&Net::FullAuto::FA_Core::username() }
    my $cmd_handle='';my $work_dirs='';my $cmd_type='';
    my $ftm_type='';my $stderr='';my $cmd_pid='';my $shell='';
-   my $shell_pid=0;my $cygdrive='';my $smb='';
-   ($cmd_handle,$work_dirs,$uname,$cmd_type,
+   my $shell_pid=0;my $cygdrive='';my $smb='';my $homedir='';
+   ($cmd_handle,$work_dirs,$homedir,$uname,$cmd_type,
       $ftm_type,$smb,$stderr,$ip,$hostname,
       $cmd_pid,$shell_pid,$cygdrive,$shell)=&cmd_login(
       $hostlabel,$new_master,$_connect,$override_login_id,$cache);
@@ -29224,6 +29259,7 @@ sub new {
    $self->{_cmd_pid}=$cmd_pid;
    $self->{_sh_pid}=$shell_pid;
    $self->{_shell}=$shell;
+   $self->{_homedir}=$homedir;
    if ($cygdrive) {
       $self->{_cygdrive}=$cygdrive;
       $self->{_cygdrive_regex}=qr/^$cygdrive\//;
@@ -29426,7 +29462,7 @@ print $Net::FullAuto::FA_Core::MRLOG "WE ARE BACK FROM LOOKUP<==\n"
    my $ms_hostlabel='';my $ms_host='';my $smb_type='';
    my $cmd_errmsg='';my $host='';my $output='';my $shell_pid=0;
    my $retrys=0;my $login_tries=0;my $cmd_pid='';my $shell='';
-   my $su_scrub='';my @connect_method=();
+   my $su_scrub='';my @connect_method=();my $homedir='';
    my ($stdout,$stderr)=('',''); 
    if (lc(${$ftr_cnct}[0]) eq 'smb') {
       $smb=1;
@@ -30323,6 +30359,33 @@ print $Net::FullAuto::FA_Core::MRLOG
                $uname='aix';
             }
             $Net::FullAuto::FA_Core::Hosts{$hostlabel}{'Uname'}=$uname;
+            ($homedir,$stderr)=Rem_Command::cmd(
+               { _cmd_handle=>$cmd_handle,
+                 _hostlabel=>[ $hostlabel,'' ] },'pwd');
+            $cmd_handle->print;
+            if (!$homedir) {
+               $cmd_handle->print(' '.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
+                  'printf \\\\041\\\\041;uname;'.
+                  $Net::FullAuto::FA_Core::gbp->('printf').
+                  'printf \\\\045\\\\045');
+               my $allins='';my $ct=0;
+               while (my $line=$cmd_handle->get) {
+                  chomp($line=~tr/\0-\37\177-\377//d);
+                  $allins.=$line;
+                  if ($allins=~/!!(.*)%%/) {
+                     $uname=$1;
+                     last;
+                  } else {
+                     $cmd_handle->print;
+                  } last if $ct++==10;
+               }
+            }
+            ($cfh_ignore,$cfh_error)=
+               &Net::FullAuto::FA_Core::clean_filehandle(
+               $cmd_handle);
+            &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
+               if $cfh_error;
          }
          if ($smb && $ms_ms_share) {
             my $msloginid = ($ms_su_id) ? $ms_su_id : $ms_login_id;
@@ -30565,7 +30628,7 @@ print $Net::FullAuto::FA_Core::MRLOG
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
 #$Net::FullAuto::FA_Core::log=0 if $logreset;
-   return $cmd_handle,$work_dirs,$uname,$cmd_type,$ftm_type,$smb,
+   return $cmd_handle,$work_dirs,$homedir,$uname,$cmd_type,$ftm_type,$smb,
         $die,$ip,$hostname,$cmd_pid,$shell_pid,$cygdrive,$shell; 
 
 } ## END of &cmd_login()
@@ -32712,7 +32775,9 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                         $output=~/^.*\n(.*)$/s;
                         $last_line=$1;
                         $last_line||='';
-                        my $ptest=substr($output,(rindex $output,'|'),-1);
+                        my $ptest=substr($output,(rindex $output,'|'),-1)
+                             if -1<index $output,'|';
+                        $ptest||=$output;
                         $ptest=~s/\s*//g;$ptest||='';
                         if ($last_line && ($last_line=~/$cmd_prompt$/s
                               || $bckgrd)) {
