@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999934';
+$main::VERSION='0.999999999935';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<END;
@@ -354,10 +354,11 @@ END
       ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
       my $instver='';
       ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
-      if ($exec_cnt==1 && $instfile=~/vendor_perl/ &&
-            ((exists $main::amazon{'ami'}) ||
-            (exists $main::amazon{'rhel'}))
-            && $module_fail eq 'Pod::Man') {
+      if ($exec_cnt==1 && $instfile=~/vendor_perl/) {
+      #if ($exec_cnt==1 && $instfile=~/vendor_perl/ &&
+      #      ((exists $main::amazon{'ami'}) ||
+      #      (exists $main::amazon{'rhel'}))
+      #      && $module_fail eq 'Pod::Man') {
          # Amazon's AMI has Pod::Man installed in the vendor_perl
          # directory which has precedence over the system directory
          # this module actually belongs in. The only solution is to

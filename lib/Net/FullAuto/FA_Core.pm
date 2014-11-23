@@ -6905,7 +6905,7 @@ print "handleerror caller=",caller,"\n";
 #$Net::FullAuto::FA_Core::log=0 if $logreset;
    my $return=0;
    my $line_adjust=0;my $warn=0;
-   my $error=$_[0];my $track='';
+   my $error=$_[0]||'';my $track='';
    my $cleanup=0;
    my $mail='';my $new_invoked='';
    if (defined $_[1] && $_[1]) {
@@ -7493,6 +7493,7 @@ sub pty_do_cmd
          } else {
             my @all_lines = $capture->read || ();
             $capture->stop();
+            $all_lines[$#all_lines]||='';
             &Net::FullAuto::FA_Core::handle_error(
                $@."\n        $all_lines[$#all_lines]\n       $m");
          }
@@ -12715,6 +12716,9 @@ sub wait_for_instance {
       while (my $line=<AWS>) {
          $json.=$line;
       } 
+      if (-1<index $json,'A client error') {
+         Net::FullAuto::FA_Core::handle_error($json);
+      }
       $hash=decode_json($json);
 #print "WAITHASH=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
 
@@ -12730,9 +12734,9 @@ sub config_server {
    use JSON::XS;
    my $server_type=$_[0];
    my $cnt=$_[1];
-   my $database=$_[2]||'';
+   my $selection=$_[2]||'';
    my $num=$cnt+1;
-   until (wait_for_instance(
+   until (Net::FullAuto::FA_Core::wait_for_instance(
          $main::aws->{$server_type}->[$cnt]->[0]->{InstanceId})
          eq 'running') {
       print "\n   Waiting for $server_type$num to come online -> pending\n";
@@ -12749,8 +12753,8 @@ sub config_server {
       identity_file => "/home/$username/fullauto.pem",
 
    };
-   ($main::aws->{$server_type}->[$cnt]->[1],$error)=connect_ssh(
-      $server_host_block);
+   ($main::aws->{$server_type}->[$cnt]->[1],$error)=
+      Net::FullAuto::FA_Core::connect_ssh($server_host_block);
    my ($stdout,$stderr)=('','');
    #($stdout,$stderr)=$main::aws->{$server_type}->[$cnt]->[1]->cmd('hostname');
    if ($server_type eq 'liferay') {
@@ -12760,66 +12764,175 @@ sub config_server {
       my $url=$stdout;
       $url=~s/^.*title=["](.*?zip).*$/$1/s;
       $url=~s/ /%20/g;
-      $url='http://downloads.sourceforge.net/project/lportal'.$url;
+      #$url='http://downloads.sourceforge.net/project/lportal'.$url;
+      $url='http://softlayer-dal.dl.sourceforge.net/project/lportal'.$url;
       my $zip=$url;
       $zip=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd("wget ".$url,'__display__');
       ($stdout,$stderr)=$handle->cmd("sudo mkdir -p /var/opt/lr_jvm1");
-      ($stdout,$stderr)=$handle->cmd("sudo mkdir -p /var/opt/lr_jvm2");
       ($stdout,$stderr)=$handle->cmd("sudo unzip -d /var/opt/lr_jvm1 $zip",
          '__display__');
-      ($stdout,$stderr)=$handle->cmd("sudo unzip -d /var/opt/lr_jvm2 $zip",
-         '__display__');
-      ($stdout,$stderr)=$handle->cmd("sudo rm -rf $zip",'__display__');
+      print "\n   ";
+      if ($selection=~/1 Server & 2/ || $selection=~/2 Servers & 4/) {
+         ($stdout,$stderr)=$handle->cmd("sudo mkdir -p /var/opt/lr_jvm2");
+         ($stdout,$stderr)=$handle->cmd("sudo unzip -d /var/opt/lr_jvm2 $zip",
+            '__display__');
+      }
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rvf $zip",'__display__');
       {
          $SIG{CHLD}="DEFAULT";
-         my $s="aws s3 mb liferay_repository 2>&1";
-         open(AWS,"$s|");
-         my $json='';
-         while (my $line=<AWS>) {
-            $json.=$line;
+         my $rand = localtime;
+         $rand=~s/\s|://g;
+         $rand=~s/\.//g;
+         my $lr_cnt=0;
+         my $lrbn='liferay-repository-'.$main::aws->{fullauto}->{InstanceId}.
+            "-$lr_cnt";
+         my $output='';
+         while (1) {
+            my $s="aws s3 mb s3://$lrbn 2>&1";
+            open(AWS,"$s|");
+            while (my $line=<AWS>) {
+               $output.=$line;
+            }
+            print "   ".$output;
+            if ((-1<index $output,'bucket name is not avail') ||
+                  ((-1<index $output,'you already own it') &&
+                  (-1==index $output,'make_bucket:'))) {
+               $lr_cnt++;
+               $lrbn='liferay-repository-'.
+                  $main::aws->{fullauto}->{InstanceId}."-$lr_cnt";
+               $output='';
+            } elsif (-1<index $output,'make_bucket:') { last }
          }
-         my $hash=decode_json($json);
-#print "WAITHASH=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
+         ($stdout,$stderr)=$handle->cmd("sudo ls -1 /var/opt/lr_jvm1");
+         my $lrf=$stdout;
+         $lrf=~s/^.*(liferay.*)\n.*/$1/s;
+         ($stdout,$stderr)=$handle->cmd("sudo ls -1 /var/opt/lr_jvm1/$lrf");
+         my %tom=();
+         foreach my $item (split "\n", $stdout) {
+            chomp $item;
+            if ($item=~/tomcat-(.*)$/) {
+               $tom{$1}=$item;
+            }
+         }
+         my @tom=sort keys %tom;
+         my $num=$cnt+1;
+         $main::aws->{$server_type}->[$cnt]->[2]=
+            [ "/var/opt/lr_jvm$num/$lrf/$tom{$tom[$#tom]}" ];
+         if ($selection=~/1 Server & 2/ || $selection=~/2 Servers & 4/) {
+            $num++;
+            push @{$main::aws->{$server_type}->[$cnt]->[2]},
+               "/var/opt/lr_jvm$num/$lrf/$tom{$tom[$#tom]}"; 
+         }
+         foreach my $jvm (@{$main::aws->{$server_type}->[$cnt]->[2]}) {
+            my $dlak='dl.store.s3.access.key';
+            my $dlsk='dl.store.s3.secret.key';
+            my $dlbn='dl.store.s3.bucket.name';
+            my $ak='';my $sk='';
+            unless (exists $main::aws->{access_id}) {
+               open(CF,".aws/credentials");
+               while (my $line=<CF>) {
+                  if ($line=~/^aws_access_key_id *= *(.*)\s*/) {
+                     $ak=$1;
+                  } elsif ($line=~/^aws_secret_access_key *= *(.*)\s*/) {
+                     $sk=$1;
+                  }
+               }
+               close CF;
+            } else {
+               $ak=$main::aws->{access_id};
+               $sk=$main::aws->{secret_key};
+            }
+            my $pe="$jvm/webapps/ROOT/WEB-INF/classes/portal-ext.properties";
+            my $impl='dl.store.impl';
+            my $s3='com.liferay.portlet.documentlibrary.store.S3Store';
+            my $content="\n$dlak=$ak".
+                        "\n$dlsk=$sk".
+                        "\n$dlbn=$lrbn".
+                        "\n$impl=$s3\n";
+            ($stdout,$stderr)=$handle->cmd("sudo touch $pe");
+            ($stdout,$stderr)=$handle->cmd("sudo chmod 777 $pe");
+            ($stdout,$stderr)=$handle->cmd("sudo echo \"$content\" > $pe");
+            ($stdout,$stderr)=$handle->cmd("sudo chmod 644 $pe");
+         }
+#print "WAITHASH=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";<STDIN>;
       }
    } elsif ($server_type eq 'httpd') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
-      ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden",
-         '__display__');
-      ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert",
-         '__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo yum clean all");
+      ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden");
+      ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert");
       ($stdout,$stderr)=$handle->cmd(
          "sudo yum -y groupinstall 'Development tools'",'__display__');
       ($stdout,$stderr)=$handle->cmd(
          "sudo yum -y install pcre-devel",'__display__');
+      if (0) {
+         my $url='http://www.openssl.org/source/';
+         ($stdout,$stderr)=$handle->cmd("wget -qO- $url");
+         my $ossltar='';
+         foreach my $line (split "\n",$stdout) {
+            if (-1<index $line,'LATEST') {
+               $line=~s/^.*?href=["](.*?)["].*$/$1/;
+               $ossltar=$line;
+               $url.=$line;
+               last;
+            }
+         }
+         my $openssl=$ossltar;
+         $openssl=~s/\.tar.gz//;
+         ($stdout,$stderr)=$handle->cmd("wget $url",'__display__');
+         ($stdout,$stderr)=$handle->cmd(
+            "sudo tar zxvf $ossltar -C /opt",'__display__');
+         ($stdout,$stderr)=$handle->cmd("rm -rvf $ossltar",'__display__');
+         ($stdout,$stderr)=$handle->cwd("/opt/$openssl");
+         ($stdout,$stderr)=$handle->cmd("sudo ./config",'__display__');
+         ($stdout,$stderr)=$handle->cmd("sudo make install",
+            '__display__');
+         ($stdout,$stderr)=$handle->cwd("~");
+      } else {
+         ($stdout,$stderr)=$handle->cmd(
+            "sudo yum -y install openssl-devel",'__display__');
+      }
       my $url='https://apr.apache.org/download.cgi';
       ($stdout,$stderr)=$handle->cmd("wget -qO- $url");
-      my $flag=0;my $version='';my $apr='';
+      my $flag=0;my $apache_lib='';my $apr_util='';my $apr='';
       foreach my $line (split "\n",$stdout) {
          if (-1<index $line,'Unix Source') {
             $flag=1 unless $flag;
          } elsif ($flag) {
             next if 1<$flag && $line!~/apr-util/;
-            $version=$line;
-            $version=~s/^.*href=["](.*)["].*$/$1/;
-            ($stdout,$stderr)=$handle->cmd("wget $version",'__display__');
-            $version=~s/^.*\/(.*)$/$1/;
+            $apache_lib=$line;
+            $apache_lib=~s/^.*href=["](.*)["].*$/$1/;
+            ($stdout,$stderr)=$handle->cmd("sudo wget $apache_lib",
+               '__display__');
+            $apache_lib=~s/^.*\/(.*)$/$1/;
             ($stdout,$stderr)=$handle->cmd(
-               "sudo tar zxvf $version -C /opt",'__display__');
+               "sudo tar zxvf $apache_lib -C /opt",'__display__');
             ($stdout,$stderr)=$handle->cmd(
-               "sudo rm -rfv $version",'__display__');
-            $version=~s/\.tar\.gz\s*$//;
-            $apr=$version unless $line=~/apr-util/;
-            ($stdout,$stderr)=$handle->cwd("/opt/$version");
+               "sudo rm -rfv $apache_lib",'__display__');
+            $apache_lib=~s/\.tar\.gz\s*$//;
+            if ($line=~/apr-util/) {
+               $apr_util=$apache_lib;
+            } else {
+               $apr=$apache_lib;
+            }
+            ($stdout,$stderr)=$handle->cwd("/opt/$apache_lib");
             if ($line=~/apr-util/) {
                ($stdout,$stderr)=$handle->cmd(
-                  "sudo ./configure --with-apr=/opt/$apr",'__display__');
+                  "sudo ./configure --with-apr=/opt/$apr".
+                  " --with-openssl".
+                  " --with-crypto",
+                  #" --with-openssl=/opt/$openssl",
+                  '__display__');
                ($stdout,$stderr)=$handle->cwd("xml/expat");
-               ($stdout,$stderr)=$handle->cmd("sudo ./configure",'__display__');
-               ($stdout,$stderr)=$handle->cmd("sudo make install",'__display__');
-               ($stdout,$stderr)=$handle->cwd("/opt/$version");
+               ($stdout,$stderr)=$handle->cmd("sudo ./configure",
+                  '__display__');
+               ($stdout,$stderr)=$handle->cmd("sudo make install",
+                  '__display__');
+               ($stdout,$stderr)=$handle->cwd("/opt/$apr_util");
             } else {
-               ($stdout,$stderr)=$handle->cmd("sudo ./configure");
+               ($stdout,$stderr)=$handle->cmd("sudo ./configure",
+                  '__display__');
             }
             ($stdout,$stderr)=$handle->cmd(
                "sudo make install",'__display__');
@@ -12829,34 +12942,41 @@ sub config_server {
       }
       $url='http://httpd.apache.org/download.cgi';
       ($stdout,$stderr)=$handle->cmd("wget -qO- $url");
-      $flag=0;$version='';
+      $flag=0;my $apache='';
       foreach my $line (split "\n",$stdout) {
          if ($line=~/Stable Release/) {
             $flag=1;
          } elsif ($flag && $line=~/^.*[#]apache.*?[>](.*gz?)[<].*$/) {
-            $version=$1;$flag=0;
-         } elsif ($line=~/Source:.*$version.*gz/) {
-            $version=$line;
-            $version=~s/^.*href="(.*?)"[>].*$/$1/;
+            $apache=$1;$flag=0;
+         } elsif ($line=~/Source:.*$apache.*gz/) {
+            $apache=$line;
+            $apache=~s/^.*href="(.*?)"[>].*$/$1/;
          }
       }
-      ($stdout,$stderr)=$handle->cmd("wget $version",'__display__');
-      $version=~s/^.*\/(.*)$/$1/;
+      ($stdout,$stderr)=$handle->cmd("wget $apache",'__display__');
+      $apache=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd(
-         "sudo tar zxvf $version -C /opt",'__display__');
-      ($stdout,$stderr)=$handle->cmd("sudo rm -rfv $version",'__display__');
-      $version=~s/\.tar\.gz\s*$//;
-      ($stdout,$stderr)=$handle->cwd("/opt/$version");
-      ($stdout,$stderr)=$handle->cmd("sudo ./configure",'__display__');
+         "sudo tar zxvf $apache -C /opt",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rfv $apache",'__display__');
+      $apache=~s/\.tar\.gz\s*$//;
+      ($stdout,$stderr)=$handle->cwd("/opt/$apache");
+      ($stdout,$stderr)=$handle->cmd("sudo ./configure ".
+         "--with-apr=/opt/$apr ".
+         "--with-apr-util=/opt/$apr_util ".
+         "--with-ssl",
+         #"--with-ssl=/opt/$openssl",
+         '__display__');
       ($stdout,$stderr)=$handle->cmd("sudo make install",'__display__');
-      ($stdout,$stderr)=$handle->cmd("ls -l",'__display__');
+      ($stdout,$stderr)=$handle->cmd(
+         "sudo /usr/local/apache2/bin/apachectl start");
+      ($stdout,$stderr)=$handle->cmd(
+         "sudo cat /usr/local/apache2/logs/error_log",'__display__');
    } else {
-      if ($database=~/mysql/i) {
+      if ($selection=~/mysql/i) {
          my $handle=$main::aws->{$server_type}->[$cnt]->[1];
-         ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden",
-            '__display__');
-         ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert",
-            '__display__');
+         ($stdout,$stderr)=$handle->cmd("sudo yum clean all");
+         ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden");
+         ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert");
          ($stdout,$stderr)=$handle->cmd(
             "sudo yum groupinstall -y 'MySQL Database'",'__display__');
          ($stdout,$stderr)=$handle->cmd(
@@ -12866,7 +12986,7 @@ sub config_server {
          $handle->{_cmd_handle}->print('sudo mysql_secure_installation');
          my $prompt=substr($handle->{_cmd_handle}->prompt(),1,-1);
          while (1) {
-            my $output=fetch($handle);
+            my $output=Net::FullAuto::FA_Core::fetch($handle);
             last if $output=~/$prompt/;
             print $output;
             if (-1<index $output,'root (enter for none):') {
@@ -12890,7 +13010,7 @@ sub config_server {
                next;
             }
          }
-         print "\n\n   DONE WITH DATABASE FOR NOW!\n\n";
+         print "\n   DONE WITH DATABASE FOR NOW!\n\n";
       } else {
 
       }
@@ -12933,18 +13053,19 @@ my $standup_liferay=sub {
          "--instance-type $type --key-name fullauto ".
          "--security-group-ids $g --subnet-id $s";
    my $database="]T[{select_database_for_liferay}";
+   my $liferay="]T[{select_liferay_setup}";
    my $cnt=0;
    if (exists $main::aws->{liferay}) {
       if ($#{$main::aws->{liferay}}==0) {
          my $inst=launch_instance($c);
          add_and_tag_server('liferay',$cnt,$inst);
-         config_server('liferay',$cnt);
+         config_server('liferay',$cnt,$liferay);
       } else {
          my $num=$#{$main::aws->{liferay}}-1;
          foreach my $num (0..$num) {
             my $inst=launch_instance($c);
             add_and_tag_server('liferay',$cnt,$inst);
-            config_server('liferay',$cnt++);
+            config_server('liferay',$cnt++,$liferay);
          }
       }
    }
@@ -12953,13 +13074,13 @@ my $standup_liferay=sub {
       if ($#{$main::aws->{httpd}}==0) {
          my $inst=launch_instance($c);
          add_and_tag_server('httpd',$cnt,$inst);
-         config_server('httpd',$cnt);
+         config_server('httpd',$cnt,'');
       } else {
          my $num=$#{$main::aws->{httpd}}-1;
          foreach my $num (0..$num) {
             my $inst=launch_instance($c);
             add_and_tag_server('httpd',$cnt,$inst);
-            config_server('httpd',$cnt++);
+            config_server('httpd',$cnt++,'');
          }
       }
    }
@@ -22749,9 +22870,6 @@ sub cwd
          if (wantarray) {
             return 'CWD command successful.','';
          } else { return 'CWD command successful.' }
-         #$self->{_work_dirs}->{_pre_mswin}=
-         #   $self->{_work_dirs}->{_cwd_mswin};
-         #$self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
       } elsif (wantarray) {
          return 'CWD command successful.','';
       } else { return 'CWD command successful.' }
@@ -22882,9 +23000,11 @@ print $Net::FullAuto::FA_Core::MRLOG "GOING TO EVAL and $self->{_uname}\n"
             }
          }
          $self->{_work_dirs}->{_cwd}=$target_dir;
-         $self->{_work_dirs}->{_pre_mswin}=
-            $self->{_work_dirs}->{_cwd_mswin};
-         $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
+         if ($self->{_uname} eq 'cygwin') {
+            $self->{_work_dirs}->{_pre_mswin}=
+               $self->{_work_dirs}->{_cwd_mswin};
+            $self->{_work_dirs}->{_cwd_mswin}=$target_dir.'\\';
+         }
       } elsif ($self->{_uname} eq 'cygwin' &&
             $target_dir=~/^[A-Za-z]:/) {
          my ($drive,$path)=unpack('a1 x1 a*',$target_dir);
@@ -33006,13 +33126,19 @@ print $Net::FullAuto::FA_Core::MRLOG "PPPPPPPPPPPPPPPPPPPPPPPPPPPTOU=$tou and FE
                         } elsif ($fetchflag) {
 print $Net::FullAuto::FA_Core::MRLOG "FETCHFLAGGGGGGGGGG=$fetchflag\n"
  if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+                           &display($output,$cmd_prompt,$save)
+                              if $display;
                            $growoutput.=$output;
                            next FETCH
                         }
                      } elsif (($output=~/^stdout: (?!\/')/) &&
                            ($growoutput=~/ 2\>&1\s?$/)) {
                         $growoutput=$output;
-                        next FETCH if $output!~/$cmd_prompt$/s;
+                        if ($output!~/$cmd_prompt$/s) {
+                           &display($output,$cmd_prompt,$save)
+                              if $display;
+                           next FETCH
+                        }
                         $output='';$fulloutput='';
                      } elsif ($growoutput && $output eq $cmd_prompt) {
                         chomp $growoutput;
@@ -33038,6 +33164,8 @@ print $Net::FullAuto::FA_Core::MRLOG "FETCHFLAGGGGGGGGGG=$fetchflag\n"
                      if (substr($growoutput,-1) eq '2') {
                         $growoutput.=$output;
                         $first=-1;
+                        &display($output,$cmd_prompt,$save)
+                           if $display;
                         next FETCH;
                      }
                      my $die="The Command:\n\n       $command"
@@ -33234,11 +33362,12 @@ print $Net::FullAuto::FA_Core::MRLOG "GRO_OUT_AFTER_MEGA_STRIPTTTTTTTTTT=$growou
                               if ($output=~/$cmd_prompt$/s &&
                                     $growoutput!~/$cmd_prompt$/s) {
                                  $growoutput=$output;
+                                 &display($output,$cmd_prompt,$save)
+                                    if $display;
                                  $lastline=$cmd_prompt;
                               } else {
                                  next FETCH;                                 
                               }
-                           #} elsif ($growoutput=~/^stdout:\s*stdout:/s) {
                            } elsif ($growoutput=~/^stdout:.*stdout:/s) {
                               $command_stripped_from_output=1;
                            }
@@ -33513,6 +33642,8 @@ print $Net::FullAuto::FA_Core::MRLOG "cmd() STDERRBOTTOM=$stderr<== and LASTLINE
             }
          }
       };
+      &display("\n",$cmd_prompt,'')
+         if $display;
 #print "DO WE GET HEREEEEEEEEEEEEEEEEEEEEEEEXXXXXXXXXXX\n";
       $self->{_cmd_handle}->autoflush(0)
          if defined fileno $self->{_cmd_handle};
