@@ -13037,6 +13037,24 @@ sub launch_instance {
    return $hash->{Instances}->[0];
 }
 
+sub get_aws_security_id {
+
+   package get_aws_security_id;
+   use JSON::XS; 
+   $SIG{CHLD}="DEFAULT";
+   my $g='aws ec2 describe-security-groups --group-names '.
+         $_[0];
+   open(AWS,"$g|");
+   my $json='';
+   while (my $line=<AWS>) {
+      $json.=$line;
+   }
+   close AWS;
+   my $hash=decode_json($json);
+   return $hash->{SecurityGroups}->[0]->{GroupId};
+
+}
+
 my $standup_liferay=sub {
 
    use JSON::XS;
@@ -13044,18 +13062,156 @@ my $standup_liferay=sub {
    $type=~s/^"//;
    $type=~s/"$//;
    $type=substr($type,0,(index $type,' ->')-3);
+   my $database="]T[{select_database_for_liferay}";
+   my $liferay="]T[{select_liferay_setup}";
    my $i=$main::aws->{fullauto}->{ImageId}||'';
    my $s=$main::aws->{fullauto}->
          {NetworkInterfaces}->[0]->{SubnetId}||'';
    my $g=$main::aws->{fullauto}->
          {SecurityGroups}->[0]->{GroupId}||'';
-   my $c="aws ec2 run-instances --image-id $i --count 1 ".
-         "--instance-type $type --key-name fullauto ".
-         "--security-group-ids $g --subnet-id $s";
-   my $database="]T[{select_database_for_liferay}";
-   my $liferay="]T[{select_liferay_setup}";
+   my $n=$main::aws->{fullauto}->
+         {SecurityGroups}->[0]->{GroupName}||'';
+   {
+      $SIG{CHLD}="DEFAULT";
+      my $c='aws ec2 describe-security-groups '.
+            "--group-names $n";
+      open(AWS,"$c|");
+      my $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      my $hash=decode_json($json);
+      my $cidr=$hash->{SecurityGroups}->[0]->{IpPermissions}
+               ->[0]->{IpRanges}->[0]->{CidrIp};
+      $c='aws ec2 create-security-group --group-name '.
+            'LiferaySecurityGroup --description '.
+            '"Liferay Security Group" 2>&1';
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name LiferaySecurityGroup --protocol '.
+         'tcp --port 22 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name LiferaySecurityGroup --protocol '.
+         'tcp --port 8080 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name LiferaySecurityGroup --protocol '.
+         'tcp --port 8081 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 create-security-group --group-name '.
+            'ApacheSecurityGroup --description '.
+            '"Apache Security Group" 2>&1';
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name ApacheSecurityGroup --protocol '.
+         'tcp --port 22 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name ApacheSecurityGroup --protocol '.
+         'tcp --port 80 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name ApacheSecurityGroup --protocol '.
+         'tcp --port 443 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 create-security-group --group-name '.
+            'MySQLSecurityGroup --description '.
+            '"MySQL Security Group" 2>&1';
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name MySQLSecurityGroup --protocol '.
+         'tcp --port 22 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name MySQLSecurityGroup --protocol '.
+         'tcp --port 3306 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+   }
+#print "DATA=",Data::Dump::Streamer::Dump($main::aws->{fullauto})->Out(),"\n";<STDIN>;
    my $cnt=0;
    if (exists $main::aws->{liferay}) {
+      my $g=get_aws_security_id('LiferaySecurityGroup');
+      my $c="aws ec2 run-instances --image-id $i --count 1 ".
+         "--instance-type $type --key-name fullauto ".
+         "--security-group-ids $g --subnet-id $s";
       if ($#{$main::aws->{liferay}}==0) {
          my $inst=launch_instance($c);
          add_and_tag_server('liferay',$cnt,$inst);
@@ -13071,6 +13227,10 @@ my $standup_liferay=sub {
    }
    $cnt=0;
    if (exists $main::aws->{httpd}) {
+      my $g=get_aws_security_id('ApacheSecurityGroup');
+      my $c="aws ec2 run-instances --image-id $i --count 1 ".
+         "--instance-type $type --key-name fullauto ".
+         "--security-group-ids $g --subnet-id $s";
       if ($#{$main::aws->{httpd}}==0) {
          my $inst=launch_instance($c);
          add_and_tag_server('httpd',$cnt,$inst);
@@ -13086,6 +13246,10 @@ my $standup_liferay=sub {
    }
    $cnt=0;
    if (exists $main::aws->{database}) {
+      my $g=get_aws_security_id('MySQLSecurityGroup');
+      my $c="aws ec2 run-instances --image-id $i --count 1 ".
+         "--instance-type $type --key-name fullauto ".
+         "--security-group-ids $g --subnet-id $s";
       if ($#{$main::aws->{database}}==0) {
          my $inst=launch_instance($c);
          add_and_tag_server('database',$cnt,$inst);
@@ -13109,7 +13273,7 @@ my $liferay_setup_summary=sub {
    $type=~s/^"//;
    $type=~s/"$//;
    my $money=$type;
-   $money=~s/^.*-> \$(.*?) (?:[(].+[)] )*per hour$/$1/;
+   $money=~s/^.*-> \$(.*?) +(?:[(].+[)] )*\s*per hour$/$1/;
    $type=substr($type,0,(index $type,' ->')-3);
    my $liferay="]T[{select_liferay_setup}";
    $liferay=~s/^"//;
@@ -13128,7 +13292,6 @@ my $liferay_setup_summary=sub {
    my $ln=$liferay;
    $ln=~s/^.*(\d+)\sServer.*$/$1/;
    if ($ln==1) {
-#print "ARE WE HERE\n";<STDIN>;
       $main::aws->{liferay}->[0]=[];
    } elsif ($ln=~/^\d+$/ && $ln) {
       foreach my $n (0..$ln) {
@@ -13342,7 +13505,6 @@ my $select_an_instance_type=sub {
    my @itypes=@{$region_data->{instanceTypes}};
    my @sizes=();my $scrollnum=1;my $cnt=0;
    foreach my $type (@itypes) {
-      #next if -1<index $type->{type},'Previous';
       foreach my $sizes (@{$type->{sizes}}) {
          my $size=$sizes->{size};
          my $price=$sizes->{valueColumns}->[0]->{prices}->{USD};
