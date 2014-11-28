@@ -349,7 +349,8 @@ our @EXPORT  = qw(%Hosts $localhost getpasswd
                   $choose_pass_expiration fetch
                   %monthconv %mimetypes %admin_menu
                   check_for_amazon_localhost
-                  get_amazon_external_ip);
+                  get_amazon_external_ip
+                  run_aws_cmd);
 
 {
    no warnings;
@@ -1638,6 +1639,29 @@ if ($^O eq 'cygwin') {
    while ($count++!=5) { $blanklines.="\n" }
 }
 
+sub run_aws_cmd {
+
+   package run_aws_cmd;
+   use JSON::XS;
+   my $c=$_[0];
+   my $json='';
+   my $hash='';
+   eval {
+      open(AWS,"$c|");
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      if (-1<index $json,'A client error') {
+         die $json;
+      } elsif ($json=~/^\s*[{]/) {
+         $hash=decode_json($json);
+      }
+   };
+   return $hash,$json,$@;
+
+}
+
 # cleanup subroutine called during normal & abnormal terminations
 sub cleanup {
 
@@ -2819,7 +2843,7 @@ sub find_berkeleydb_utils {
             "$berkeleydb_perl_module_lib | ".
             $Net::FullAuto::FA_Core::gbp->('grep')."grep \"Berkeley DB.*:\"";
    my $bver=`$bcmd`;
-   $bver=~s/^.*DB\s+(.*?)\.\d+:.*$/$1/s;
+   $bver=~s/^.*?DB\s+(.*?)\.\d+:.*$/$1/s;
    if ($^O eq 'cygwin' && -f "/bin/db${bver}_$db_util.exe") {
       return "/bin/db${bver}_$db_util.exe";
    } elsif ((defined $fa_conf::berkeleydb) &&
@@ -2901,7 +2925,11 @@ sub find_berkeleydb_utils {
                print "Searching $dir$file ...\n";
                my @subout=`$find_cmd1\"$dir$file\"$find_cmd2`;
                if (-1<$#subout) {
-                  require CPAN::Config;
+                  require CPAN;
+                  require Config;
+                  eval {
+                     CPAN::HandleConfig->load;
+                  };
                   my $ccon=(defined $CPAN::Config &&
                         exists $CPAN::Config->{cpan_home})?
                         $CPAN::Config->{cpan_home}:'';
@@ -5820,10 +5848,15 @@ sub kill
    }
 print $Net::FullAuto::FA_Core::MRLOG "BEFOREKILL -> ",join ' ',@{$cmd},"\n"
       if -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-   my $mystdout='';
-   IO::CaptureOutput::capture sub {
+   my ($stdout_capture,$stderr_capture)=('','');
+   ($stdout_capture,$stderr_capture)=
+         Capture::Tiny::capture {
       ($ignore,$stdout)=&setuid_cmd($cmd,5);
-           }, \$mystdout;
+   };
+   #my $mystdout='';
+   #IO::CaptureOutput::capture sub {
+   #   ($ignore,$stdout)=&setuid_cmd($cmd,5);
+   #        }, \$mystdout;
    $stdout||='';
    if (wantarray) {
       return $stdout,'';
@@ -5869,15 +5902,25 @@ sub testpid
                 "if ${killpath}kill -0 $pid"
                 ." \012then echo 1\012else echo 0\012fi"
                 ." | ${sedpath}sed -e \'s/^/stdout: /' 2>&1" ];
-      my $mystdout='';
-      IO::CaptureOutput::capture sub {
+      my ($stdout_capture,$stderr_capture)=('','');
+      ($stdout_capture,$stderr_capture)=
+            Capture::Tiny::capture {
          ($stdout,$stderr)=&setuid_cmd($cmd,5); # Save Pound Sign
-              }, \$mystdout;
-      chomp $mystdout;
-      if ($mystdout=~s/^stdout: ?//) {
-         $stdout=$mystdout;
-      } elsif ($mystdout) {
-         $stderr=$mystdout;
+      };
+      #my $mystdout='';
+      #IO::CaptureOutput::capture sub {
+      #   ($stdout,$stderr)=&setuid_cmd($cmd,5); # Save Pound Sign
+      #        }, \$mystdout;
+      #chomp $mystdout;
+      #if ($mystdout=~s/^stdout: ?//) {
+      #   $stdout=$mystdout;
+      #} elsif ($mystdout) {
+      #   $stderr=$mystdout;
+      #}
+      if ($stdout_capture=~s/^stdout: ?//) {
+         $stdout=$stdout_capture;
+      } elsif ($stdout_capture) {
+         $stderr=$$stdout_capture;
       }
    } else {
       my $cmd=[ "${bashpath}bash".' -c'
@@ -7662,6 +7705,7 @@ sub clean_filehandle
       -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
    my $filehandle=$_[0];
    my $cftimeout=$_[1]||0;
+   my $command=$_[2]||'';
    if (!defined $filehandle || -1==index $filehandle,'GLOB'
          || !defined fileno $filehandle) {
       if (defined $filehandle && (-1==index $filehandle,'GLOB')) {
@@ -7688,17 +7732,37 @@ sub clean_filehandle
          if (wantarray) {
             if ($cftimeout) {
                &release_fa_lock(7755);
-               return '',"\n\n       Command did not complete before timeout".
-                         "\n       => $timeout seconds. This is common if".
-                         " the\n       command takes more than $timeout".
-                         "\n       seconds to complete, and/or no".
-                         "\n       output is generated within $timeout".
-                         "\n       seconds.\n".
-                         "\n       Increase the timeout for the command, or".
-                         "\n       if it is a script or program you".
-                         "\n       authored, consider adding verbose output".
-                         "\n       that appears before the timeout of".
-                         "\n       $timeout seconds expires.";
+               my $die='';
+               if ($command) {
+                  $die=<<END;
+
+      The Command:
+
+         $command
+
+      did not complete before timeout => $timeout seconds.
+      This is common if the command takes more than $timeout
+      seconds to complete, and/or no output is generated
+      within $timeout seconds.
+
+END
+               } else {
+                   $die=<<END;
+
+      Command did not complete before timeout => $timeout seconds.
+      This is common if the command takes more than $timeout
+      seconds to complete, and/or no output is generated
+      within $timeout seconds.
+
+END
+               }
+               $die.=<<END;
+      Increase the timeout for the command, or if it is a script
+      or program you authored, consider adding verbose output
+      that appears before the timeout of $timeout seconds expires.
+
+END
+               return $die;
             } else {
                &release_fa_lock(7755);
                return '','Invalid filehandle';
@@ -7758,7 +7822,8 @@ sub clean_filehandle
             $all_lines.=$line;
             if ($line=~/password[: ]+$/si) {
                return '',$line;
-            } elsif (-1<index $all_lines,"$Net::FullAuto::FA_Core::uhray->[0]_-") {
+            } elsif (-1<index $all_lines,
+                  "$Net::FullAuto::FA_Core::uhray->[0]_-") {
                if ($all_lines=~/_funkyPrompt_$/s) {
                   return '','';
                } else {
@@ -8546,7 +8611,7 @@ sub getpasswd
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            die "Cannot Open DB: ".
+            die "Cannot Open DB (1): ".
                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
                 " $BerkeleyDB::Error\n";
          }
@@ -8913,7 +8978,7 @@ sub getpasswd
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            die "Cannot Open DB:".
+            die "Cannot Open DB (2):".
                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
                 " $BerkeleyDB::Error\n";
          }
@@ -9648,7 +9713,7 @@ END
          -Env      => $Net::FullAuto::FA_Core::dbenv_once
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ".
+         die "Cannot Open DB (3): ".
              "${Net::FullAuto::FA_Core::progname}_defaults.db".
              " $BerkeleyDB::Error\n";
       }
@@ -9719,7 +9784,7 @@ END
             -Env      => $Net::FullAuto::FA_Core::dbenv_once
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            die "Cannot Open DB: ".
+            die "Cannot Open DB (4): ".
                 "${Net::FullAuto::FA_Core::progname}_sets.db".
                 " $BerkeleyDB::Error\n";
          }
@@ -9807,7 +9872,7 @@ my $set_default_sub=sub {
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ".
+         die "Cannot Open DB (5): ".
              "${progname}_sets.db $BerkeleyDB::Error\n";
       }
    }
@@ -10195,7 +10260,7 @@ FIN
          -Env      => $sdbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ${progname}_sets.db ".
+         die "Cannot Open DB (6): ${progname}_sets.db ".
              $BerkeleyDB::Error."\n";
       }
    }
@@ -10728,7 +10793,7 @@ my $define_modules_commit_sub=sub {
                   -Env      => $dbenv
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
-                  die "Cannot Open DB: ".
+                  die "Cannot Open DB (7): ".
                       "${progname}_sets.db $BerkeleyDB::Error\n";
                }
             }
@@ -11087,7 +11152,7 @@ my $delete_sets_menu_sub=sub {
                                  -Env      => $dbenv
                               );
                               unless ($BerkeleyDB::Error=~/Successful/) {
-                                 die "Cannot Open DB: ".
+                                 die "Cannot Open DB (8): ".
                                      "${progname}_defaults.db ".
                                      $BerkeleyDB::Error."\n";
                               }
@@ -11149,7 +11214,7 @@ my $delete_sets_menu_sub=sub {
                                  -Env      => $sdbenv
                               );
                               unless ($BerkeleyDB::Error=~/Successful/) {
-                                 die "Cannot Open DB: ".
+                                 die "Cannot Open DB (9): ".
                                      "${progname}_sets.db ".
                                      $BerkeleyDB::Error."\n";
                               }
@@ -11304,7 +11369,7 @@ my $set_default_menu_in_db_sub=sub {
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ".
+         die "Cannot Open DB (10): ".
              "${progname}_defaults.db $BerkeleyDB::Error\n";
       }
    }
@@ -12687,7 +12752,6 @@ END
 
 sub add_and_tag_server {
 
-   package add_and_tag_server;
    use JSON::XS;
    my $server_type=$_[0];
    my $cnt=$_[1];
@@ -12696,9 +12760,9 @@ sub add_and_tag_server {
    {
       $SIG{CHLD}="DEFAULT";
       my $n="aws ec2 create-tags --resources $inst->{InstanceId}".
-            " --tags Key=$server_type,Value=".++$cnt." 2>&1";
-      open(AWS,"$n|");
-      close AWS;
+            " --tags Key=Name,Value=\"$server_type ".++$cnt."\" 2>&1";
+      my ($hash,$output,$error)=('','','');
+      ($hash,$output,$error)=run_aws_cmd($n);
    }
 }
 
@@ -12708,18 +12772,24 @@ sub wait_for_instance {
    use JSON::XS;
    my $instance_id=$_[0];my $hash='';
    {
-      $SIG{CHLD}="DEFAULT";
-      my $c="aws ec2 describe-instances --instance-ids ".
-            "$instance_id 2>&1";
-      open(AWS,"$c|");
-      my $json='';
-      while (my $line=<AWS>) {
-         $json.=$line;
-      } 
-      if (-1<index $json,'A client error') {
-         Net::FullAuto::FA_Core::handle_error($json);
+      $SIG{CHLD}="DEFAULT";my $flag=0;
+      while (1) {
+         my $c="aws ec2 describe-instances --instance-ids ".
+               "$instance_id 2>&1";
+         open(AWS,"$c|");
+         my $json='';
+         while (my $line=<AWS>) {
+            $json.=$line;
+         } 
+         if (-1<index $json,'A client error') {
+            unless ($flag) {
+               $flag=1;sleep 5;next;
+            }
+            Net::FullAuto::FA_Core::handle_error($json);
+         }
+         $hash=decode_json($json);
+         last;
       }
-      $hash=decode_json($json);
 #print "WAITHASH=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";
 
    }
@@ -12735,14 +12805,39 @@ sub config_server {
    my $server_type=$_[0];
    my $cnt=$_[1];
    my $selection=$_[2]||'';
-   my $num=$cnt+1;
+   my $num=$cnt+1;my $icnt=0;
+   my $server_launch=<<'END';
+
+
+   :'######::'########:'########::'##::::'##:'########:'########::
+   '##... ##: ##.....:: ##.... ##: ##:::: ##: ##.....:: ##.... ##:
+    ##:::..:: ##::::::: ##:::: ##: ##:::: ##: ##::::::: ##:::: ##:
+   . ######:: ######::: ########:: ##:::: ##: ######::: ########::
+   :..... ##: ##...:::: ##.. ##:::. ##:: ##:: ##...:::: ##.. ##:::
+   '##::: ##: ##::::::: ##::. ##:::. ## ##::: ##::::::: ##::. ##::
+   . ######:: ########: ##:::. ##:::. ###:::: ########: ##:::. ##:
+   :......:::........::..:::::..:::::...:::::........::..:::::..::
+   '##::::::::::'###::::'##::::'##:'##::: ##::'######::'##::::'##:
+    ##:::::::::'## ##::: ##:::: ##: ###:: ##:'##... ##: ##:::: ##:
+    ##::::::::'##:. ##:: ##:::: ##: ####: ##: ##:::..:: ##:::: ##:
+    ##:::::::'##:::. ##: ##:::: ##: ## ## ##: ##::::::: #########:
+    ##::::::: #########: ##:::: ##: ##. ####: ##::::::: ##.... ##:
+    ##::::::: ##.... ##: ##:::: ##: ##:. ###: ##::: ##: ##:::: ##:
+    ########: ##:::: ##:. #######:: ##::. ##:. ######:: ##:::: ##:
+   ........::..:::::..:::.......:::..::::..:::......:::..:::::..::
+
+END
+   print $server_launch;sleep 3;
    until (Net::FullAuto::FA_Core::wait_for_instance(
          $main::aws->{$server_type}->[$cnt]->[0]->{InstanceId})
          eq 'running') {
-      print "\n   Waiting for $server_type$num to come online -> pending\n";
+      print "\n   Waiting for new server $server_type $num to ".
+            "come online -> pending\n";
       sleep 3;
+      last if $icnt++==10;
    }
-   print "\n   Waiting for $server_type$num to come online -> running\n";
+   print "\n   Waiting for new server $server_type $num to ".
+         "come online -> running\n";
    my $error='';
    my $username=&Net::FullAuto::FA_Core::username();
    my $server_host_block={
@@ -12757,7 +12852,7 @@ sub config_server {
       Net::FullAuto::FA_Core::connect_ssh($server_host_block);
    my ($stdout,$stderr)=('','');
    #($stdout,$stderr)=$main::aws->{$server_type}->[$cnt]->[1]->cmd('hostname');
-   if ($server_type eq 'liferay') {
+   if ($server_type eq 'Liferay.com') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
       ($stdout,$stderr)=$handle->cmd("wget -qO- ".
          "http://sourceforge.net/projects/lportal/files/");
@@ -12768,6 +12863,32 @@ sub config_server {
       $url='http://softlayer-dal.dl.sourceforge.net/project/lportal'.$url;
       my $zip=$url;
       $zip=~s/^.*\/(.*)$/$1/;
+      my $download_liferay=<<'END';
+
+   ooo.   .oPYo. o      o o    o o     .oPYo.      .oo ooo.   o o    o .oPYo.
+   8  `8. 8    8 8      8 8b   8 8     8    8     .P 8 8  `8. 8 8b   8 8    8
+   8   `8 8    8 8      8 8`b  8 8     8    8    .P  8 8   `8 8 8`b  8 8
+   8    8 8    8 8  db  8 8 `b 8 8     8    8   oPooo8 8    8 8 8 `b 8 8   oo
+   8   .P 8    8 `b.PY.d' 8  `b8 8     8    8  .P    8 8   .P 8 8  `b8 8    8
+   8ooo'  `YooP'  `8  8'  8   `8 8oooo `YooP' .P     8 8ooo'  8 8   `8 `YooP8
+   ..........................................................................
+   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+            __________
+           |          |  _     _  ____  ____  ____        __   __
+           | [][][]   | | |   | ||  __||  __||  _ '\   /\ \ \ / /
+           | [][]     | | |   | || |_  | |__ | |_) |  /  \ \ V /
+           | []    [] | | |   | ||  _| |  __||    ,/ / /\ \ \ /
+           |     [][] | | |__ | || |   | |__ | |\ \ / ____ \| |
+           |   [][][] | |____||_||_|   |____||_| \_\_/    \_|_| (R)
+           |__________|                        _  _  _ ___ _
+                                              |_)/ \|_) | |_|| 
+   http://www.liferay.com/community           |  \_/| \ | | ||__  CE
+
+   (Liferay Inc. and Community are **NOT** sponsors of the FullAuto Project.)
+
+END
+      print $download_liferay;sleep 4;
       ($stdout,$stderr)=$handle->cmd("wget ".$url,'__display__');
       ($stdout,$stderr)=$handle->cmd("sudo mkdir -p /var/opt/lr_jvm1");
       ($stdout,$stderr)=$handle->cmd("sudo unzip -d /var/opt/lr_jvm1 $zip",
@@ -12805,9 +12926,11 @@ sub config_server {
             } elsif (-1<index $output,'make_bucket:') { last }
          }
          ($stdout,$stderr)=$handle->cmd("sudo ls -1 /var/opt/lr_jvm1");
-         my $lrf=$stdout;
-         $lrf=~s/^.*(liferay.*)\n.*/$1/s;
-         ($stdout,$stderr)=$handle->cmd("sudo ls -1 /var/opt/lr_jvm1/$lrf");
+         my $lr_release=$stdout;
+         $lr_release=~s/^.*(liferay.*)\n.*/$1/s;
+         $main::aws->{Liferay_Release}=$lr_release;
+         ($stdout,$stderr)=$handle->cmd(
+            "sudo ls -1 /var/opt/lr_jvm1/$lr_release");
          my %tom=();
          foreach my $item (split "\n", $stdout) {
             chomp $item;
@@ -12818,11 +12941,11 @@ sub config_server {
          my @tom=sort keys %tom;
          my $num=$cnt+1;
          $main::aws->{$server_type}->[$cnt]->[2]=
-            [ "/var/opt/lr_jvm$num/$lrf/$tom{$tom[$#tom]}" ];
+            [ "/var/opt/lr_jvm$num/$lr_release/$tom{$tom[$#tom]}" ];
          if ($selection=~/1 Server & 2/ || $selection=~/2 Servers & 4/) {
             $num++;
             push @{$main::aws->{$server_type}->[$cnt]->[2]},
-               "/var/opt/lr_jvm$num/$lrf/$tom{$tom[$#tom]}"; 
+               "/var/opt/lr_jvm$num/$lr_release/$tom{$tom[$#tom]}"; 
          }
          foreach my $jvm (@{$main::aws->{$server_type}->[$cnt]->[2]}) {
             my $dlak='dl.store.s3.access.key';
@@ -12857,7 +12980,7 @@ sub config_server {
          }
 #print "WAITHASH=",Data::Dump::Streamer::Dump($hash)->Out(),"\n";<STDIN>;
       }
-   } elsif ($server_type eq 'httpd') {
+   } elsif ($server_type eq 'Apache.org') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
       ($stdout,$stderr)=$handle->cmd("sudo yum clean all");
       ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden");
@@ -12903,6 +13026,7 @@ sub config_server {
             next if 1<$flag && $line!~/apr-util/;
             $apache_lib=$line;
             $apache_lib=~s/^.*href=["](.*)["].*$/$1/;
+            $apache_lib=~s/([^:])\/\//$1\//g;
             ($stdout,$stderr)=$handle->cmd("sudo wget $apache_lib",
                '__display__');
             $apache_lib=~s/^.*\/(.*)$/$1/;
@@ -12953,6 +13077,31 @@ sub config_server {
             $apache=~s/^.*href="(.*?)"[>].*$/$1/;
          }
       }
+      my $download_apache=<<'END';
+
+
+   ooo.   .oPYo. o      o o    o o     .oPYo.      .oo ooo.   o o    o .oPYo.
+   8  `8. 8    8 8      8 8b   8 8     8    8     .P 8 8  `8. 8 8b   8 8    8
+   8   `8 8    8 8      8 8`b  8 8     8    8    .P  8 8   `8 8 8`b  8 8
+   8    8 8    8 8  db  8 8 `b 8 8     8    8   oPooo8 8    8 8 8 `b 8 8   oo
+   8   .P 8    8 `b.PY.d' 8  `b8 8     8    8  .P    8 8   .P 8 8  `b8 8    8
+   8ooo'  `YooP'  `8  8'  8   `8 8oooo `YooP' .P     8 8ooo'  8 8   `8 `YooP8
+   ..........................................................................
+   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+                             _                 _
+         __,,--;;;v\\_V_=-" /_\  _ __  __ _ __| |_  ___      ______ _
+    _--;;\\V^V^\\\//7 ^    / _ \| '_ \/ _` / _| ' \/ -_)  |_| |  | |_)
+   <_,,,==//^~*'''        /_/ \_\ .__/\__,_\__|_||_\___|  | | |  | |   SERVER
+                                |_|                   tm
+
+   http://www.apache.org
+
+   (The Apache Foundation is **NOT** a sponsor of the FullAuto Project.)
+
+END
+      print $download_apache;sleep 4;
       ($stdout,$stderr)=$handle->cmd("wget $apache",'__display__');
       $apache=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd(
@@ -12971,16 +13120,57 @@ sub config_server {
          "sudo /usr/local/apache2/bin/apachectl start");
       ($stdout,$stderr)=$handle->cmd(
          "sudo cat /usr/local/apache2/logs/error_log",'__display__');
+      my ($hash,$json,$output,$error)=('','','','');
+      my $in_id=$main::aws->{$server_type}->[$cnt]->[0]->{InstanceId};
+      ($hash,$output,$error)=
+          Net::FullAuto::FA_Core::run_aws_cmd("aws ec2 describe-instances ".
+          "--filters Name=instance-id,Values=$in_id");
+      if ($error) {
+         print $error;
+         cleanup();
+      }
+      my $ap_ip=
+            $hash->{Reservations}->[0]->{Instances}->[0]->{PublicIpAddress};
+      print "\n   ACCESS APACHE WEB SERVER AT:  http://$ap_ip\n\n";
    } else {
+      my $lr_inst=$main::aws->{'Liferay.com'}->[$cnt]->[0];
       if ($selection=~/mysql/i) {
          my $handle=$main::aws->{$server_type}->[$cnt]->[1];
          ($stdout,$stderr)=$handle->cmd("sudo yum clean all");
          ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden");
          ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert");
+         my $install_mysql=<<'END';
+
+          o o    o .oPYo. ooooo    .oo o     o     o o    o .oPYo.
+          8 8b   8 8        8     .P 8 8     8     8 8b   8 8    8
+          8 8`b  8 `Yooo.   8    .P  8 8     8     8 8`b  8 8
+          8 8 `b 8     `8   8   oPooo8 8     8     8 8 `b 8 8   oo
+          8 8  `b8      8   8  .P    8 8     8     8 8  `b8 8    8
+          8 8   `8 `YooP'   8 .P     8 8oooo 8oooo 8 8   `8 `YooP8
+          ........................................................
+          :::::::::::::::::::::::::::::'        ':::::::::::::::::
+                                           _
+                                          ( `..,
+                                           \  , `*.
+                                            \      \
+                                             \      \_.,
+           http://www.mysql.com              ( /        ",
+           ___    ___          ______  ______ V _     _--~*
+          |   \  /   | _    _ / _____|/  __  \ | |    \
+          | |\ \/ /| || |  | |\___  \ | |  | | | |     `\
+          | | \  / | || |__| | ___)  || |__| | | |____
+          |_|  \/  |_| \___, ||_____/ \___\ \/ \______|(R)
+                       ____| |             \_\
+                      |_____;'                           DATABASE
+
+          (Oracle(R) is **NOT** a sponsor of the FullAuto Project.)
+
+END
+         print $install_mysql;sleep 4;
          ($stdout,$stderr)=$handle->cmd(
             "sudo yum groupinstall -y 'MySQL Database'",'__display__');
-         ($stdout,$stderr)=$handle->cmd(
-            "sed -i '/mysqld/a bind-address = 127.0.0.1' /etc/my.cnf");
+         #($stdout,$stderr)=$handle->cmd(
+         #   "sed -i '/mysqld/a bind-address = 127.0.0.1' /etc/my.cnf");
          ($stdout,$stderr)=$handle->cmd("sudo service mysqld start",
             '__display__');
          $handle->{_cmd_handle}->print('sudo mysql_secure_installation');
@@ -12996,24 +13186,175 @@ sub config_server {
                $handle->{_cmd_handle}->print('n');
                next;
             } elsif (-1<index $output,'Remove anonymous users? [Y/n]') {
-               $handle->{_cmd_handle}->print('n');
+               $handle->{_cmd_handle}->print('Y');
                next;
             } elsif (-1<index $output,'Disallow root login remotely? [Y/n]') {
-               $handle->{_cmd_handle}->print('n');
+               $handle->{_cmd_handle}->print('Y');
                next;
             } elsif (-1<index $output,
                   'Remove test database and access to it? [Y/n]') {
-               $handle->{_cmd_handle}->print('n');
+               $handle->{_cmd_handle}->print('Y');
                next;
             } elsif (-1<index $output,'Reload privilege tables now? [Y/n]') {
                $handle->{_cmd_handle}->print('Y');
                next;
             }
          }
-         print "\n   DONE WITH DATABASE FOR NOW!\n\n";
+         my $lr_release=$main::aws->{Liferay_Release};
+         $lr_release=~/liferay-portal-(.*)-ce-(.*)$/;
+#print "LR_RELEASE=$lr_release\n";
+         my $rnum=$1;my $rtyp=$2;
+#print "RNUM=$1 and RTYP=$2\n";
+         print "   Downloading Liferay.com SQL files . . .\n";
+         ($stdout,$stderr)=$handle->cmd("wget -qO- ".
+            "http://sourceforge.net/projects/lportal/files/Liferay%20Portal/");
+         my $flag=0;my $lr_url='';
+         foreach my $line (split "\n",$stdout) {
+            if ($flag && $line=~/^.*href=["](.*?)["].*$/) {
+               $lr_url=$1;last; 
+            } elsif ($line=~/^.*title=["](.*?) (.*?)["]\s*class=["]folder/) {
+               my $num=$1;my $typ=$2;
+               if ($num=~/^$rnum/ && $rtyp=~/$typ/i) {
+                  $flag=1;next;
+               }
+            }
+         }
+         ($stdout,$stderr)=$handle->cmd("wget -qO- ".
+            "http://sourceforge.net".$lr_url);
+         my $regx="liferay.*sql-.*$rnum.*".lc($rtyp).".*zip";
+         $flag=0;
+         foreach my $line (split "\n",$stdout) {
+            if ($flag && $line=~/^.*href=["](.*?)["].*$/) {
+               $lr_url=$1;last;
+            } elsif ($line=~/^.*title=["]$regx["]\s*class=["]file/) {
+               $flag=1;next;
+            }
+         }
+         $lr_url=~s/^(.*)\/download\s*$/$1/;
+         ($stdout,$stderr)=$handle->cmd("wget $lr_url",'__display__');
+         $lr_url=~s/^.*\/(.*)\s*$/$1/;
+         ($stdout,$stderr)=$handle->cmd("sudo unzip -d /opt $lr_url",
+            '__display__');
+         ($stdout,$stderr)=$handle->cmd("sudo rm -rvf $lr_url",
+            '__display__');
+         $lr_url=~s/^(.*)-.*$/$1/;
+         my $cmd='sudo mysql -vvv -u root < '.
+                 "/opt/$lr_url/create/create-mysql.sql";
+         ($stdout,$stderr)=$handle->cmd($cmd,'__display__');
+         my $lr_pip=$lr_inst->{NetworkInterfaces}->[0]->{PrivateIpAddress};
+         $handle->{_cmd_handle}->print('mysql -u root lportal');
+         $prompt=substr($handle->{_cmd_handle}->prompt(),1,-1);
+         my $cmd_sent=0;
+         while (1) {
+            my $output=Net::FullAuto::FA_Core::fetch($handle);
+            my $out=$output;
+            $out=~s/$prompt//sg;
+            print $out if $output!~/^mysql>\s*$/;
+            last if $output=~/$prompt|Bye/;
+            if (!$cmd_sent && $output=~/mysql>\s*$/) {
+               my $cmd='grant all privileges on *.* to '.
+                       "'lportal'\@'".$lr_pip."' identified by 'liferay'".
+                       " with grant option;";
+               print "$cmd\n";
+               $handle->{_cmd_handle}->print($cmd);
+               $cmd_sent++;
+               sleep 1;
+               next;
+            } elsif ($cmd_sent==1 && $output=~/mysql>\s*$/) {
+               my $cmd="FLUSH PRIVILEGES;";
+               print "$cmd\n";
+               $handle->{_cmd_handle}->print($cmd);
+               $cmd_sent++;
+               sleep 1;
+               next;
+            } elsif ($cmd_sent>=2 && $output=~/mysql>\s*$/) {
+               print "quit\n";
+               $handle->{_cmd_handle}->print('quit');
+               sleep 1;
+               next;
+            } sleep 1;
+            $handle->{_cmd_handle}->print();
+         }
+         my $db_inst=$main::aws->{$server_type}->[$cnt]->[0];
+         my $db_pip=$db_inst->{NetworkInterfaces}->[0]->{PrivateIpAddress};
+         my $lrhandle=$main::aws->{'Liferay.com'}->[$cnt]->[1];
+         my $pe=$main::aws->{'Liferay.com'}->[$cnt]->[2]->[0].
+                '/webapps/ROOT/WEB-INF/classes/portal-ext.properties';
+         my $ad="jdbc.default.driverClassName=com.mysql.jdbc.Driver";
+         ($stdout,$stderr)=$lrhandle->cmd(
+            "sudo sed -i \'/S3Store/a $ad\' $pe");
+         ($stdout,$stderr)=$lrhandle->cmd(
+            "sudo sed -i \'/S3Store/G\' $pe");
+         $ad="jdbc.default.url=jdbc:mysql://$db_pip:3306/lportal?".
+             'useUnicode=true&'.
+             'characterEncoding=UTF-8&'.
+             'useFastDateParsing=false';
+         ($stdout,$stderr)=$lrhandle->cmd(
+            "sudo sed -i \'/Driver/a $ad\' $pe");
+         my $id="jdbc.default.username=lportal";
+         ($stdout,$stderr)=$lrhandle->cmd(
+            "sudo sed -i \'/Unicode/a $id\' $pe");
+         my $pw="jdbc.default.password=liferay";
+         ($stdout,$stderr)=$lrhandle->cmd(
+            "sudo sed -i \'/username/a $pw\' $pe");
       } else {
 
       }
+      my $lrhandle=$main::aws->{'Liferay.com'}->[$cnt]->[1];
+      my $tom_dir=$main::aws->{'Liferay.com'}->[$cnt]->[2]->[0];
+      my $starting_liferay=<<'END';
+
+   .oPYo. ooooo    .oo  .oPYo. ooooo o o    o .oPYo.      o    o  .oPYo.
+   8        8     .P 8  8   `8   8   8 8b   8 8    8      8    8  8    8
+   `Yooo.   8    .P  8  8YooP'   8   8 8`b  8 8           8    8  8YooP'
+       `8   8   oPooo8  8   `b   8   8 8 `b 8 8   oo      8    8  8
+        8   8  .P    8  8    8   8   8 8  `b8 8    8      8    8  8
+   `YooP'   8 .P     8  8    8   8   8 8   `8 `YooP8      `YooP'  8
+   ....................................................................
+   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+   ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+          __________
+         |          |  _     _  ____  ____  ____        __   __
+         | [][][]   | | |   | ||  __||  __||  _ '\   /\ \ \ / /
+         | [][]     | | |   | || |_  | |__ | |_) |  /  \ \ V /
+         | []    [] | | |   | ||  _| |  __||    ,/ / /\ \ \ /
+         |     [][] | | |__ | || |   | |__ | |\ \ / ____ \| |
+         |   [][][] | |____||_||_|   |____||_| \_\_/    \_|_| (R)
+         |__________|                        _  _  _ ___ _
+                                            |_)/ \|_) | |_||
+   http://www.liferay.com/community         |  \_/| \ | | ||__  CE
+
+   (Liferay Inc. and Community are **NOT** sponsors of the FullAuto Project.)
+
+END
+      print $starting_liferay;sleep 4;
+      ($stdout,$stderr)=$lrhandle->cmd("sudo $tom_dir".
+         "/bin/startup.sh",'__display__');
+      $lrhandle->{_cmd_handle}->print("tail -f $tom_dir/logs/catalina.out");
+      my $prompt=substr($lrhandle->{_cmd_handle}->prompt(),1,-1);
+      while (1) {
+         my $output=Net::FullAuto::FA_Core::fetch($lrhandle);
+         my $out=$output;
+         $out=~s/$prompt//sg;
+         print $out;
+         if ($out=~/Server startup in/) {
+            $lrhandle->{_cmd_handle}->print("\003");
+            last;
+         }
+         sleep 1;
+      }
+      my ($hash,$json,$output,$error)=('','','','');
+      my $in_id=$lr_inst->{InstanceId};
+      ($hash,$output,$error)=
+          Net::FullAuto::FA_Core::run_aws_cmd("aws ec2 describe-instances ".
+          "--filters Name=instance-id,Values=$in_id");
+      if ($error) {
+         print $error;
+         cleanup();
+      }
+      my $lr_ip=
+            $hash->{Reservations}->[0]->{Instances}->[0]->{PublicIpAddress};
+      print "\n   ACCESS LIFERAY PORTAL AT:  http://$lr_ip:8080\n";
    }
 
 }
@@ -13085,7 +13426,7 @@ my $standup_liferay=sub {
                ->[0]->{IpRanges}->[0]->{CidrIp};
       $c='aws ec2 create-security-group --group-name '.
             'LiferaySecurityGroup --description '.
-            '"Liferay Security Group" 2>&1';
+            '"Liferay.com Security Group" 2>&1';
       open(AWS,"$c|");
       $json='';
       while (my $line=<AWS>) {
@@ -13129,7 +13470,7 @@ my $standup_liferay=sub {
          if $json && -1==index $json,'already exists';
       $c='aws ec2 create-security-group --group-name '.
             'ApacheSecurityGroup --description '.
-            '"Apache Security Group" 2>&1';
+            '"Apache.org Security Group" 2>&1';
       open(AWS,"$c|");
       $json='';
       while (my $line=<AWS>) {
@@ -13207,58 +13548,76 @@ my $standup_liferay=sub {
    }
 #print "DATA=",Data::Dump::Streamer::Dump($main::aws->{fullauto})->Out(),"\n";<STDIN>;
    my $cnt=0;
-   if (exists $main::aws->{liferay}) {
+   if (exists $main::aws->{'Liferay.com'}) {
       my $g=get_aws_security_id('LiferaySecurityGroup');
       my $c="aws ec2 run-instances --image-id $i --count 1 ".
          "--instance-type $type --key-name fullauto ".
          "--security-group-ids $g --subnet-id $s";
-      if ($#{$main::aws->{liferay}}==0) {
+      if ($#{$main::aws->{'Liferay.com'}}==0) {
          my $inst=launch_instance($c);
-         add_and_tag_server('liferay',$cnt,$inst);
-         config_server('liferay',$cnt,$liferay);
+         add_and_tag_server('Liferay.com',$cnt,$inst);
+         config_server('Liferay.com',$cnt,$liferay);
       } else {
-         my $num=$#{$main::aws->{liferay}}-1;
+         my $num=$#{$main::aws->{'Liferay.com'}}-1;
          foreach my $num (0..$num) {
             my $inst=launch_instance($c);
-            add_and_tag_server('liferay',$cnt,$inst);
-            config_server('liferay',$cnt++,$liferay);
+            add_and_tag_server('Liferay.com',$cnt,$inst);
+            config_server('Liferay.com',$cnt++,$liferay);
          }
       }
    }
    $cnt=0;
-   if (exists $main::aws->{httpd}) {
+   if (exists $main::aws->{'Apache.org'}) {
       my $g=get_aws_security_id('ApacheSecurityGroup');
       my $c="aws ec2 run-instances --image-id $i --count 1 ".
          "--instance-type $type --key-name fullauto ".
          "--security-group-ids $g --subnet-id $s";
-      if ($#{$main::aws->{httpd}}==0) {
+      if ($#{$main::aws->{'Apache.org'}}==0) {
          my $inst=launch_instance($c);
-         add_and_tag_server('httpd',$cnt,$inst);
-         config_server('httpd',$cnt,'');
+         add_and_tag_server('Apache.org',$cnt,$inst);
+         config_server('Apache.org',$cnt,'');
       } else {
-         my $num=$#{$main::aws->{httpd}}-1;
+         my $num=$#{$main::aws->{'Apache.org'}}-1;
          foreach my $num (0..$num) {
             my $inst=launch_instance($c);
-            add_and_tag_server('httpd',$cnt,$inst);
-            config_server('httpd',$cnt++,'');
+            add_and_tag_server('Apache.org',$cnt,$inst);
+            config_server('Apache.org',$cnt++,'');
          }
       }
    }
    $cnt=0;
-   if (exists $main::aws->{database}) {
+   if (exists $main::aws->{'MySQL.com'}) {
       my $g=get_aws_security_id('MySQLSecurityGroup');
       my $c="aws ec2 run-instances --image-id $i --count 1 ".
          "--instance-type $type --key-name fullauto ".
          "--security-group-ids $g --subnet-id $s";
-      if ($#{$main::aws->{database}}==0) {
+      if ($#{$main::aws->{'MySQL.com'}}==0) {
          my $inst=launch_instance($c);
-         add_and_tag_server('database',$cnt,$inst);
-         config_server('database',$cnt,$database);
+         add_and_tag_server('MySQL.com',$cnt,$inst);
+         config_server('MySQL.com',$cnt,$database);
       }
    }
 
-print "DONE\n";#<STDIN>;
-&Net::FullAuto::FA_Core::cleanup;
+   my $thanks=<<'END';
+
+     ______                  _    ,
+       / /              /   ' )  /        /
+    --/ /_  __.  ____  /_    /  / __ . . /
+   (_/ / /_(_/|_/ / <_/ <_  (__/_(_)(_/_'   For Trying
+                             // 
+
+           _   _      _         _____      _ _    _         _
+          | \ | | ___| |_      |  ___|   _| | |  / \  _   _| |_ ___
+          |  \| |/ _ \ __| o o | |_ | | | | | | / _ \| | | | __/ _ \
+          | |\  |  __/ ||  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
+          |_| \_|\___|\__|     |_|   \__,_|_|_/_/   \_\__,_|\__\___/
+
+
+   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
+
+END
+   print $thanks;
+   &Net::FullAuto::FA_Core::cleanup;
 
 };
 
@@ -13292,26 +13651,26 @@ my $liferay_setup_summary=sub {
    my $ln=$liferay;
    $ln=~s/^.*(\d+)\sServer.*$/$1/;
    if ($ln==1) {
-      $main::aws->{liferay}->[0]=[];
+      $main::aws->{'Liferay.com'}->[0]=[];
    } elsif ($ln=~/^\d+$/ && $ln) {
       foreach my $n (0..$ln) {
-         $main::aws->{liferay}=[] unless exists
-            $main::aws->{liferay};
-         $main::aws->{liferay}->[$n]=[];
+         $main::aws->{'Liferay.com'}=[] unless exists
+            $main::aws->{'Liferay.com'};
+         $main::aws->{'Liferay.com'}->[$n]=[];
       }
    }
    my $hd=$httpd;
    $hd=~s/^.*(\d+)\sadditional.*$/$1/;
    if ($hd==1) {
-      $main::aws->{httpd}->[0]=[];
+      $main::aws->{'Apache.org'}->[0]=[];
    } elsif ($hd=~/^\d+$/ && $hd) {
       foreach my $n (0..$hd) {
-         $main::aws->{httpd}=[] unless exists
-            $main::aws->{httpd};
-         $main::aws->{httpd}->[$n]=[];
+         $main::aws->{'Apache.org'}=[] unless exists
+            $main::aws->{'Apache.org'};
+         $main::aws->{'Apache.org'}->[$n]=[];
       }
    }
-   $main::aws->{database}->[0]=[];
+   $main::aws->{'MySQL.com'}->[0]=[];
    $num_of_servers=$ln+$hd+1;
    my $cost=int($num_of_servers)*$money;
    my $cents='';
@@ -13375,8 +13734,8 @@ END
 my $select_httpd_for_liferay=sub {
 
    my @options=('Do NOT use a separate httpd (web) server',
-                'Use 1 Apache httpd server on 1 additional Server',
-                'Use 2 Apache httpd servers on 2 additional Servers');
+                'Use 1 Apache.org httpd server on 1 additional Server',
+                'Use 2 Apache.org httpd servers on 2 additional Servers');
 
    my $select_database_banner=<<END;
 
@@ -13386,7 +13745,7 @@ my $select_httpd_for_liferay=sub {
     \\___//__/\\___|   \\_/\\_/\\___|_.__/ |___/\\___|_|  \\_/\\___|_| /__/(_)
 
 
-   If you choose to use Apache httpd (web) servers in front of Liferay,
+   If you choose to use Apache.org httpd (web) servers in front of Liferay,
    additional servers will be launched. Depending on all your choices,
    FullAuto will launch and install supporting software on up to 5
    separate AWS EC2 servers.
@@ -13434,7 +13793,7 @@ my $select_database_for_liferay=sub {
 
 
    An additional server will be launched, and a supporting database for
-   use by Liferay will be installed. Please choose a database:
+   use by Liferay Portal (ce) will be installed. Please choose a database:
 
 END
    my %select_database_for_liferay=(
@@ -13604,20 +13963,19 @@ END
 
 my $choose_aws_instances=sub {
 
-   package choose_aws_instances;
    use JSON::XS;
    my $demo_choice=']S[';
    my @regions=();my $r='';my $scrollnum=1;
    $main::regions_data={};
    {
       $SIG{CHLD}="DEFAULT";
-      my $json='';
-      open(AWS,"aws ec2 describe-instances|");
-      while (my $line=<AWS>) {
-         $json.=$line;
+      my ($hash,$json,$output,$error)=('','','','');
+      ($hash,$output,$error)=
+          run_aws_cmd("aws ec2 describe-instances");
+      if ($error) {
+         print $error;
+         cleanup();
       }
-      my $hash={};
-      $hash=decode_json($json);
       my $instance='';
       my $ipaddress=Socket::inet_ntoa((gethostbyname(
                     $Net::FullAuto::FA_Core::local_hostname))[4]);
@@ -13639,37 +13997,29 @@ my $choose_aws_instances=sub {
             }
          }
       }
-      close AWS;
+      #close AWS;
       $r=$main::aws->{fullauto}->{Placement}->{AvailabilityZone};
       chop $r;
       my $i=$main::aws->{fullauto}->{InstanceId};
       my $t="aws ec2 describe-tags --filters \"Name=resource-id,Values=$i\"";
-      open(AWS,"$t|");
-      $json='';
-      while (my $line=<AWS>) {
-         $json.=$line;
+      ($hash,$output,$error)=run_aws_cmd($t);
+      if ($#{$hash->{Tags}}==-1) {
+         my $n="aws ec2 create-tags --resources $i --tags Key=Name,".
+               "Value=FullAuto 2>&1";
+         ($hash,$output,$error)=run_aws_cmd($t);
+         if ($error) {
+            print $error;
+            cleanup();
+         } 
       }
-      my $thash=decode_json($json);
-      close AWS;
-      if ($#{$thash->{Tags}}==-1) {
-         my $n="aws ec2 create-tags --resources $i --tags Key=fullauto,".
-               "Value=1 2>&1";
-         open(AWS,"$n|");
-         close AWS;
-      }
-      $json='';
       my $prc='wget -qO- https://a0.awsstatic.com/pricing/'.
               '1/ec2/linux-od.min.js';
-      open(AWS,"$prc|");
-      while (my $line=<AWS>) {
-         $json.=$line;
-      }
-      $json=~s/^.*?callback[(](.*)[)];\s*$/$1/s;
-      $json=~s/([{,])([A-Za-z]+):/$1"$2":/g;
+      ($hash,$output,$error)=run_aws_cmd($prc);
+      $output=~s/^.*?callback[(](.*)[)];\s*$/$1/s;
+      $output=~s/([{,])([A-Za-z]+):/$1"$2":/g;
       my $prc_hash={};
-      $prc_hash=decode_json($json);
+      $prc_hash=decode_json($output);
 #print "PRC_HASH=",Data::Dump::Streamer::Dump($prc_hash)->Out(),"\n";<STDIN>;
-      close AWS;
       my $cnt=0;
       foreach my $region (@{$prc_hash->{config}->{regions}}) {
          $cnt++;
@@ -13768,7 +14118,7 @@ END
       Item_1 => {
 
          Text   => ']C[',
-         Convey => [ 'Liferay Portal with Clustering' ],
+         Convey => [ 'Liferay Portal (ce) with Clustering' ],
          Result => $choose_aws_instances,
 
       },
@@ -14016,7 +14366,7 @@ our $determine_password=sub {
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ".
+         die "Cannot Open DB (11): ".
              "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
              " $BerkeleyDB::Error\n";
       }
@@ -14810,14 +15160,6 @@ END
       $fullauto=']FullAuto[';
       $cron=']Cron[';
    }
-   if (($Term::Menus::new_user_flag or $welcome or $newuser) &&
-         !$default) {
-      $Net::FullAuto::FA_Core::skip_host_hash=1;
-      &new_user_experience($Term::Menus::new_user_flag,
-         $welcome,$newuser);
-   } elsif ($newuseramazon) {
-      &new_user_amazon();
-   }
    my $cache='';
    foreach my $hl ('cache','localhost') {
       if (exists $Hosts{$hl} && exists $Hosts{$hl}->{Cache}
@@ -15164,7 +15506,7 @@ END
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            die "Cannot Open DB:".
+            die "Cannot Open DB (11):".
                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
                 " $BerkeleyDB::Error\n";
          }
@@ -15268,6 +15610,14 @@ END
                   " ####\n\n";
             }
 
+         }
+         if (($Term::Menus::new_user_flag or $welcome or $newuser) &&
+               !$default) {
+            $Net::FullAuto::FA_Core::skip_host_hash=1;
+            &new_user_experience($Term::Menus::new_user_flag,
+               $welcome,$newuser);
+         } elsif ($newuseramazon) {
+            &new_user_amazon();
          }
          if (defined $default || (defined $facode && !$facode)
                               || (defined $faconf && !$faconf)
@@ -15473,7 +15823,7 @@ END
                   -Env      => $dbenv
                );
                unless ($BerkeleyDB::Error=~/Successful/) {
-                  die "Cannot Open DB: ".
+                  die "Cannot Open DB (12): ".
                       "${Net::FullAuto::FA_Core::progname}_plans.db".
                       " $BerkeleyDB::Error\n";
                }
@@ -16005,7 +16355,7 @@ print $Net::FullAuto::FA_Core::MRLOG "PRINTING PASSWORD NOW<==\n"
                      -Env      => $dbenv
                   );
                   unless ($BerkeleyDB::Error=~/Successful/) {
-                     die "Cannot Open DB: ".${Net::FullAuto::FA_Core::progname}.
+                     die "Cannot Open DB (13): ".${Net::FullAuto::FA_Core::progname}.
                          "_${kind}_passwds.db".
                          " $BerkeleyDB::Error\n";
                   }
@@ -16265,7 +16615,7 @@ print $Net::FullAuto::FA_Core::MRLOG
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
-               die "Cannot Open DB: ".
+               die "Cannot Open DB (14): ".
                    "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
                    " $BerkeleyDB::Error\n";
             }
@@ -16788,7 +17138,7 @@ sub fa_set {
                         -Env      => $dbenv
                      );
                      unless ($BerkeleyDB::Error=~/Successful/) {
-                        die "Cannot Open DB ${progname}_defaults.db:".
+                        die "Cannot Open DB (15): ${progname}_defaults.db:".
                             " $BerkeleyDB::Error\n";
                      }
                   }
@@ -16855,7 +17205,7 @@ sub fa_set {
                            -Env      => $stenv
                         );
                         unless ($BerkeleyDB::Error=~/Successful/) {
-                           die "Cannot Open DB ${progname}_sets.db:".
+                           die "Cannot Open DB (16): ${progname}_sets.db:".
                                " $BerkeleyDB::Error\n";
                         }
                      }
@@ -16971,7 +17321,7 @@ sub fa_set {
                         -Env      => $stenv
                      );
                      unless ($BerkeleyDB::Error=~/Successful/) {
-                        die "Cannot Open DB ${progname}_sets.db:".
+                        die "Cannot Open DB (17): ${progname}_sets.db:".
                             " $BerkeleyDB::Error\n";
                      }
                   }
@@ -17366,7 +17716,7 @@ sub passwd_db_update
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ".
+         die "Cannot Open DB (18): ".
              "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
              " $BerkeleyDB::Error\n";
       }
@@ -17506,7 +17856,7 @@ sub su_scrub
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
-         die "Cannot Open DB: ".
+         die "Cannot Open DB (19): ".
              "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
              " $BerkeleyDB::Error\n";
       }
@@ -17703,7 +18053,7 @@ print $Net::FullAuto::FA_Core::MRLOG "su() DONEGID=$gids<==\n"
                -Env      => $dbenv
             );
             unless ($BerkeleyDB::Error=~/Successful/) {
-               die "Cannot Open DB: ".
+               die "Cannot Open DB (20): ".
                    "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
                    " $BerkeleyDB::Error\n";
             }
@@ -18636,10 +18986,18 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
          -Env      => $dbenv
       );
       unless ($BerkeleyDB::Error=~/Successful/) {
+         print "   ",$BerkeleyDB::Error."\n";
+         undef $bdb;
+         $dbenv->close();
          my $d=&Net::FullAuto::FA_Core::find_berkeleydb_utils('recover');
          my $cmd="$d -h ".$Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds';
          my $out=`$cmd`;
          &handle_error($out) if $out;
+         $dbenv = BerkeleyDB::Env->new(
+         -Home  => $Hosts{"__Master_${$}__"}{'FA_Secure'}.'Passwds',
+         -Flags => DB_CREATE|DB_INIT_CDB|DB_INIT_MPOOL|DB_PRIVATE
+         ) or &handle_error(
+            "cannot open environment for DB: $BerkeleyDB::Error\n",'',$track);
          $bdb = BerkeleyDB::Btree->new(
             -Filename =>
                "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db",
@@ -18647,7 +19005,8 @@ print $Net::FullAuto::FA_Core::MRLOG "PAST THE DBENV INITIALIZATION<==\n"
             -Env      => $dbenv
          );
          unless ($BerkeleyDB::Error=~/Successful/) {
-            die "Cannot Open DB: ".
+            print "   ",$BerkeleyDB::Error,"\n";
+            die "Cannot Open DB (21): ".
                 "${Net::FullAuto::FA_Core::progname}_${kind}_passwds.db".
                 " $BerkeleyDB::Error\n";
          }
@@ -19993,7 +20352,7 @@ print "FTR_RETURN3\n";
                                 -Env      => $dbenv
                            );
                            unless ($BerkeleyDB::Error=~/Successful/) {
-                              die "Cannot Open DB: ".
+                              die "Cannot Open DB (22): ".
                                   "${pn}_${kind}_passwds.db".
                                   " $BerkeleyDB::Error\n";
                            }
@@ -22444,10 +22803,19 @@ END
                $count++ if $line=~/^\s*$/s;
                if ($warning=~/Connection closed|Connection reset/s
                      || $count==10) {
-                  $warning=~s/^.*?(\@+.*)$/$1/s;
+                  #$warning=~s/^.*?(\@+.*)$/$1/s;
                   $warning=~s/_funkyPrompt_//s;
                   $warning=~s/^/       /gm;
                   $warning=~s/\s*$//s;
+print "WARNING HERE==>$warning<== and COUNT=$count\n";
+                  if ($count==10) {
+                     if (defined $main::aws) {
+                        die 'AWS Connection refused';
+                     } else {
+print "WE ARE GETTING OUT OF \@\@\n";sleep 10;
+                        die "read timed-out\n";
+                     }
+                  }
                   die "\n".$warning;
                } $filehandle->{_cmd_handle}->print;
                next;
@@ -30099,10 +30467,15 @@ print $Net::FullAuto::FA_Core::MRLOG
                                  my $progpath=substr($0,0,(rindex $0,'/')+1);
                                  my $mc=$progpath.'install_mozrepl_plugin '.
                                        "\"$winff\""." ${cdr}mozrepl-1.1-fx.xpi";
-                                 my $mystdout='';
-                                 IO::CaptureOutput::capture sub {
+                                 #my $mystdout='';
+                                 my ($stdout_capture,$stderr_capture)=('','');
+                                 ($stdout_capture,$stderr_capture)=
+                                       Capture::Tiny::capture {
                                     system($mc);
-                                 }, \$mystdout;
+                                 };
+                                 #IO::CaptureOutput::capture sub {
+                                 #   system($mc);
+                                 #}, \$mystdout;
                               }
                               my $fcmd="\"${firefox}\" -new-instance -repl ".
                                     "http://www.fullautosoftware.net ".
@@ -30112,10 +30485,15 @@ print $Net::FullAuto::FA_Core::MRLOG
                                  my $ro=$localhost->{_work_dirs}->{_tmp}.
                                        "repl_out.txt";
                                  unlink $ro if -e $ro;
-                                 my $mystdout='';
-                                 IO::CaptureOutput::capture sub {
+                                 my ($stdout_capture,$stderr_capture)=('','');
+                                 ($stdout_capture,$stderr_capture)=
+                                       Capture::Tiny::capture {
                                     system($fcmd);
-                                 }, \$mystdout;
+                                 };
+                                 #my $mystdout='';
+                                 #IO::CaptureOutput::capture sub {
+                                 #   system($fcmd);
+                                 #}, \$mystdout;
                                  my $cat_=$Net::FullAuto::FA_Core::gbp->('cat');
                                  foreach (1..30) {
                                     my $out=`${cat_}cat $ro`;
@@ -30137,10 +30515,15 @@ print $Net::FullAuto::FA_Core::MRLOG
                                  $stderr=$@ if $@;
                                  &Net::FullAuto::FA_Core::handle_error($stderr);
                               } else {
-                                 my $mystdout='';
-                                 IO::CaptureOutput::capture sub {
+                                 my ($stdout_capture,$stderr_capture)=('','');
+                                 ($stdout_capture,$stderr_capture)=
+                                       Capture::Tiny::capture {
                                     system($fcmd);
-                                 }, \$mystdout;
+                                 };
+                                 #my $mystdout='';
+                                 #IO::CaptureOutput::capture sub {
+                                 #   system($fcmd);
+                                 #}, \$mystdout;
                               }
                            }
                            if (1<=$#connect_method) {
@@ -32947,7 +33330,7 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                   my $cfh_ignore='';my $cfh_error='';
                   ($cfh_ignore,$cfh_error)=
                      &Net::FullAuto::FA_Core::clean_filehandle(
-                     $self->{cmd_handle},$tim);
+                     $self->{cmd_handle},$tim,$command);
                   &Net::FullAuto::FA_Core::handle_error(
                      $cfh_error,'-2','__cleanup__')
                      if $cfh_error;
@@ -33763,7 +34146,7 @@ print "FOURTEEN003\n";
                      my $cfh_ignore='';my $cfh_error='';
                      ($cfh_ignore,$cfh_error)=
                         &Net::FullAuto::FA_Core::clean_filehandle(
-                        $self->{cmd_handle});
+                        $self->{cmd_handle},'',$command);
                      &Net::FullAuto::FA_Core::handle_error($cfh_error,'-1')
                         if $cfh_error;
                      my $lv_errmsg="read timed-out for command :"
@@ -33863,8 +34246,12 @@ print $Net::FullAuto::FA_Core::MRLOG "LOGINRETRY=$login_retry and ",
    "ERROR=$eval_error<== and FTP=$ftp and NOTRAP=$notrap\n"
    if $Net::FullAuto::FA_Core::log &&
    -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+         my $num_of_err_lines=0;
+         ($num_of_err_lines=$eval_error)=~tr/\n//;
          if ((-1<index $eval_error,'logout') ||
-               (-1<index $eval_error,'Connection closed')
+               (-1<index $eval_error,'Connection closed') ||
+               ((-1<index $eval_error,'read timed-out') &&
+               (40<$num_of_err_lines))
                && !$login_retry && !$cleanup) {
 print $Net::FullAuto::FA_Core::MRLOG "MADE IT TO LOGOUT ERROR HANDLING\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';

@@ -27,10 +27,10 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999937';
+$main::VERSION='0.999999999938';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
-my $fa_banner=<<END;
+my $fa_banner=<<'END';
 
 
 
@@ -43,14 +43,14 @@ my $fa_banner=<<END;
 
 
            _   _      _         _____      _ _    _         _
-          | \\ | | ___| |_      |  ___|   _| | |  / \\  _   _| |_ ___
-          |  \\| |/ _ \\ __| o o | |_ | | | | | | / _ \\| | | | __/ _ \\
-          | |\\  |  __/ ||  o o |  _|| |_| | | |/ ___ \\ |_| | || (_) |
-          |_| \\_|\\___|\\__|     |_|   \\__,_|_|_/_/   \\_\\__,_|\\__\\___/
+          | \ | | ___| |_      |  ___|   _| | |  / \  _   _| |_ ___
+          |  \| |/ _ \ __| o o | |_ | | | | | | / _ \| | | | __/ _ \
+          | |\  |  __/ ||  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
+          |_| \_|\___|\__|     |_|   \__,_|_|_/_/   \_\__,_|\__\___/
 
 
 
-   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
+   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
 
 
 END
@@ -391,11 +391,11 @@ END
       }
    }
 
-   my $cryptography_banner=<<END;
+   my $cryptography_banner=<<'END';
    __      __             _           _
-   \\ \\    / /_ _ _ _ _ _ (_)_ _  __ _| |
-    \\ \\/\\/ / _` | '_| ' \\| | ' \\/ _` |_|
-     \\_/\\_/\\__,_|_| |_||_|_|_||_\\__, (_)
+   \ \    / /_ _ _ _ _ _ (_)_ _  __ _| |
+    \ \/\/ / _` | '_| ' \| | ' \/ _` |_|
+     \_/\_/\__,_|_| |_||_|_|_||_\__, (_)
                                 |___/
 
    Exporting, importing and/or using cryptography software, or even
@@ -5666,12 +5666,12 @@ if ($^O eq 'cygwin') {
 }
 install_script('bin/fullauto.pl');
 
-my $good_choice=<<END;
+my $good_choice=<<'END';
 
      ___               _     ___ _        _        _ 
     / __| ___  ___  __| |   / __| |_  ___(_)__ ___| |
-   | (_ |/ _ \\/ _ \\/ _` |  | (__| ' \\/ _ \\ / _/ -_)_|
-    \\___|\\___/\\___/\\__,_|   \\___|_||_\\___/_\\__\\___(_)
+   | (_ |/ _ \/ _ \/ _` |  | (__| ' \/ _ \ / _/ -_)_|
+    \___|\___/\___/\__,_|   \___|_||_\___/_\__\___(_)
 
 
    The Nano Editor is widely considered to be the easiest Terminal Editor to
@@ -5684,7 +5684,7 @@ my $good_choice=<<END;
     ________     ____                    _______     ____ 
    || Ctrl ||   ||E ||                  || Alt ||   ||C ||
    ||______|| + ||__||  M-C  is  alt c  ||_____|| + ||__||
-   |/______\\|   |/__\\|                  |/_____\\|   |/__\\|
+   |/______\|   |/__\|                  |/_____\|   |/__\|
 
 END
 
@@ -5813,11 +5813,11 @@ sub fa_license {
 
    );
 
-   my $cryptography_banner=<<END;
+   my $cryptography_banner=<<'END';
    __      __             _           _ 
-   \\ \\    / /_ _ _ _ _ _ (_)_ _  __ _| |
-    \\ \\/\\/ / _` | '_| ' \\| | ' \\/ _` |_|
-     \\_/\\_/\\__,_|_| |_||_|_|_||_\\__, (_)
+   \ \    / /_ _ _ _ _ _ (_)_ _  __ _| |
+    \ \/\/ / _` | '_| ' \| | ' \/ _` |_|
+     \_/\_/\__,_|_| |_||_|_|_||_\__, (_)
                                 |___/  
 
    Exporting, importing and/or using cryptography software, or even
@@ -5911,11 +5911,11 @@ if (keys %main::amazon) {
                 "\n             ".
                 '             5 other editors )',
                );
-   my $banner=<<END;
+   my $banner=<<'END';
     ___      _        _      ___    _ _ _
    / __| ___| |___ __| |_   | __|__| (_) |_ ___ _ _
-   \\__ \\/ -_) / -_) _|  _|  | _|/ _` | |  _/ _ \\ '_|
-   |___/\\___|_\\___\\__|\\__|  |___\\__,_|_|\\__\\___/_|
+   \__ \/ -_) / -_) _|  _|  | _|/ _` | |  _/ _ \ '_|
+   |___/\___|_\___\__|\__|  |___\__,_|_|\__\___/_|
 
    In order to use the integrated edit features you will need to choose
    an editor. You can later change the selection in the Admin menu.
@@ -5973,13 +5973,13 @@ if (keys %main::amazon) {
    $memfree=~s/^.*MemFree:\s*(\d+) kB.*$/$1/s;
    if ($memfree<1000000) {
 
-my $almost_there=<<END;
+my $almost_there=<<'END';
 
        ___    __                     __     ________                   __
       /   |  / /___ ___  ____  _____/ /_   /_  __/ /_  ___  ________  / /
-     / /| | / / __ `__ \\/ __ \\/ ___/ __/    / / / __ \\/ _ \\/ ___/ _ \\/ / 
+     / /| | / / __ `__ \/ __ \/ ___/ __/    / / / __ \/ _ \/ ___/ _ \/ / 
     / ___ |/ / / / / / / /_/ (__  ) /_     / / / / / /  __/ /  /  __/_/  
-   /_/  |_/_/_/ /_/ /_/\\____/____/\\__/    /_/ /_/ /_/\\___/_/   \\___(_)   
+   /_/  |_/_/_/ /_/ /_/\____/____/\__/    /_/ /_/ /_/\___/_/   \___(_)   
 
    Normally, FullAuto is installed via the CPAN utility - but because of
    memory limits, you were instructed to setup via Makefile.PL. As a

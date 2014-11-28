@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999938 released.
+
+        * More code added for the AWS EC2 Liferay demo.
+
+
 2014-11-27  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999937 released.
