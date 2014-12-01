@@ -22,11 +22,6 @@ In a B<Module::Install> extension module:
 
     sub extension_method {
         my $self = shift;
-        unless (exists $INC{"$self->{path}.pm"} &&
-              $INC{"$self->{path}.pm"}) {
-           $INC{"$self->{path}.pm"}||=$INC{'Module/Install/Admin.pm'};
-           substr($INC{"$self->{path}.pm"},-9)='.pm';
-        }
         $self->admin->some_method(@args);
     }
 
