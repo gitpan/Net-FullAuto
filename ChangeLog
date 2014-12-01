@@ -22,6 +22,15 @@
 
 2014-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999999999942 released.
+
+        * Bug fix in Makefile.PL
+
+        * Fix error handling in AWS EC2 Liferay demo. 
+
+
+2014-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999999999941 released.
 
         * Bug fix in Makefile.PL

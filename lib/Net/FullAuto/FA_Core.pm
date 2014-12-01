@@ -1647,7 +1647,7 @@ sub run_aws_cmd {
    my $json='';
    my $hash='';
    eval {
-      open(AWS,"$c|");
+      open(AWS,"$c 2>&1|");
       while (my $line=<AWS>) {
          $json.=$line;
       }
@@ -16942,7 +16942,8 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
             !$Net::FullAuto::FA_Core::quiet;
          print $MRLOG $die
             if $log && -1<index $MRLOG,'*';
-         &Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
+         die $die;
+         #&Net::FullAuto::FA_Core::handle_error($die,'__cleanup__');
 
       } last;
    }

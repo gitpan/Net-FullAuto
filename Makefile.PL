@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999941';
+$main::VERSION='0.999999999942';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<'END';
@@ -355,7 +355,7 @@ END
       my $instver='';
       ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
       my $cpanver='';
-      ($cpanver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
+      ($cpanver=$mod_info)=~s/^.*CPAN_VERSION\s+([^\s]+).*$/$1/s;
       if ($exec_cnt==1 && $cpanver ne $instver) {
             # && $instfile=~/vendor_perl/) { # &&
             #((exists $main::amazon{'ami'}) ||
@@ -1871,7 +1871,6 @@ END
    &fa_install_module('Email::Abstract','install','Makefile');
    &fa_install_module('Email::Sender','install','Makefile');
    &fa_install_module('Data::Password::Check','install','Makefile');
-   &fa_install_module('Module::Install','install','Makefile');
 
 };
 
