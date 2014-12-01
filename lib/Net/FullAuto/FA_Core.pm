@@ -10302,12 +10302,12 @@ FIN
    return $banner;
 };
 
-my $fa_congrats=<<END;
+my $fa_congrats=<<'END';
 
      ___                        _        _      _   _             _ 
     / __|___ _ _  __ _ _ _ __ _| |_ _  _| |__ _| |_(_)___ _ _  __| |
-   | (__/ _ \\ ' \\/ _` | '_/ _` |  _| || | / _` |  _| / _ \\ ' \\(_-<_|
-    \\___\\___/_||_\\__, |_| \\__,_|\\__|\\_,_|_\\__,_|\\__|_\\___/_||_/__(_)
+   | (__/ _ \ ' \/ _` | '_/ _` |  _| || | / _` |  _| / _ \ ' \(_-<_|
+    \___\___/_||_\__, |_| \__,_|\__|\_,_|_\__,_|\__|_\___/_||_/__(_)
                  |___/
 
    You have QUICKLY gotten started with FullAuto! The goal of this new
@@ -12442,6 +12442,7 @@ my $setup_new_user10=sub{
 
 my $setup_new_user9=sub{
 
+   $main::new_user_flag=1;
    my %setup_new_user9=(
 
       Name => 'setup_new_user9',
@@ -12760,7 +12761,7 @@ sub add_and_tag_server {
    {
       $SIG{CHLD}="DEFAULT";
       my $n="aws ec2 create-tags --resources $inst->{InstanceId}".
-            " --tags Key=Name,Value=\"$server_type ".++$cnt."\" 2>&1";
+            " --tags Key=Name,Value=\"$server_type-".++$cnt."\" 2>&1";
       my ($hash,$output,$error)=('','','');
       ($hash,$output,$error)=run_aws_cmd($n);
    }
@@ -12831,18 +12832,18 @@ END
    until (Net::FullAuto::FA_Core::wait_for_instance(
          $main::aws->{$server_type}->[$cnt]->[0]->{InstanceId})
          eq 'running') {
-      print "\n   Waiting for new server $server_type $num to ".
+      print "\n   Waiting for new server ${server_type}-$num to ".
             "come online -> pending\n";
       sleep 3;
       last if $icnt++==10;
    }
-   print "\n   Waiting for new server $server_type $num to ".
+   print "\n   Waiting for new server ${server_type}-$num to ".
          "come online -> running\n";
    my $error='';
    my $username=&Net::FullAuto::FA_Core::username();
    my $server_host_block={
 
-      Label => $server_type.$num,
+      Label => $server_type.'-'.$num,
       IP => $main::aws->{$server_type}->[$cnt]->[0]->{PrivateIpAddress},
       Login => $username,
       identity_file => "/home/$username/fullauto.pem",
@@ -12851,7 +12852,6 @@ END
    ($main::aws->{$server_type}->[$cnt]->[1],$error)=
       Net::FullAuto::FA_Core::connect_ssh($server_host_block);
    my ($stdout,$stderr)=('','');
-   #($stdout,$stderr)=$main::aws->{$server_type}->[$cnt]->[1]->cmd('hostname');
    if ($server_type eq 'Liferay.com') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
       ($stdout,$stderr)=$handle->cmd("wget -qO- ".
@@ -12876,14 +12876,14 @@ END
    ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             __________
            |          |  _     _  ____  ____  ____        __   __
-           | [][][]   | | |   | ||  __||  __||  _ '\   /\ \ \ / /
+           | [][][]   | | |   | ||  __||  __||  _ `\   /\ \ \ / /
            | [][]     | | |   | || |_  | |__ | |_) |  /  \ \ V /
-           | []    [] | | |   | ||  _| |  __||    ,/ / /\ \ \ /
+           | []    [] | | |   | ||  _| |  __||    ./ / /\ \ \ /
            |     [][] | | |__ | || |   | |__ | |\ \ / ____ \| |
            |   [][][] | |____||_||_|   |____||_| \_\_/    \_|_| (R)
-           |__________|                        _  _  _ ___ _
-                                              |_)/ \|_) | |_|| 
-   http://www.liferay.com/community           |  \_/| \ | | ||__  CE
+           |__________|                       _  _  _ ___ _
+                                             |_)/ \|_) | |_||    COMMUNITY
+   http://www.liferay.com/community          |  \_/| \ | | ||__  EDITION
 
    (Liferay Inc. and Community are **NOT** sponsors of the FullAuto Project.)
 
@@ -13148,20 +13148,20 @@ END
           8 8  `b8      8   8  .P    8 8     8     8 8  `b8 8    8
           8 8   `8 `YooP'   8 .P     8 8oooo 8oooo 8 8   `8 `YooP8
           ........................................................
-          :::::::::::::::::::::::::::::'        ':::::::::::::::::
-                                           _
-                                          ( `..,
-                                           \  , `*.
-                                            \      \
-                                             \      \_.,
-           http://www.mysql.com              ( /        ",
-           ___    ___          ______  ______ V _     _--~*
-          |   \  /   | _    _ / _____|/  __  \ | |    \
-          | |\ \/ /| || |  | |\___  \ | |  | | | |     `\
-          | | \  / | || |__| | ___)  || |__| | | |____
-          |_|  \/  |_| \___, ||_____/ \___\ \/ \______|(R)
-                       ____| |             \_\
-                      |_____;'                           DATABASE
+          :::::::::::::::::::::::::::::::::'        ':::::::::::::
+                                              (`*..,
+                                               \  , `.
+                                                \     \
+          http://www.mysql.com                   \     \
+                                                 /      \.
+          Powered by                            ( /\      `*,
+           ___    ___            ______   _____  V _      ~-~
+          |   \  /   |  _    _  / _____| /  __  \ | |     \
+          | |\ \/ /| | | |  | | \___  \  | |  | | | |      `
+          | | \  / | | | |__| |  ___)  | | |__| | | |____
+          |_|  \/  |_|  \___, | |_____/  \___\ \/ \______|(R)
+                        ____| |               \_\
+                       |_____/                            DATABASE
 
           (Oracle(R) is **NOT** a sponsor of the FullAuto Project.)
 
@@ -13315,9 +13315,9 @@ END
    ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
           __________
          |          |  _     _  ____  ____  ____        __   __
-         | [][][]   | | |   | ||  __||  __||  _ '\   /\ \ \ / /
+         | [][][]   | | |   | ||  __||  __||  _ `\   /\ \ \ / /
          | [][]     | | |   | || |_  | |__ | |_) |  /  \ \ V /
-         | []    [] | | |   | ||  _| |  __||    ,/ / /\ \ \ /
+         | []    [] | | |   | ||  _| |  __||    ./ / /\ \ \ /
          |     [][] | | |__ | || |   | |__ | |\ \ / ____ \| |
          |   [][][] | |____||_||_|   |____||_| \_\_/    \_|_| (R)
          |__________|                        _  _  _ ___ _

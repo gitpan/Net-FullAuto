@@ -20,6 +20,14 @@
 #######################################################################
 
 
+2014-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999939 released.
+
+        * Fixed Windows Installer - works with latest
+          everything.
+
+
 2014-11-28  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999938 released.

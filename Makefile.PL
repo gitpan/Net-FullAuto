@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999938';
+$main::VERSION='0.999999999939';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<'END';
@@ -354,11 +354,10 @@ END
       ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
       my $instver='';
       ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
-      if ($exec_cnt==1 && $instfile=~/vendor_perl/) {
-      #if ($exec_cnt==1 && $instfile=~/vendor_perl/ &&
-      #      ((exists $main::amazon{'ami'}) ||
-      #      (exists $main::amazon{'rhel'}))
-      #      && $module_fail eq 'Pod::Man') {
+      if ($exec_cnt==1 && $instfile=~/vendor_perl/ &&
+            ((exists $main::amazon{'ami'}) ||
+            (exists $main::amazon{'rhel'}))
+            && $module_fail eq 'Pod::Man') {
          # Amazon's AMI has Pod::Man installed in the vendor_perl
          # directory which has precedence over the system directory
          # this module actually belongs in. The only solution is to
@@ -439,6 +438,7 @@ END
    Project for use in the OpenSSL Toolkit. (http://www.openssl.org/) and
    includes cryptographic software written by Eric Young (eay\@cryptsoft.com)
    and Tim Hudson (tjh\@cryptsoft.com)
+
 END
 
    use CPAN;
@@ -783,26 +783,29 @@ END
          my $dt=Win32::DriveInfo::DriveType($drv);
          my $FileSystemName=(Win32::DriveInfo::VolumeInfo($drv))[3];
          my $file_size = (Win32::DriveInfo::DriveSpace("$drv:"))[6];
-         my $banner="\n".
-                    "    ___                     _            _     _ \n".
-                    "   |_ _|_ __  _ __  ___ _ _| |_ __ _ _ _| |_  | |\n".
-                    "    | || '  \\| '_ \\/ _ \\ '_|  _/ _` | ' \\  _| |_|\n".
-                    "   |___|_|_|_| .__/\\___/_|  \\__\\__,_|_||_\\__| (_)\n".
-                    "             |_|\n".
-                    "\n".
-                    "   FullAuto Setup has detected a Cygwin installation\n".
-                    "   at $cygwin_loc. Setup has also determined that\n".
-                    "   there is ".&size_fmt($file_size)." Free Space on".
-                    " the Drive $drv Volume.\n".
-                    "   It is IMPORTANT TO NOTE that FullAuto Setup will\n".
-                    "   attempt to use this installation. If this is\n".
-                    "   undesirable, then select choice '2' and FullAuto\n".
-                    "   Setup will EXIT. It is recommended that you use the\n".
-                    "   cpan utility to install or update FullAuto, if there\n".
-                    "   is more than one Cygwin installation on your system.\n".
-                    "\n   If you're sure you wish to proceed with your\n".
-                    "   $cygwin_loc setup, then select choice '1' and\n".
-                    "   FullAuto Setup will continue ...";
+         my $banner=<<'END';print "MKLINE=".__LINE__."\n";
+
+    ___                     _            _     _
+   |_ _|_ __  _ __  ___ _ _| |_ __ _ _ _| |_  | |
+    | || '  \| '_ \/ _ \ '_|  _/ _` | ' \  _| |_|
+   |___|_|_|_| .__/\___/_|  \__\__,_|_||_\__| (_)
+             |_|
+END
+   my $size_file=&size_fmt($file_size);print "MKLINE=".__LINE__."\n";
+         $banner.=<<END;print "MKLINE=".__LINE__."\n";
+
+   FullAuto Setup has detected a Cygwin installation at $cygwin_loc.
+   Setup has also determined that there is $size_file Free Space on
+   the Drive $drv Volume. It is IMPORTANT TO NOTE that FullAuto Setup
+   will attempt to use this installation. If this is undesirable, then
+   select choice '2' and FullAuto Setup will EXIT. It is recommended
+   that you use the cpan utility to install or update FullAuto, if
+   there is more than one Cygwin installation on your system.
+
+   If you're sure you wish to proceed with your $cygwin_loc setup,
+   then select choice '1' and FullAuto Setup will continue . . .
+
+END
          my %cygchoice=(
 
                Label => 'cygchoice',
@@ -812,10 +815,17 @@ END
                Item_2 => {
                   Text => 'CANCEL FullAuto Setup and EXIT',
                },
+               Scroll => 1,
                Banner => $banner,
          );
          my $selection=Menu(\%cygchoice);
          chomp($selection);
+         if (-1<index $selection,'Continue') {
+            my $cwd=cwd();
+            my $p='/usr/bin/perl -MCPAN -e';
+            my $b="$cygwin_loc/bin/bash -lc";
+            exec "$b \"$p 'install Net::FullAuto'\";'fa --new-user'";
+         }
          exit if $selection eq ']quit[';
          exit if $selection eq 'CANCEL FullAuto Setup and EXIT';
          $main::root_dir=$cygwin_loc;
@@ -1395,6 +1405,7 @@ print "YEP MEMORY=$line\n";<STDIN>;
       if (!$version && !(-e "dependencies/CPAN/authors") || (grep {
             /(?:use[-_]?)?internet|online|connect_to_internet_ok/i
             } @ARGV)) {
+         CPAN::Shell->m($p);
          eval {
             require CPAN;
             {
@@ -1408,7 +1419,6 @@ print "YEP MEMORY=$line\n";<STDIN>;
             ($instfile=$mod_info)=~s/^.*INST_FILE\s+([^\s]+).*$/$1/s;
             ($instver=$mod_info)=~s/^.*INST_VERSION\s+([^\s]+).*$/$1/s;
             ($cpanver=$mod_info)=~s/^.*CPAN_VERSION\s+([^\s]+).*$/$1/s;
-            print "\n$mod_info";
          }
          if (!$version && ($instver<$cpanver)) {
             unlink $instfile if $exec_cnt;
