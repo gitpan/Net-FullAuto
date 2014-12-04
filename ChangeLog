@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-12-04  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999943 released.
+
+        * New AWS Intro in Makefile.PL for Windows exe.
+
+
 2014-12-01  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999942 released.

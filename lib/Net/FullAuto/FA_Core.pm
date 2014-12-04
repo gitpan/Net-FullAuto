@@ -3942,20 +3942,26 @@ my $getplans_sub=sub {
    if (-1<$#{$plans}) {
       return $plans;
    } else {
-      my $message="\n\n".
-                  "    _  _  ___ _____ ___   _   \n".
-                  "   | \\| |/ _ \\_   _| __| (_)\n".
-                  "   | .` | (_) || | | _|   _   \n".
-                  "   |_|\\_|\\___/ |_| |___| (_) \n".
-                  "\n\n".
-                  "   *NO* Plans have yet been 'made' with\n".
-                  "   this FullAuto installation.\n\n".
-                  "   To make a 'plan' use the --plan argument\n".
-                  "   in conjunction with the --code argument\n".
-                  "   invoked from the command line.\n\n".
-                  "      Example:  fa --plan --code hello_world\n\n".
-                  "   Press ANY KEY to return to the Plan Menu\n";
+      my $message=<<'END';
 
+
+    _  _  ___ _____ ___   _
+   | \| |/ _ \_   _| __| (_)
+   | .` | (_) || | | _|   _
+   |_|\_|\___/ |_| |___| (_)
+
+
+   *NO* Plans have yet been 'made' with
+   this FullAuto installation.
+
+   To make a 'plan' use the --plan argument
+   in conjunction with the --code argument
+   invoked from the command line.
+
+      Example:  fa --plan --code hello_world
+
+   Press ANY KEY to return to the Plan Menu
+END
       print $Net::FullAuto::FA_Core::blanklines,$message;
       alarm 120;
       Term::ReadKey::ReadMode('cbreak');
@@ -4598,20 +4604,26 @@ my $plan_menu_options_sub=sub {
       );
       return \%existing_plans;
    } else {
-      my $message="\n\n".
-                  "    _  _  ___ _____ ___   _   \n".
-                  "   | \\| |/ _ \\_   _| __| (_)\n".
-                  "   | .` | (_) || | | _|   _   \n".
-                  "   |_|\\_|\\___/ |_| |___| (_) \n".
-                  "\n\n".
-                  "   *NO* Plans have yet been 'made' with\n".
-                  "   this FullAuto installation.\n\n".
-                  "   To make a 'plan' use the --plan argument\n".
-                  "   in conjunction with the --code argument\n".
-                  "   invoked from the command line.\n\n".
-                  "      Example:  fa --plan --code hello_world\n\n".
-                  "   Press ANY KEY to return to the Plan Menu\n";
+      my $message=<<'END';
 
+
+    _  _  ___ _____ ___   _
+   | \| |/ _ \_   _| __| (_)
+   | .` | (_) || | | _|   _
+   |_|\_|\___/ |_| |___| (_)
+
+
+   *NO* Plans have yet been 'made' with
+   this FullAuto installation.
+
+   To make a 'plan' use the --plan argument
+   in conjunction with the --code argument
+   invoked from the command line.
+
+      Example:  fa --plan --code hello_world
+
+   Press ANY KEY to return to the Plan Menu
+END
       print $Net::FullAuto::FA_Core::blanklines,$message;
       alarm 120;
       Term::ReadKey::ReadMode('cbreak');
@@ -11918,7 +11930,7 @@ FIN
    return \%set_menu;
 };
 
-my $fa_welcome=<<END;
+my $fa_welcome=<<'END';
 
 
 
@@ -11931,40 +11943,40 @@ my $fa_welcome=<<END;
 
 
            _   _      _         _____      _ _    _         _
-          | \\ | | ___| |_      |  ___|   _| | |  / \\  _   _| |_ ___
-          |  \\| |/ _ \\ __| o o | |_ | | | | | | / _ \\| | | | __/ _ \\
-          | |\\  |  __/ ||  o o |  _|| |_| | | |/ ___ \\ |_| | || (_) |
-          |_| \\_|\\___|\\__|     |_|   \\__,_|_|_/_/   \\_\\__,_|\\__\\___/
+          | \ | | ___| |_      |  ___|   _| | |  / \  _   _| |_ ___
+          |  \| |/ _ \ __| o o | |_ | | | | | | / _ \| | | | __/ _ \
+          | |\  |  __/ ||  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
+          |_| \_|\___|\__|     |_|   \__,_|_|_/_/   \_\__,_|\__\___/
 
 
 
-   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
+   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
 
 
 
 END
 
-my $fa_tutorial=<<END;
+my $fa_tutorial=<<'END';
 
     ___     _ _   _       _
-   | __|  _| | | /_\\ _  _| |_ ___
-   | _| || | | |/ _ \\ || |  _/ _ \\
-   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/
+   | __|  _| | | /_\ _  _| |_ ___
+   | _| || | | |/ _ \ || |  _/ _ \
+   |_| \_,_|_|_/_/ \_\_,_|\__\___/
 
     _____     _           _      _ 
    |_   _|  _| |_ ___ _ _(_)__ _| |
-     | || || |  _/ _ \\ '_| / _` | |
-     |_| \\_,_|\\__\\___/_| |_\\__,_|_|
+     | || || |  _/ _ \ '_| / _` | |
+     |_| \_,_|\__\___/_| |_\__,_|_|
 
 
 END
 
-my $fa_fullauto_welcome=<<END;
+my $fa_fullauto_welcome=<<'END';
 
                          ___     _ _   _       _       
-                        | __|  _| | | /_\\ _  _| |_ ___ 
-   (   /_ /_   _  _     | _| || | | |/ _ \\ || |  _/ _ \\
-   |/|/(-(( ()//)(-  To |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  $username
+                        | __|  _| | | /_\ _  _| |_ ___ 
+   (   /_ /_   _  _     | _| || | | |/ _ \ || |  _/ _ \
+   |/|/(-(( ()//)(-  To |_| \_,_|_|_/_/ \_\_,_|\__\___/  $username
 
    Items with the arrow character  >  are the current selection, Just
    press ENTER or Scroll with UP and DOWN arrow keys. You can also type
@@ -14135,12 +14147,12 @@ sub new_user_amazon {
 
    print $fa_welcome;
    sleep 3;
-   my $banner=<<END;
+   my $banner=<<'END';
 
     ___     _ _   _       _                  
-   | __|  _| | | /_\\ _  _| |_ ___    ___ _ _             __|  __|_  ) 
-   | _| || | | |/ _ \\ || |  _/ _ \\  / _ \\ ' \\            _|  (     /
-   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  \\___/_||_|  Amazon  ___|\\___|___|
+   | __|  _| | | /_\ _  _| |_ ___    ___ _ _             __|  __|_  ) 
+   | _| || | | |/ _ \ || |  _/ _ \  / _ \ ' \            _|  (     /
+   |_| \_,_|_|_/_/ \_\_,_|\__\___/  \___/_||_|  Amazon  ___|\___|___|
 
    You are fully authenticated with FullAuto on Amazon AWS EC2:
    "Amazon Web Services  -  Elastic Compute Cloud".
