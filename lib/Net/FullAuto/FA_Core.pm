@@ -12356,12 +12356,12 @@ my $fa_fa_defaults_sub=sub {
 
 };
 
-my $fa_fa_defaults=<<END;
+my $fa_fa_defaults=<<'END';
 
     ___     _ _   _       _          ___       __           _ _      
-   | __|  _| | | /_\\ _  _| |_ ___   |   \\ ___ / _|__ _ _  _| | |_ ___
-   | _| || | | |/ _ \\ || |  _/ _ \\  | |) / -_)  _/ _` | || | |  _(_-<
-   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
+   | __|  _| | | /_\ _  _| |_ ___   |   \ ___ / _|__ _ _  _| | |_ ___
+   | _| || | | |/ _ \ || |  _/ _ \  | |) / -_)  _/ _` | || | |  _(_-<
+   |_| \_,_|_|_/_/ \_\_,_|\__\___/  |___/\___|_| \__,_|\_,_|_|\__/__/
 
 
    Most of the time you'll be working with the same five file set. It would
@@ -12688,12 +12688,12 @@ my $configure_aws3=sub {
 
 my $configure_aws2=sub {
 
-   my $banner=<<END;
+   my $banner=<<'END';
 
      ___              _            _                      _  __
-    / __|_ _ ___ __ _| |_ ___     /_\\  __ __ ___ ______  | |/ /___ _  _ ___
-   | (__| '_/ -_) _` |  _/ -_)   / _ \\/ _/ _/ -_|_-<_-<  | ' </ -_) || (_-<
-    \\___|_| \\___\\__,_|\\__\\ ___| /_/ \\_\\__\\__\\___/__/__/  |_|\\_\\___|\\_, /__/
+    / __|_ _ ___ __ _| |_ ___     /_\  __ __ ___ ______  | |/ /___ _  _ ___
+   | (__| '_/ -_) _` |  _/ -_)   / _ \/ _/ _/ -_|_-<_-<  | ' </ -_) || (_-<
+    \___|_| \___\__,_|\__\___|  /_/ \_\__\__\___/__/__/  |_|\_\___|\_, /__/
                                                                    |__/
    
    Click 'Create Access Key' button in the lower part of the popup page.
@@ -12726,12 +12726,12 @@ END
 
 my $configure_aws1=sub {
 
-   my $banner=<<END;
+   my $banner=<<'END';
 
      ___           __ _                        ___      _____
-    / __|___ _ _  / _(_)__ _ _  _ _ _ ___     /_\\ \\    / / __|
-   | (__/ _ \\ ' \\|  _| / _` | || | '_/ -_)   / _ \\ \\/\\/ /\\__ \\ 
-    \\___\\___/_||_|_| |_\\__, |\\_,_|_| \\___|  /_/ \\_\\_/\\_/ |___/
+    / __|___ _ _  / _(_)__ _ _  _ _ _ ___     /_\ \    / / __|
+   | (__/ _ \ ' \|  _| / _` | || | '_/ -_)   / _ \ \/\/ /\__ \ 
+    \___\___/_||_|_| |_\__, |\_,_|_| \___|  /_/ \_\_/\_/ |___/
                         |___/
 
    1. Sign in to the AWS Management Console and open the IAM console at:
@@ -13697,12 +13697,12 @@ my $liferay_setup_summary=sub {
          $cents=' ('.$cents.' cents)';
       }
    }
-   my $show_cost_banner=<<END;
+   my $show_cost_banner=<<'END';
 
       _                  _       ___        _  ___
-     /_\\  __ __ ___ _ __| |_    / __|___ __| ||__ \\
-    / _ \\/ _/ _/ -_) '_ \\  _|  | (__/ _ (_-<  _|/_/
-   /_/ \\_\\__\\__\\___| .__/\\__|   \\___\\___/__/\\__(_)
+     /_\  __ __ ___ _ __| |_    / __|___ __| ||__ \
+    / _ \/ _/ _/ -_) '_ \  _|  | (__/ _ (_-<  _|/_/
+   /_/ \_\__\__\___| .__/\__|   \___\___/__/\__(_)
                    |_|
 
    Note: There is a \$$cost per hour cost$cents to launch $num_of_servers
@@ -13749,12 +13749,12 @@ my $select_httpd_for_liferay=sub {
                 'Use 1 Apache.org httpd server on 1 additional Server',
                 'Use 2 Apache.org httpd servers on 2 additional Servers');
 
-   my $select_database_banner=<<END;
+   my $select_database_banner=<<'END';
 
     _   _          __      __   _      ___                         ___
-   | | | |___ ___  \\ \\    / /__| |__  / __| ___ _ ___ _____ _ _ __|__ \\
-   | |_| (_-</ -_)  \\ \\/\\/ / -_) '_ \\ \\__ \\/ -_) '_\\ V / -_) '_(_-< /_/
-    \\___//__/\\___|   \\_/\\_/\\___|_.__/ |___/\\___|_|  \\_/\\___|_| /__/(_)
+   | | | |___ ___  \ \    / /__| |__  / __| ___ _ ___ _____ _ _ __|__ \
+   | |_| (_-</ -_)  \ \/\/ / -_) '_ \ \__ \/ -_) '_\ V / -_) '_(_-< /_/
+    \___//__/\___|   \_/\_/\___|_.__/ |___/\___|_|  \_/\___|_| /__/(_)
 
 
    If you choose to use Apache.org httpd (web) servers in front of Liferay,
@@ -13796,12 +13796,12 @@ my $select_database_for_liferay=sub {
    # yum install oracle-validated 
    # http://download.oracle.com/otn/linux/oracle11g/xe/oracle-ex-11.2.0-1.0.x86_64.rmp.zip
 
-   my $select_database_banner=<<END;
+   my $select_database_banner=<<'END';
 
     ___      _        _     ___       _        _
-   / __| ___| |___ __| |_  |   \\ __ _| |_ __ _| |__  __ _ ___ ___
-   \\__ \\/ -_) / -_) _|  _| | |) / _` |  _/ _` | '_ \\/ _` (_-</ -_)
-   |___/\\___|_\\___\\__|\\__| |___/\\__,_|\\__\\__,_|_.__/\\__,_/__/\\___|
+   / __| ___| |___ __| |_  |   \ __ _| |_ __ _| |__  __ _ ___ ___
+   \__ \/ -_) / -_) _|  _| | |) / _` |  _/ _` | '_ \/ _` (_-</ -_)
+   |___/\___|_\___\__|\__| |___/\__,_|\__\__,_|_.__/\__,_/__/\___|
 
 
    An additional server will be launched, and a supporting database for
@@ -13832,12 +13832,12 @@ my $select_liferay_setup=sub {
                 'Liferay & Tomcat on 1 Server & 2 Clustered JVMs',
                 'Liferay & Tomcat on 2 Servers & 2 Clustered JVMs',
                 'Liferay & Tomcat on 2 Servers & 4 Clustered JVMs');
-   my $liferay_setup_banner=<<END;
+   my $liferay_setup_banner=<<'END';
 
     _    _  __                      ___      _
    | |  (_)/ _|___ _ _ __ _ _  _   / __| ___| |_ _  _ _ __
-   | |__| |  _/ -_) '_/ _` | || |  \\__ \\/ -_)  _| || | '_ \\
-   |____|_|_| \\___|_| \\__,_|\\_, |  |___/\\___|\\__|\\_,_| .__/
+   | |__| |  _/ -_) '_/ _` | || |  \__ \/ -_)  _| || | '_ \
+   |____|_|_| \___|_| \__,_|\_, |  |___/\___|\__|\_,_| .__/
                             |__/                     |_|
 
    Choose the Liferay setup you wish to demo. Note that more servers
@@ -13874,7 +13874,7 @@ my $select_an_instance_type=sub {
       if (defined $main::regions_data &&
       exists $main::regions_data->{$region});
    my @itypes=@{$region_data->{instanceTypes}};
-   my @sizes=();my $scrollnum=1;my $cnt=0;
+   my @sizes=();my $cnt=0;my $scrollnum=1;
    foreach my $type (@itypes) {
       foreach my $sizes (@{$type->{sizes}}) {
          my $size=$sizes->{size};
@@ -13902,16 +13902,27 @@ my $select_an_instance_type=sub {
 #print "DUMP=",Data::Dump::Streamer::Dump(\@sizes)->Out(),"\n";<STDIN>;
    my $demo_choice=']P[{choose_demo_setup}';
    my $ns=$#sizes+1;
-   my $select_type_banner=<<END;
+   my $stype='m2.small';
+   my $result=$select_liferay_setup;
+   if (-1<index $demo_choice,'XXXXXX') {
+      $stype='t2.micro';
+      my @sz=grep { !/t2.micro/ } @sizes;
+      unshift @sz, grep { /t2.micro/ } @sizes;
+      @sizes=@sz;
+      #$result=$select_XXXXXX_setup;
+   }
+   my $select_type_banner=<<'END';
 
      ___ _                        _____
     / __| |_  ___  ___ ___ ___   |_   _|  _ _ __  ___
-   | (__| ' \\/ _ \\/ _ (_-</ -_)    | || || | '_ \\/ -_)
-    \\___|_||_\\___/\\___/__/\\___|    |_| \\_, | .__/\\___|
+   | (__| ' \/ _ \/ _ (_-</ -_)    | || || | '_ \/ -_)
+    \___|_||_\___/\___/__/\___|    |_| \_, | .__/\___|
                                        |__/|_|
 
+END
+   $select_type_banner.=<<END;
    Choose the type of server instance to use for your
-   $demo_choice demo. Note that m1.small
+   $demo_choice demo. Note that $stype
    has been pre-selected for you. If you wish use this, just press [ENTER],
    otherwise use the [^] and [v] arrow keys to make a different selection.
    Note: There are $ns choices.
@@ -13924,7 +13935,7 @@ END
 
          Text => ']C[',
          Convey => \@sizes,
-         Result => $select_liferay_setup,
+         Result => $result,
 
       },
       Scroll => $scrollnum,
@@ -13939,18 +13950,18 @@ END
 my $choose_an_instance_type=sub {
 
    my $demo_choice=']P[{choose_demo_setup}';
-   my $instance_type_banner=<<END;
+   my $instance_type_banner=<<'END';
     ___         _                      _____
    |_ _|_ _  __| |_ __ _ _ _  __ ___  |_   _|  _ _ __  ___ ___
-    | || ' \\(_-<  _/ _` | ' \\/ _/ -_)   | || || | '_ \\/ -_|_-<
-   |___|_||_/__/\\__\\__,_|_||_\\__\\___|   |_| \\_, | .__/\\___/__/
+    | || ' \(_-<  _/ _` | ' \/ _/ -_)   | || || | '_ \/ -_|_-<
+   |___|_||_/__/\__\__,_|_||_\__\___|   |_| \_, | .__/\___/__/
                                             |__/|_|
 
    You have selected the demo: $demo_choice
 
 END
    if (-1<index $demo_choice,'Liferay') {
-      $instance_type_banner.=<<END 
+      $instance_type_banner.=<<END;
 
    Unfortunately, Free Tier micro servers do not have enough resources to
    successfully run Liferay, even in a minimalist capacity. Therefore, you
@@ -13959,7 +13970,16 @@ END
    presented to you for approval before any costs are incurred.
 
 END
+   } elsif (-1<index $demo_choice,'XXXXXX') {
+      $instance_type_banner.=<<END;
 
+   $demo_choice can be run on a Free Tier micro server, but the performance
+   will be poor. Therefore it is recommended you choose at least a 'small'
+   instance type. However, Free Tier remains the default choice. Based on
+   the choices you make next, a fee summary will be calculated and
+   presented to you for approval before any costs are incurred.
+
+END
    }
 
    my %describe_costs=(
@@ -14040,12 +14060,12 @@ my $choose_aws_instances=sub {
          push @regions,$region->{region};
       }
    }
-   my $regions_banner=<<END;
+   my $regions_banner=<<'END';
 
     ___      _        _       _     ___          _
-   / __| ___| |___ __| |_    /_\\   | _ \\___ __ _(_)___ _ _
-   \\__ \\/ -_) / -_) _|  _|  / _ \\  |   / -_) _` | / _ \\ ' \\
-   |___/\\___|_\\___\\__|\\__| /_/ \\_\\ |_|_\\___\\__, |_\\___/_||_|
+   / __| ___| |___ __| |_    /_\   | _ \___ __ _(_)___ _ _
+   \__ \/ -_) / -_) _|  _|  / _ \  |   / -_) _` | / _ \ ' \
+   |___/\___|_\___\__|\__| /_/ \_\ |_|_\___\__, |_\___/_||_|
                                            |___/
 
    AWS has infrastructure all over the globe. This server you are now on
@@ -14070,6 +14090,71 @@ END
       Banner => $regions_banner,
    );
    return \%awsregions;
+
+};
+
+my $do_wxPerl_setup=sub {
+
+   # http://joekiller.com/2012/06/03/ \
+   # install-firefox-on-amazon-linux-x86_64-compiling-gtk/
+
+   my $c='sudo yum --assumeyes install make libjpeg-devel libpng-devel '.
+         'libtiff-devel gcc libffi-devel gettext-devel libmpc-devel '.
+         'libstdc++46-devel xauth gcc-c++ libtool libX11-devel '.
+         'libXext-devel libXinerama-devel libXi-devel libxml2-devel '.
+         'libXrender-devel libXrandr-devel libXt dbus-glib '.
+         'pandgo pango-devel';
+   open(AWS,"$c|");
+   while (my $line=<AWS>) {
+      print $line;
+   }
+   close AWS;
+   $ENV{PKG_CONFIG_PATH}='/usr/local/lib/pkgconfig';
+   $c=<<'END';
+bash -c "
+cat << EOF > /etc/ld.so.conf.d/gtk.conf
+/usr/local/lib
+EOF
+ldconfig
+"
+END
+   open(AWS,"$c|");
+   while (my $line=<AWS>) {
+      print $line;
+   }
+   close AWS;
+   my @urls=(
+      'ftp://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.xz',
+      'http://download.savannah.gnu.org/releases/freetype/freetype-2.4.9.tar.gz',
+      'http://www.freedesktop.org/software/fontconfig/release/fontconfig-2.9.0.tar.gz',
+      'http://ftp.gnome.org/pub/gnome/sources/glib/2.32/glib-2.32.3.tar.xz',
+      'http://cairographics.org/releases/pixman-0.26.0.tar.gz',
+      'http://cairographics.org/releases/cairo-1.12.2.tar.xz',
+      'http://ftp.gnome.org/pub/gnome/sources/pango/1.30/pango-1.30.0.tar.xz',
+      'http://ftp.gnome.org/pub/gnome/sources/atk/2.4/atk-2.4.0.tar.xz',
+      'http://ftp.gnome.org/pub/GNOME/sources/gdk-pixbuf/2.26/gdk-pixbuf-2.26.1.tar.xz',
+      'http://ftp.gnome.org/pub/gnome/sources/gtk+/2.24/gtk+-2.24.25.tar.xz',
+   );
+   foreach my $url (@urls) {
+      system("wget $url");
+      my $file=$url;
+      $file=~s/^.*\/(.*)$/$1/;
+      if ($file=~/.xz$/) {
+         system("tar xvfJ $file");
+      } else {
+         system("tar zxvf $file");
+      }
+      $file=~s/\.tar\..z$//;
+      my $dir=`pwd`;
+      chdir $file;
+      system("./configure");
+      system("make");
+      system("make install");
+      system("ldconfig");
+      chdir $dir;
+   }
+   system("perl -MCPAN -i Alien::wxWidgets");
+   return '<';
 
 };
 
@@ -14109,14 +14194,14 @@ my $get_ec2_api=sub {
    if ($need_to_configure_aws) {
       $configure_aws1->();
    }
-   my $choose_demo_banner=<<END;
+   my $choose_demo_banner=<<'END';
 
    Amazon AWS EC2 API is Active!
 
      ___ _                          _      ___
-    / __| |_  ___  ___ ___ ___     /_\\    |   \\ ___ _ __  ___
-   | (__| ' \\/ _ \\/ _ (_-</ -_)   / _ \\   | |) / -_) '  \\/ _ \\
-    \\___|_||_\\___/\\___/__/\\___|  /_/ \\_\\  |___/\\___|_|_|_\\___/
+    / __| |_  ___  ___ ___ ___     /_\    |   \ ___ _ __  ___
+   | (__| ' \/ _ \/ _ (_-</ -_)   / _ \   | |) / -_) '  \/ _ \
+    \___|_||_\___/\___/__/\___|  /_/ \_\  |___/\___|_|_|_\___/
 
 
    Below is a selection of demos designed to demonstrate
@@ -14132,6 +14217,13 @@ END
          Text   => ']C[',
          Convey => [ 'Liferay Portal (ce) with Clustering' ],
          Result => $choose_aws_instances,
+
+      },
+      Item_2 => {
+
+         Text   => ']C[',
+         Convey => [ 'wxPerl: Cross-Platform GUI' ],
+         Result => $do_wxPerl_setup,
 
       },
       Scroll => 1,
