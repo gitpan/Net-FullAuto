@@ -111,6 +111,11 @@ package Net::FullAuto::FA_Core;
 #
 #  http://www.network-science.de/ascii/
 #
+## Vim auto-indenting turn off
+#
+#  http://vim.wikia.com/wiki/Toggle_auto-indenting_for_code_paste
+#  :set paste
+#
 ## TO DO: Look for way to fix this error:
 #
 #  cd "/cygdrive_funkyPrompt_cd "/cygdrive/c/Users/KB06606-admin" 2>&1
@@ -12619,6 +12624,12 @@ my $configure_aws3=sub {
    $region=`$region`;
    chop $region;
    my $homedir=File::HomeDir->my_home;
+   if (-e "/home/$username/.aws") {
+      eval {
+         `rm -rf /home/$username/.aws`;
+         `rm -rf /root/.aws`;
+      };
+   }
    {
       $SIG{CHLD}="DEFAULT";
       my $cmd="aws configure";
@@ -14098,6 +14109,8 @@ my $do_wxPerl_setup=sub {
    # http://joekiller.com/2012/06/03/ \
    # install-firefox-on-amazon-linux-x86_64-compiling-gtk/
 
+   # https://forums.aws.amazon.com/thread.jspa?messageID=224857
+
    my $c='sudo yum --assumeyes install make libjpeg-devel libpng-devel '.
          'libtiff-devel gcc libffi-devel gettext-devel libmpc-devel '.
          'libstdc++46-devel xauth gcc-c++ libtool libX11-devel '.
@@ -14127,33 +14140,55 @@ END
       'ftp://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.xz',
       'http://download.savannah.gnu.org/releases/freetype/freetype-2.4.9.tar.gz',
       'http://www.freedesktop.org/software/fontconfig/release/fontconfig-2.9.0.tar.gz',
-      'http://ftp.gnome.org/pub/gnome/sources/glib/2.32/glib-2.32.3.tar.xz',
       'http://cairographics.org/releases/pixman-0.26.0.tar.gz',
       'http://cairographics.org/releases/cairo-1.12.2.tar.xz',
       'http://ftp.gnome.org/pub/gnome/sources/pango/1.30/pango-1.30.0.tar.xz',
       'http://ftp.gnome.org/pub/gnome/sources/atk/2.4/atk-2.4.0.tar.xz',
       'http://ftp.gnome.org/pub/GNOME/sources/gdk-pixbuf/2.26/gdk-pixbuf-2.26.1.tar.xz',
-      'http://ftp.gnome.org/pub/gnome/sources/gtk+/2.24/gtk+-2.24.25.tar.xz',
+      'http://ftp.gnome.org/pub/gnome/sources/gtk+/2.24/gtk+-2.24.10.tar.xz',
    );
+   my $pkg_config='export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/';
    foreach my $url (@urls) {
-      system("wget $url");
       my $file=$url;
       $file=~s/^.*\/(.*)$/$1/;
+      my $base=$file;
+      $base=~s/\.tar\..z$//;
+      unless (-d $base) {
+         system("sudo wget $url");
+      } else { next }
       if ($file=~/.xz$/) {
-         system("tar xvfJ $file");
+         system("sudo tar xvfJ $file");
       } else {
-         system("tar zxvf $file");
+         system("sudo tar zxvf $file");
       }
-      $file=~s/\.tar\..z$//;
-      my $dir=`pwd`;
-      chdir $file;
-      system("./configure");
-      system("make");
-      system("make install");
-      system("ldconfig");
-      chdir $dir;
+      chdir $base;
+      system("sudo bash -c \'$pkg_config;./configure\'");
+      system("sudo make");
+      system("sudo make install");
+      if (-1<index $url,'gtk+') {
+         chdir 'demos';
+         system("sudo make install");
+         chdir '..';
+         system('sudo cp gtk+-2.0.pc /usr/local/lib/pkgconfig');
+      }
+      system("sudo ldconfig");
+      chdir '..';
    }
-   system("perl -MCPAN -i Alien::wxWidgets");
+   system('sudo chmod -Rv 755 /usr/local/lib/pango');
+   system('sudo chmod -Rv 755 /usr/local/etc/*');
+   system('sudo bash -c '.
+          '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+          'perl -MCPAN -e \'install Fatal\'"');
+   system('sudo bash -c '.
+          '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+          'perl -MCPAN -e \'install Alien::wxWidgets\'"');
+   system('sudo bash -c '.
+          '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+          'perl -MCPAN -e \'install Wx\'"');
+   system('sudo bash -c '.
+          '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+          'perl -MCPAN -e \'install Wx::Demo\'"');
+   system("gtk-demo");
    return '<';
 
 };
@@ -14184,7 +14219,8 @@ my $get_ec2_api=sub {
       $SIG{CHLD}="DEFAULT";
       open(AWS,"aws iam list-access-keys 2>&1|");
       while (my $line=<AWS>) {
-         if (-1<index $line,'configure credentials') {
+         if ((-1<index $line,'configure credentials') ||
+               (-1<index $line,'Partial credentials found')) {
             $need_to_configure_aws=1;
             last;
          }
