@@ -4675,6 +4675,19 @@ my $setup_new_sched_job_menu_sub=sub {
 
 };
 
+my $plan_menu_banner=<<'END';
+     ___ _               _        _     _      __  __ 
+    | _ \ |__ _ _ _    _| |_   _ | |___| |__  |  \/  |___ _ _ _  _ 
+    |  _/ / _` | ' \  |_   _| | || / _ \ '_ \ | |\/| / -_) ' \ || |
+    |_| |_\__,_|_||_|   |_|    \__/\___/_.__/ |_|  |_\___|_||_\_,_|
+
+    Plan:  Indicated by a Plan Number, A FullAuto 'Plan' is a
+           recording of user &Menu() choices and user input.
+
+    Job:   A FullAuto Scheduled 'Job' is a fully unattended
+           invocation of a Custom Code Block via cron.
+END
+
 my %plan_menu=(
 
       Name   => 'plan_menu',
@@ -4685,21 +4698,23 @@ my %plan_menu=(
 
                             unless (grep { /--plan/i } @ARGV) {
 
-          my $message="\n".
-                     "    ___                     _            _     _ \n".
-                     "   |_ _|_ __  _ __  ___ _ _| |_ __ _ _ _| |_  | |\n".
-                     "    | || '  \\| '_ \\/ _ \\ '_|  _/ _` | ' \\  _| |_|\n".
-                     "   |___|_|_|_| .__/\\___/_|  \\__\\__,_|_||_\\__| (_)\n".
-                     "             |_|\n".
-                     "\n".
-                     "   This selection is not available when accessed\n".
-                     "   via the Admin Menu. This item is available only\n".
-                     "   when the --plan argument is used in conjunction\n".
-                     "   with the --code argument invoked from the command\n".
-                     "   line.\n\n".
-                     "      Example:  fa --plan --code hello_world\n\n".
-                     "   Press ANY KEY to return to the Plan Menu\n";
+          my $message=<<'END';
+    ___                     _            _     _
+   |_ _|_ __  _ __  ___ _ _| |_ __ _ _ _| |_  | |
+    | || '  \| '_ \/ _ \ '_|  _/ _` | ' \  _| |_|
+   |___|_|_|_| .__/\___/_|  \__\__,_|_||_\__| (_)
+             |_|
 
+   This selection is not available when accessed
+   via the Admin Menu. This item is available only
+   when the --plan argument is used in conjunction
+   with the --code argument invoked from the command
+   line.
+
+      Example:  fa --plan --code hello_world
+
+   Press ANY KEY to return to the Plan Menu
+END
                                print $Net::FullAuto::FA_Core::blanklines,
                                      $message;
                                alarm 120;
@@ -4746,19 +4761,7 @@ my %plan_menu=(
 
       },
 
-
-      Banner =>
-
-   "     ___ _               _        _     _      __  __              \n".
-   "    | _ \\ |__ _ _ _    _| |_   _ | |___| |__  |  \\/  |___ _ _ _  _ \n".
-   "    |  _/ / _` | ' \\  |_   _| | || / _ \\ '_ \\ | |\\/| / -_) ' \\ || |\n".
-   "    |_| |_\\__,_|_||_|   |_|    \\__/\\___/_.__/ |_|  |_\\___|_||_\\_,_|\n".
-   "\n".
-   "    Plan:  Indicated by a Plan Number, A FullAuto 'Plan' is a\n".
-   "           recording of user &Menu() choices and user input.\n".
-   "\n".
-   "    Job:   A FullAuto Scheduled 'Job' is a fully unattended\n".
-   "           invocation of a Custom Code Block via cron.",
+      Banner => $plan_menu_banner,
 
 );
 
@@ -14166,10 +14169,30 @@ END
       system("sudo make");
       system("sudo make install");
       if (-1<index $url,'gtk+') {
-         chdir 'demos';
+         chdir 'demos/gtk-demo';
+         system("sudo make install");
+         chdir '..';
          system("sudo make install");
          chdir '..';
          system('sudo cp gtk+-2.0.pc /usr/local/lib/pkgconfig');
+         my $missing_pc=<<'END';
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+target=x11
+
+Name: GDK
+Description: GTK+ Drawing Kit (${target} target)
+Version: 2.24.10
+Requires: pango pangocairo gdk-pixbuf-2.0
+Libs: -L${libdir} -lgdk-${target}-2.0
+Cflags: -I${includedir}/gtk-2.0 -I${libdir}/gtk-2.0/include
+END
+         open(FH,">gdk-x11-2.0.pc");
+         print FH $missing_pc;
+         close FH;
+         system('sudo cp gdk-x11-2.0.pc /usr/local/lib/pkgconfig');
       }
       system("sudo ldconfig");
       chdir '..';
@@ -14184,10 +14207,29 @@ END
           'perl -MCPAN -e \'install Alien::wxWidgets\'"');
    system('sudo bash -c '.
           '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
-          'perl -MCPAN -e \'install Wx\'"');
+          'perl -MCPAN -e \'get Wx\'"');
+   $c='sudo ls -l /root/.cpan/build';
+   my %timest=();my ($size,$timestampd,$dirname)=('','','');
+   open(AWS,"$c|");
+   while (my $line=<AWS>) {
+      if ($line=~/^d.*Wx-\d+.*$/) {
+         ($size,$timestampd,$dirname)=&Net::FullAuto::FA_Core::ls_parse($line);
+         $timest{$timestampd}=$dirname;
+      }
+      print $line;
+   }
+   my $ts=(reverse sort keys %timest)[0];
+   system('sudo bash -c '.
+          "\"cd /root/.cpan/build/$timest{$ts};perl Makefile.PL;".
+          "make;make install\"");
+   close AWS;
+   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
+   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod -v 755');
    system('sudo bash -c '.
           '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
           'perl -MCPAN -e \'install Wx::Demo\'"');
+   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
+   system('wxperl_demo.pl');
    system("gtk-demo");
    return '<';
 

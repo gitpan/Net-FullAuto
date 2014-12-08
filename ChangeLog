@@ -22,11 +22,18 @@
 
 2014-12-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
+        * Version 0.999999999947 released.
+
+        * Forgot to update FA_Code.pm in previous release.
+
+
+2014-12-08  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
         * Version 0.999999999946 released.
 
         * Fixed wxPerl install.
 
-
+ 
 2014-12-06  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999945 released.
