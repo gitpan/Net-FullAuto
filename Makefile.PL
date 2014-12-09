@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999947';
+$main::VERSION='0.999999999948';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<'END';
@@ -5981,7 +5981,9 @@ print FH '/* program: fullauto'."\n".
 close FH;
 
 my $timeout=120;my $selection='';
-unless (exists $ENV{FA_BERKELEY}) {
+if (keys %main::amazon) {
+   $selection='Install with Setuid Permissions (Recommended Default)';
+} elsif (!exists $ENV{FA_BERKELEY}) {
    eval {
       local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
       alarm $timeout;

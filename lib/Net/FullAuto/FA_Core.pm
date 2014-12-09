@@ -14126,6 +14126,12 @@ my $do_wxPerl_setup=sub {
    }
    close AWS;
    $ENV{PKG_CONFIG_PATH}='/usr/local/lib/pkgconfig';
+
+   # for gcc compiles (building a program with Gcc and a simple "make"):
+   # Code: -Wl,-rpath,$(DEFAULT_LIB_INSTALL_PATH)
+   # This is a good link:
+   # http://www.tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html
+
    $c=<<'END';
 bash -c "
 cat << EOF > /etc/ld.so.conf.d/gtk.conf
@@ -14145,7 +14151,7 @@ END
       'http://www.freedesktop.org/software/fontconfig/release/fontconfig-2.9.0.tar.gz',
       'http://cairographics.org/releases/pixman-0.26.0.tar.gz',
       'http://cairographics.org/releases/cairo-1.12.2.tar.xz',
-      'http://ftp.gnome.org/pub/gnome/sources/pango/1.30/pango-1.30.0.tar.xz',
+      #'http://ftp.gnome.org/pub/gnome/sources/pango/1.30/pango-1.30.0.tar.xz',
       'http://ftp.gnome.org/pub/gnome/sources/atk/2.4/atk-2.4.0.tar.xz',
       'http://ftp.gnome.org/pub/GNOME/sources/gdk-pixbuf/2.26/gdk-pixbuf-2.26.1.tar.xz',
       'http://ftp.gnome.org/pub/gnome/sources/gtk+/2.24/gtk+-2.24.10.tar.xz',
@@ -14165,7 +14171,7 @@ END
          system("sudo tar zxvf $file");
       }
       chdir $base;
-      system("sudo bash -c \'$pkg_config;./configure\'");
+      system("sudo bash -lc \'$pkg_config;./configure\'");
       system("sudo make");
       system("sudo make install");
       if (-1<index $url,'gtk+') {
@@ -14174,6 +14180,7 @@ END
          chdir '..';
          system("sudo make install");
          chdir '..';
+         system('sudo chmod 755 /usr/local/lib/pkgconfig');
          system('sudo cp gtk+-2.0.pc /usr/local/lib/pkgconfig');
          my $missing_pc=<<'END';
 prefix=/usr/local
@@ -14199,13 +14206,39 @@ END
    }
    system('sudo chmod -Rv 755 /usr/local/lib/pango');
    system('sudo chmod -Rv 755 /usr/local/etc/*');
-   system('sudo bash -c '.
+   system('sudo bash -lc '.
           '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
           'perl -MCPAN -e \'install Fatal\'"');
-   system('sudo bash -c '.
+   $c=<<'END';
+bash -c "
+cat << EOF > /etc/ld.so.conf.d/alien.conf
+/usr/local/lib64/perl5/Alien/wxWidgets/gtk_3_0_0_uni/lib
+EOF
+ldconfig
+"
+END
+   open(AWS,"$c|");
+   while (my $line=<AWS>) {
+      print $line;
+   }
+   close AWS;
+   system('sudo bash -lc '.
           '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
           'perl -MCPAN -e \'install Alien::wxWidgets\'"');
-   system('sudo bash -c '.
+   $c=<<'END';
+bash -c "
+cat << EOF > /etc/ld.so.conf.d/wx.conf
+/usr/local/lib64/perl5/auto/Wx
+EOF
+ldconfig
+"
+END
+   open(AWS,"$c|");
+   while (my $line=<AWS>) {
+      print $line;
+   }
+   close AWS;
+   system('sudo bash -lc '.
           '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
           'perl -MCPAN -e \'get Wx\'"');
    $c='sudo ls -l /root/.cpan/build';
@@ -14219,18 +14252,24 @@ END
       print $line;
    }
    my $ts=(reverse sort keys %timest)[0];
-   system('sudo bash -c '.
-          "\"cd /root/.cpan/build/$timest{$ts};perl Makefile.PL;".
+   my $ld='export LD_LIBRARY_PATH=/usr/local/lib64/perl5/auto/Wx/'.
+          ':/usr/local/lib64/perl5/Alien/wxWidgets/gtk_3_0_0_uni/lib/';
+   system('sudo bash -lc '.
+          "\"$ld;cd /root/.cpan/build/$timest{$ts};perl Makefile.PL;".
           "make;make install\"");
    close AWS;
    system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
    system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod -v 755');
-   system('sudo bash -c '.
-          '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+   system( "\"$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
           'perl -MCPAN -e \'install Wx::Demo\'"');
    system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
-   system('wxperl_demo.pl');
-   system("gtk-demo");
+   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod -v 755');
+   system("\"$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
+          'perl -MCPAN -e \'force install Wx::Demo\'"');
+   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
+   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod -v 755');
+   system('/usr/local/bin/wxperl_demo.pl');
+   system("/usr/local/bin/gtk-demo");
    return '<';
 
 };
@@ -15798,9 +15837,9 @@ END
             $Net::FullAuto::FA_Core::skip_host_hash=1;
             &new_user_experience($Term::Menus::new_user_flag,
                $welcome,$newuser);
-         } elsif ($newuseramazon) {
-            &new_user_amazon();
-         }
+         } #elsif ($newuseramazon) {
+           # &new_user_amazon();
+         #}
          if (defined $default || (defined $facode && !$facode)
                               || (defined $faconf && !$faconf)
                               || (defined $fahost && !$fahost)
@@ -17174,6 +17213,8 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
          cleanup();
       }
       $plan=$plan->{Plan};
+   } elsif ($newuseramazon) {
+      &new_user_amazon();
    }
    return $cust_subnam_in_fa_code_module_file, \@menu_args, $fatimeout, $cache;
 
