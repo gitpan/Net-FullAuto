@@ -14109,11 +14109,16 @@ END
 
 my $do_wxPerl_setup=sub {
 
+   package do_wxPerl_setup;
+   require Net::FullAuto::FA_Core;
+   import FA_Core;
+
    # http://joekiller.com/2012/06/03/ \
    # install-firefox-on-amazon-linux-x86_64-compiling-gtk/
 
    # https://forums.aws.amazon.com/thread.jspa?messageID=224857
 
+   print "\n";
    my $c='sudo yum --assumeyes install make libjpeg-devel libpng-devel '.
          'libtiff-devel gcc libffi-devel gettext-devel libmpc-devel '.
          'libstdc++46-devel xauth gcc-c++ libtool libX11-devel '.
@@ -14151,7 +14156,7 @@ END
       'http://www.freedesktop.org/software/fontconfig/release/fontconfig-2.9.0.tar.gz',
       'http://cairographics.org/releases/pixman-0.26.0.tar.gz',
       'http://cairographics.org/releases/cairo-1.12.2.tar.xz',
-      #'http://ftp.gnome.org/pub/gnome/sources/pango/1.30/pango-1.30.0.tar.xz',
+      'http://ftp.gnome.org/pub/gnome/sources/pango/1.30/pango-1.30.0.tar.xz',
       'http://ftp.gnome.org/pub/gnome/sources/atk/2.4/atk-2.4.0.tar.xz',
       'http://ftp.gnome.org/pub/GNOME/sources/gdk-pixbuf/2.26/gdk-pixbuf-2.26.1.tar.xz',
       'http://ftp.gnome.org/pub/gnome/sources/gtk+/2.24/gtk+-2.24.10.tar.xz',
@@ -14238,36 +14243,62 @@ END
       print $line;
    }
    close AWS;
-   system('sudo bash -lc '.
-          '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
-          'perl -MCPAN -e \'get Wx\'"');
-   $c='sudo ls -l /root/.cpan/build';
-   my %timest=();my ($size,$timestampd,$dirname)=('','','');
-   open(AWS,"$c|");
-   while (my $line=<AWS>) {
-      if ($line=~/^d.*Wx-\d+.*$/) {
-         ($size,$timestampd,$dirname)=&Net::FullAuto::FA_Core::ls_parse($line);
-         $timest{$timestampd}=$dirname;
-      }
-      print $line;
-   }
-   my $ts=(reverse sort keys %timest)[0];
    my $ld='export LD_LIBRARY_PATH=/usr/local/lib64/perl5/auto/Wx/'.
           ':/usr/local/lib64/perl5/Alien/wxWidgets/gtk_3_0_0_uni/lib/';
-   system('sudo bash -lc '.
-          "\"$ld;cd /root/.cpan/build/$timest{$ts};perl Makefile.PL;".
-          "make;make install\"");
-   close AWS;
-   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
-   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod -v 755');
-   system( "\"$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
-          'perl -MCPAN -e \'install Wx::Demo\'"');
-   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
-   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod -v 755');
-   system("\"$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
-          'perl -MCPAN -e \'force install Wx::Demo\'"');
-   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod -v 755');
-   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod -v 755');
+   my ($stdout,$stderr)=('','');
+   ($stdout,$stderr)=$localhost->cmd("cpan -D Wx",'__display__'); 
+   if ($stdout!~/up to date/) {
+      #system('sudo bash -lc '.
+      #       '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+      #       'perl -MCPAN -e \'get Wx\'"');
+      $c='export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+         'perl -MCPAN -e "get Wx"';
+      ($stdout,$stderr)=$localhost->cmd($c,'__display__');
+      ($stdout,$stderr)=$localhost->cmd(
+         "ls -l $localhost->{_homedir}/.cpan/build",
+         '__display__');
+      #$c='sudo ls -l /root/.cpan/build';
+      my %timest=();my ($size,$timestampd,$dirname)=('','','');
+      #open(AWS,"$c|");
+      #while (my $line=<AWS>) {
+      foreach my $line (split "\n",$stdout) {
+         if ($line=~/^d.*Wx-\d+.*$/) {
+            ($size,$timestampd,$dirname)=
+               &Net::FullAuto::FA_Core::ls_parse($line);
+            $timest{$timestampd}=$dirname;
+         }
+         print $line."\n";
+      }
+      my $ts=(reverse sort keys %timest)[0];
+      #system('sudo bash -lc '.
+      #       "\"$ld;cd /root/.cpan/build/$timest{$ts};perl Makefile.PL;".
+      #       "make;make install\"");
+      ($stdout,$stderr)=$localhost->cwd(
+         "$localhost->{_homedir}/.cpan/build/$timest{$ts}");
+      ($stdout,$stderr)=$localhost->cmd("perl Makefile.PL",'__display__');
+      ($stdout,$stderr)=$localhost->cmd("make",'__display__');
+      ($stdout,$stderr)=$localhost->cmd("sudo make install",'__display__');
+      ($stdout,$stderr)=$localhost->cwd("~");
+      #close AWS;
+   }
+   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
+   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
+   #system( "\"$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
+   #       'perl -MCPAN -e \'install Wx::Demo\'"');
+   ($stdout,$stderr)=$localhost->cmd(
+      "$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
+      'perl -MCPAN -e "install Wx::Demo"',
+      '__display__');
+   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
+   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
+   system("$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
+          'perl -MCPAN -e \'force install Wx::Demo\'');
+   #($stdout,$stderr)=$localhost->cmd(
+   #   "$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
+   #   'perl -MCPAN -e "install Wx::Demo"',
+   #   '__display__');
+   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
+   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
    system('/usr/local/bin/wxperl_demo.pl');
    system("/usr/local/bin/gtk-demo");
    return '<';
@@ -16223,6 +16254,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                $localhost->{_cmd_type}=$cmd_type;
                $localhost->{_connect}=$_connect;
                $localhost->{_uname}=$^O;
+               $localhost->{_homedir}=File::HomeDir->my_home;
                $localhost->{_hostlabel}=
                   [ "__Master_${$}__",'' ];
                $local_host=Net::Telnet->new(Fhopen => $localhost,
@@ -16432,6 +16464,7 @@ print $MRLOG "FA_LOGINTRYINGTOKILL=$line\n"
                   $localhost->{_cmd_type}=$cmd_type;
                   $localhost->{_connect}=$_connect;
                   $localhost->{_uname}=$^O;
+                  $localhost->{_homedir}=File::HomeDir->my_home;
                   $localhost->{_hostlabel}=[ "__Master_${$}__",'' ];
                   $local_host=Net::Telnet->new(Fhopen => $local_host,
                      Timeout => $fatimeout);
@@ -17214,6 +17247,7 @@ print $Net::FullAuto::FA_Core::MRLOG "BDB STATUS=$status<==\n"
       }
       $plan=$plan->{Plan};
    } elsif ($newuseramazon) {
+print "WE ARE HERE and ",$localhost->cmd('hostname');
       &new_user_amazon();
    }
    return $cust_subnam_in_fa_code_module_file, \@menu_args, $fatimeout, $cache;
@@ -19375,6 +19409,7 @@ sub new {
    $self->{_work_dirs}=$work_dirs;
    $self->{_ftp_pid}=$ftp_pid if $ftp_pid;
    $self->{_fpx_pid}=$fpx_pid if $fpx_pid;
+print "HOW BOUT HD1\n";<STDIN>;
    $self->{_homedir}=$homedir;
    bless($self,$class);
    $Net::FullAuto::FA_Core::Connections{"${hostlabel}__%-$chk_id"}=$self;
@@ -30155,6 +30190,7 @@ sub new {
    $self->{_cmd_pid}=$cmd_pid;
    $self->{_sh_pid}=$shell_pid;
    $self->{_shell}=$shell;
+print "HOW BOUT HD2\n";<STDIN>;
    $self->{_homedir}=$homedir;
    if ($cygdrive) {
       $self->{_cygdrive}=$cygdrive;
