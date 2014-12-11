@@ -20,6 +20,13 @@
 #######################################################################
 
 
+2014-12-11  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999951 released.
+
+        * More fixes for wxPerl in AWS.
+
+
 2014-12-10  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999950 released.

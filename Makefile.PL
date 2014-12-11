@@ -27,7 +27,7 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999950';
+$main::VERSION='0.999999999951';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
 my $fa_banner=<<'END';
@@ -1003,35 +1003,43 @@ END
          } else {
             my $stup='setup-x86.exe';
             $stup='setup-x86_64.exe' if $uname=~/WOW64/;
-            my $die="\n       FATAL ERROR! : ".
-                    "The Gnu C Compiler 'gcc': gcc-core".
-                    "\n                      & gcc-g++ as provided by Cygwin".
-                    "\n                      is required to install FullAuto".
-                    "\n                      on Windows.".
-                    "\n(Hint: Run Cygwin $stup and install 'gcc-core' ".
-                    "and 'gcc-g++' under the Category 'Devel' ).".
-                    "\n\n";
+            my $die=<<END;
+
+       FATAL ERROR! : The Gnu C Compiler 'gcc': gcc-core
+                      & gcc-g++ as provided by Cygwin
+                      is required to install FullAuto
+                      on Windows.
+
+       ( Hint: Run Cygwin $stup and install 'gcc-core'
+               and 'gcc-g++' under the Category 'Devel' ).
+
+END
             die $die;
          }
       }
    } elsif ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
       if (-1==index $0,'Setup-FullAuto-v') {
-         my $s='    ';
-         my $die="\n$s   FATAL ERROR! : Cygwin Linux Emulation Layer".
-            "\n$s                  is required to use FullAuto".
-            "\n$s                  on Windows - goto www.cygwin.com.".
-            "\n\n$s       Be sure to install the following programs in ".
-            "\n$s       addition to the base package:".
-            "\n\n$s       inetutils and openssh [as provided by Cygwin]".
-            "\n$s       perl [as provided by Cygwin] (*NOT* CPAN)".
-            "\n$s       perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
-            "\n$s       ncurses, cron, and procps [as provided by Cygwin]".
-            "\n$s       gcc-core and gcc-g++ [as provided by Cygwin]".
-            "\n$s       Oracle Berkeley DB [as provided by Cygwin or Oracle]".
-            "\n\n$s       **IMPORTANT** - the FullAuto install, either manual".
-            "\n$s       or via CPAN, must be run *inside* a Cygwin bash shell".
-            "\n$s       when installing FullAuto on Microsoft Windows.".
-            "\n\n";
+         my $die=<<'END';
+
+       FATAL ERROR! : Cygwin Linux Emulation Layer
+                      is required to use FullAuto
+                      on Windows - goto www.cygwin.com.
+
+           Be sure to install the following programs in
+           addition to the base package:
+
+           inetutils and openssh [as provided by Cygwin]
+           perl [as provided by Cygwin] (*NOT* CPAN)
+           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)
+           ncurses, cron, and procps [as provided by Cygwin]
+           gcc-core and gcc-g++ [as provided by Cygwin]
+           Oracle Berkeley DB [as provided by Cygwin or Oracle]
+
+           **IMPORTANT** - the FullAuto install, either manual
+           or via CPAN, must be run *inside* a Cygwin bash shell
+           when installing FullAuto on Microsoft Windows.
+
+END
          unless ($ENV{'AUTOMATED_TESTING'}) {
             die $die;
          } else {
@@ -4159,21 +4167,27 @@ if ($^O eq 'MSWin32' || $^O eq 'MSWin64') {
    } elsif ($process_id) {
       exit;
    }
-   my $die="\n       FATAL ERROR! : Cygwin Linux Emulation Layer".
-           "\n                      is required to use FullAuto".
-           "\n                      on Windows - goto www.cygwin.com.".
-           "\n\n           Be sure to install the following programs in ".
-           "\n           addition to the base package:".
-           "\n\n           inetutils and openssh [as provided by Cygwin]".
-           "\n           perl [as provided by Cygwin] (*NOT* CPAN)".
-           "\n           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)".
-           "\n           ncurses, cron, and procps [as provided by Cygwin]".
-           "\n           gcc-core and gcc-g++ [as provided by Cygwin]".
-           "\n           Oracle Berkeley DB [as provided by Cygwin or Oracle]".
-           "\n\n           **IMPORTANT** - the FullAuto install, either manual".
-           "\n           or via CPAN, must be run *inside* a Cygwin bash shell".
-           "\n           when installing FullAuto on Microsoft Windows.".
-           "\n\n";
+   my $die=<<'END';
+
+       FATAL ERROR! : Cygwin Linux Emulation Layer
+                      is required to use FullAuto
+                      on Windows - goto www.cygwin.com.
+
+           Be sure to install the following programs in
+           addition to the base package:
+
+           inetutils and openssh [as provided by Cygwin]
+           perl [as provided by Cygwin] (*NOT* CPAN)
+           perl-libwin32 [as provided by Cygwin] (*NOT* CPAN)
+           ncurses, cron, and procps [as provided by Cygwin]
+           gcc-core and gcc-g++ [as provided by Cygwin]
+           Oracle Berkeley DB [as provided by Cygwin or Oracle]
+
+           **IMPORTANT** - the FullAuto install, either manual
+           or via CPAN, must be run *inside* a Cygwin bash shell
+           when installing FullAuto on Microsoft Windows.
+
+END
    die $die;
 }
 
@@ -4899,24 +4913,29 @@ END
          my $already_downloaded=0;
          my $filename='';
          unless (grep { /Encrypted/i } @ARGV) {
-            eval {
-               local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-               alarm $timeout;
-               $BDB_selection=Menu(\%berkeley_menu);
-               alarm 0;
-            };
-            if ($@) {
-               # timed out
+            unless (keys %main::amazon) { 
+               eval {
+                  local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                  alarm $timeout;
+                  $BDB_selection=Menu(\%berkeley_menu);
+                  alarm 0;
+               };
+               if ($@) {
+                  # timed out
+                  $BDB_selection='NON-ENCRYPTED';
+                  $source=~s/tar.gz/NC.tar.gz/;
+               } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
+                  print "\n";
+                  exit;
+               } elsif (-1<index $BDB_selection,'Encrypted') {
+                  $BDB_selection='Encrypted';
+               } else {
+                  $source=~s/tar.gz/NC.tar.gz/;
+               } alarm 0;
+            } else {
                $BDB_selection='NON-ENCRYPTED';
                $source=~s/tar.gz/NC.tar.gz/;
-            } elsif ($BDB_selection=~/\]quit\[|Exit/s) {
-               print "\n";
-               exit;
-            } elsif (-1<index $BDB_selection,'Encrypted') {
-               $BDB_selection='Encrypted';
-            } else {
-               $source=~s/tar.gz/NC.tar.gz/;
-            } alarm 0;
+            }
          } elsif (grep  { /Encrypted/ } @ARGV) {
             $BDB_selection='Encrypted';
             $already_downloaded=1;

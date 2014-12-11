@@ -2792,7 +2792,7 @@ sub ls_parse
    my $rx1=qr/\d+\s+\w\w\w\s+\d+\s+\d\d:\d\d\s+.*/;
    my $rx2=qr/\d+\s+\w\w\w\s+\d+\s+\d\d\d\d\s+.*/;
    if ($line=~s/^.*\s+($rx1|$rx2)$/$1/) {
-      $line=~/^(\d+)\s+(\w\w\w)\s+(\d+)\s+(\d\d:\d\d\s+|\d\d\d\d\s+)+(.*)$/;
+      $line=~/^(\d+)\s+(\w\w\w)\s+(\d+)\s+(\d\d:\d\d\s+|\d\d\d\d\s+)(.*)$/;
       $size=$1;$mn=$Net::FullAuto::FA_Core::month{$2};$dy=$3;$time=$4;
       $file=$5;
    }
@@ -3163,7 +3163,7 @@ sub edit {
          next if $file eq 'README';
          if ($file=~s/^.*\s+($rx1|$rx2)$/$1/) {
             $file=~
-               s/^\d+\s+\w\w\w\s+\d+\s+(?:\d\d:\d\d\s+|\d\d\d\d\s+)+(.*)$/$1/;
+               s/^\d+\s+\w\w\w\s+\d+\s+(?:\d\d:\d\d\s+|\d\d\d\d\s+)(.*)$/$1/;
          }
          push @file,$username.'/'.$dirr.'/'.$file;
       }
@@ -11979,12 +11979,12 @@ my $fa_tutorial=<<'END';
 
 END
 
-my $fa_fullauto_welcome=<<'END';
+my $fa_fullauto_welcome=<<END;
 
                          ___     _ _   _       _       
-                        | __|  _| | | /_\ _  _| |_ ___ 
-   (   /_ /_   _  _     | _| || | | |/ _ \ || |  _/ _ \
-   |/|/(-(( ()//)(-  To |_| \_,_|_|_/_/ \_\_,_|\__\___/  $username
+                        | __|  _| | | /_\\ _  _| |_ ___ 
+   (   /_ /_   _  _     | _| || | | |/ _ \\ || |  _/ _ \\
+   |/|/(-(( ()//)(-  To |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/  $username
 
    Items with the arrow character  >  are the current selection, Just
    press ENTER or Scroll with UP and DOWN arrow keys. You can also type
@@ -11992,33 +11992,33 @@ my $fa_fullauto_welcome=<<'END';
    selection.
 END
 
-my $fa_fullauto=<<END;
+my $fa_fullauto=<<'END';
 
     ___     _ _   _       _
-   | __|  _| | | /_\\ _  _| |_ ___
-   | _| || | | |/ _ \\ || |  _/ _ \\
-   |_| \\_,_|_|_/_/ \\_\\_,_|\\__\\___/
+   | __|  _| | | /_\ _  _| |_ ___
+   | _| || | | |/ _ \ || |  _/ _ \
+   |_| \_,_|_|_/_/ \_\_,_|\__\___/
 
 END
 
 my $fa_mini_welcome=" (   /_ /_   _  _ \n".
                     "       |/|/(-(( ()//)(- ";
 
-my $fa_new_user=<<END;
+my $fa_new_user=<<'END';
 
     _  _              _   _             
-   | \\| |_____ __ __ | | | |___ ___ _ _ 
+   | \| |_____ __ __ | | | |___ ___ _ _ 
    | .` / -_) V  V / | |_| (_-</ -_) '_|
-   |_|\\_\\___|\\_/\\_/   \\___//__/\\___|_|
+   |_|\_\___|\_/\_/   \___//__/\___|_|
   
 END
 
-my $fa_process_lifecycle=<<END;
+my $fa_process_lifecycle=<<'END';
 
     ___                          _    _  __                _     
-   | _ \\_ _ ___  __ ___ ______  | |  (_)/ _|___ __ _  _ __| |___ 
-   |  _/ '_/ _ \\/ _/ -_|_-<_-<  | |__| |  _/ -_) _| || / _| / -_)
-   |_| |_| \\___/\\__\\___/__/__/  |____|_|_| \\___\\__|\\_, \\__|_\\___|
+   | _ \_ _ ___  __ ___ ______  | |  (_)/ _|___ __ _  _ __| |___ 
+   |  _/ '_/ _ \/ _/ -_|_-<_-<  | |__| |  _/ -_) _| || / _| / -_)
+   |_| |_| \___/\__\___/__/__/  |____|_|_| \___\__|\_, \__|_\___|
                                                    |__/ 
 
    In large organizations, development of any software or business
@@ -12036,12 +12036,12 @@ my $fa_process_lifecycle=<<END;
 
 END
 
-my $fa_organization=<<END;
+my $fa_organization=<<'END';
 
      ___                     _         _   _          
-    / _ \\ _ _ __ _ __ _ _ _ (_)_____ _| |_(_)___ _ _  
-   | (_) | '_/ _` / _` | ' \\| |_ / _` |  _| / _ \\ ' \\ 
-    \\___/|_| \\__, \\__,_|_||_|_/__\\__,_|\\__|_\\___/_||_|
+    / _ \ _ _ __ _ __ _ _ _ (_)_____ _| |_(_)___ _ _  
+   | (_) | '_/ _` / _` | ' \| |_ / _` |  _| / _ \ ' \ 
+    \___/|_| \__, \__,_|_||_|_/__\__,_|\__|_\___/_||_|
              |___/ 
 
    "A place for everything, everything in its place." - Benjamin Franklin
@@ -12053,12 +12053,12 @@ my $fa_organization=<<END;
 
 END
 
-my $fa_privacy=<<END;
+my $fa_privacy=<<'END';
 
     ___     _
-   | _ \\_ _(_)_ ____ _ __ _  _
-   |  _/ '_| \\ V / _` / _| || |
-   |_| |_| |_|\\_/\\__,_\\__|\\_, |
+   | _ \_ _(_)_ ____ _ __ _  _
+   |  _/ '_| \ V / _` / _| || |
+   |_| |_| |_|\_/\__,_\__|\_, |
                           |__/
 
    FullAuto users *own* their setup. Nothing is shared
@@ -12076,12 +12076,12 @@ my $fa_privacy=<<END;
 
 END
 
-my $fa_security=<<END;
+my $fa_security=<<'END';
 
     ___                  _ _        
    / __| ___ __ _  _ _ _(_) |_ _  _ 
-   \\__ \\/ -_) _| || | '_| |  _| || |
-   |___/\\___\\__|\\_,_|_| |_|\\__|\\_, |
+   \__ \/ -_) _| || | '_| |  _| || |
+   |___/\___\__|\_,_|_| |_|\__|\_, |
                                |__/ 
 
    FullAuto is a SECURE Automation Framework. Security
@@ -12099,12 +12099,12 @@ my $fa_security=<<END;
 
 END
 
-my $fa_basics=<<END;
+my $fa_basics=<<'END';
 
     ___                  ___          _
    / __| ___ _ __  ___  | _ ) __ _ __(_)__ ___
-   \\__ \\/ _ \\ '  \\/ -_) | _ \\/ _` (_-< / _(_-<
-   |___/\\___/_|_|_\\___| |___/\\__,_/__/_\\__/__/
+   \__ \/ _ \ '  \/ -_) | _ \/ _` (_-< / _(_-<
+   |___/\___/_|_|_\___| |___/\__,_/__/_\__/__/
 
    This wizard is interactive. You can go backwards and forwards.
    Just press the LEFTARROW  <  key to navigate backwards, the
@@ -12122,12 +12122,12 @@ my $fa_basics=<<END;
    screen. To quit admin, press [ESC], and help pages. type 'q'.
 END
 
-my $fa_no_web=<<END;
+my $fa_no_web=<<'END';
 
     _  _      __      __   _      ___              ___ _
-   | \\| |___  \\ \\    / /__| |__  | _ \\__ _ __ _ __|__ \\ |
-   | .` / _ \\  \\ \\/\\/ / -_) '_ \\ |  _/ _` / _` / -_)/_/_|
-   |_|\\_\\___/   \\_/\\_/\\___|_.__/ |_| \\__,_\\__, \\___(_)(_)
+   | \| |___  \ \    / /__| |__  | _ \__ _ __ _ __|__ \ |
+   | .` / _ \  \ \/\/ / -_) '_ \ |  _/ _` / _` / -_)/_/_|
+   |_|\_\___/   \_/\_/\___|_.__/ |_| \__,_\__, \___(_)(_)
                                           |___/
 
    YES! FullAuto is Automation & High Productivity software. Ever see a
@@ -12137,20 +12137,20 @@ my $fa_no_web=<<END;
    distraction, we keep simple and utilitarian. Ever seen an operating
    room with a rich color palette? (No? - neither have I!)
                  __ _____        __ __  __  __  _____ 
-                (_ |_  |   _|_  |_ /  \\|__)/ _ |_  |  
-   FullAuto is  __)|__ |    |   |  \\__/| \\ \\__)|__ |  software.
+                (_ |_  |   _|_  |_ /  \|__)/ _ |_  |  
+   FullAuto is  __)|__ |    |   |  \__/| \ \__)|__ |  software.
 
    Hence the name Full - Auto (as in 'full' or 'complete' AUTOMATION).
    You tell it what to do, you turn it on - and you MOVE ON to more
    enjoyable or urgent activities!
 END
 
-my $fa_intro=<<END;
+my $fa_intro=<<'END';
 
     ___     _               _         _   _          
    |_ _|_ _| |_ _ _ ___  __| |_  _ __| |_(_)___ _ _  
-    | || ' \\  _| '_/ _ \\/ _` | || / _|  _| / _ \\ ' \\ 
-   |___|_||_\\__|_| \\___/\\__,_|\\_,_\\__|\\__|_\\___/_||_|
+    | || ' \  _| '_/ _ \/ _` | || / _|  _| / _ \ ' \ 
+   |___|_||_\__|_| \___/\__,_|\_,_\__|\__|_\___/_||_|
 
    FullAuto is an Automation & High Productivity Framework. With FullAuto
    almost any computer process can be *fully* automated. In addition,
@@ -12172,12 +12172,12 @@ END
 my $fa_continue_setup=<<END;
 END
 
-my $fa_fa_code_banner=<<END;
+my $fa_fa_code_banner=<<'END';
 
       __                      _                  
     _/ _)__ _      __ ___  __| |___   _ __ _ __  
-   (   _/ _` |    / _/ _ \\/ _` / -_)_| '_ \\ '  \\ 
-    |_| \\__,_|====\\__\\___/\\__,_\\___(_) .__/_|_|_|
+   (   _/ _` |    / _/ _ \/ _` / -_)_| '_ \ '  \ 
+    |_| \__,_|====\__\___/\__,_\___(_) .__/_|_|_|
                                      |_|
 
    This is the single most important file in FullAuto. In
@@ -12193,12 +12193,12 @@ my $fa_fa_code_banner=<<END;
    You can also use a shortcut to access it directly:  fa -ec
 END
 
-my $fa_fa_conf_banner=<<END;
+my $fa_fa_conf_banner=<<'END';
 
       __                         __
     _/ _)__ _      __ ___ _ _  _/ _)  _ __ _ __
-   (   _/ _` |    / _/ _ \\ ' \\(   _/_| '_ \\ '  \\
-    |_| \\__,_|====\\__\\___/_||_||_| (_) .__/_|_|_|
+   (   _/ _` |    / _/ _ \ ' \(   _/_| '_ \ '  \
+    |_| \__,_|====\__\___/_||_||_| (_) .__/_|_|_|
                                      |_| 
 
    This is the user's FullAuto Configuration File. This file
@@ -12212,12 +12212,12 @@ my $fa_fa_conf_banner=<<END;
 
 END
 
-my $fa_fa_host_banner=<<END;
+my $fa_fa_host_banner=<<'END';
 
       __           _           _                
     _/ _)__ _     | |_  ___ __| |_   _ __ _ __  
-   (   _/ _` |    | ' \\/ _ (_-<  _|_| '_ \\ '  \\ 
-    |_| \\__,_|====|_||_\\___/__/\\__(_) .__/_|_|_|
+   (   _/ _` |    | ' \/ _ (_-<  _|_| '_ \ '  \ 
+    |_| \__,_|====|_||_\___/__/\__(_) .__/_|_|_|
                                     |_|
 
    This is the user's FullAuto Host File. The host file
@@ -12233,12 +12233,12 @@ my $fa_fa_host_banner=<<END;
    This file can be accessed with the shortcut:  fa -eh
 END
 
-my $fa_fa_maps_banner=<<END;
+my $fa_fa_maps_banner=<<'END';
 
       __                                        
     _/ _)__ _      _ __  __ _ _ __ ___  _ __ _ __  
-   (   _/ _` |    | '  \\/ _` | '_ (_-<_| '_ \\ '  \\ 
-    |_| \\__,_|====|_|_|_\\__,_| .__/__(_) .__/_|_|_|
+   (   _/ _` |    | '  \/ _` | '_ (_-<_| '_ \ '  \ 
+    |_| \__,_|====|_|_|_\__,_| .__/__(_) .__/_|_|_|
                              |_|       |_|  
 
    This is the FullAuto Maps File. Often there is a need
@@ -12254,12 +12254,12 @@ my $fa_fa_maps_banner=<<END;
 
 END
 
-my $fa_fa_menu_banner=<<END;
+my $fa_fa_menu_banner=<<'END';
 
       __                                        
     _/ _|__ _      _ __  ___ _ _ _  _   _ __ _ __  
-   (   _/ _` |    | '  \\/ -_) ' \\ || |_| '_ \\ '  \\ 
-    |_| \\__,_|====|_|_|_\\___|_||_\\_,_(_) .__/_|_|_|
+   (   _/ _` |    | '  \/ -_) ' \ || |_| '_ \ '  \ 
+    |_| \__,_|====|_|_|_\___|_||_\_,_(_) .__/_|_|_|
                                        |_|     
 
    This is the FullAuto Menu File. Net::FullAuto has
@@ -12275,12 +12275,12 @@ my $fa_fa_menu_banner=<<END;
 
 END
 
-my $fa_batter_up=<<END;
+my $fa_batter_up=<<'END';
 
     ___       _   _             _   _ ___ _ 
-   | _ ) __ _| |_| |_ ___ _ _  | | | | _ \\ |
-   | _ \\/ _` |  _|  _/ -_) '_| | |_| |  _/_|
-   |___/\\__,_|\\__|\\__\\___|_|    \\___/|_| (_)
+   | _ ) __ _| |_| |_ ___ _ _  | | | | _ \ |
+   | _ \/ _` |  _|  _/ -_) '_| | |_| |  _/_|
+   |___/\__,_|\__|\__\___|_|    \___/|_| (_)
 
    In baseball, there are many players on a team, but
    only one player at a time can pick up a bat and step
@@ -12298,24 +12298,24 @@ my $fa_batter_up=<<END;
 
 END
 
-my $fa_fa_defaults2=<<END;
+my $fa_fa_defaults2=<<'END';
 
      ___                     _      ___       __           _ _
-    / __|  _ _ _ _ _ ___ _ _| |_   |   \\ ___ / _|__ _ _  _| | |_ ___
-   | (_| || | '_| '_/ -_) ' \\  _|  | |) / -_)  _/ _` | || | |  _(_-<
-    \\___\\_,_|_| |_| \\___|_||_\\__|  |___/\\___|_| \\__,_|\\_,_|_|\\__/__/
+    / __|  _ _ _ _ _ ___ _ _| |_   |   \ ___ / _|__ _ _  _| | |_ ___
+   | (_| || | '_| '_/ -_) ' \  _|  | |) / -_)  _/ _` | || | |  _(_-<
+    \___\_,_|_| |_| \___|_||_\__|  |___/\___|_| \__,_|\_,_|_|\__/__/
 
 
 
    The --defaults utility also (conveniently) displays what your current
 END
 
-my $fa_set_defaults=<<END;
+my $fa_set_defaults=<<'END';
 
     ___ _            _     ___      _           _ 
-   / __| |_ __ _ _ _| |_  |   \\ ___(_)_ _  __ _| |
-   \\__ \\  _/ _` | '_|  _| | |) / _ \\ | ' \\/ _` |_|
-   |___/\\__\\__,_|_|  \\__| |___/\\___/_|_||_\\__, (_)
+   / __| |_ __ _ _ _| |_  |   \ ___(_)_ _  __ _| |
+   \__ \  _/ _` | '_|  _| | |) / _ \ | ' \/ _` |_|
+   |___/\__\__,_|_|  \__| |___/\___/_|_||_\__, (_)
                                           |___/   
 
 
@@ -14118,6 +14118,11 @@ my $do_wxPerl_setup=sub {
 
    # https://forums.aws.amazon.com/thread.jspa?messageID=224857
 
+   # http://raspberrypi.stackexchange.com/questions/1719/ \
+   # x11-connection-rejected-because-of-wrong-authentication
+
+   # https://wiki.archlinux.org/index.php/Running_X_apps_as_root
+
    print "\n";
    my $c='sudo yum --assumeyes install make libjpeg-devel libpng-devel '.
          'libtiff-devel gcc libffi-devel gettext-devel libmpc-devel '.
@@ -14131,6 +14136,18 @@ my $do_wxPerl_setup=sub {
    }
    close AWS;
    $ENV{PKG_CONFIG_PATH}='/usr/local/lib/pkgconfig';
+
+   my @creds=();
+   open(AWS,"(sudo -u ec2-user xauth list 1>&2) 2>&1|");
+   while (my $line=<AWS>) {
+      print "WHAT IS THE VALUE=$line\n";
+      chomp $line;
+      push @creds, $line;
+   }
+   close AWS;
+   foreach my $cred (@creds) {
+      system("sudo xauth add $cred");
+   }
 
    # for gcc compiles (building a program with Gcc and a simple "make"):
    # Code: -Wl,-rpath,$(DEFAULT_LIB_INSTALL_PATH)
@@ -14243,22 +14260,14 @@ END
       print $line;
    }
    close AWS;
-   my $ld='export LD_LIBRARY_PATH=/usr/local/lib64/perl5/auto/Wx/'.
-          ':/usr/local/lib64/perl5/Alien/wxWidgets/gtk_3_0_0_uni/lib/';
-   my ($stdout,$stderr)=('','');
-   system('sudo -u ec2-user xhost +;'.
-          'export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
-          'perl -MCPAN -e "install Wx"');
    system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
    system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
-   system('sudo -u ec2-user xhost +;'.
-          'export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+   system('export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
           'perl -MCPAN -e "install Wx::Demo"');
    system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
    system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
    system('/usr/local/bin/wxperl_demo.pl');
    system('/usr/local/bin/gtk-demo');
-   system('sudo -u ec2-user xhost -');
    return '<';
 
 };
@@ -17796,11 +17805,11 @@ our $adminmenu=sub {
       my @Hosts=@{&check_Hosts($Net::FullAuto::FA_Core::fa_host)};
       &Net::FullAuto::FA_Core::host_hash(\@Hosts);
    }
-   my $fam=<<FAM;
+   my $fam=<<'FAM';
       _      _       _        __  __              
-     /_\\  __| |_ __ (_)_ _   |  \\/  |___ _ _ _  _ 
-    / _ \\/ _` | '  \\| | ' \\  | |\\/| / -_) ' \\ || |
-   /_/ \\_\\__,_|_|_|_|_|_||_| |_|  |_\\___|_||_\\_,_|
+     /_\  __| |_ __ (_)_ _   |  \/  |___ _ _ _  _ 
+    / _ \/ _` | '  \| | ' \  | |\/| / -_) ' \ || |
+   /_/ \_\__,_|_|_|_|_|_||_| |_|  |_\___|_||_\_,_|
 
 FAM
    my %admin=(
@@ -20002,7 +20011,7 @@ sub ls
          my $rx2=qr/\d+\s+\w\w\w\s+\d+\s+\d\d\d\d\s+.*/;
          if ($line=~s/^.*\s+($rx1|$rx2)$/$1/) {
             $line=~
-               s/^\d+\s+\w\w\w\s+\d+\s+(?:\d\d:\d\d\s+|\d\d\d\d\s+)+(.*)$/$1/;
+               s/^\d+\s+\w\w\w\s+\d+\s+(?:\d\d:\d\d\s+|\d\d\d\d\s+)(.*)$/$1/;
             $newout.=$line;
          }
       } $output=$newout if $newout;
@@ -23206,25 +23215,25 @@ print "WE ARE GETTING OUT OF \@\@\n";sleep 10;
          chomp($error=~tr/\0-\11\13-\37\177-\377//d);
          if ($error=~/Permission denied/) {
             if ($error=~/publickey/) {
-               my $publickey_failed=<<END;
+               my $publickey_failed=<<'END';
     ___      _    _ _    _  __
-   | _ \\_  _| |__| (_)__| |/ /___ _  _
-   |  _/ || | '_ \\ | / _| ' </ -_) || |
-   |_|  \\_,_|_.__/_|_\\__|_|\\_\\___|\\_, |
+   | _ \_  _| |__| (_)__| |/ /___ _  _
+   |  _/ || | '_ \ | / _| ' </ -_) || |
+   |_|  \_,_|_.__/_|_\__|_|\_\___|\_, |
                                   |__/
       _       _   _            _   _         _   _
-     /_\\ _  _| |_| |_  ___ _ _| |_(_)__ __ _| |_(_)___ _ _
-    / _ \\ || |  _| ' \\/ -_) ' \\  _| / _/ _` |  _| / _ \\ ' \\
-   /_/ \\_\\_,_|\\__|_||_\\___|_||_\\__|_\\__\\__,_|\\__|_\\___/_||_|
+     /_\ _  _| |_| |_  ___ _ _| |_(_)__ __ _| |_(_)___ _ _
+    / _ \ || |  _| ' \/ -_) ' \  _| / _/ _` |  _| / _ \ ' \
+   /_/ \_\_,_|\__|_||_\___|_||_\__|_\__\__,_|\__|_\___/_||_|
 
     (                              ____
-    )\\ )           (        (     |   /
-   (()/(    )  (   )\\   (   )]\\ ) |  /
-    /(_))( /(  )\\ ((_) ))\\ (()/(  | /
+    )\ )           (        (     |   /
+   (()/(    )  (   )\   (   )]\ ) |  /
+    /(_))( /(  )\ ((_) ))\ (()/(  | /
    (_))_|)(_))((_) _  /((_) ((_)) |/
    | |_ ((_)_  (_)| |(_))   _| | (
-   | __|/ _` | | || |/ -_)/ _` | )\\
-   |_|  \\__,_| |_||_|\\___|\\__,_|((_)
+   | __|/ _` | | || |/ -_)/ _` | )\
+   |_|  \__,_| |_||_|\___|\__,_|((_)
 
 
 END
@@ -23265,12 +23274,12 @@ END
        pscp -i fullauto.ppk fullauto.pen $user\@$amazon->[1]:$user_path
 END
 
-                     my $wait_banner=<<END;
+                     my $wait_banner=<<'END';
 
     ___  _  _ _                _ _   _
    |_ _|( )| | |  __ __ ____ _(_) |_| |
-    | |  V | | |  \\ V  V / _` | |  _|_|
-   |___|   |_|_|   \\_/\\_/\\__,_|_|\\__(_)  (for 5 minutes)
+    | |  V | | |  \ V  V / _` | |  _|_|
+   |___|   |_|_|   \_/\_/\__,_|_|\__(_)  (for 5 minutes)
 
    If you can, go ahead and upload the private key mentioned on the
    previous page right now. (If you need to review the instructions
