@@ -14246,61 +14246,19 @@ END
    my $ld='export LD_LIBRARY_PATH=/usr/local/lib64/perl5/auto/Wx/'.
           ':/usr/local/lib64/perl5/Alien/wxWidgets/gtk_3_0_0_uni/lib/';
    my ($stdout,$stderr)=('','');
-   ($stdout,$stderr)=$localhost->cmd("cpan -D Wx",'__display__'); 
-   if ($stdout!~/up to date/) {
-      #system('sudo bash -lc '.
-      #       '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
-      #       'perl -MCPAN -e \'get Wx\'"');
-      $c='export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
-         'perl -MCPAN -e "get Wx"';
-      ($stdout,$stderr)=$localhost->cmd($c,'__display__');
-      ($stdout,$stderr)=$localhost->cmd(
-         "ls -l $localhost->{_homedir}/.cpan/build",
-         '__display__');
-      #$c='sudo ls -l /root/.cpan/build';
-      my %timest=();my ($size,$timestampd,$dirname)=('','','');
-      #open(AWS,"$c|");
-      #while (my $line=<AWS>) {
-      foreach my $line (split "\n",$stdout) {
-         if ($line=~/^d.*Wx-\d+.*$/) {
-            ($size,$timestampd,$dirname)=
-               &Net::FullAuto::FA_Core::ls_parse($line);
-            $timest{$timestampd}=$dirname;
-         }
-         print $line."\n";
-      }
-      my $ts=(reverse sort keys %timest)[0];
-      #system('sudo bash -lc '.
-      #       "\"$ld;cd /root/.cpan/build/$timest{$ts};perl Makefile.PL;".
-      #       "make;make install\"");
-      ($stdout,$stderr)=$localhost->cwd(
-         "$localhost->{_homedir}/.cpan/build/$timest{$ts}");
-      ($stdout,$stderr)=$localhost->cmd("perl Makefile.PL",'__display__');
-      ($stdout,$stderr)=$localhost->cmd("make",'__display__');
-      ($stdout,$stderr)=$localhost->cmd("sudo make install",'__display__');
-      ($stdout,$stderr)=$localhost->cwd("~");
-      #close AWS;
-   }
+   system('sudo -u ec2-user xhost +;'.
+          'export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+          'perl -MCPAN -e "install Wx"');
    system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
    system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
-   #system( "\"$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
-   #       'perl -MCPAN -e \'install Wx::Demo\'"');
-   ($stdout,$stderr)=$localhost->cmd(
-      "$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
-      'perl -MCPAN -e "install Wx::Demo"',
-      '__display__');
-   system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
-   system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
-   system("$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
-          'perl -MCPAN -e \'force install Wx::Demo\'');
-   #($stdout,$stderr)=$localhost->cmd(
-   #   "$ld;export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;".
-   #   'perl -MCPAN -e "install Wx::Demo"',
-   #   '__display__');
+   system('sudo -u ec2-user xhost +;'.
+          'export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
+          'perl -MCPAN -e "install Wx::Demo"');
    system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
    system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
    system('/usr/local/bin/wxperl_demo.pl');
-   system("/usr/local/bin/gtk-demo");
+   system('/usr/local/bin/gtk-demo');
+   system('sudo -u ec2-user xhost -');
    return '<';
 
 };
