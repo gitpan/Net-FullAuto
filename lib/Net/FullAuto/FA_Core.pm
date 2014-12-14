@@ -12878,7 +12878,126 @@ END
    ($main::aws->{$server_type}->[$cnt]->[1],$error)=
       Net::FullAuto::FA_Core::connect_ssh($server_host_block);
    my ($stdout,$stderr)=('','');
-   if ($server_type eq 'Liferay.com') {
+   if ($server_type eq 'OpenLDAP.org') {
+      my $handle=$main::aws->{$server_type}->[$cnt]->[1];
+      ($stdout,$stderr)=$handle->cmd("sudo yum clean all");
+      ($stdout,$stderr)=$handle->cmd("sudo yum grouplist hidden");
+      ($stdout,$stderr)=$handle->cmd("sudo yum groups mark convert");
+      ($stdout,$stderr)=$handle->cmd(
+         "sudo yum -y groupinstall 'Development tools'",'__display__');
+      ($stdout,$stderr)=$handle->cmd(
+         'sudo yum -y install openssl-devel icu cyrus-sasl'.
+         ' libicu cyrus-sasl-devel libtool-ltdl-devel',
+         '__display__');
+      my $url=
+         'http://www.oracle.com/technetwork/'.
+         'products/berkeleydb/downloads/index.html';
+      ($stdout,$stderr)=$handle->cmd("wget -qO- ".$url);
+      my $site='download.oracle.com';
+      my $source=$stdout;
+      $source=~
+           s/^.*?(http:\/\/$site\/)(?:otn\/)*(b.*?\d.tar.gz).*$/$1$2/s;
+      my $file=$2;
+      $file=~s/6\.\d+\.\d+.tar.gz/5.1.29.tar.gz/;
+      $source=~s/6\.\d+\.\d+.tar.gz/5.1.29.tar.gz/;
+      my $tarfile=$file;
+      $tarfile=~s/^.*\/(.*)\s*$/$1/;
+      my $dbdir=substr($file,(index $file,'/')+1,-7);
+      my $ver=$dbdir;
+      $ver=~s/_.*$//;
+      $ver=~s/^.*db-(\d+[.]\d+).*$/$1/;
+      my $pre="/usr/local/BerkeleyDB.$ver";
+      ($stdout,$stderr)=$handle->cmd("wget $source",'__display__');
+      ($stdout,$stderr)=$handle->cmd("wget ${source}.md5",'__display__');
+      ($stdout,$stderr)=$handle->cmd("cat ${tarfile}.md5");
+      my $checksum=$stdout;
+      $checksum=~s/^\s*(\S+)\s+.*$/$1/s;
+      ($stdout,$stderr)=$handle->cmd("md5sum -c - <<<\"$checksum $tarfile\"",
+         '__display__');
+      unless ($stderr) {
+         print(qq{ + CHECKSUM Test for $tarfile *PASSED* \n})
+      } else {
+         print "FATAL ERROR! : ".
+               "CHECKSUM Test for $tarfile *FAILED*\n";
+         print "\nPress ANY key to terminate FullAuto ",
+               "installation ...\n";
+         <STDIN>;
+         return '{choose_demo_setup}<';
+      }
+      ($stdout,$stderr)=$handle->cmd("sudo tar zxvf $tarfile -C /opt",
+         '__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rvf ${tarfile}.md5",
+         '__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rvf $tarfile",'__display__');
+      ($stdout,$stderr)=$handle->cmd("wget -qO- ".
+         "http://www.openldap.org/software/download/");
+      $url=$stdout;
+      $url=~s/^.*?[>]OpenLDAP[<].*?HREF="(.*?tgz)".*$/$1/s;
+      ($stdout,$stderr)=$handle->cmd("sudo wget ".$url,'__display__');
+      my $md5=$url;
+      $md5=~s/tgz$/md5/;
+      $tarfile=$url;
+      $tarfile=~s/^.*\/(.*)\s*/$1/;
+      my $oldir=$tarfile;
+      $oldir=~s/\.tgz$//;
+      ($stdout,$stderr)=$handle->cmd("wget $md5",'__display__');
+      $md5=~s/^.*\/(.*)\s*/$1/;
+      ($stdout,$stderr)=$handle->cmd("cat $md5");
+      $checksum=$stdout;
+      $checksum=~s/^.*=\s*(\S+)\s*$/$1/s;
+      ($stdout,$stderr)=$handle->cmd("md5sum -c - <<<\"$checksum $tarfile\"",
+         '__display__');
+      unless ($stderr) {
+         print(qq{ + CHECKSUM Test for $tarfile *PASSED* \n})
+      } else {
+         print "FATAL ERROR! : ".
+               "CHECKSUM Test for $tarfile *FAILED*\n";
+         print "\nPress ANY key to terminate FullAuto ",
+               "installation ...\n";
+         <STDIN>;
+         return '{choose_demo_setup}<';
+      }
+      ($stdout,$stderr)=$handle->cmd("sudo tar zxvf $tarfile -C /opt",
+         '__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rvf $md5",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo rm -rvf $tarfile",'__display__');
+      ($stdout,$stderr)=$handle->cwd("/opt/$dbdir/build_unix");
+      ($stdout,$stderr)=$handle->cmd("sudo ../dist/configure",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo make install",'__display__');
+      my $c='sudo cat /usr/local/BerkeleyDB.5.1/lib >'.
+            ' /etc/ld.so.conf.d/bdb.conf;'.
+            'sudo chmod 444 /etc/ld.so.conf.d/bdb.conf;'.
+            'sudo ldconfig';
+      ($stdout,$stderr)=$handle->cmd($c);
+      $c='sudo cat /usr/local/lib >'.
+            ' /etc/ld.so.conf.d/sasl.conf;'.
+            'sudo chmod 444 /etc/ld.so.conf.d/sasl.conf;'.
+            'sudo ldconfig';
+      ($stdout,$stderr)=$handle->cmd($c);
+      $c='sudo cat /usr/lib64 >'.
+            ' /etc/ld.so.conf.d/icu.conf;'.
+            'sudo chmod 444 /etc/ld.so.conf.d/icu.conf;'.
+            'sudo ldconfig';
+      ($stdout,$stderr)=$handle->cmd($c);
+      ($stdout,$stderr)=$handle->cwd("/opt/$oldir");
+      # http://www.openldap.org/faq/data/cache/1113.html
+      my $lf="export LDFLAGS=\'-L/usr/local/BerkeleyDB.5.1/lib ".
+                            "-L/usr/lib64 -L/usr/local/lib ".
+                            "-Wl,-rpath,/usr/local/BerkeleyDB.5.1/lib ".
+                            "-Wl,-rpath,/usr/lib64 ".
+                            "-Wl,-rpath,/usr/local/lib\'";
+      my $cp="export CPPFLAGS=\'-I/usr/local/BerkeleyDB.5.1/include ".
+                             "-I/usr/include/sasl\'";
+      #my $lp='export LD_LIBRARY_PATH=/usr/local/BerkeleyDB.5.1/lib:'
+      #      .'/usr/lib64:/usr/local/lib';
+      ($stdout,$stderr)=$handle->cmd(
+         "sudo bash -lc \"$lf;$cp;./configure --with-cyrus-sasl\"",
+         '__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo make depend",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo make",'__display__');
+      ($stdout,$stderr)=$handle->cmd("sudo make install",'__display__');
+print "DONE SO FAR\n";<STDIN>;
+   } elsif ($server_type eq 'Liferay.com') {
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
       ($stdout,$stderr)=$handle->cmd("wget -qO- ".
          "http://sourceforge.net/projects/lportal/files/");
@@ -13422,6 +13541,80 @@ sub get_aws_security_id {
 
 }
 
+my $standup_openldap=sub {
+
+   use JSON::XS;
+   my $type="]T[{select_type}";
+   $type=~s/^"//;
+   $type=~s/"$//;
+   $type=substr($type,0,(index $type,' ->')-3);
+   my $openldap="]T[{select_openldap_setup}";
+   my $i=$main::aws->{fullauto}->{ImageId}||'';
+   my $s=$main::aws->{fullauto}->
+         {NetworkInterfaces}->[0]->{SubnetId}||'';
+   my $g=$main::aws->{fullauto}->
+         {SecurityGroups}->[0]->{GroupId}||'';
+   my $n=$main::aws->{fullauto}->
+         {SecurityGroups}->[0]->{GroupName}||'';
+   {
+      $SIG{CHLD}="DEFAULT";
+      my $c='aws ec2 describe-security-groups '.
+            "--group-names $n";
+      open(AWS,"$c|");
+      my $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      my $hash=decode_json($json);
+      my $cidr=$hash->{SecurityGroups}->[0]->{IpPermissions}
+               ->[0]->{IpRanges}->[0]->{CidrIp};
+      $c='aws ec2 create-security-group --group-name '.
+            'OpenLDAPSecurityGroup --description '.
+            '"OpenLDAP.org Security Group" 2>&1';
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+      $c='aws ec2 authorize-security-group-ingress '.
+         '--group-name OpenLDAPSecurityGroup --protocol '.
+         'tcp --port 22 --cidr '.$cidr." 2>&1";
+      open(AWS,"$c|");
+      $json='';
+      while (my $line=<AWS>) {
+         $json.=$line;
+      }
+      close AWS;
+      $hash=decode_json($json)
+         if $json && -1==index $json,'already exists';
+   }
+   my $cnt=0;
+   if (exists $main::aws->{'OpenLDAP.org'}) {
+      my $g=get_aws_security_id('OpenLDAPSecurityGroup');
+      my $c="aws ec2 run-instances --image-id $i --count 1 ".
+         "--instance-type $type --key-name fullauto ".
+         "--security-group-ids $g --subnet-id $s";
+      if ($#{$main::aws->{'OpenLDAP.org'}}==0) {
+         my $inst=launch_instance($c);
+         add_and_tag_server('OpenLDAP.org',$cnt,$inst);
+         config_server('OpenLDAP.org',$cnt,$openldap);
+      } else {
+         my $num=$#{$main::aws->{'OpenLDAP.org'}}-1;
+         foreach my $num (0..$num) {
+            my $inst=launch_instance($c);
+            add_and_tag_server('OpenLDAP.org',$cnt,$inst);
+            config_server('OpenLDAP.org',$cnt++,$openldap);
+         }
+      }
+   }
+
+   return '{choose_demo_setup}<'; 
+
+};
+
 my $standup_liferay=sub {
 
    use JSON::XS;
@@ -13647,6 +13840,96 @@ END
 
 };
 
+my $openldap_setup_summary=sub {
+
+   package liferay_setup_summary;
+   use JSON::XS;
+   my $region="]T[{awsregions}";
+   $region=~s/^"//;
+   $region=~s/"$//;
+   my $type="]T[{select_type}";
+   $type=~s/^"//;
+   $type=~s/"$//;
+   my $money=$type;
+   $money=~s/^.*-> \$(.*?) +(?:[(].+[)] )*\s*per hour$/$1/;
+   $type=substr($type,0,(index $type,' ->')-3);
+   my $openldap="]T[{select_openldap_setup}";
+   $openldap=~s/^"//;
+   $openldap=~s/"$//;
+   print "REGION=$region and TYPE=$type\n";
+   print "OPENLDAP=$openldap\n";
+   my $num_of_servers=0;
+   my $ol=$openldap;
+   $ol=~s/^.*(\d+)\sServer.*$/$1/;
+   if ($ol==1) {
+      $main::aws->{'OpenLDAP.org'}->[0]=[];
+   } elsif ($ol=~/^\d+$/ && $ol) {
+      foreach my $n (0..$ol) {
+         $main::aws->{'OpenLDAP.org'}=[] unless exists
+            $main::aws->{'OpenLDAP.org'};
+         $main::aws->{'OpenLDAP.org'}->[$n]=[];
+      }
+   }
+   $num_of_servers=$ol;
+   my $cost=int($num_of_servers)*$money;
+   my $cents='';
+   if ($cost=~/^0\./) {
+      $cents=$cost;
+      $cents=~s/^0\.//;
+      if (length $cents>2) {
+         $cents=~s/^(..)(.*)$/$1.$2/;
+         $cents=~s/^0//;
+         $cents=' ('.$cents.' cents)';
+      } else {
+         $cents=' ('.$cents.' cents)';
+      }
+   }
+   my $show_cost_banner=<<'END';
+
+      _                  _       ___        _  ___
+     /_\  __ __ ___ _ __| |_    / __|___ __| ||__ \
+    / _ \/ _/ _/ -_) '_ \  _|  | (__/ _ (_-<  _|/_/
+   /_/ \_\__\__\___| .__/\__|   \___\___/__/\__(_)
+                   |_|
+
+END
+   $show_cost_banner.=<<END;
+   Note: There is a \$$cost per hour cost$cents to launch $num_of_servers
+         AWS EC2 $type servers for the FullAuto Demo:
+
+         $openldap
+
+
+END
+   my %show_cost=(
+
+      Name => 'show_cost',
+      Item_1 => {
+
+         Text => "I accept the \$$cost$cents per hour cost",
+         Result => $standup_openldap,
+
+      },
+      Item_2 => {
+
+         Text => "Return to Choose Demo Menu",
+         Result => sub { return '{choose_demo_setup}<' },
+
+      },
+      Item_3 => {
+
+         Text => "Exit FullAuto",
+         Result => sub { Net::FullAuto::FA_Core::cleanup() },
+
+      },
+      Scroll => 2,
+      Banner => $show_cost_banner,
+
+   );
+   return \%show_cost;
+
+};
+
 my $liferay_setup_summary=sub {
 
    package liferay_setup_summary;
@@ -13840,6 +14123,42 @@ END
 
 };
 
+my $select_openldap_setup=sub {
+
+   my @options=('OpenLDAP & Berkeley DB on 1 Server');
+   my $openldap_setup_banner=<<'END';
+
+     ___                 _    ___   _   ___ 
+    / _ \ _ __  ___ _ _ | |  |   \ /_\ | _ \
+   | (_) | '_ \/ -_) ' \| |__| |) / _ \|  _/
+    \___/| .__/\___|_||_|____|___/_/ \_\_|  
+         |_|
+
+   Choose the OpenLDAP setup you wish to demo. Note that more servers
+   means more expense, and more JVMs means less permformance on a
+   small instance type. Consider a medium or large instance type (previous
+   screens) if you wish to test more than 1 JVM on a server. You can
+   navigate backwards and make new selections with the [<] LEFTARROW key.
+
+END
+   my %select_openldap_setup=(
+
+      Name => 'select_openldap_setup',
+      Item_1 => {
+
+         Text => ']C[',
+         Convey => \@options,
+         Result => $openldap_setup_summary,
+
+      },
+      Scroll => 1,
+      Banner => $openldap_setup_banner,
+   );
+   return \%select_openldap_setup,
+
+};
+#Result => sub { return '{choose_demo_setup}<' },
+
 my $select_liferay_setup=sub {
 
    my @options=('Liferay & Tomcat on 1 Server & 1 JVM',
@@ -13918,12 +14237,12 @@ my $select_an_instance_type=sub {
    my $ns=$#sizes+1;
    my $stype='m2.small';
    my $result=$select_liferay_setup;
-   if (-1<index $demo_choice,'XXXXXX') {
+   if (-1<index $demo_choice,'OpenLDAP') {
       $stype='t2.micro';
       my @sz=grep { !/t2.micro/ } @sizes;
       unshift @sz, grep { /t2.micro/ } @sizes;
       @sizes=@sz;
-      #$result=$select_XXXXXX_setup;
+      $result=$select_openldap_setup;
    }
    my $select_type_banner=<<'END';
 
@@ -13971,9 +14290,8 @@ my $choose_an_instance_type=sub {
    |___|_||_/__/\__\__,_|_||_\__\___|   |_| \_, | .__/\___/__/
                                             |__/|_|
 
-   You have selected the demo: $demo_choice
-
 END
+   $instance_type_banner.="   You have selected the demo: $demo_choice\n";
    if (-1<index $demo_choice,'Liferay') {
       $instance_type_banner.=<<END;
 
@@ -13984,7 +14302,7 @@ END
    presented to you for approval before any costs are incurred.
 
 END
-   } elsif (-1<index $demo_choice,'XXXXXX') {
+   } elsif (-1<index $demo_choice,'OpenLDAP') {
       $instance_type_banner.=<<END;
 
    $demo_choice can be run on a Free Tier micro server, but the performance
@@ -14167,6 +14485,7 @@ END
       print $line;
    }
    close AWS;
+   system("sudo chmod 444 /etc/ld.so.conf.d/gtk.conf");
    my @urls=(
       'ftp://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.xz',
       'http://download.savannah.gnu.org/releases/freetype/freetype-2.4.9.tar.gz',
@@ -14244,6 +14563,7 @@ END
       print $line;
    }
    close AWS;
+   system("sudo chmod 444 /etc/ld.so.conf.d/alien.conf");
    system('sudo bash -lc '.
           '"export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
           'perl -MCPAN -e \'install Alien::wxWidgets\'"');
@@ -14260,6 +14580,7 @@ END
       print $line;
    }
    close AWS;
+   system("sudo chmod 444 /etc/ld.so.conf.d/wx.conf");
    system('sudo find /usr/local/lib64/perl5 -type d | xargs sudo chmod 755');
    system('sudo find /usr/local/share/perl5 -type d | xargs sudo chmod 755');
    system('export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig;'.
@@ -14339,6 +14660,13 @@ END
          Text   => ']C[',
          Convey => [ 'wxPerl: Cross-Platform GUI' ],
          Result => $do_wxPerl_setup,
+
+      },
+      Item_3 => {
+
+         Text   => ']C[',
+         Convey => [ 'OpenLDAP' ],
+         Result => $choose_aws_instances,
 
       },
       Scroll => 1,
@@ -30157,7 +30485,6 @@ sub new {
    $self->{_cmd_pid}=$cmd_pid;
    $self->{_sh_pid}=$shell_pid;
    $self->{_shell}=$shell;
-print "HOW BOUT HD2\n";<STDIN>;
    $self->{_homedir}=$homedir;
    if ($cygdrive) {
       $self->{_cygdrive}=$cygdrive;

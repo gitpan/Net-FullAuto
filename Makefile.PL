@@ -27,9 +27,11 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999951';
+$main::VERSION='0.999999999952';
 
 # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
+# When FullAuto is installed, run:  fa --figlet  to view multiple fonts.
+
 my $fa_banner=<<'END';
 
 
