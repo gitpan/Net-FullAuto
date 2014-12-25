@@ -116,6 +116,10 @@ package Net::FullAuto::FA_Core;
 #  http://vim.wikia.com/wiki/Toggle_auto-indenting_for_code_paste
 #  :set paste
 #
+## Send cmd and do interactive over ssh:
+#
+#  ssh user@host  -t 'bash -l -c "ls;bash"'
+#
 ## TO DO: Look for way to fix this error:
 #
 #  cd "/cygdrive_funkyPrompt_cd "/cygdrive/c/Users/KB06606-admin" 2>&1
@@ -11953,7 +11957,7 @@ my $fa_welcome=<<'END';
            _   _      _         _____      _ _    _         _
           | \ | | ___| |_      |  ___|   _| | |  / \  _   _| |_ ___
           |  \| |/ _ \ __| o o | |_ | | | | | | / _ \| | | | __/ _ \
-          | |\  |  __/ ||  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
+          | |\  |  __/ |_  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
           |_| \_|\___|\__|     |_|   \__,_|_|_/_/   \_\__,_|\__\___/
 
 
@@ -12998,6 +13002,15 @@ END
       ($stdout,$stderr)=$handle->cmd("sudo make install",'__display__');
 print "DONE SO FAR\n";<STDIN>;
    } elsif ($server_type eq 'Liferay.com') {
+
+      # https://www.liferay.com/web/raymond.auge/blog/-/blogs \
+      #       /liferay-osgi-and-shell-access-via-gogo-shell
+
+      # https://www.liferay.com/web/jignesh/blog/-/ \
+      #       blogs/power-of-beanshell-in-liferay
+
+      # http://www.insinuator.net/2011/12/liferay-portlet-shell/
+
       my $handle=$main::aws->{$server_type}->[$cnt]->[1];
       ($stdout,$stderr)=$handle->cmd("wget -qO- ".
          "http://sourceforge.net/projects/lportal/files/");
@@ -13828,7 +13841,7 @@ my $standup_liferay=sub {
            _   _      _         _____      _ _    _         _
           | \ | | ___| |_      |  ___|   _| | |  / \  _   _| |_ ___
           |  \| |/ _ \ __| o o | |_ | | | | | | / _ \| | | | __/ _ \
-          | |\  |  __/ ||  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
+          | |\  |  __/ |_  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
           |_| \_|\___|\__|     |_|   \__,_|_|_/_/   \_\__,_|\__\___/
 
 
@@ -24383,8 +24396,6 @@ sub mirror
          return '',$die;
       } else { &Net::FullAuto::FA_Core::handle_error($die) }
    }
-   delete $baseFH->{_unaltered_basehash} if exists
-          $baseFH->{_unaltered_basehash};
    my $username=&Net::FullAuto::FA_Core::username();
    my $dest_output='';my $base_output='';my $lsgnu=0;
    my $num_of_levels='';my $mirrormap='';my $trantar='';
@@ -24620,60 +24631,18 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                   return '',$die;
                } else { &Net::FullAuto::FA_Core::handle_error($die) }
             }
-            $main::base_shortcut_info{$baseFH}=$dir if $index_base_once;
+            deep_delete_data_hash($baseFH,'_bhash') if
+               exists $baseFH->{_bhash} && $baseFH->{_bhash};
+            $main::base_shortcut_info{$baseFH}=$dir
+               if $index_base_once;
             if (exists $baseFH->{_unaltered_basehash} &&
                   $baseFH->{_unaltered_basehash}) {
-               foreach my $key (keys %{$baseFH->{_bhash}}) {
-                  if (ref ${$baseFH->{_bhash}}{$key} ne 'ARRAY') {
-                     delete ${$baseFH->{_bhash}}{$key};
-                     next;
-                  }
-                  my $elems=$#{${$baseFH->{_bhash}}{$key}}+1;
-                  while (-1<--$elems) {
-                     if (ref ${$baseFH->{_bhash}}{$key}[$elems] ne 'HASH') {
-                        undef ${$baseFH->{_bhash}}{$key}[$elems];
-                     } else {
-                        foreach my $key (
-                              keys %{${$baseFH->{_bhash}}{$key}[$elems]}) {
-                           if (${${$baseFH->{_bhash}}{$key}[$elems]}{$key}) {
-                              undef
-                                 @{${${$baseFH->{_bhash}}{$key}[$elems]}{$key}};
-                           } delete ${${$baseFH->{_bhash}}{$key}[$elems]}{$key};
-                        } undef %{${$baseFH->{_bhash}}{$key}[$elems]};
-                        undef ${$baseFH->{_bhash}}{$key}[$elems];
-                     }
-                  } undef ${$baseFH->{_bhash}}{$key};
-                  delete ${$baseFH->{_bhash}}{$key};
-               } undef %{$baseFH->{_bhash}};undef $baseFH->{_bhash};
-               foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
-                  if (ref $baseFH->{_unaltered_basehash}->{$key} ne 'ARRAY') {
-                     delete $baseFH->{_unaltered_basehash}->{$key};
-                     next;
-                  }
-                  my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
-                  while (-1<--$elems) {
-                     if (ref ${$baseFH->{_unaltered_basehash}}{$key}[$elems]
-                           ne 'HASH') {
-                        undef ${$baseFH->{_unaltered_basehash}}{$key}[$elems];
-                     } else {
-                        foreach my $key (
-                              keys %{${$baseFH->{_unaltered_basehash}}
-                              {$key}[$elems]}) {
-                           if (${${$baseFH->{_unaltered_basehash}}
-                                 {$key}[$elems]}{$key}) {
-                              undef @{${${$baseFH->{_unaltered_basehash}}
-                                    {$key}[$elems]}{$key}};
-                           } delete ${${$baseFH->{_unaltered_basehash}}
-                                    {$key}[$elems]}{$key};
-                        } undef %{${$baseFH->{_unaltered_basehash}}
-                                {$key}[$elems]};
-                        undef ${$baseFH->{_unaltered_basehash}}
-                              {$key}[$elems];
-                     }
-                  } undef ${$baseFH->{_unaltered_basehash}}{$key};
-                  delete ${$baseFH->{_unaltered_basehash}}{$key};
-               } undef %{$baseFH->{_unaltered_basehash}};
-               $baseFH->{_unaltered_basehash}='';
+               if ($index_base_once) {
+                  $baseFH->{_bhash}=make_deep_data_copy(
+                     $baseFH->{_unaltered_basehash});
+               } else {
+                  deep_delete_data_hash($baseFH,'_unaltered_basehash');
+               }
             }
             if (!$stderr && $base_output!~/bytes free\s*/s) {
                delete $main::base_shortcut_info{$baseFH} if
@@ -24685,24 +24654,16 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                &Net::FullAuto::FA_Core::handle_error($die);
             } else { last }
          }
-      } else {
-         $baseFH->{_bhash}={}; # cygwin
-         foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
-            if (ref ${$baseFH->{_unaltered_basehash}}{$key} eq 'ARRAY') {
-               foreach my $elem (@{${$baseFH->{_unaltered_basehash}}{$key}}) {
-                  if (ref $elem ne 'HASH') {
-                     push @{${$baseFH->{_bhash}}{$key}}, $elem;
-                  } else {
-                     my %newelem=();
-                     foreach my $key (keys %{$elem}) {
-                        $newelem{$key}=[@{${$elem}{$key}}];
-                     }
-                     push @{${$baseFH->{_bhash}}{$key}}, \%newelem;
-                  }
-               }
+      } else { # cygwin
+         deep_delete_data_hash($baseFH,'_bhash') if
+            exists $baseFH->{_bhash} && $baseFH->{_bhash};
+         if (exists $baseFH->{_unaltered_basehash} &&
+               $baseFH->{_unaltered_basehash}) {
+            if ($index_base_once) {
+               $baseFH->{_bhash}=make_deep_data_copy(
+                  $baseFH->{_unaltered_basehash});
             } else {
-               ${$baseFH->{_bhash}}{$key}= # cygwin
-                  ${$baseFH->{_unaltered_basehash}}{$key};
+               deep_delete_data_hash($baseFH,'_unaltered_basehash');
             }
          }
       } &Net::FullAuto::FA_Core::handle_error($stderr) if $stderr;
@@ -24796,31 +24757,18 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                }
             }
          }
-         $main::base_shortcut_info{$baseFH}=$dir if $index_base_once;
-         if ($baseFH->{_unaltered_basehash}) {
-            foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
-               my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
-               while (-1<--$elems) {
-                  if (ref ${$baseFH->{_unaltered_basehash}}{$key}[$elems]
-                        ne 'HASH') {
-                     undef ${$baseFH->{_unaltered_basehash}}{$key}[$elems];
-                  } else {
-                     foreach my $key (
-                           keys %{${$baseFH->{_unaltered_basehash}}
-                           {$key}[$elems]}) {
-                        if (${${$baseFH->{_unaltered_basehash}}
-                              {$key}[$elems]}{$key}) {
-                           undef @{${${$baseFH->{_unaltered_basehash}}
-                                 {$key}[$elems]}{$key}};
-                        } delete ${${$baseFH->{_unaltered_basehash}}
-                                 {$key}[$elems]}{$key};
-                     } undef %{${$baseFH->{_unaltered_basehash}}{$key}[$elems]};
-                     undef ${$baseFH->{_unaltered_basehash}}{$key}[$elems];
-                  }
-               } undef ${$baseFH->{_unaltered_basehash}}{$key}; 
-               delete ${$baseFH->{_unaltered_basehash}}{$key};
-            } undef %{$baseFH->{_unaltered_basehash}};
-            $baseFH->{_unaltered_basehash}='';
+         deep_delete_data_hash($baseFH,'_bhash') if
+            exists $baseFH->{_bhash} && $baseFH->{_bhash};
+         $main::base_shortcut_info{$baseFH}=$dir
+            if $index_base_once;
+         if (exists $baseFH->{_unaltered_basehash} &&
+               $baseFH->{_unaltered_basehash}) {
+            if ($index_base_once) {
+               $baseFH->{_bhash}=make_deep_data_copy(
+                  $baseFH->{_unaltered_basehash});
+            } else {
+               deep_delete_data_hash($baseFH,'_unaltered_basehash');
+            }
          }
       }
    } elsif (!exists $main::base_shortcut_info{$baseFH} ||
@@ -24846,51 +24794,23 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
          $stderr.="\n\n       at ".(caller(0))[1]." line ".__LINE__."\n"
             if $stderr;
       }
-      if ($baseFH->{_unaltered_basehash}) { # line 7144
-         foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
-            my $elems=$#{${$baseFH->{_unaltered_basehash}}{$key}}+1;
-            while (-1<--$elems) {
-               if (ref ${$baseFH->{_unaltered_basehash}}{$key}[$elems]
-                     ne 'HASH') {
-                  undef ${$baseFH->{_unaltered_basehash}}{$key}[$elems];
-               } else {
-                  foreach my $key (
-                        keys %{${$baseFH->{_unaltered_basehash}}
-                        {$key}[$elems]}) {
-                     if (${${$baseFH->{_unaltered_basehash}}
-                           {$key}[$elems]}{$key}) {
-                        undef @{${${$baseFH->{_unaltered_basehash}}
-                              {$key}[$elems]}{$key}};
-                     } delete ${${$baseFH->{_unaltered_basehash}}
-                              {$key}[$elems]}{$key};
-                  } undef %{${$baseFH->{_unaltered_basehash}}{$key}[$elems]};
-                  undef ${$baseFH->{_unaltered_basehash}}{$key}[$elems];
-               }
-            } undef ${$baseFH->{_unaltered_basehash}}{$key};
-            delete ${$baseFH->{_unaltered_basehash}}{$key};
-         } undef %{$baseFH->{_unaltered_basehash}};
-         $baseFH->{_unaltered_basehash}='';
-      }
-   } else {
-      $baseFH->{_bhash}={};
-      foreach my $key (keys %{$baseFH->{_unaltered_basehash}}) {
-         if (ref ${$baseFH->{_unaltered_basehash}}{$key} eq 'ARRAY') {
-            foreach my $elem (@{${$baseFH->{_unaltered_basehash}}{$key}}) {
-               if (ref $elem ne 'HASH') {
-                  push @{${$baseFH->{_bhash}}{$key}}, $elem;
-               } else {
-                  my %newelem=();
-                  foreach my $key (keys %{$elem}) {
-                     $newelem{$key}=[@{${$elem}{$key}}];
-                  }
-                  push @{${$baseFH->{_bhash}}{$key}}, \%newelem;
-               }
-            }
+      deep_delete_data_hash($baseFH,'_bhash') if
+         exists $baseFH->{_bhash} && $baseFH->{_bhash};
+      $main::base_shortcut_info{$baseFH}=$dir
+         if $index_base_once;
+      if (exists $baseFH->{_unaltered_basehash} &&
+            $baseFH->{_unaltered_basehash}) {
+         if ($index_base_once) {
+            $baseFH->{_bhash}=make_deep_data_copy(
+               $baseFH->{_unaltered_basehash});
          } else {
-            ${$baseFH->{_bhash}}{$key}=
-               ${$baseFH->{_unaltered_basehash}}{$key};
+            deep_delete_data_hash($baseFH,'_unaltered_basehash');
          }
       }
+   } else {
+      deep_delete_data_hash($baseFH,'_bhash');
+      $baseFH->{_bhash}=make_deep_data_copy(
+         $baseFH->{_unaltered_basehash});
    }
    if ($stderr) {
       if (unpack('a10',$stderr) eq 'The System') {
@@ -24973,20 +24893,20 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
 
       $baseFH->{_unaltered_basehash}={};
       foreach my $key (keys %{$baseFH->{_bhash}}) {
-         if (ref ${$baseFH->{_bhash}}{$key} eq 'ARRAY') {
-            foreach my $elem (@{${$baseFH->{_bhash}}{$key}}) {
+         if (ref $baseFH->{_bhash}->{$key} eq 'ARRAY') {
+            foreach my $elem (@{$baseFH->{_bhash}->{$key}}) {
                if (ref $elem ne 'HASH') {
-                  push @{${$baseFH->{_unaltered_basehash}}{$key}}, $elem;
+                  push @{$baseFH->{_unaltered_basehash}->{$key}}, $elem;
                } else {
                   my %newelem=();
                   foreach my $key (keys %{$elem}) {
-                     $newelem{$key}=[@{${$elem}{$key}}];
+                     $newelem{$key}=[@{$elem->{$key}}];
                   }
-                  push @{${$baseFH->{_unaltered_basehash}}{$key}}, \%newelem;
+                  push @{$baseFH->{_unaltered_basehash}->{$key}}, \%newelem;
                }
             }
          } else {
-            ${$baseFH->{_unaltered_basehash}}{$key}=${$baseFH->{_bhash}}{$key};
+            $baseFH->{_unaltered_basehash}->{$key}=$baseFH->{_bhash}->{$key};
          }
       }
 
@@ -25086,23 +25006,7 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
          } else { &Net::FullAuto::FA_Core::handle_error($stderr,'-7'); }
       }
       if (ref $dest_first_hash eq 'HASH') {
-         foreach my $key (keys %{$destFH->{_dhash}}) {
-            my $elems=$#{${$destFH->{_dhash}}{$key}}+1;
-            while (-1<--$elems) {
-               if (ref ${$destFH->{_dhash}}{$key}[$elems] ne 'HASH') {
-                  undef ${$destFH->{_dhash}}{$key}[$elems];
-               } else {
-                  foreach my $key (
-                        keys %{${$destFH->{_dhash}}{$key}[$elems]}) {
-                     if (${${$destFH->{_dhash}}{$key}[$elems]}{$key}) {
-                        undef @{${${$destFH->{_dhash}}{$key}[$elems]}{$key}};
-                     } delete ${${$destFH->{_dhash}}{$key}[$elems]}{$key};
-                  } undef %{${$destFH->{_dhash}}{$key}[$elems]};
-                  undef ${$destFH->{_dhash}}{$key}[$elems];
-               }
-            } undef ${$destFH->{_dhash}}{$key};
-            delete ${$destFH->{_dhash}}{$key};
-         } undef %{$destFH->{_dhash}};
+         deep_delete_data_hash($destFH,'_dhash');
       }
       my $hostlabel='';
       eval {
@@ -25166,22 +25070,23 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                undef ${$dest_first_hash}{$key};
                next;
             }
-            my $elems=$#{${$dest_first_hash}{$key}}+1;
+            my $elems=($#{$dest_first_hash->{$key}})+1;
             while (-1<--$elems) {
-               if (ref ${$dest_first_hash}{$key}[$elems] ne 'HASH') {
-                  undef ${$dest_first_hash}{$key}[$elems];
+               if (ref $dest_first_hash->{$key}[$elems] ne 'HASH') {
+                  undef $dest_first_hash->{$key}[$elems];
                } else {
                   foreach my $key (
-                        keys %{${$dest_first_hash}{$key}[$elems]}) {
-                     if (exists ${$dest_first_hash}{$key}[$elems]->{$key} &&
-                           ref ${$dest_first_hash}{$key}[$elems]->{$key} eq 'ARRAY') {
-                        undef @{${$dest_first_hash}{$key}[$elems]->{$key}};
-                     } delete ${$dest_first_hash}{$key}[$elems]->{$key};
-                  } undef %{${$dest_first_hash}{$key}[$elems]};
-                  undef ${$dest_first_hash}{$key}[$elems];
+                        keys %{$dest_first_hash->{$key}[$elems]}) {
+                     if (exists $dest_first_hash->{$key}[$elems]->{$key} &&
+                           ref $dest_first_hash->{$key}[$elems]->{$key}
+                           eq 'ARRAY') {
+                        undef @{$dest_first_hash->{$key}[$elems]->{$key}};
+                     } delete $dest_first_hash->{$key}[$elems]->{$key};
+                  } undef %{$dest_first_hash->{$key}[$elems]};
+                  undef $dest_first_hash->{$key}[$elems];
                }
-            } undef ${$dest_first_hash}{$key};
-            delete ${$dest_first_hash}{$key};
+            } undef $dest_first_hash->{$key};
+            delete $dest_first_hash->{$key};
          } undef %{$dest_first_hash};
       }
       ## BUILDING FIRST DEST HASH
@@ -26799,6 +26704,61 @@ print $Net::FullAuto::FA_Core::MRLOG "WHAT THE HECK2 IS ACTIVITY=$activity\n"
    if (wantarray) {
       return $mirror_output,$mirror_debug;
    } else { return $mirror_output }
+
+}
+
+sub make_deep_data_copy
+{
+
+   my $deep_data=$_[0];
+   my $new_copy={};
+   foreach my $key (keys %{$deep_data}) {
+      if (ref $deep_data->{$key} eq 'ARRAY') {
+         foreach my $elem (@{$deep_data->{$key}}) {
+            if (ref $elem ne 'HASH') {
+               push @{$new_copy->{$key}}, $elem;
+            } else {
+               my %newelem=();
+               foreach my $key (keys %{$elem}) {
+                  $newelem{$key}=[@{$elem->{$key}}];
+               }
+               push @{$new_copy->{$key}}, \%newelem;
+            }
+         }
+      } else {
+         $new_copy->{$key}=$deep_data->{$key};
+      }
+   }
+
+}
+
+sub deep_delete_data_hash
+{
+
+   my $dataFH=$_[0];
+   my $hash=$_[1];
+   foreach my $key (keys %{$dataFH->{$hash}}) {
+      if (ref $dataFH->{$hash}->{$key} ne 'ARRAY') {
+         delete $dataFH->{$hash}->{$key};
+         next;
+      }
+      my $elems=($#{$dataFH->{$hash}->{$key}})+1;
+      while (-1<--$elems) {
+         if (ref $dataFH->{$hash}->{$key}[$elems] ne 'HASH') {
+            undef $dataFH->{$hash}->{$key}[$elems];
+         } else {
+            foreach my $key (
+                  keys %{$dataFH->{$hash}->{$key}[$elems]}) {
+               if ($dataFH->{$hash}->{$key}[$elems]->{$key}) {
+                  undef
+                     @{$dataFH->{$hash}->{$key}[$elems]->{$key}};
+               } delete $dataFH->{$hash}->{$key}[$elems]->{$key};
+            } undef %{$dataFH->{$hash}->{$key}[$elems]};
+            undef $dataFH->{$hash}->{$key}[$elems];
+         }
+      } undef $dataFH->{$hash}->{$key};
+      delete $dataFH->{$hash}->{$key};
+   } undef %{$dataFH->{$hash}};undef $dataFH->{$hash};
 
 }
 
@@ -34097,16 +34057,44 @@ print $Net::FullAuto::FA_Core::MRLOG "FIRST_EIGHT_AND_A_HALF\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
                               $first=0;
                            } else {
-                              my $tsst=unpack("a$lslc",$test_stripped_output);
+                              my $stripang_live_command=$stripped_live_command;
+                              $stripang_live_command=~s/[>]//gs;
+                              my $lsac=(length $stripang_live_command)+1;
+                              if ($lsac==$lslc) {
+                                 $output=unpack("x$ltso a*",$output);
+
+print $Net::FullAuto::FA_Core::MRLOG "FIRST_NINE_HALF and 1=$lslc and ",
+                              "2=$ltso and 3=$lsac and ",
+                              "OUTPUT=$output<== and ",
+                              "TWO=$stripped_live_command<==",
+                              "(ONE SHOULD EQ TWO but didn't)\n"
+                              if $Net::FullAuto::FA_Core::log &&
+                              -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
+
+                                 if ($output=~s/^\s*(stdout.*
+                                       \n$cmd_prompt)$/$1/sx) {
+                                    &display($output,$cmd_prompt,$save)
+                                       if $display;
+                                    $growoutput.=$output;$output='';
+                                    $first=0;
+                                 } else {
+                                    $growoutput=$output;$output='';
+                                    $command_stripped_from_output=1;
+                                 }
+                              }
+                              if (!$first && !$command_stripped_from_output) {
+                                 my $tsst=unpack("a$lslc",
+                                       $test_stripped_output);
 print $Net::FullAuto::FA_Core::MRLOG "FIRST_NINE and 1=$lslc and 2=$ltso and ",
                               "ONE=$tsst<== and TWO=$stripped_live_command<==",
                               "(ONE SHOULD EQ TWO but didn't)\n"
    if $Net::FullAuto::FA_Core::log && -1<index $Net::FullAuto::FA_Core::MRLOG,'*';
-                              &display($last_line,$cmd_prompt,$save)
-                                 if $display;
-                              $first=0;$growoutput.=$last_line;
-                              $growoutput=~s/^.*($cmd_prompt)$/$1/s;
-                              $output='';
+                                 &display($last_line,$cmd_prompt,$save)
+                                    if $display;
+                                 $first=0;$growoutput.=$last_line;
+                                 $growoutput=~s/^.*($cmd_prompt)$/$1/s;
+                                 $output='';
+                              }
                            }
                         } elsif ($ptest eq
                               "|sed-e's/^/stdout:/'2>&1") {

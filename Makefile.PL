@@ -27,12 +27,12 @@
 
 BEGIN {
 
-$main::VERSION='0.999999999952';
+   $main::VERSION='0.999999999953';
 
-# ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
-# When FullAuto is installed, run:  fa --figlet  to view multiple fonts.
+   # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
+   # When FullAuto is installed, run:  fa --figlet  to view multiple fonts.
 
-my $fa_banner=<<'END';
+   my $fa_banner=<<'END';
 
 
 
@@ -47,7 +47,7 @@ my $fa_banner=<<'END';
            _   _      _         _____      _ _    _         _
           | \ | | ___| |_      |  ___|   _| | |  / \  _   _| |_ ___
           |  \| |/ _ \ __| o o | |_ | | | | | | / _ \| | | | __/ _ \
-          | |\  |  __/ ||  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
+          | |\  |  __/ |_  o o |  _|| |_| | | |/ ___ \ |_| | || (_) |
           |_| \_|\___|\__|     |_|   \__,_|_|_/_/   \_\__,_|\__\___/
 
 
@@ -266,7 +266,7 @@ END
          return $cygwin_query;
       } return 0
    }
-   $SIG{ INT } = sub{ eval { Term::ReadKey };
+   $SIG{ INT } = sub{ eval { require Term::ReadKey };
                       unless ($@) { Term::ReadKey::ReadMode(0) };
                       print "\n";
                       exit };
@@ -787,6 +787,7 @@ END
    );
 
    if (-1<index lc($0), 'demo') {
+
       my $demo_out=Menu(\%fullauto_demo);
       print "DONE WITH DEMO\n";<STDIN>;
       exit;
