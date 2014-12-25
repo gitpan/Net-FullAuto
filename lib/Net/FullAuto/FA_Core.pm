@@ -761,7 +761,7 @@ BEGIN {
               },
    };
 
-   use Fcntl qw(S_IMODE);
+   use Fcntl qw(S_IMODE O_WRONLY O_CREAT);
    our $fa_perm=S_IMODE((CORE::stat($main::netfull))[2]);
 
 }
@@ -16133,8 +16133,10 @@ END
                $MRLOG=*MRLOG;
                my $die="Cannot Open LOGFILE - \"" .
                        $Hosts{"__Master_${$}__"}{'LogFile'} . "\"";
-               open ($MRLOG, ">$Hosts{\"__Master_${$}__\"}{'LogFile'}")
-                  || &handle_error($die);
+               umask 0027;
+               sysopen($MRLOG,$Hosts{"__Master_${$}__"}{'LogFile'}
+                                   ,(O_WRONLY|O_CREAT)) # write mode,
+                                   || &handle_error($!);# create if needed
                unless ($quiet) {
                   print "\n  LOGFILE ==> \"",
                      $Hosts{"__Master_${$}__"}{'LogFile'},"\"\n";
@@ -16151,11 +16153,27 @@ END
                   " ####\n\n";
             } elsif ($log) {
                $MRLOG=*MRLOG;
-               my $olog="$home_dir/FAlog${$}d".
-                  $Net::FullAuto::FA_Core::invoked[2].
-                  $Net::FullAuto::FA_Core::invoked[3].".txt";
+               my $olog='';
+               umask 0027;
+               if ($log!~/^\d$/) {
+                  if ($log!~/\//) {
+                     $olog=$home_dir."/$log";
+                  } elsif ($log=~/\/$/) {
+                     $olog=$log."FAlog${$}d".
+                           $Net::FullAuto::FA_Core::invoked[2].
+                           $Net::FullAuto::FA_Core::invoked[3].".txt";
+                  }
+               } else {
+                  mkdir "$home_dir/.fullauto" unless
+                        -d "$home_dir/.fullauto";
+                  chmod 0770, "$home_dir/.fullauto";
+                  $olog=$home_dir."/.fullauto/FAlog${$}d".
+                        $Net::FullAuto::FA_Core::invoked[2].
+                        $Net::FullAuto::FA_Core::invoked[3].".txt";
+               }
                $Hosts{"__Master_${$}__"}{'LogFile'}=$olog;
-               open ($MRLOG, ">$olog") || &handle_error($!);
+               sysopen($MRLOG,$olog,(O_WRONLY|O_CREAT)) # write mode,
+                                   || &handle_error($!);# create if needed
                $MRLOG->autoflush(1);
                unless ($quiet) {
                   print "\n  LOGFILE ==> \"$olog\"\n";
@@ -16176,9 +16194,7 @@ END
             $Net::FullAuto::FA_Core::skip_host_hash=1;
             &new_user_experience($Term::Menus::new_user_flag,
                $welcome,$newuser);
-         } #elsif ($newuseramazon) {
-           # &new_user_amazon();
-         #}
+         }
          if (defined $default || (defined $facode && !$facode)
                               || (defined $faconf && !$faconf)
                               || (defined $fahost && !$fahost)
@@ -19717,7 +19733,6 @@ sub new {
    $self->{_work_dirs}=$work_dirs;
    $self->{_ftp_pid}=$ftp_pid if $ftp_pid;
    $self->{_fpx_pid}=$fpx_pid if $fpx_pid;
-print "HOW BOUT HD1\n";<STDIN>;
    $self->{_homedir}=$homedir;
    bless($self,$class);
    $Net::FullAuto::FA_Core::Connections{"${hostlabel}__%-$chk_id"}=$self;

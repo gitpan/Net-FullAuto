@@ -20,6 +20,20 @@
 #######################################################################
 
 
+2014-12-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999953 released.
+
+        * Install dies on error when module complains of
+          lacking a dependency.
+
+        * Added Exporter::Tiny to dependencies.
+
+        * Merry Christmas!
+
+        * Logs now go into ~/.fullauto folder by default.
+
+
 2014-12-24  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999953 released.

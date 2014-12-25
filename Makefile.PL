@@ -27,7 +27,7 @@
 
 BEGIN {
 
-   $main::VERSION='0.999999999953';
+   $main::VERSION='0.999999999954';
 
    # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
    # When FullAuto is installed, run:  fa --figlet  to view multiple fonts.
@@ -1838,6 +1838,8 @@ print "YEP MEMORY=$line\n";<STDIN>;
       }
       eval "require $p;1";
       my $ver='';
+      my $testp=$p;
+      $testp=~s/::/\//g;
       unless ($@) {
          if ($version) {
             my $ttmp='$ver=$'.$p.'::VERSION';
@@ -1845,6 +1847,11 @@ print "YEP MEMORY=$line\n";<STDIN>;
             $ver=eval $ver;
             $force=($ver<$version)?1:0;
          } else { $force=0 } 
+      } elsif ((-1<index $@,"Can't locate") &&
+            (-1==index $@,$testp)) {
+         print "\n\n";
+         print "   Fatal Error: $@\n\n";
+         exit 1;
       }
       if ($@ || $instfile eq '(not' || $force) {
          if ($ENV{'AUTOMATED_TESTING'}) {
@@ -2235,6 +2242,7 @@ END
    &fa_install_module('Crypt::Rijndael','install','Makefile');
    &fa_install_module('Clone','install','Makefile');
    &fa_install_module('File::Remove','install','Makefile');
+   &fa_install_module('Exporter::Tiny','install','Makefile');
    &fa_install_module('List::MoreUtils','install','Makefile');
    &fa_install_module('Params::Util','install','Makefile');
    &fa_install_module('Test::Object','install','Makefile');
