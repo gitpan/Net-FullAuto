@@ -1,7 +1,7 @@
 ### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2000-2014  Brian M. Kelly
+#    Copyright (C) 2000-2015  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,9 +20,18 @@
 #######################################################################
 
 
+2015-01-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999955 released.
+
+        * Updated Copyright notices to 2015.
+
+        * Demo source is not part of the release.
+
+
 2014-12-25  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
-        * Version 0.999999999953 released.
+        * Version 0.999999999954 released.
 
         * Install dies on error when module complains of
           lacking a dependency.

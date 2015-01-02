@@ -3,7 +3,7 @@ package Net::FullAuto::FA_Core;
 ### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2000-2014  Brian M. Kelly
+#    Copyright (C) 2000-2015  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -2470,7 +2470,7 @@ my $version=<<VERSION;
 This is Net::FullAuto, v$Net::FullAuto::VERSION
 (See  fullauto -V  or  fa -V  for more detail)
 
-Copyright 2000-2014, Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
+Copyright 2000-2015, Brian M. Kelly  Brian.Kelly\@fullautosoftware.net
 
 FullAuto may be copied only under the terms of the GNU Affero General Public
 License, which may be found in the FullAuto source distribution.
@@ -9664,7 +9664,7 @@ my $affero=<<END;
 ### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2000-2014  Brian M. Kelly
+#    Copyright (C) 2000-2015  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -11962,7 +11962,7 @@ my $fa_welcome=<<'END';
 
 
 
-   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
+   Copyright (C) 2000-2015  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
 
 
 
@@ -13046,7 +13046,7 @@ print "DONE SO FAR\n";<STDIN>;
    (Liferay Inc. and Community are **NOT** sponsors of the FullAuto Project.)
 
 END
-      print $download_liferay;sleep 4;
+      print $download_liferay;sleep 10;
       ($stdout,$stderr)=$handle->cmd("wget ".$url,'__display__');
       ($stdout,$stderr)=$handle->cmd("sudo mkdir -p /var/opt/lr_jvm1");
       ($stdout,$stderr)=$handle->cmd("sudo unzip -d /var/opt/lr_jvm1 $zip",
@@ -13259,7 +13259,7 @@ END
    (The Apache Foundation is **NOT** a sponsor of the FullAuto Project.)
 
 END
-      print $download_apache;sleep 4;
+      print $download_apache;sleep 10;
       ($stdout,$stderr)=$handle->cmd("wget $apache",'__display__');
       $apache=~s/^.*\/(.*)$/$1/;
       ($stdout,$stderr)=$handle->cmd(
@@ -13307,8 +13307,8 @@ END
           8 8   `8 `YooP'   8 .P     8 8oooo 8oooo 8 8   `8 `YooP8
           ........................................................
           :::::::::::::::::::::::::::::::::'        ':::::::::::::
-                                              (`*..,
-                                               \  , `.
+          (Oracle(R) is **NOT** a sponsor     (`*..,
+          of the FullAuto Project.)            \  , `.
                                                 \     \
           http://www.mysql.com                   \     \
                                                  /      \.
@@ -13320,11 +13320,8 @@ END
           |_|  \/  |_|  \___, | |_____/  \___\ \/ \______|(R)
                         ____| |               \_\
                        |_____/                            DATABASE
-
-          (Oracle(R) is **NOT** a sponsor of the FullAuto Project.)
-
 END
-         print $install_mysql;sleep 4;
+         print $install_mysql;sleep 10;
          ($stdout,$stderr)=$handle->cmd(
             "sudo yum groupinstall -y 'MySQL Database'",'__display__');
          #($stdout,$stderr)=$handle->cmd(
@@ -13485,7 +13482,7 @@ END
    (Liferay Inc. and Community are **NOT** sponsors of the FullAuto Project.)
 
 END
-      print $starting_liferay;sleep 4;
+      print $starting_liferay;sleep 10;
       ($stdout,$stderr)=$lrhandle->cmd("sudo $tom_dir".
          "/bin/startup.sh",'__display__');
       $lrhandle->{_cmd_handle}->print("tail -f $tom_dir/logs/catalina.out");
@@ -13845,10 +13842,16 @@ my $standup_liferay=sub {
           |_| \_|\___|\__|     |_|   \__,_|_|_/_/   \_\__,_|\__\___/
 
 
-   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
+   Copyright (C) 2000-2015  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
 
 END
-   print $thanks;
+   eval {
+      local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+      alarm 300;
+      print $thanks;
+      print "   \n   Press Any Key to EXIT ... ";
+      <STDIN>;
+   };alarm(0);
    &Net::FullAuto::FA_Core::cleanup;
 
 };
@@ -14015,6 +14018,8 @@ my $liferay_setup_summary=sub {
    /_/ \_\__\__\___| .__/\__|   \___\___/__/\__(_)
                    |_|
 
+END
+   $show_cost_banner.=<<END;
    Note: There is a \$$cost per hour cost$cents to launch $num_of_servers
          AWS EC2 $type servers for the FullAuto Demo:
 
@@ -14350,7 +14355,14 @@ my $choose_aws_instances=sub {
       ($hash,$output,$error)=
           run_aws_cmd("aws ec2 describe-instances");
       if ($error) {
-         print $error;
+         eval {
+            local $SIG{ALRM} = sub { die "alarm\n" }; # \n required
+            alarm 120;
+            $error=~s/^\s*//;
+            $error=~s/: /:\n   /;
+            print "\n   $error\n   Press Any Key to EXIT ... ";
+            <STDIN>;
+         };alarm(0);
          cleanup();
       }
       my $instance='';
@@ -14412,7 +14424,8 @@ my $choose_aws_instances=sub {
    \__ \/ -_) / -_) _|  _|  / _ \  |   / -_) _` | / _ \ ' \
    |___/\___|_\___\__|\__| /_/ \_\ |_|_\___\__, |_\___/_||_|
                                            |___/
-
+END
+   $regions_banner.=<<END;
    AWS has infrastructure all over the globe. This server you are now on
    is located in region:  $r
 

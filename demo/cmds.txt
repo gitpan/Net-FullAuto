@@ -1,0 +1,1 @@
+bash -l -c "fa -gi fullauto.pem --new-user-amazon"

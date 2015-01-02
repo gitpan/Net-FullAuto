@@ -1,0 +1,5 @@
+wxpar --gui -o FullAuto_DEMO_MSWin.exe fa_demo.pl -M Term::Menus -M Wx::Perl::Packager -M Wx -M File::Copy -a fagreen.ico -a fullautogreenbannerpower3.png -a fakey.png -a puttykey.exe -a putty.exe -a puttygen.exe -a runputty.exe -a cmds.txt -a engineroom.jpg -a engine.pl -a standup.gif -a Scratched_Steel_Texture_by_AaronDesign.jpg -a presshere.jpg -a notready.jpg --compress=9
+
+# how to set putty logfile using putty command line
+http://stackoverflow.com/questions/21831161/how-to-set-putty-logfile-using-putty-command-line
+

@@ -3,7 +3,7 @@ package Net::FullAuto;
 ### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2000-2014  Brian M. Kelly
+#    Copyright (C) 2000-2015  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,7 @@ package Net::FullAuto;
 #######################################################################
 
 
-our $VERSION='0.999999999954';
+our $VERSION='0.999999999955';
 
 
 use 5.005;
@@ -1543,7 +1543,7 @@ Brian M. Kelly <Brian.Kelly@fullautosoftware.net>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2000-2014
+Copyright (C) 2000-2015
 
 by Brian M. Kelly.
 

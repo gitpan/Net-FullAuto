@@ -1,7 +1,7 @@
 ### OPEN SOURCE LICENSE - GNU AFFERO PUBLIC LICENSE Version 3.0 #######
 #
 #    Net::FullAuto - Powerful Network Process Automation Software
-#    Copyright (C) 2000-2014  Brian M. Kelly
+#    Copyright (C) 2000-2015  Brian M. Kelly
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -27,7 +27,7 @@
 
 BEGIN {
 
-   $main::VERSION='0.999999999954';
+   $main::VERSION='0.999999999955';
 
    # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
    # When FullAuto is installed, run:  fa --figlet  to view multiple fonts.
@@ -52,7 +52,7 @@ BEGIN {
 
 
 
-   Copyright (C) 2000-2014  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
+   Copyright (C) 2000-2015  Brian M. Kelly  Brian.Kelly@fullautosoftware.net
 
 
 END
@@ -831,7 +831,7 @@ END
 
    *THANK YOU* For Trying FullAuto!   Net::FullAuto INSTALLATION PROGRAM
 
-   Copyright (C) 2000-2014   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
+   Copyright (C) 2000-2015   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
 
    This program comes with ABSOLUTELY NO WARRANTY; for details select  2.
    This is free software, and you are welcome to redistribute it under certain
@@ -6288,7 +6288,7 @@ END
 
    *THANK YOU* For Trying FullAuto!   Net::FullAuto INSTALLATION PROGRAM
 
-   Copyright (C) 2000-2014   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
+   Copyright (C) 2000-2015   Brian M. Kelly   Brian.Kelly\@fullautosoftware.net
 
    This program comes with ABSOLUTELY NO WARRANTY; for details select 2.
    This is free software, and you are welcome to redistribute it under certain
