@@ -14,11 +14,11 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 87b5b14fd981a4c984e0783ac222095d19b2e5ae ChangeLog
+SHA1 92ea551011bc1b06c5081b136839708034578d03 ChangeLog
 SHA1 62647027745e394450492878f8d8730548d83fa2 LICENSE
-SHA1 8fd7c264be6b7050213146a147f5f1990a921a04 MANIFEST
-SHA1 277e35d66501a0a7ee51deac580d4872a1c0d269 META.yml
-SHA1 c1bf0ab6d4e6d8a331d58df2d9ce8003e326c130 Makefile.PL
+SHA1 78b62b6d7446a8e58420447a7478e94ab4622f28 MANIFEST
+SHA1 6b2efa54b0c25d712a39234f46b355b17e5460ac META.yml
+SHA1 d310a44b070c75f177696f431922425b54ab2175 Makefile.PL
 SHA1 abf9b3d4ba241b34d48761f7c7b2e99df3a8b444 README
 SHA1 ecb089134bba590f02aa974be5a6e86d72cdb0dc UNINSTALL_CYGWIN
 SHA1 5707f75115746960925af550ba7dd44e1b0c84dc bin/fullauto.pl
@@ -35,12 +35,8 @@ SHA1 7e09591010cf83081acb6be760bf8ec8674b1992 demo/fakey.png
 SHA1 ac7843bad51faf892eda57124f5bd11c57691272 demo/fullautogreenbannerpower.png
 SHA1 8ff410acf26cc0574bf4227d4b31724ca93ebf86 demo/notready.jpg
 SHA1 720d2d35a65b0eeb055c44671ebebedd0549ef76 demo/presshere.jpg
-SHA1 a390c71509f8b942f53453bfe5d1449125812c57 demo/putty.exe
-SHA1 9d33133df918ae386b9071cacafd6c776375ad46 demo/puttygen.exe
 SHA1 f55d1740db30d9bd0c6d85b47bd9cba49d1fd58f demo/puttykey.ahk
-SHA1 191a550159f068a759c0aa43a97c9165136ada43 demo/puttykey.exe
 SHA1 3c201d53c6cf843c788487a923da642da9d7d547 demo/runputty.ahk
-SHA1 8c24303e84f2df15cd51730e3b9d23212425cd82 demo/runputty.exe
 SHA1 784955e0e44b132341668db4efa407569dd71189 demo/standup.gif
 SHA1 d7f05f3c29deb4f29dd9291d5076899b3f92cd20 dependencies/FIGlet_fonts/3-d.flf
 SHA1 8238eb029ef0be3083cd5982100b4000bd8aacb8 dependencies/FIGlet_fonts/4x4_offr.flf
@@ -141,7 +137,7 @@ SHA1 6fed559b971e9d2f091e0776ddbb131be5225a36 inc/Module/Install/Win32.pm
 SHA1 ea528c813c3473a2674fcbed06531c2f795116ce inc/Module/Install/WriteAll.pm
 SHA1 00bb8470354d11bd7c2c74633083ebe627eb2b7e inc/Module/Install/with.pm
 SHA1 77bbd5cc371896e002b43367c5e89af699842036 install_mozrepl_plugin.ahk
-SHA1 fb8b5dd689d9d0b7e94f0b3611c77f764d2b23a7 lib/Net/FullAuto.pm
+SHA1 5561592712704dd9a47f2d6e0d5e9723da049689 lib/Net/FullAuto.pm
 SHA1 dd5c5a050bc7f1e1d383d5f0d88dbfa539ff2a7c lib/Net/FullAuto/Custom/BackUp/README
 SHA1 2bb520f28ccf171adfb9c44bd568ddff6eb93b60 lib/Net/FullAuto/Custom/README
 SHA1 1c16509afac6208a7e8e721b56f0fe06c8fddd31 lib/Net/FullAuto/Distro/fa_code.pm
@@ -152,17 +148,17 @@ SHA1 08cbbee99be31423393ae29f715797a4167fad5c lib/Net/FullAuto/Distro/fa_maps.pm
 SHA1 6782b5c43c4456925b1a61ecf964e768aff08cd1 lib/Net/FullAuto/Distro/fa_menu.pm
 SHA1 ed7de4ad2ec0c7620b9006dc55e88c02b0e3aaaa lib/Net/FullAuto/Distro/fa_menu_demo.pm
 SHA1 c61c03f9beda14559fdf07e569e813a2bd553a53 lib/Net/FullAuto/Distro/fullautologo.jpg
-SHA1 84683d9706faf461d9f288ba3e3389a1d464fbe5 lib/Net/FullAuto/FA_Core.pm
+SHA1 41455ed29425c675de2760c1dbb93284bb569b77 lib/Net/FullAuto/FA_Core.pm
 SHA1 7f2e13f5f6a798d52ea897d24d07b49af4039341 t/0-signature.t
 SHA1 6fac6b17647d05b71441ac3783ceec38b9b71fa6 t/test.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQEcBAEBAgAGBQJUpsYOAAoJEBa/9Pad787EeaYIAIrs4ELRr4qXxdUXhY8TCuRZ
-te39J2CbvgXTk5WJGu7gSFYCx1eTlo3Ji/wBILVZEHc1mDcw9AtlmRvm7Urv3Mgl
-QtMgSv5ZT2cjDHUhuUi0yNzqmui2fFH7Dq7CuJ+hx4jOPI5H5aA22oID58tEQlos
-2qLiYT+7m8EIMyNZIsU/XKeNmYmlxnyinf6y27+FW+0yFfAyFVhUkMwaAuJXLwfs
-Lh0itOZw9HZTsLlVdJZi8w0n0ScXtSa8mKoS79qN/NkA2gpe52+o1ZBjU1rTdiIH
-joNam9DCA5KiCRELfaqGtHZudJICNJyHBXq+iXIIJVZFX/6W1V66gTI+AGnylqs=
-=L1bh
+iQEcBAEBAgAGBQJUqG7QAAoJEBa/9Pad787E660H/3mGjpSRe5fxPCxAKe5d2BDs
+z1KOiknn5OmmKVsP+eOo/QwYsL7VhLaHKbgBlyEB6YGEISURixImVPuOLh96hEny
+m4yV7XE3ypbJ2k6iRC6IYtlWvgFtDz4bLdim2tl3Qy/G0RkOeKlwte+Kt4O7fzPd
+QpEWAzwl4FuFPDpKgqroilgicmVKthviTcClRDuTmaRYxWNpUn+KuqtTiBwlUbZe
+tPa1bgmw2QTEnDVwsicn0nIJ/Vf+2ska1QXAy+lVCN/qM6zAtxRELwCOOP/YgLl4
+yYXQ6ws1+xoZPziu8s+mTEDsow5bGCpU9VMFbIdNpqMYGixqirmBOED/W/c0abM=
+=xBjb
 -----END PGP SIGNATURE-----

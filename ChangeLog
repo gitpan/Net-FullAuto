@@ -20,6 +20,16 @@
 #######################################################################
 
 
+2015-01-03  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
+
+        * Version 0.999999999956 released.
+
+        * Added LogCount feature to limit number of logs
+          generated over time.
+
+        * Fix for mirror() when mirroring more than one host.
+
+
 2015-01-02  Brian M. Kelly  <Brian.Kelly@fullautosoftware.com>
 
         * Version 0.999999999955 released.

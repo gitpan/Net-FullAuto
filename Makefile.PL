@@ -27,7 +27,7 @@
 
 BEGIN {
 
-   $main::VERSION='0.999999999955';
+   $main::VERSION='0.999999999956';
 
    # ASCII BANNER Courtesy of:  http://www.network-science.de/ascii/
    # When FullAuto is installed, run:  fa --figlet  to view multiple fonts.
@@ -4688,6 +4688,10 @@ if (grep { /-*add[-_]?dependencies/i } @ARGV) {
       foreach my $fnd (@found) {
          print MF "$fnd\n";
       }
+      print MF "demo/putty.exe";
+      print MF "demo/puttgen.exe";
+      print MF "demo/runputty.exe";
+      print MF "demo/puttykey.exe";
       close NF;
    }
 } else {

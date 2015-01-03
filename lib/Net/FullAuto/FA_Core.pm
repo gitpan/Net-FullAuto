@@ -16137,6 +16137,7 @@ END
       eval { # eval is for error trapping. Any errors are
              # handled by the "if ($@)" block at the bottom
              # of this routine.
+         my $logdir='';
          if (!$MRLOG) {
             if (exists $Hosts{"__Master_${$}__"}{'LogFile'}
                   && $Hosts{"__Master_${$}__"}{'LogFile'}) {
@@ -16146,6 +16147,12 @@ END
                $MRLOG=*MRLOG;
                my $die="Cannot Open LOGFILE - \"" .
                        $Hosts{"__Master_${$}__"}{'LogFile'} . "\"";
+               $logdir=$Hosts{"__Master_${$}__"}{'LogFile'};
+               if ($logdir=~/[\/|\\]/) {
+                  $logdir=~s/^(.*)[\/|\\].*$/$1/;
+               } else {
+                  $logdir=cwd();
+               }
                umask 0027;
                sysopen($MRLOG,$Hosts{"__Master_${$}__"}{'LogFile'}
                                    ,(O_WRONLY|O_CREAT)) # write mode,
@@ -16171,15 +16178,18 @@ END
                if ($log!~/^\d$/) {
                   if ($log!~/\//) {
                      $olog=$home_dir."/$log";
+                     $logdir=$home_dir;
                   } elsif ($log=~/\/$/) {
                      $olog=$log."FAlog${$}d".
                            $Net::FullAuto::FA_Core::invoked[2].
                            $Net::FullAuto::FA_Core::invoked[3].".txt";
+                     $logdir=$log;
                   }
                } else {
                   mkdir "$home_dir/.fullauto" unless
                         -d "$home_dir/.fullauto";
                   chmod 0770, "$home_dir/.fullauto";
+                  $logdir="$home_dir/.fullauto";
                   $olog=$home_dir."/.fullauto/FAlog${$}d".
                         $Net::FullAuto::FA_Core::invoked[2].
                         $Net::FullAuto::FA_Core::invoked[3].".txt";
@@ -16200,7 +16210,34 @@ END
                   (join " ",map { (-1<index $_,' ')?"\"$_\"":$_ } @ARGV),
                   " ####\n\n";
             }
-
+            if ($logdir && exists $Hosts{'localhost'}{'LogCount'} &&
+                   $Hosts{'localhost'}{'LogCount'} &&
+                   $Hosts{'localhost'}{'LogCount'}=~/^\d+$/) {
+               my @logs=();
+               eval {
+                  @logs=`ls -t $logdir`;
+               };
+               print $MRLOG "Cannot Read Contents of LOGDIR $logdir=$@\n"
+                  if $log && -1<index $MRLOG,'*';
+               my $count=$Hosts{'localhost'}{'LogCount'};
+               my $logcount=$#logs;
+               $count--;
+               if ($count<$logcount) {
+                  foreach my $log (reverse @logs) {
+                     chomp $log;
+                     next if $log eq '.';
+                     next if $log eq '..';
+                     eval {
+                        unlink $logdir.'/'.$log;
+                     };
+                     if ($@) {
+                        print $MRLOG "Cannot Remove Logfiles=$@\n"
+                           if $log && -1<index $MRLOG,'*';
+                     }
+                     last if $count >= --$logcount;
+                  }
+               }
+            }
          }
          if (($Term::Menus::new_user_flag or $welcome or $newuser) &&
                !$default) {
@@ -24785,18 +24822,18 @@ print "KEYS=",(join " | ",keys %{$cache}),"\n" if $cache;
                }
             }
          }
-         deep_delete_data_hash($baseFH,'_bhash') if
-            exists $baseFH->{_bhash} && $baseFH->{_bhash};
-         $main::base_shortcut_info{$baseFH}=$dir
-            if $index_base_once;
-         if (exists $baseFH->{_unaltered_basehash} &&
-               $baseFH->{_unaltered_basehash}) {
-            if ($index_base_once) {
-               $baseFH->{_bhash}=make_deep_data_copy(
-                  $baseFH->{_unaltered_basehash});
-            } else {
-               deep_delete_data_hash($baseFH,'_unaltered_basehash');
-            }
+      }
+      deep_delete_data_hash($baseFH,'_bhash') if
+         exists $baseFH->{_bhash} && $baseFH->{_bhash};
+      $main::base_shortcut_info{$baseFH}=$dir
+         if $index_base_once;
+      if (exists $baseFH->{_unaltered_basehash} &&
+            $baseFH->{_unaltered_basehash}) {
+         if ($index_base_once) {
+            $baseFH->{_bhash}=make_deep_data_copy(
+               $baseFH->{_unaltered_basehash});
+         } else {
+            deep_delete_data_hash($baseFH,'_unaltered_basehash');
          }
       }
    } elsif (!exists $main::base_shortcut_info{$baseFH} ||
@@ -26757,6 +26794,7 @@ sub make_deep_data_copy
          $new_copy->{$key}=$deep_data->{$key};
       }
    }
+   return $new_copy;
 
 }
 
@@ -29663,8 +29701,8 @@ sub build_base_dest_hashes
       my $cur_dir_excluded=0;my $file_count=0;my $dofiles=0;
       my @keys=();my $addbytes=0;my $nt5=0;
       my $prevkey='';my $savekey='';my $savetotal=0;
-      ${$cmd_handle->{"_${bd}hash"}}{'/'}=[ 'ALL', {},
-                      'DEPLOY_SOMEFILES_OF_CURDIR' ];
+      $cmd_handle->{"_${bd}hash"}->{'/'}=[ 'ALL', {},
+                       'DEPLOY_SOMEFILES_OF_CURDIR' ];
       my $key='/';my $bytesize=0;my $total=0;
 #$xxxnext=0;
 #if (!$cygwin) {
@@ -33999,6 +34037,8 @@ print "GETTING THIS=${c}out${pid_ts}.txt\n";
                            $two=$2 if defined $2;
                            $thr=$3 if defined $3;
                            $output=$one.$two.$thr;
+                           $test_stripped_output=~s/$grx//s;
+                           $ltso=length $test_stripped_output;
                         }
                         my $last_line='';
                         $output=~/^.*\n(.*)$/s;
